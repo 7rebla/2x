@@ -15,6 +15,7 @@ from django.core.exceptions import ValidationError
 from rest_framework.settings import api_settings
 
 from twox.accounts.permissions import CanRead
+from twox.config import settings as settings_module
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -251,7 +252,9 @@ def test_templates_serve_the_admin() -> None:
 def test_languages_are_german_and_english() -> None:
     assert [code for code, _ in settings.LANGUAGES] == ["de", "en"]
     assert settings.LANGUAGE_CODE == "en"
-    assert settings.LOCALE_PATHS == [BACKEND_ROOT / "locale"]
+    # The settings module itself: the tests point LOCALE_PATHS at compiled
+    # copies outside the source tree (tests/conftest.py).
+    assert settings_module.LOCALE_PATHS == [BACKEND_ROOT / "locale"]
     assert settings.USE_I18N is True
 
 
