@@ -1,0 +1,138 @@
+name: ci
+
+# Lint, type check, tests and licence check for backend and web UI on every
+# push and pull request. Every check runs in the containers of docker compose,
+# with the same commands as locally. Services that are too large for the
+# hosted runners or need a GPU are not started here (the converter service and
+# the language model); the backend job names the services it starts.
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new run on the same branch or pull request cancels the older one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Show runner user and Docker versions
+        run: |
+          id
+          docker version
+          docker compose version
+
+      - name: Prepare .env
+        run: cp .env.example .env
+
+      - name: Build images
+        run: docker compose --profile dev build migrate api worker backend-dev
+
+      - name: Start services and wait until healthy
+        run: docker compose up -d --wait --wait-timeout 300 db valkey worker api
+
+      - name: Lint (ruff check)
+        run: docker compose run --rm backend-dev ruff check .
+
+      - name: Format check (ruff format)
+        run: docker compose run --rm backend-dev ruff format --check .
+
+      - name: Type check (mypy)
+        run: docker compose run --rm backend-dev mypy .
+
+      - name: Tests (pytest)
+        run: docker compose run --rm backend-dev pytest
+
+      - name: Worker tests (pytest -m worker)
+        run: docker compose run --rm backend-dev pytest -m worker
+
+      - name: Migrations up to date
+        run: docker compose run --rm backend-dev python manage.py makemigrations --check --dry-run
+
+      - name: Licence check (Python)
+        run: docker compose run --rm backend-dev sh scripts/check-licenses.sh
+
+      # Regenerates the OpenAPI schema into the checked-in folder; any
+      # difference means web/openapi/schema.yml is out of date.
+      - name: OpenAPI schema up to date
+        run: |
+          docker compose run --rm -v "$PWD/web/openapi:/out" backend-dev \
+            python manage.py spectacular --file /out/schema.yml
+          git diff --exit-code -- web/openapi
+          test -z "$(git status --porcelain --untracked-files=all -- web/openapi)"
+
+      - name: Container status and logs on failure
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --no-color --timestamps
+
+  web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      WEB_COMPOSE: deploy/compose/compose.web.yaml
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Show runner user and Docker versions
+        run: |
+          id
+          docker version
+          docker compose version
+
+      - name: Prepare .env
+        run: cp .env.example .env
+
+      - name: Build image
+        run: docker compose -f "$WEB_COMPOSE" --profile dev build web-dev
+
+      - name: Install packages (npm ci)
+        run: docker compose -f "$WEB_COMPOSE" run --rm web-dev npm ci
+
+      - name: Lint
+        run: docker compose -f "$WEB_COMPOSE" run --rm web-dev npm run lint
+
+      - name: Type check
+        run: docker compose -f "$WEB_COMPOSE" run --rm web-dev npm run typecheck
+
+      - name: Tests
+        run: docker compose -f "$WEB_COMPOSE" run --rm web-dev npm run test
+
+      - name: Build
+        run: docker compose -f "$WEB_COMPOSE" run --rm web-dev npm run build
+
+      - name: Licence check (npm)
+        run: docker compose -f "$WEB_COMPOSE" run --rm web-dev npm run licenses
+
+      # Regenerates the API client from the checked-in schema; any difference
+      # means web/src/api/generated is out of date. Together with the schema
+      # check in the backend job this covers backend -> schema -> client.
+      - name: API client up to date
+        run: |
+          docker compose -f "$WEB_COMPOSE" run --rm web-dev npm run api:generate
+          git diff --exit-code -- web/openapi web/src/api
+          test -z "$(git status --porcelain --untracked-files=all -- web/openapi web/src/api)"
+
+      - name: Container status and logs on failure
+        if: failure()
+        run: |
+          docker compose -f "$WEB_COMPOSE" --profile dev ps -a
+          docker compose -f "$WEB_COMPOSE" --profile dev logs --no-color --timestamps
