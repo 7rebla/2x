@@ -9,6 +9,8 @@ from typing import Any
 
 import pytest
 import yaml
+from auditlog.cid import get_cid, set_cid
+from auditlog.middleware import AuditlogMiddleware
 from auditlog.models import LogEntry
 from auditlog.registry import auditlog
 from django.contrib import admin
@@ -23,7 +25,7 @@ from rest_framework.test import APIClient
 
 from tests.accounts.users import KINDS, TEST_PASSWORD, make_user
 from twox.accounts.admin import AuditLogEntryAdmin
-from twox.accounts.audit import AUDITED_MODELS, acting_as
+from twox.accounts.audit import AUDITED_MODELS, AuditMiddleware, acting_as
 from twox.accounts.management.commands.create_account import PASSWORD_VARIABLE
 from twox.accounts.models import User
 from twox.assets.models import Area, Device, Plant, Site
@@ -414,6 +416,95 @@ def test_no_ip_address_and_no_session_is_stored() -> None:
     session_key = client.cookies["sessionid"].value
     assert session_key
     assert session_key not in text
+
+
+# Request headers a client can set; auditlog 3.4.2 would take them into the
+# entry (cid, remote_port, remote_addr). A value that does not fit the column
+# would make writing the entry fail after the change itself is saved.
+HEADER_CASES = {
+    "long-correlation-id": {"HTTP_X_CORRELATION_ID": "c" * 300},
+    "short-correlation-id": {"HTTP_X_CORRELATION_ID": "client-value"},
+    "port-text": {"HTTP_X_FORWARDED_PORT": "abc"},
+    "port-negative": {"HTTP_X_FORWARDED_PORT": "-1"},
+    "port-too-large": {"HTTP_X_FORWARDED_PORT": "99999999999"},
+    "port-plain": {"HTTP_X_FORWARDED_PORT": "8443"},
+    "forwarded-for": {"HTTP_X_FORWARDED_FOR": "203.0.113.5, 198.51.100.23"},
+    "all-at-once": {
+        "HTTP_X_CORRELATION_ID": "c" * 300,
+        "HTTP_X_FORWARDED_PORT": "99999999999",
+        "HTTP_X_FORWARDED_FOR": "203.0.113.5",
+    },
+}
+
+
+@pytest.mark.parametrize("headers", HEADER_CASES.values(), ids=HEADER_CASES.keys())
+def test_client_headers_neither_break_nor_enter_the_log(headers: dict[str, str]) -> None:
+    manager = make_user("manage")
+    assert manager is not None
+    client = signed_in(manager, **headers)
+
+    created = client.post("/api/v1/sites/", {"name": "West"}, format="json")
+    assert created.status_code == 201
+    site = Site.objects.get(pk=created.json()["id"])
+    changed = client.patch(f"/api/v1/sites/{site.pk}/", {"name": "West 2"}, format="json")
+    assert changed.status_code == 200
+
+    # The changes are saved, and each has its entry with the signed-in user.
+    site.refresh_from_db()
+    assert site.name == "West 2"
+    entries = entries_for(site)
+    assert [(entry.action, entry.actor) for entry in entries] == [
+        (CREATE, manager),
+        (UPDATE, manager),
+    ]
+    for entry in entries:
+        assert entry.cid is None
+        assert entry.remote_port is None
+        assert entry.remote_addr is None
+    # Ports are covered by remote_port above (short numbers such as "-1" also
+    # occur in every time stamp).
+    text = entry_text(entries)
+    for name, value in headers.items():
+        if name != "HTTP_X_FORWARDED_PORT":
+            assert value not in text
+
+
+def test_no_entry_ever_holds_header_values() -> None:
+    client = signed_in(make_user("manage"), **HEADER_CASES["all-at-once"])
+    client.post("/api/v1/sites/", {"name": "West"}, format="json")
+
+    assert LogEntry.objects.exists()
+    assert not LogEntry.objects.exclude(cid=None).exists()
+    assert not LogEntry.objects.exclude(remote_port=None).exists()
+    assert not LogEntry.objects.exclude(remote_addr=None).exists()
+
+
+@pytest.mark.parametrize(("value", "auditlog_port"), [("-1", -1), ("99999999999", 99999999999)])
+def test_auditlog_middleware_alone_would_take_the_port_from_the_client(
+    value: str, auditlog_port: int
+) -> None:
+    # Counter-check of the finding: auditlog's own middleware passes the value
+    # on although AUDITLOG_DISABLE_REMOTE_ADDR is set; the project's does not.
+    request = RequestFactory().get(
+        "/", headers={"X-Forwarded-Port": value, "X-Forwarded-For": "203.0.113.5"}
+    )
+
+    assert AuditlogMiddleware._get_remote_port(request) == auditlog_port
+    assert AuditMiddleware._get_remote_port(request) is None
+    assert AuditMiddleware._get_remote_addr(request) is None
+
+
+def test_correlation_id_is_never_read_from_the_request(settings: Settings) -> None:
+    request = RequestFactory().get("/", HTTP_X_CORRELATION_ID="c" * 300)
+
+    set_cid(request)
+    assert get_cid() is None
+
+    # Counter-check: with auditlog's default header the value would be taken.
+    settings.AUDITLOG_CID_HEADER = "x-correlation-id"
+    set_cid(request)
+    assert get_cid() == "c" * 300
+    set_cid(None)
 
 
 # --- admin -----------------------------------------------------------------

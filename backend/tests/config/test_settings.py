@@ -228,7 +228,7 @@ def test_middleware_order_follows_the_django_documentation() -> None:
         "django.middleware.common.CommonMiddleware",
         "django.middleware.csrf.CsrfViewMiddleware",
         "django.contrib.auth.middleware.AuthenticationMiddleware",
-        "auditlog.middleware.AuditlogMiddleware",
+        "twox.accounts.audit.AuditMiddleware",
         "django.contrib.messages.middleware.MessageMiddleware",
         "django.middleware.clickjacking.XFrameOptionsMiddleware",
         "allauth.account.middleware.AccountMiddleware",
@@ -296,14 +296,18 @@ def test_change_log_stores_no_ip_address_and_json_changes() -> None:
     # E-43: no IP address in the change log.
     assert settings.AUDITLOG_DISABLE_REMOTE_ADDR is True
     assert settings.AUDITLOG_STORE_JSON_CHANGES is True
+    # No correlation id from a request header.
+    assert settings.AUDITLOG_CID_HEADER is None
 
 
 def test_audit_middleware_runs_after_authentication() -> None:
     middleware: list[str] = settings.MIDDLEWARE
 
-    assert middleware.index("auditlog.middleware.AuditlogMiddleware") > middleware.index(
+    assert middleware.index("twox.accounts.audit.AuditMiddleware") > middleware.index(
         "django.contrib.auth.middleware.AuthenticationMiddleware"
     )
+    # Only the project's subclass, never auditlog's own middleware as well.
+    assert "auditlog.middleware.AuditlogMiddleware" not in middleware
 
 
 def test_tests_run_with_the_local_memory_cache() -> None:

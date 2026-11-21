@@ -117,8 +117,9 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     # Attributes every change during a request to the signed-in user; needs
-    # request.user, hence after the authentication middleware.
-    "auditlog.middleware.AuditlogMiddleware",
+    # request.user, hence after the authentication middleware. auditlog's
+    # middleware without values from request headers (twox/accounts/audit.py).
+    "twox.accounts.audit.AuditMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Required by django-allauth; after the authentication middleware.
@@ -194,6 +195,10 @@ ACCOUNT_RATE_LIMITS = {
 # Change log (django-auditlog, E-43). No IP address in the log: the
 # middleware stores none, also not from X-Forwarded-For.
 AUDITLOG_DISABLE_REMOTE_ADDR = True
+# No correlation id from the header X-Correlation-ID: a client value of more
+# than 255 characters would make writing the entry fail after the change is
+# saved. With None, auditlog never reads a header for it.
+AUDITLOG_CID_HEADER = None
 # Changes are stored as JSON values ([old, new] with null, true, false and
 # numbers as such) instead of text, so that an empty value and the text
 # "None" stay apart in the API.

@@ -2,7 +2,7 @@
 
 Every model whose changes are logged is registered here and nowhere else;
 ``AccountsConfig.ready()`` calls :func:`register_models`. During a request,
-``AuditlogMiddleware`` (see the settings) names the signed-in user as the
+:class:`AuditMiddleware` (see the settings) names the signed-in user as the
 actor. Outside a request (management commands, imports) wrap the work in
 :func:`acting_as`.
 
@@ -14,8 +14,10 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 from auditlog.context import auditlog_value, set_actor
+from auditlog.middleware import AuditlogMiddleware
 from auditlog.registry import auditlog
 from django.db.models import Model
+from django.http import HttpRequest
 
 from twox.accounts.models import User
 from twox.assets.models import Area, Device, Plant, Site
@@ -62,6 +64,27 @@ def register_models() -> None:
         exclude_fields=list(USER_EXCLUDED_FIELDS),
         m2m_fields=set(USER_M2M_FIELDS),
     )
+
+
+class AuditMiddleware(AuditlogMiddleware):
+    """auditlog's middleware without any value from request headers.
+
+    In auditlog 3.4.2 the middleware takes ``remote_port`` from the header
+    ``X-Forwarded-Port`` (also with ``AUDITLOG_DISABLE_REMOTE_ADDR``) and the
+    address from ``X-Forwarded-For``. A port that does not fit the column
+    makes writing the entry fail after the change itself is saved: the change
+    would stay without an entry. So neither is ever taken from the request;
+    only the signed-in user is. The correlation id is switched off in the
+    settings (``AUDITLOG_CID_HEADER = None``).
+    """
+
+    @staticmethod
+    def _get_remote_addr(request: HttpRequest) -> None:
+        return None
+
+    @staticmethod
+    def _get_remote_port(request: HttpRequest) -> None:
+        return None
 
 
 @contextmanager
