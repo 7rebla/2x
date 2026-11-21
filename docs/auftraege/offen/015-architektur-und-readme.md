@@ -1,6 +1,6 @@
 # Auftrag 015 – ARCHITECTURE.md und README
 
-Meilenstein: M0 · Freigabestufe: B · Status: offen
+Meilenstein: M0 · Freigabestufe: B · Status: zur Prüfung
 
 ## Ziel
 
@@ -73,7 +73,62 @@ Vorher `.env.example` nach `.env` kopieren (falls nicht vorhanden) und darin `TW
 Keine.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Alle Akzeptanzkriterien erfüllt; die Läufe fanden am 21.11.2026 statt. Keine offene Frage an a7.
+
+### Was wurde gebaut?
+
+- `README.md` (neu, Englisch): Zweck in zwei Sätzen und Hinweis auf den frühen Stand (Verweis auf `docs/ROADMAP.md`), Voraussetzungen (Docker mit Compose-Plugin, Plattenbedarf Docling, Ollama optional auf dem Host), Schnellstart (`cp .env.example .env`, `docker compose up -d --wait`, `http://localhost:8000/` mit erwarteter Anzeige), Dienste und Netze (Docling nur im internen Netz, E-32), Prüfbefehle `check_docling` und `check_llm` mit allen Ausgängen, Entwicklerbefehle wörtlich wie in `ci.yml` (Backend, Oberfläche, Browser-Test, Testfabrik, Geheimnissuche), was die CI nicht prüft, Sicherheitshinweise (Port nur 127.0.0.1, keine Anmeldung bis M1, `TWOX_DEBUG` nur in der Entwicklung, keine Telemetrie), Lizenz Apache-2.0 mit Verweis auf `/static/THIRD-PARTY-NOTICES.txt` und `docs/DECISIONS.md`. Testfabrik mit Lizenzhinweis (keine Herstellerunterlagen im Repository, `fetch.py` lädt lokal, Siemens nur von Hand, E-27).
+- `docs/ARCHITECTURE.md` (neu, Englisch): Container mit Mermaid-Schaubild und Tabelle, Netze, Einschränkungen von Docling (nur RapidOCR, kein Vorwärmen), Stufen der Dockerfiles, Aufbau des Repositorys, die neun Django-Apps bzw. `config` mit vorgesehenem Zweck und Inhalt in M0, Aufbau der Compose-Dateien und Profile, Weg der Testseiten-Anfrage (Mermaid-Sequenzdiagramm und fünf Schritte), die drei Warteschlangen, API und erzeugter Client, Tabelle der 13 Umgebungsvariablen (Bedeutung, Wert in `.env.example`, Verhalten ohne Wert), Qualitätswerkzeuge, was die CI prüft und was nicht (Docling, Ollama, Prüffragen, `fetch.py`).
+- Keine Änderung an Code, Compose-Dateien oder CI.
+
+### Wie wurde getestet?
+
+`.env` aus `.env.example` mit `TWOX_API_PORT=18015`; alle Läufe mit `-p twox-015` im Arbeitsverzeichnis, Docker Engine 29.9.3, Compose v5.7.0. Das Projekt `2x` lief durchgehend weiter und wurde nicht angefasst.
+
+| Nr. | Ergebnis | Nachweis (gekürzt) |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` (29.9.3) und `docker compose version` (v5.7.0), Exit 0 |
+| 1 | erfüllt, mit einer Korrektur der README | siehe Befehlsliste unten |
+| 2 | erfüllt | beide `git grep` (mit `sort -u`) liefern dieselben 13 Variablen (`diff` Exit 0) |
+| 3 | erfüllt, mit Hinweis | alle Dienstnamen in `config --services` (Hauptdatei mit `--profile dev --profile e2e`: api, backend-dev, db, docling, e2e, migrate, valkey, web-dev, worker; `compose.tools.yaml`: gitleaks-dir, gitleaks-git; `testfactory.yaml`: check, check-offline, fetch). Alle genannten Repository-Pfade in `git ls-files`; Ausnahmen siehe Abweichungen |
+| 4 | erfüllt | `git grep` ohne Treffer (Exit 1); beide Dateien sind reines ASCII |
+| 5 | erfüllt | `git grep -i -e 'a7' -e 'Desktop'` ohne Treffer (Exit 1) |
+| 6 | Durchsicht der Leitstelle | Nicht Vorhandenes ist als geplant bzw. „not present yet“ gekennzeichnet |
+| 7 | erfüllt | vor dem Bericht: nur `README.md` und `docs/ARCHITECTURE.md`; mit diesem Commit zusätzlich die Auftragsdatei |
+| 8 | erfüllt | `gitleaks-dir`: `no leaks found`, Exit 0 |
+| 9 | erfüllt | `down -v` Exit 0 (Volumes `db-data`, `valkey-data`, `web_node_modules`, beide Netze entfernt); danach `--profile dev --profile e2e down -v` Exit 0; keine Container, Volumes oder Netze von `twox-015` mehr |
+
+Befehle aus der README in deren Reihenfolge (jeweils mit `-p twox-015`):
+
+| Befehl | Ergebnis |
+| --- | --- |
+| `up -d --wait` (alle Dienste mit Docling) | Exit 0 nach 21 s (Images im Cache), alle `healthy`, `migrate` beendet |
+| Testseite `http://localhost:18015/` | `200 text/html`; `/api/v1/selftest/`: Datenbank `ok` (18.7), Worker `pong`; `/static/THIRD-PARTY-NOTICES.txt` 200 |
+| `exec api python manage.py check_docling` | `OK: docling-serve 1.38.2 at http://docling:5001`, Exit 0 |
+| `exec api python manage.py check_llm` | `OK: http://host.docker.internal:11434/v1/models is reachable, 0 model(s) reported`, Exit 0 |
+| Backend: `--profile dev build …`, `up … db valkey worker api`, `ruff check .`, `ruff format --check .`, `mypy .`, `pytest`, `pytest -m worker`, `makemigrations --check --dry-run`, `sh scripts/check-licenses.sh` | alle Exit 0; `110 passed, 4 deselected`; `4 passed, 110 deselected`; 53 Pakete, `License check passed.` |
+| Schema aktuell (`spectacular --file /out/schema.yml`, `git diff --exit-code -- web/openapi`) | erster Lauf in Git Bash **Exit 1** (`FileNotFoundError: 'C:/Program Files/Git/out/schema.yml'`, Pfadumschreibung von Git Bash). Mit `MSYS_NO_PATHCONV=1` Exit 0, Datei neu geschrieben, `git diff` Exit 0. README um diesen Hinweis ergänzt |
+| Oberfläche mit `-f deploy/compose/compose.web.yaml`: `build web-dev`, `npm ci`, `lint`, `typecheck`, `test`, `build`, `licenses`, `api:generate`, danach `git diff --exit-code -- web/openapi web/src/api` | alle Exit 0; `Tests 10 passed (10)`; 394 Pakete, `License check passed.` |
+| Browser-Test: `--profile e2e pull e2e`, `--profile dev run --rm web-dev npm ci`, `up … db valkey worker api`, `--profile e2e run --rm e2e` | alle Exit 0; `1 passed` |
+| Testfabrik: alle neun Befehle aus `ci.yml` | alle Exit 0; `Ran 215 tests … OK (skipped=1)`; Manifeste `OK (31 entries)` bzw. `OK (10 entries)`, beide `already in canonical form` |
+| `-f deploy/compose/compose.tools.yaml run --rm gitleaks-dir` | `no leaks found`, Exit 0 |
+| `--profile dev --profile e2e down -v` | Exit 0 |
+
+Nicht ausgeführt: `gitleaks-git` (im Arbeitsverzeichnis ist `.git` nur eine Verweisdatei; die README sagt, dass es einen normalen Klon braucht), `docker compose down` ohne `-v` (nur in der README erwähnt), die PowerShell-Variante `Copy-Item .env.example .env` (`.env` lag schon vor) und `docker compose -f deploy/compose/compose.web.yaml …` ohne `-p` (dass Compose dann das Projekt `compose` nimmt, ist nur mit `config` belegt: `name: compose`).
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-a260e393c6aec0bce`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-a260e393c6aec0bce` (relativ zum Projektordner)
+
+### Abweichungen und Hinweise
+
+- **Wort „Desktop“:** Die Leitstelle nannte als Voraussetzung „Docker Desktop/Engine“; Kriterium 5 verbietet das Wort. Die README sagt „Docker with the Compose plugin“ und erwähnt nur „Docker with WSL 2 on Windows“ als Entwicklungsrechner.
+- **Pfade, die nicht in `git ls-files` stehen (Kriterium 3):** `.env` (legt der Nutzer an), `testfactory/extern/` (ignoriert, nur lokal), `/static/THIRD-PARTY-NOTICES.txt` (entsteht beim Bau des Images, URL-Pfad), `deploy/helm` und `testfactory/generated/` (ausdrücklich als „not present yet“ genannt, weil Abschnitt 6 der Startunterlage sie vorsieht). Kurzformen wie `celery.py` stehen in der Tabelle unter `backend/twox/config/`.
+- **Zwei `TWOX_`-Variablen fehlen in `.env.example`:** `TWOX_WEB_DIST_DIR` (nur beim Bau, `backend/Dockerfile`) und `TWOX_E2E_API_URL` (`compose.web.yaml`). Wegen Kriterium 2 nennt `docs/ARCHITECTURE.md` sie nicht beim Namen, sondern beschreibt sie mit Verweis auf die Dateien.
+- **Entwicklerbefehle der Oberfläche** stehen wie in `ci.yml` mit `-f deploy/compose/compose.web.yaml`. Ohne `-p` läuft das als eigenes Projekt `compose` mit eigenem `node_modules`-Volume; die README sagt das. Der Browser-Test nutzt das Hauptprojekt.
+- **Schema-Prüfung in Git Bash** braucht `MSYS_NO_PATHCONV=1` (siehe oben). In `ci.yml` ist nichts zu ändern (Linux). Dieselbe Falle betrifft vermutlich den Befehl in `web/openapi/README.md` (`$(pwd)/web/openapi:/out`); dort nicht geändert, weil außerhalb des Bereichs.
+- **Hinweis für M6:** `.env.example` ist eine Entwicklungsvorlage (`TWOX_DEBUG=true`, Entwicklungs-Kennwörter). Für „Installation in 10 Minuten“ braucht es eine eigene Vorlage ohne Debug und mit Aufforderung zu eigenen Geheimnissen.
+- **Gelesen:** alle Kurzberichte 001–014 vollständig; von 101–114 nur 109 und 114 vollständig, die übrigen nicht im Einzelnen (die Testfabrik ist über `testfactory/README.md` beschrieben, auf die verwiesen wird).
+- Lokal liegen noch die Images `twox-015-api`, `-worker`, `-migrate`, `-backend-dev`, `-web-dev`; die lokale `.env` (ignoriert) hat `TWOX_API_PORT=18015`.
