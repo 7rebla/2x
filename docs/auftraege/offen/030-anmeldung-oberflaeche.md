@@ -84,6 +84,8 @@ Alle Befehle laufen im Wurzelverzeichnis des Arbeitsverzeichnisses, in der Form 
 
 ## Vorgaben und Hinweise
 
+- **Nachtrag der Leitstelle (aus der Prüfung von 027):** `web/e2e/fixtures.ts` meldet heute jeden Test einzeln an; allauth erlaubt 30 Anmeldungen je Minute und IP. Stelle in diesem Auftrag auf eine Anmeldung je Worker um (`storageState`, z. B. über ein Setup-Projekt), damit die Tests aus 032–037 nicht sporadisch an der Grenze scheitern. Der Test mit falschem Kennwort darf das gemeinsame Testkonto nicht sperren (5 Fehlversuche je 5 Minuten und Konto): nimm dafür einen nicht existierenden Benutzernamen oder höchstens einen Fehlversuch.
+
 Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“); 016, 020, 021, 023 und 027 sind nach `main` zusammengeführt; Antwort von a7 auf Auftrag 028, Frage 3 (Sichtbarkeit von `/audit`).
 
 - Welle 5, parallel zu 028 und 029 (Backend).
