@@ -1,6 +1,6 @@
 # Auftrag 030 – Anmeldung in der Oberfläche, Rollen in der Navigation, Admin über dieselbe Anmeldung
 
-Meilenstein: M1 · Freigabestufe: C · Status: offen
+Meilenstein: M1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -109,7 +109,67 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 Anmeldeverfahren und Admin: siehe Auftrag 016, Fragen 1 und 3, sowie Auftrag 020.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Alle Kriterien 0–7 erfüllt; alle Läufe am 21.11.2026 im Container (Docker Engine 29.9.3, Compose v5.7.0). Keine offene Frage an a7. Keine neue Abhängigkeit.
+
+### Was wurde gebaut?
+
+**Backend (Admin):**
+- `backend/twox/config/admin_site.py`: `TwoxAdminSite.login` ersetzt Djangos Anmeldeformular und meldet nie jemanden an.
+  - Anonym (jede Methode, auch POST an das alte Formular): 302 auf `/login?next=<Admin-Pfad>`.
+  - Angemeldeter Superuser: weiter zum Admin-Pfad.
+  - Angemeldet ohne Zugang (z. B. nur `is_staff`): 403 statt Umleitung, sonst entstünde eine Anmelde-Schleife (`/admin/` → `/admin/login/` → `/login` → zurück).
+  - `next` wird nur übernommen, wenn es ein Pfad dieses Hosts unter `/admin/` ist; sonst `/admin/`. `never_cache` und `login_not_required` wie bei Djangos Original.
+- `backend/tests/config/test_admin.py`: 15 neue Fälle. `/admin/login/` leitet auf `/login?next=%2Fadmin%2F` um; ein Admin-Unterpfad landet über zwei Umleitungen dort; fremde und ungültige `next`-Werte (`https://…`, `//…`, `/api/…`, `/login`, `javascript:`, leer) werden zu `/admin/`; Admin-Pfad mit Query bleibt erhalten; POST mit richtigem Superuser-Kennwort an das alte Formular meldet niemanden an (mit und ohne CSRF-Prüfung); ein über `POST /_allauth/browser/v1/auth/login` angemeldeter Superuser erreicht `/admin/` (200); angemeldeter Superuser an `/admin/login/` geht weiter; angemeldet ohne Zugang → genau eine Umleitung, dann 403, Sitzung bleibt.
+
+**Oberfläche (`web/src/`):**
+- `api/client.ts` (neu, Client-Konfiguration): Interceptoren des erzeugten Clients. Schreibende Methoden senden `X-CSRFToken` aus dem Cookie `csrftoken`, alle Anfragen `Accept-Language` mit der gezeigten Sprache. Jede 403-Antwort (außer von `/api/v1/me/`) wird an Abonnenten gemeldet (`onForbidden`).
+- `api/auth.ts` (neu): typisierte Hülle um allauth, `signIn` (`POST …/auth/login`) und `signOut` (`DELETE …/auth/session`), mit denselben Kopfzeilen. Ergebnis als Union: angemeldet (200, auch 409), falsche Daten (400 `username_password_mismatch`), Kontosperre (400 `too_many_login_attempts`), Ratenbegrenzung (429), sonstige 400, abgelaufene Seite (403 CSRF), anderer Status, keine Antwort. Abmelden gilt bei 401 (so antwortet allauth) als erfolgreich.
+- `session.ts` (neu, Anmeldezustand): eine TanStack-Abfrage auf `GET /api/v1/me/`; 403 dort heißt „abgemeldet“ (Daten `null`). `watchForbidden` (in `App.tsx` eingehängt) fragt nach jeder 403 einer anderen Abfrage `me` erneut: 403 → abgemeldet → Umleitung zur Anmeldung; 200 → nur Hinweis. Dazu `useSession()`, `useRole()` (`role`, `canRead`, `canManage`), `hasRole()` („manage“ schließt „read“ ein), `safeNextPath()` (nur Pfade dieser Anwendung; `https://…`, `//…`, `/\…`, `/api/`, `/static/`, `/_allauth/`, `/accounts/` und `/login` werden zu `/`), `loginPathFor()`, `isServerPage()`.
+- `components/SessionGuards.tsx` (neu): `RequireSession` (ohne Sitzung `<Navigate>` nach `/login?next=<Adresse>`; bei `/` ohne `next`), `RequireRole` und `NoPermission` (Hinweis „keine Berechtigung“, keine Umleitung, keine Abmeldung).
+- `routes.tsx`: `/login` außerhalb, alle übrigen Seiten in `RequireSession`; jede Seite in `RequireRole` mit der Rolle aus `navigation.ts` (Seiten ohne Eintrag: `read`).
+- `navigation.ts`: `requires` je Eintrag; `/` und `/selftest` `read`, `/import` und `/audit` `manage` (Frage 3 zu 028 und E-43: nur Verwalter lesen das Protokoll). `visibleNavigation(role)` und `requiredRole(path)`. Seiten-Aufträge 032–036 müssen hier nichts ändern.
+- `components/Layout.tsx`: Navigation nur mit Sitzung und nur die Einträge der Rolle; Benutzerbereich über `components/UserMenu.tsx` (neu: Benutzername, übersetzte Rolle, „Abmelden“, Fehlermeldung bei gescheiterter Abmeldung). Konto ohne Rolle: Hinweis über der Seite, keine Navigation.
+- `pages/LoginPage.tsx`: ersetzt den Platzhalter. Formular mit Benutzername und Kennwort (`autocomplete` gesetzt), eigene Fehlertexte je Ergebnis (auch beide Sperr-Fälle verständlich: Konto gesperrt bzw. zu viele Versuche von diesem Rechner), Kennwortfeld wird nach einem Fehler geleert. Nach der Anmeldung wird `me` neu geladen und zu `next` gewechselt; ein bereits angemeldeter Besucher von `/login` geht sofort weiter. `next` unter `/admin/` öffnet die Seite per Seitenladen (`browserLocation.ts`, neu, im Test ersetzbar).
+- `components/ErrorMessage.tsx` und `pages/SelftestPage.tsx`: Eine 403 zeigt „keine Berechtigung“ statt „HTTP-Status 403“ (bei abgelaufener Sitzung erscheint die Seite gar nicht erst, weil zur Anmeldung umgeleitet wird).
+- `locales/{de,en}/auth.json`: alle Texte der Anmeldung, Rollen, Hinweise.
+- `main.tsx`, `test/renderApp.tsx`: `installClientConfig()`.
+- `pages/README.md`: Abschnitt „Sign-in and roles“ mit Beispiel für `useRole()`.
+
+**Vitest** (151 Fälle, davon neu bzw. neu gefasst): `api/client.test.ts` (CSRF-Cookie lesen; `X-CSRFToken` bei POST/PATCH/DELETE, nicht bei GET; `Accept-Language` folgt dem Sprachwechsel; 403-Meldung, nicht für `me`; allauth-Aufrufe mit CSRF und Sprache; Abbildung aller Antwortcodes), `pages/LoginPage.test.tsx` (Formular, Fehleranzeige je Fall auch auf Deutsch, leere Felder senden nichts, Rückkehr zu `next` mit Query, fremde `next`-Werte → `/`, Admin per Seitenladen, angemeldeter Besucher geht weiter), `session.test.tsx` (Umleitung ohne Anmeldung mit `next` für fünf Adressen; keine Umleitung bei 403 mit gültiger Sitzung, `me` zweimal gefragt, keine Abmeldung; abgelaufene Sitzung → Anmeldung; Navigation je Rolle; Leser auf `/import` und `/audit` → Hinweis; Konto ohne Rolle (de/en); Abmelden mit CSRF → `/login`; gescheitertes Abmelden; `useRole`, `hasRole`, `safeNextPath` mit 17 Fällen). `routes.test.tsx`, `App.test.tsx` und `errors.test.tsx` an die Anmeldung angepasst (Hilfe `test/fakeApi.ts`, neu).
+
+**Playwright** (`web/e2e/`):
+- `fixtures.ts` (Nachtrag der Leitstelle): Anmeldung einmal je Worker (`workerStorageState`, Worker-Fixture), jeder Test startet mit diesem `storageState`. Keine Dateien, kein Setup-Projekt nötig. Specs ohne Sitzung setzen `storageState: { cookies: [], origins: [] }`. Im Log eines Laufs: 1 Anmeldung des Workers + 4 aus `login.spec.ts` statt bisher 1 je Test.
+- `login.spec.ts` (neu, ohne geteilte Sitzung): falsches Kennwort mit nicht existierendem Benutzernamen `e2e-nobody-<suffix>` (genau ein Fehlversuch, das Testkonto kann nicht gesperrt werden) zeigt die Meldung und setzt kein `sessionid`; Anmeldung über die Seite zeigt Benutzername und Rolle; Abmelden führt zu `/login` und beendet die Sitzung (danach führt `/selftest` wieder zur Anmeldung); `/selftest` ohne Anmeldung → `/login?next=%2Fselftest` → nach der Anmeldung zurück mit `pong`. Die Abmelde-Tests melden sich selbst an und berühren die geteilte Sitzung nicht.
+- `fixtures.spec.ts`: öffnet zuerst `/` (die Seite startet jetzt leer) und prüft den Benutzernamen im Kopf.
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-030`, `W` = `docker compose -p twox-030-web -f deploy/compose/compose.web.yaml`; `.env` aus `.env.example` mit `TWOX_API_PORT=18030`. Die Testumgebung „2x“ und „twox-leit“ wurden nicht berührt.
+
+| AK | Ergebnis |
+| --- | --- |
+| 0 | erfüllt: `docker version` (Server 29.9.3), `docker compose version` (v5.7.0), Exit 0 |
+| 1 | erfüllt: Bau `migrate api worker backend-dev web-dev` und `up -d --wait` je Exit 0, alle Dienste healthy |
+| 2 | erfüllt: `http://localhost:8000/login?next=%2Fadmin%2F` |
+| 3 | erfüllt: `All checks passed!`; `103 files already formatted` (Exit 0); `Success: no issues found in 103 source files` |
+| 4 | erfüllt: `725 passed, 4 deselected`, 0 fehlgeschlagen, 0 übersprungen; `pytest -m worker`: `4 passed` |
+| 5 | erfüllt: `build web-dev`, `npm ci`, `lint`, `typecheck`, `test` (9 Dateien, 151 Fälle), `build` (`index-….js 439.05 kB`, gzip 137.77 kB), `licenses` (`License check passed.`), `api:generate` je Exit 0; danach `git diff --exit-code -- web/openapi web/src/api` ohne Unterschied |
+| 6 | erfüllt: `pull e2e`, `npm ci`, „Create test account“ (`Created …`, beim zweiten Lauf `Updated …`) je Exit 0; `D --profile e2e run --rm e2e`: `12 passed`, darunter die vier Fälle aus `login.spec.ts`, Exit 0 (zweimal gelaufen, der zweite Lauf nach dem letzten Commit und Neubau) |
+| 7 | erfüllt: `D --profile dev --profile e2e down -v` und `W --profile dev down -v` Exit 0; danach kein Container und kein Volume mit `twox-030` |
+
+Zusätzlich wie im CI-Job `backend`: `makemigrations --check --dry-run` (`No changes detected`), Lizenzprüfung Python (`License check passed.`), OpenAPI-Schema neu erzeugt ohne Unterschied. Geheimnissuche `gitleaks-dir`: `no leaks found`, Exit 0.
+
+### Zweig und Arbeitsverzeichnis
+
+Zweig `worktree-agent-a92bb24ee2559d8d2`, Arbeitsverzeichnis `.claude/worktrees/agent-a92bb24ee2559d8d2`. Nicht gepusht, nicht zusammengeführt.
+
+### Abweichungen und Hinweise
+
+1. **Mehr Dateien als genannt, alle in `web/src/`:** `session.ts`, `browserLocation.ts`, `components/SessionGuards.tsx`, `components/UserMenu.tsx`, `test/fakeApi.ts` (neu); `App.tsx`, `components/ErrorMessage.tsx`, `pages/SelftestPage.tsx` (403 als „keine Berechtigung“), `pages/README.md`. In `web/e2e/` zusätzlich `fixtures.spec.ts` angepasst.
+2. **Admin für Angemeldete ohne Zugang: 403** statt Djangos Formular mit Hinweis. Eine Umleitung auf `/login` hätte eine Schleife erzeugt (die Seite schickt Angemeldete sofort zu `next` zurück).
+3. **Abmelden führt zu `/login` ohne `next`.** Eine abgelaufene Sitzung führt dagegen zu `/login?next=<Seite>`.
+4. **Konto ohne Rolle** sieht keine Navigation und auf jeder Seite „keine Berechtigung“ (alle Seiten verlangen mindestens `read`, wie die API nach E-40); dazu der Hinweis über der Seite.
+5. **Fehlertexte der Anmeldung** stammen aus `auth.json` je Fehlercode von allauth; die (englische) Meldung von allauth selbst wird nicht gezeigt.
+6. **Nicht geändert:** `README.md` (Abschnitt „Browser test“ stimmt weiterhin; der Hinweis auf die Anmeldung je Worker könnte mit 038 dazukommen). Der Admin bietet Superusern weiter `/admin/password_change/` an; das ist kein Anmeldeweg und entspricht Frage 1 (a) („Superuser setzen Kennwörter im Admin“).
+7. Die Sitzungsabfrage gilt 60 Sekunden als frisch. Eine abgelaufene Sitzung fällt bei der nächsten 403 einer Abfrage auf, sonst beim nächsten Fensterfokus nach Ablauf der 60 Sekunden; ein reiner Seitenwechsel fragt `me` nicht neu.
