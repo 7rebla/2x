@@ -1,6 +1,6 @@
 # Auftrag 036 – Oberfläche: Dateien je Gerät hochladen, Versionen, herunterladen
 
-Meilenstein: M1 · Freigabestufe: B · Status: offen
+Meilenstein: M1 · Freigabestufe: B · Status: zur Prüfung
 
 ## Ziel
 
@@ -79,7 +79,58 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 Keine.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Alle Kriterien 0–5 erfüllt; alle Läufe am 22.11.2026 im Container (Docker Engine 29.9.3, Compose v5.7.0) auf dem committeten Stand. Keine neue Abhängigkeit, Schema und Client unverändert, Backend unverändert. Keine offene Frage an a7.
+
+### Was wurde gebaut?
+
+- **Dateien auf der Geräteseite** `web/src/components/DeviceFiles.tsx` (Platzhalter aus 032 ersetzt, gleicher Name und gleiche Props): Tabelle mit Titel (Link auf `/documents/<id>`), Art (übersetzt), neuester Version mit Nummer, Datum, Größe, Benutzer („System“ bei `null`), Prüfsumme gekürzt (12 Zeichen, `<details>`: ein Klick zeigt sie vollständig) und Download-Link. Hinweis bei leerer Liste; Fehler der API im Dateibereich über `ErrorMessage`. Für `manage` darunter das Formular „Neue Datei hochladen“.
+- **Dateiseite** `web/src/pages/DocumentPage.tsx` (`/documents/:documentId`, Platzhalter ersetzt): Titel als Überschrift, Gerät als Link (Name und Kennung, nachgeladen), Art, angelegt am/von; alle Versionen **neueste zuerst** mit Nummer, Datum, Größe, Benutzer, Original-Dateiname, Prüfsumme und Download-Link je Version; für `manage` das Formular „Neue Version hochladen“ und das Protokoll der Datei über `<AuditTrail objectType="files.document" objectId={id} />`. Ungültige Id (ohne Anfrage) und 404 zeigen `NotFound`, andere Fehler `ErrorMessage` unter der Überschrift „Datei“.
+- **Bausteine** unter `web/src/components/files/`:
+  - `format.ts`: Größe über `Intl.NumberFormat` mit Einheiten (dezimal, 1 kB = 1000 Byte, passend zur Grenze 200 000 000 Byte = 200 MB), Datum über `Intl.DateTimeFormat`, gekürzte Prüfsumme, Adressen, Id-Prüfung, Grenze aus der 413-Meldung.
+  - `parts.tsx`: Prüfsumme, Größe, Zeitpunkt, Benutzer, Art, Download-Link (normaler Link auf `/api/v1/document-versions/<id>/download/`, die API setzt `Content-Disposition: attachment`).
+  - `upload.ts`: Upload über den erzeugten Client (`deviceDocumentsCreate`, `documentVersionCreate`, `multipart/form-data`, CSRF über `api/client.ts`) mit eigener fetch-Hülle wie in `pages/structure/save.ts`, die eine Kopie von 400, 409 und 413 behält. Ergebnis als Union: hochgeladen (mit `duplicates`), 409 mit `existing_version`, 413 mit Grenze, 400 mit Feldfehlern (`parseFieldErrors` aus `save.ts` wiederverwendet), sonst Fehler. Leerer Titel wird nicht gesendet (die API nimmt den Dateinamen).
+  - `UploadForm.tsx`: `NewDocumentForm` (Datei, Titel, Art) und `NewVersionForm` (Datei), React-19-Formularaktionen ohne Formular-Bibliothek. Meldungen: „Als Version N hochgeladen.“ mit Dubletten-Hinweis („Derselbe Inhalt liegt bereits an anderer Stelle:“, je Fundstelle Link auf Gerät und Datei, Versionsnummer); 409 „Inhalt gleicht Version N. Es wurde keine neue Version angelegt.“ mit Datum und Download-Link der Version; 413 „Die Datei ist größer als die Obergrenze von 200 MB.“ (Grenze aus der Meldung der API, sonst Text ohne Zahl); 400 mit Feldfehlern am Feld und übrigen Meldungen oben; fehlende Datei wird vor dem Senden gemeldet. Der Titel bleibt nach einem Fehler stehen, nach Erfolg sind die Felder leer und die Daten neu geladen (`reloadAfterSave`). Während des Hochladens „Wird hochgeladen …“, Knopf gesperrt; keine Fortschrittsanzeige (der Client meldet keinen Fortschritt).
+  - **Konfigurationen (E-37/E-42):** Das Auswahlfeld „Art“ zeigt „Konfiguration (noch nicht möglich)“ gesperrt; darunter der Hinweis, dass Konfigurationen Zugangsdaten enthalten können, erst ab M5 geschwärzt werden und auch nicht als Dokument hochgeladen werden sollen. Weist die API eine Konfiguration ab (400 an `kind`, bei einer neuen Version eines Konfigurations-Dokuments unter `non_field_errors`), erscheint zusätzlich „Konfigurationsdateien werden noch nicht angenommen (das Schwärzen von Zugangsdaten folgt mit Meilenstein M5).“
+- Dateinamen, Titel, Gerätenamen und Benutzernamen werden nur als Text gerendert, nie über die Interpolation von i18next (getestet mit HTML im Titel).
+- **Texte** `web/src/locales/{de,en}/files.json`, gleiche Schlüssel.
+- **Doku** `web/src/pages/README.md`: Abschnitt „Files“, Verweis auf der Geräteseite aktualisiert.
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-036`, `W` = `docker compose -p twox-036-web -f deploy/compose/compose.web.yaml`; `.env` aus `.env.example` (ohne BOM) mit `TWOX_API_PORT=18036`. Die Umgebungen „2x“ und „twox-leit“ wurden nicht berührt.
+
+- **Vitest (neu, 66 Fälle):**
+  - `components/files/format.test.ts` (29): Größen in Englisch und Deutsch, Prüfsumme, Adressen, Id-Prüfung, Grenze aus der Meldung.
+  - `components/files/upload.test.ts` (10): Multipart mit Datei, Titel, Art und `X-CSRFToken`; leerer Titel entfällt; 400, 413 mit und ohne lesbare Meldung, 403, keine Antwort; neue Version nur mit Datei; 409 mit `existing_version`, 409 ohne.
+  - `components/DeviceFiles.test.tsx` (15): Liste mit allen Spalten, Prüfsumme gekürzt und aufgeklappt, leere Liste, HTML im Titel als Text, API-Fehler, Deutsch; Leser ohne Formular, Verwalter mit gesperrter Konfiguration und Hinweis; Upload-Ablauf mit Neuladen und gesendetem Formular, Dubletten mit Links, 413 mit Grenze (Titel bleibt), abgewiesene Konfiguration, Fehler ohne Feld, fehlende Datei ohne Anfrage, 403.
+  - `pages/DocumentPage.test.tsx` (12): Versionen neueste zuerst mit Download-Links, Gerät als Link, 404, ungültige Id ohne Anfrage, 500, Deutsch; Leser ohne Formular und ohne Protokoll-Anfrage, Verwalter mit `AuditTrail` (`object_type=files.document`, `object_id`); neue Version, 409 (Englisch und Deutsch), 413, abgewiesene neue Version einer Konfiguration.
+  - Testhilfe `components/files/testData.ts`: gefälschte Datei-API mit Speicher und 409 bei gleichem Inhalt, Namen `Test …`.
+- **Playwright** `web/e2e/files.spec.ts` (1 Fall, als `manage` über `fixtures.ts`): Standort, Bereich, Anlage, Gerät per API (`testName()`, `testIp(30)`); Geräteseite leer; Textdatei mit Inhalt je Lauf (`uniqueSuffix()`) als Version 1 über das Formular, Zeile mit Titel, Art, Version, Benutzer und Prüfsumme; Dateiseite über den Link; geänderter Inhalt als Version 2; beide Versionen sichtbar (2, 1); Version 1 per Klick heruntergeladen (Download-Ereignis, Dateiname, kein Fehler) und der Inhalt über dieselbe Adresse mit Sitzung geprüft (200, `attachment`, gleicher Text); dieselbe Datei erneut → 409-Meldung, weiter zwei Versionen; Neuladen der Dateiseite (Direktaufruf) und ein Protokolleintrag „Created“; keine Konsolenfehler außer der erwarteten 409.
+
+| AK | Ergebnis |
+| --- | --- |
+| 0 | erfüllt: `docker version` (Server 29.9.3), `docker compose version` (v5.7.0), Exit 0 |
+| 1 | erfüllt: `W --profile dev build web-dev`, `npm ci` („added 425 packages“); `lint`, `typecheck` ohne Meldung; `test`: 19 Dateien, 322 Fälle bestanden; `build`: `index-….js 499.84 kB` (gzip 151.61 kB); `licenses`: „License check passed.“ – je Exit 0 |
+| 2 | erfüllt: `npm run api:generate` Exit 0; `git diff --exit-code -- web/openapi web/src/api` Exit 0, `git status --porcelain --untracked-files=all` leer |
+| 3 | erfüllt: Bau, `pull e2e`, `npm ci`, `up -d --wait` (alle healthy), „Create test account“ wie in `ci.yml` („Created account …“), `D --profile e2e run --rm e2e`: „16 passed“, Exit 0 |
+| 4 | erfüllt: dieselbe Folge ohne `down -v`: „Updated account …“, „16 passed“, Exit 0 |
+| 5 | erfüllt: `D --profile dev --profile e2e down -v` und `W --profile dev down -v` Exit 0; danach kein Container, Volume oder Netz mit `twox-036` |
+
+### Zweig und Arbeitsverzeichnis
+
+Zweig `worktree-agent-a58f626d1ceee5865`, Arbeitsverzeichnis `.claude/worktrees/agent-a58f626d1ceee5865`. Nicht gepusht, nicht zusammengeführt.
+
+### Abweichungen und Hinweise
+
+1. **Zwei bestehende Tests angepasst**, weil der Platzhalter der Dateiseite ersetzt ist:
+   - `web/src/routes.test.tsx`: `/documents/42` aus der Platzhalter-Tabelle entfernt; der Parametertest öffnet `/documents/7` mit gefälschter Datei-API und prüft den Titel.
+   - `web/e2e/navigation.spec.ts`: „an address with a parameter opens directly“ öffnet jetzt `/documents/2147483647` (eine Datei, die kein Test anlegt): Django liefert die Seite (200), die Seite fragt die API (404) und zeigt `NotFound` im Rahmen. Den Direktaufruf einer echten Dateiseite prüft `files.spec.ts` (Neuladen), den einer Geräteseite `assets.spec.ts`. Die erwartete 404-Meldung der Konsole wird dort herausgefiltert.
+2. **`api/errors.ts` nicht geändert.** Statt eines Felds `body` in `ApiError` liest `files/upload.ts` die Antworten 400/409/413 über eine eigene fetch-Hülle (Muster aus `save.ts`). `parseFieldErrors` und `reloadAfterSave` werden aus `pages/structure/save.ts` importiert (Komponente importiert aus `pages/`; bei einem späteren Umbau wäre ein gemeinsamer Ort wie `api/` besser).
+3. **Die Grenze der 413** steht nicht in einer Einstellung der Oberfläche; sie wird aus der Meldung der API gelesen (einzige Zahl darin, `%d` ohne Tausendertrennung). Fehlt sie, erscheint der Text ohne Zahl.
+4. **Protokoll auf der Dateiseite** zeigt nur die Einträge des Dokuments (`files.document`). Neue Versionen sind eigene Objekte (`files.documentversion`) und erscheinen dort nicht; `AuditTrail` filtert auf genau eine Objektart. Das Protokoll sehen nur Verwalter (die API erlaubt es nur ihnen, E-43); Leser bekommen den Bereich gar nicht, statt eines „keine Berechtigung“.
+5. **Neue Versionen** lädt man auf der Dateiseite hoch, nicht in der Liste der Geräteseite.
+6. **Test-Technik:** Unter jsdom sendet Nodes `Request` eine jsdom-Datei als leeren Teil „blob“. Die Vitest-Fälle nutzen deshalb `textFile()` und `fakeUploadApi()` (in `files/testData.ts`), die Formulare als Multipart-Text senden; der Code der Anwendung ist derselbe wie im Browser. Aus demselben Grund merkt sich das Formular die gewählte Datei zusätzlich aus dem `change`-Ereignis (Rückfall, wenn `FormData` sie nicht enthält). `web/src/test/fakeApi.ts` ist unverändert.
+7. **Ungenutzte Schlüssel:** `assets.json` enthält weiter `files.heading` und `files.placeholder` aus 032; die Texte des Bereichs kommen jetzt aus `files.json`. `assets.json` gehört nicht zu diesem Auftrag und blieb unverändert; die Schlüssel können bei Gelegenheit entfallen.
+8. **Bündelgröße:** `index-….js` liegt mit 499.84 kB knapp unter der Warnschwelle von Vite (500 kB); der nächste Auftrag mit Oberfläche wird sie vermutlich überschreiten (nur eine Warnung, kein Fehler).
+9. Der Auftrag nennt `uniqueSuffix()` für die Namen; verwendet ist `testName()` (nutzt `uniqueSuffix()`, Muster `e2e-<art>-<suffix>`), `uniqueSuffix()` direkt für den Dateiinhalt je Lauf.
