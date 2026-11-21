@@ -1,1 +1,75 @@
-{}
+{
+  "structure": {
+    "intro": "Standorte, Bereiche, Anlagen und Geräte mit der Anzahl der Geräte.",
+    "treeLabel": "Standorte, Bereiche, Anlagen und Geräte",
+    "empty": "Es gibt noch keinen Standort.",
+    "noMatch": "Nichts passt zur Suche.",
+    "deviceCount_one": "{{count}} Gerät",
+    "deviceCount_other": "{{count}} Geräte"
+  },
+  "search": {
+    "label": "Suche",
+    "placeholder": "Name, Kennung oder IP-Adresse"
+  },
+  "kind": {
+    "site": "Standort",
+    "area": "Bereich",
+    "plant": "Anlage",
+    "device": "Gerät"
+  },
+  "actions": {
+    "newSite": "Neuer Standort",
+    "newArea": "Neuer Bereich",
+    "newPlant": "Neue Anlage",
+    "newDevice": "Neues Gerät",
+    "newAreaIn": "Neuer Bereich in {{name}}",
+    "newPlantIn": "Neue Anlage in {{name}}",
+    "newDeviceIn": "Neues Gerät in {{name}}",
+    "edit": "Bearbeiten",
+    "editSite": "Standort {{name}} bearbeiten",
+    "editArea": "Bereich {{name}} bearbeiten",
+    "editPlant": "Anlage {{name}} bearbeiten",
+    "editDevice": "Gerät {{name}} bearbeiten",
+    "save": "Speichern",
+    "saving": "Speichert …",
+    "cancel": "Abbrechen"
+  },
+  "form": {
+    "createSite": "Neuer Standort",
+    "editSite": "Standort bearbeiten",
+    "createArea": "Neuer Bereich",
+    "editArea": "Bereich bearbeiten",
+    "createPlant": "Neue Anlage",
+    "editPlant": "Anlage bearbeiten",
+    "createDevice": "Neues Gerät",
+    "editDevice": "Gerät bearbeiten",
+    "choose": "Bitte wählen",
+    "invalid": "Der Eintrag wurde nicht gespeichert. Bitte die markierten Felder prüfen.",
+    "otherErrors": "Meldungen der API"
+  },
+  "fields": {
+    "site": "Standort",
+    "area": "Bereich",
+    "plant": "Anlage",
+    "name": "Name",
+    "key": "Kennung",
+    "notes": "Notizen",
+    "manufacturer": "Hersteller",
+    "model": "Modell",
+    "software_version": "Softwarestand",
+    "ip_address": "IP-Adresse",
+    "address_source": "Herkunft der Adresse",
+    "protocols": "Protokolle",
+    "created_at": "Angelegt",
+    "updated_at": "Zuletzt geändert"
+  },
+  "device": {
+    "breadcrumb": "Ort des Geräts",
+    "fieldsLabel": "Angaben zum Gerät",
+    "notSet": "–"
+  },
+  "files": {
+    "heading": "Dateien",
+    "placeholder": "Die Dateien dieses Geräts folgen in einer späteren Version."
+  }
+}
