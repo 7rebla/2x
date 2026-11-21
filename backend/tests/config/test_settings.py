@@ -38,8 +38,13 @@ print(json.dumps({
 """
 
 
-def run_python(code: str, overrides: dict[str, str | None]) -> subprocess.CompletedProcess[str]:
-    """Run ``code`` in a fresh interpreter; a ``None`` override removes the variable."""
+def run_python(
+    code: str, overrides: dict[str, str | None], args: list[str] | None = None
+) -> subprocess.CompletedProcess[str]:
+    """Run ``code`` with ``args`` in a fresh interpreter.
+
+    A ``None`` override removes the variable.
+    """
     env = {key: value for key, value in os.environ.items() if not key.startswith("TWOX_")}
     base: dict[str, str | None] = {
         "TWOX_SECRET_KEY": "test-only",
@@ -52,7 +57,7 @@ def run_python(code: str, overrides: dict[str, str | None]) -> subprocess.Comple
             env[key] = value
     env["DJANGO_SETTINGS_MODULE"] = "twox.config.settings"
     return subprocess.run(
-        [sys.executable, "-c", code],
+        [sys.executable, "-c", code, *(args or [])],
         cwd=BACKEND_ROOT,
         env=env,
         capture_output=True,

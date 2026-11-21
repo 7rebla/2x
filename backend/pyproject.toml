@@ -10,6 +10,7 @@ dependencies = [
     "drf-spectacular>=0.30.0,<0.31",
     "psycopg[binary]>=3.3.9,<3.4",
     "uvicorn>=0.54.0,<0.55",
+    "whitenoise>=6.12.0,<6.13",
 ]
 
 [dependency-groups]
@@ -73,3 +74,8 @@ markers = [
     "worker: needs a running Celery worker (run with `pytest -m worker`)",
 ]
 xfail_strict = true
+filterwarnings = [
+    # backend-dev has no collected web UI (STATIC_ROOT is created at image
+    # build time only); WhiteNoise warns once per test client about it.
+    "ignore:No directory at.*staticfiles:UserWarning",
+]
