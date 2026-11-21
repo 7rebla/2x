@@ -1,6 +1,6 @@
 # Auftrag 108 – Frei lizenzierte Testunterlagen in testdata/klein
 
-Meilenstein: T1 · Freigabestufe: C · Status: offen
+Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -83,7 +83,40 @@ In den Befehlen steht `TF` für `docker compose -f deploy/compose/testfactory.ya
    - Empfehlung: A; erst wenn deutsches Markdown-Material für die Tests wirklich fehlt, B.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung** (21.11.2026)
+
+- **Was wurde gebaut?**
+  - `testdata/klein/opnsense/source/`: vier OPNsense-Seiten, bytegleich mit den Rohdateien am Commit `953dd3d1d1dd2739a18d0b6df5c936146153aff6` (`https://raw.githubusercontent.com/opnsense/docs/<commit>/source/manual/<datei>`), zusammen 11.549 Byte:
+    - `backups.rst` 3.773 B, SHA-256 `b64703c3b6c2e56d11f03f0e6b5ae22c80a523abee8e0debf76a2e5d89bd3f5b`
+    - `updates.rst` 2.532 B, `ea04aa1eba1b77db4cbfe329e3cad99d5ccc91b6bbd4aaaf1c08288bca8c18ed`
+    - `sftp-backup.rst` 3.816 B, `5acbb67270744d9fa189df452625693e924711745b80ef1f0e2280a23b3992ea`
+    - `firewall_groups.rst` 1.428 B, `1b48aa64ce5e824b83188d7ac86d357414a4c3188a189bedc7c979c9a1aa4bc5`
+  - `testdata/klein/opnsense/LICENSE` 2.072 B, `4ffb5112f4d0d9eb0fb07bbe8d5740420edc176bdf69037306c838b0ee48f153` (gleich dem Wert aus Auftrag 103).
+  - `testdata/klein/opnsense/markdown/`: je Seite die pandoc-Ausgabe (`backups.md` 3.390 B `5a50793d…c8e7`, `updates.md` 2.384 B `8032473e…a642`, `sftp-backup.md` 3.363 B `a9c25fc6…c556`, `firewall_groups.md` 987 B `4af6342e…e760`; volle Werte im Manifest).
+  - `testdata/klein/recht/BetrSichV.pdf` 334.915 B, SHA-256 `fc2c7d0d907091c3ee804b487042b7ae0bd97dd2d2a3e6d0c633383008e87d03`, 60 Seiten, von `https://www.gesetze-im-internet.de/betrsichv_2015/BetrSichV.pdf` (einziger PDF-Verweis der Übersichtsseite), abgerufen 21.11.2026; Stand „zuletzt geändert durch Art. 27 G v. 18.12.2025 I Nr. 347“, PDF erzeugt 06.05.2026.
+  - `testdata/klein/manifest.yaml`: zehn Einträge `kind: local`, `fetch: none`, mit `url`, `landing_page`, `repository` (volle `https://github.com/...`-Adresse), `branch`, `commit` bzw. Abrufdatum, `sha256`, `size_bytes`, `terms` (verified, mit `terms_url`); Markdown-Einträge mit `derived_from` und `generated_by`. Kanonische Form über `dump_manifest`/`write_manifest` im Dienst `fetch` erzeugt und geprüft (Laden und Schreiben gibt dieselben Bytes; der Test prüft das ebenfalls). Die LICENSE hat einen eigenen Eintrag. `size_bytes` ist bei `local` schon heute erlaubt; `notes` war dafür nicht nötig.
+  - `testdata/klein/README.md` (Englisch): Zweck, Dateitabelle mit Lizenz, die vier Befehle wortgleich zu `generated_by`, Hinweis „nur ausdrücklich freie Unterlagen“.
+  - `testfactory/tests/test_testdata_klein.py`: neun Tests (gültig und vollständig, kanonische Form, nur `local`/`none`, Prüfsumme und Größe je Datei, keine ungelistete Datei, Lizenz aus `BSD-2-Clause`/`public-domain` mit `redistribution: true`, Markdown mit `derived_from`/`generated_by` und Image mit Digest, README nennt jedes `generated_by`, Ordner < 2 MB).
+- **Werkzeug:** pandoc 3.14 aus `pandoc/core:3.14.0.0@sha256:f6c6e92d8b150cc1e106e0fbdf2697dea179c737c99c8dbf36caa907b7ba7e73` (Index-Digest; Docker-Hub-API und Registry liefern denselben Wert; Tag zuletzt aktualisiert 17.11.2026). Aufruf `docker run --rm --network none`, Ordner `testdata/klein/opnsense` eingebunden, `--from=rst --to=gfm --wrap=none`. Lizenzbefund am Original: pandoc GPL-2.0-or-later (`COPYRIGHT` in `jgm/pandoc`); Bauanleitung des Images GPL-2.0 (`LICENSE` in `pandoc/dockerfiles`, GitHub-API `GPL-2.0`); Basis Alpine Linux 3.24.4, Paketlizenzen laut `apk info` im Image: MIT, BSD-2/3-Clause, Apache-2.0, ISC, X11, Zlib, Libpng, FTL, bzip2-1.0.6, GPL-2.0/3.0, LGPL-2.1/3.0, MPL-1.1/2.0, Beerware, Public Domain – keine Lizenz mit Nutzungsbeschränkung. Das deckt sich mit dem Befund oben; das Werkzeug wurde nur benutzt.
+- **Wie wurde getestet?** (alle mit `-p twox-108`)
+  - `docker version` und `docker compose version`: Exit 0 (Engine 29.9.3, Compose v5.7.0).
+  - `TF run --rm fetch python -m testfactory.manifest_tools check --complete testdata/klein/manifest.yaml` → `testdata/klein/manifest.yaml: OK (10 entries)`, Exit 0.
+  - `TF run --rm check python -m unittest discover -s testfactory/tests -t . -v` → `Ran 93 tests`, `OK`, darin alle neun `test_testdata_klein`-Tests; `check-offline` ebenso `OK`.
+  - `TF run --rm check mypy --config-file testfactory/mypy.ini testfactory` → `Success: no issues found in 7 source files`.
+  - `git check-attr text -- testdata/klein/recht/BetrSichV.pdf` → `text: unset`. SHA-256 des eingecheckten Blobs (`git cat-file blob HEAD:…`) = `fc2c7d0d…7d03`, gleich dem Download. Die `.rst`-Dateien und die LICENSE haben auch als eingecheckte Blobs die Prüfsummen der Rohdateien (oben).
+  - Wiederholbarkeit: Markdown-Dateien gelöscht und mit den vier README-Befehlen neu erzeugt → alle vier Prüfsummen gleich.
+  - Gegenprobe: eine zusätzliche Datei `recht/stray.txt` lässt `test_no_unlisted_file_in_folder` fehlschlagen (danach entfernt).
+  - `git diff --stat main...HEAD`: nur `testdata/klein/**`, `testfactory/tests/test_testdata_klein.py` und diese Auftragsdatei.
+- **Zweig und Arbeitsverzeichnis:** `worktree-agent-a7bf27078f1eb0434`, `.claude/worktrees/agent-a7bf27078f1eb0434`.
+- **Abweichungen:**
+  - Seitenwahl abweichend vom Vorschlag: `backups`, `updates`, `sftp-backup`, `firewall_groups` statt `virtuals` und `users`. Grund: `virtuals.rst` enthält Bildverweise auf Herstellerlogos (VMware, Xen, AWS, Azure), `users.rst` einen Bildschirmfoto-Verweis; die gewählten Seiten enthalten keine `image`-Direktive. `git-backup.rst` nicht aufgenommen. Härtefälle stecken trotzdem drin: `raw:: html`-Tabelle und `toctree` (backups), Gitter-Tabelle und Codeblöcke (sftp-backup).
+  - `sftp-backup.rst` enthält ein Beispiel aus der Doku: `ssh-keygen`-Ausgabe mit Fingerabdruck eines Beispielschlüssels, Platzhalter-Mail `your_email@example.com` und Beispieladresse `192.168.1.10`. Das sind keine Zugangsdaten (kein privater Schlüssel, kein Kennwort); als Prüfmaterial fürs Schwärzen eher nützlich. Wenn unerwünscht: Seite entfernen, drei Einträge löschen.
+  - Die unveränderte LICENSE enthält Personennamen in den Copyright-Zeilen der OPNsense-Mitwirkenden. Die BSD-2-Clause verlangt, den Vermerk unverändert beizulegen; E-22 betrifft den Projektinhaber. Hinweis für die Leitstelle.
+  - Markdown-Ausgabe von pandoc: unbekannte Sphinx-Rollen werden zu Code bzw. `<span class="title-ref">`, `toctree` zu einem `<div>`, Hinweise zu GitHub-Callouts (`> [!NOTE]`). Bewusst unverändert gelassen.
+  - Das Image `twox-testfactory-check:local` wurde mit `TF build check` neu gebaut (gleiche Dockerfile; der Name steht fest in der Compose-Datei).
+  - Deutsches Markdown-Material aus freier Quelle fehlt weiterhin (OPNsense-Doku nur englisch); das deutsche Material ist nur das PDF.
+- **Vorschlag für das Entscheidungsprotokoll:**
+  - „pandoc 3.14 (GPL-2.0-or-later) als einmaliges Werkzeug für Auftrag 108: Image `pandoc/core:3.14.0.0@sha256:f6c6e92d8b150cc1e106e0fbdf2697dea179c737c99c8dbf36caa907b7ba7e73` (Bauanleitung `pandoc/dockerfiles`, GPL-2.0; Basis Alpine 3.24.4 mit freien Paketlizenzen), nur in `docker run --rm --network none` zur Umwandlung von vier OPNsense-Seiten nach Markdown benutzt; nicht eingebunden, nicht weitergegeben, in kein eigenes Image aufgenommen. Die Ausgaben stehen unter der Lizenz der Eingaben (BSD-2-Clause). Befehle in `testdata/klein/README.md`.“
+  - „Testdaten in `testdata/klein/`: OPNsense-Dokumentation (BSD-2-Clause, Commit `953dd3d`, LICENSE unverändert beigelegt) und Betriebssicherheitsverordnung als PDF von gesetze-im-internet.de (amtliches Werk, § 5 Abs. 1 UrhG, im Manifest als `public-domain`). Kein CC-BY-SA-Material.“
+- **Offene Fragen:** keine.
