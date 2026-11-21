@@ -50,6 +50,8 @@ INSTALLED_APPS = [
     # admin and the login itself arrive with milestone M1.
     "django.contrib.auth",
     "django.contrib.contenttypes",
+    # collectstatic gathers the built web UI at image build time.
+    "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
     "twox.assets",
@@ -64,6 +66,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serves STATIC_ROOT below STATIC_URL; everything else passes through.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -126,6 +130,34 @@ CELERY_TASK_DEFAULT_QUEUE = "default"
 CELERY_TASK_CREATE_MISSING_QUEUES = False
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TIMEZONE = "UTC"
+
+# Web UI. Vite builds it with base "/static/" (web/vite.config.ts); the image
+# build runs collectstatic, which copies the build output from WEB_DIST_DIR
+# into STATIC_ROOT. WhiteNoise serves STATIC_ROOT, the view at / returns its
+# index.html. There is no Node server at runtime.
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+WEB_DIST_DIR = Path(env_str("TWOX_WEB_DIST_DIR", str(BASE_DIR.parent / "web" / "dist")))
+# Only if a build exists: backend-dev and the tests run without one.
+STATICFILES_DIRS = [WEB_DIST_DIR] if WEB_DIST_DIR.is_dir() else []
+# Plain storage: Vite already puts a content hash into every asset name, and
+# no compressed copies are made (nothing between server and browser should
+# compress or buffer, see the answer stream in milestone M3).
+STORAGES = {
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+# Never look into STATICFILES_DIRS at request time, also not with DEBUG on:
+# only what collectstatic put into STATIC_ROOT is served.
+WHITENOISE_USE_FINDERS = False
+WHITENOISE_AUTOREFRESH = False
+
+
+def web_asset_is_immutable(path: str, url: str) -> bool:
+    """Files below /static/assets/ carry a content hash from Vite and never change."""
+    return url.startswith(STATIC_URL + "assets/")
+
+
+WHITENOISE_IMMUTABLE_FILE_TEST = web_asset_is_immutable
 
 LANGUAGE_CODE = "en"
 TIME_ZONE = "UTC"
