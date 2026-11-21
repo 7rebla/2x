@@ -139,3 +139,33 @@ Nach Auftrag 013 über den Django-Dienst unter dem dort festgelegten Pfad (gleic
 - `server_version` wird ungekürzt angezeigt (z. B. `18.7 (Debian 18.7-1.pgdg12+2)`).
 - Schema-Neuerzeugung: Der Dienst `backend-dev` bindet nur `backend/` ein; deshalb wird `web/openapi` mit `-v` zusätzlich eingebunden (Befehl im README). Für die CI (Auftrag 014) gehört die Prüfung „Schema und Client aktuell“ zusammen: beide Schritte, danach `git diff --exit-code -- web/openapi web/src/api`.
 - Die lokalen Images `twox-012-backend-dev` und `twox-012-web-dev` liegen noch vor.
+
+### Nacharbeit nach Prüfung
+
+**Status: zur Prüfung.** Commit nach der Prüfung durch die Leitstelle, gleicher Zweig.
+
+1. **Stiller Fehler behoben (Pflicht).** `SelftestPage.tsx` fängt jetzt jeden Fehler von `loadSelftest` ab und zeigt den neuen Zustand „unexpected-error“ mit dem neutralen Text „The self-test could not be run in this browser. Please try again.“ (`data-testid="selftest-error"`, keine Interna). Danach ist „Check again“ wieder bedienbar.
+2. **`AbortSignal.any` entfernt.** Das Zeitlimit (15 s) und der Abbruch durch die Seite laufen jetzt über einen eigenen `AbortController` mit `setTimeout`, verbunden mit dem Signal des Aufrufers über `addEventListener("abort")`; `clearTimeout` und das Abmelden des Listeners stehen im `finally`. Damit sind ältere Browser nicht mehr ausgeschlossen. Im gebauten Bündel kommt `AbortSignal.any` nicht mehr vor (`grep -c`: 0).
+3. **Neue Tests:**
+   - `src/SelftestPage.test.tsx`: `loadSelftest` (nachgestellt mit `vi.mock`) wirft → Fehlerzustand sichtbar, kein Ladezustand, Fehlertext ohne Interna, Schaltfläche nicht gesperrt; erneutes Prüfen ruft `loadSelftest` ein zweites Mal auf und zeigt dessen Ergebnis.
+   - `src/api/selftest.test.ts`: eine nie antwortende API ergibt nach dem Zeitlimit „unreachable“ (mit nachgestellter Uhr); ein Abbruch durch den Aufrufer beendet die laufende Anfrage.
+4. **Hinweis für Auftrag 014:** In die CI gehören beide Prüfungen: „Schema aktuell“ (Schema im Container `backend-dev` neu erzeugen und mit `web/openapi/schema.yml` vergleichen) und „Client aktuell“ (`npm run api:generate`, danach `git diff --exit-code -- web/src/api`).
+
+Erneute Läufe nach der Nacharbeit (gleiche Abkürzungen wie oben, auf dem committeten Stand):
+
+| Nr. | Ergebnis | Tatsächliche Ausgabe (gekürzt) |
+| --- | --- | --- |
+| 1 | erfüllt | `spectacular` Exit-Code 0, `cmp`: identisch |
+| 2 | erfüllt | „added 414 packages“, Exit-Code 0, kein `ERESOLVE` |
+| 3 | erfüllt | `api:generate` Exit-Code 0; `git diff --exit-code -- web/src/api web/openapi` Exit-Code 0 |
+| 4 | erfüllt | lint und typecheck Exit-Code 0, keine Meldung |
+| 5 | erfüllt | „Test Files 3 passed (3)“, „Tests 10 passed (10)“, Exit-Code 0 |
+| 6 | erfüllt | „built in 356ms“, Exit-Code 0 |
+| 7 | erfüllt | außerhalb von `src/api/generated` kein Treffer |
+| 8 | erfüllt | Treffer nur in `generated/types.gen.ts` (1), `SelftestPage.tsx` (1), `App.test.tsx` (2) |
+| 9 | erfüllt | 391 Pakete, „License check passed.“, Exit-Code 0 |
+| 10 | erfüllt | `i/lf w/lf` |
+| 11 | erfüllt | `W --profile dev down -v` und `B --profile dev down -v` Exit-Code 0; keine Container und Volumes von `twox-012`; Projekt `2x` lief weiter |
+| – | erfüllt | `kein-nachladen-css`, `kein-nachladen-html`, `kein-cdn` |
+
+Keine neue Abhängigkeit, keine offene Frage.
