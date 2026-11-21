@@ -1,6 +1,6 @@
 # Auftrag 023 – Oberfläche: Routing, Rahmen und Datenabruf
 
-Meilenstein: M1 · Freigabestufe: C · Status: offen
+Meilenstein: M1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -86,7 +86,79 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
    - Empfehlung: (a). Viele Listen und Formulare in M1, weniger eigener Code für Laden, Fehler und Aktualisieren.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Alle Kriterien 0–7 sind erfüllt; alle Läufe am 21.11.2026 im Container (Docker Engine 29.9.3, Compose v5.7.0). Keine offene Frage an a7.
+
+### Was wurde gebaut?
+
+- **Pakete** (`web/package.json`, `web/package-lock.json`, exakt festgelegt): `react-router` 8.5.2 und `@tanstack/react-query` 5.108.2. Mitgezogen laut Lock: `cookie-es` 3.1.1, `@remix-run/route-pattern` 0.22.1, `@tanstack/query-core` 5.108.2. Alle fünf MIT (Lock und `npm run licenses`), keine weiteren neuen Pakete. Im Lock wechselt `@types/react-dom` von `"dev": true` auf `"devOptional": true` (optionaler Peer von react-router).
+- **Client:** `web/openapi-ts.config.ts` mit dem Plugin `@tanstack/react-query`; neu erzeugt `web/src/api/generated/@tanstack/react-query.gen.ts` (Query-Optionen und -Schlüssel je Endpunkt). Die übrigen erzeugten Dateien sind unverändert.
+- **Routing** (`web/src/routes.tsx`): react-router im Daten-Modus (`createBrowserRouter`, `RouterProvider` aus `react-router/dom`), kein Framework-Modus, kein Node-Server. Adressen `/`, `/devices/:deviceId`, `/documents/:documentId`, `/import`, `/audit`, `/login`, `/selftest`, alles andere `NotFound`. Je Seite eine Datei unter `web/src/pages/` (Platzhalter mit Überschrift aus `nav.json`; Gerät und Datei zeigen den Adressparameter). Die Selbsttest-Seite ist nach `web/src/pages/SelftestPage.tsx` verschoben (mit ihrem Test), Inhalt und `data-testid` unverändert.
+- **Navigation** `web/src/navigation.ts`: Liste mit Pfad, Text-Schlüssel (`nav.json`, typgeprüft) und `end`. Einträge: Struktur, Import, Änderungsprotokoll, Selbsttest. Seiten mit Parameter und `/login` stehen nicht in der Navigation (ihre Texte schon).
+- **Rahmen** `web/src/components/Layout.tsx`: Kopf mit Namen (`<h1>`, Link auf `/`), Navigation (`<nav aria-label>`, `NavLink` mit `aria-current`), Sprachumschalter aus 018 und leerem Bereich `data-testid="user-area"` für 030; darunter `<main>` mit der Seite.
+- **Komponenten:** `Loading`, `ErrorMessage` (HTTP-Status und Text der API, sonst „keine Antwort“, „unlesbare Antwort“ oder allgemeiner Fehler; `role="alert"`), `NotFound` (mit Link zur Struktur), dazu `PagePlaceholder` und `RouteError` (Renderfehler einer Seite erscheinen als `ErrorMessage` im Rahmen).
+- **Datenabruf:** `web/src/App.tsx` legt `QueryClientProvider` um den Router. `web/src/api/errors.ts` macht über einen Fehler-Interceptor des erzeugten Clients aus jedem Fehlschlag ein `ApiError` (`kind` http/network/invalid-answer, `status`, `detail` aus DRF `detail` oder einer Klartext-Antwort, gekürzt auf 500 Zeichen; HTML-Seiten werden nicht gezeigt; Abbrüche bleiben unverändert). `web/src/api/queryClient.ts`: nur fehlende Antworten werden wiederholt (zweimal), HTTP-Fehler erscheinen sofort. `main.tsx` richtet beides ein.
+- **Texte** in `common.json` und `nav.json`, Deutsch und Englisch (Laden, Fehler, Platzhalter, Seite nicht gefunden, alle Seitennamen, Name der Navigation).
+- **Tests (Vitest):** neu `web/src/routes.test.tsx` (23 Fälle: Rahmen, jeder Navigationseintrag per Klick zur Seite mit `aria-current`, alle Adressen, Parameter, unbekannte Adressen zeigen `NotFound` im Rahmen, Rückweg, Deutsch, Renderfehler) und `web/src/api/errors.test.tsx` (12 Fälle: Umwandlung, Wiederholregel, erzeugte Query-Optionen mit `Loading` und `ErrorMessage` gegen einen gestubbten `fetch`). `web/src/App.test.tsx` rendert jetzt die ganze App unter `/selftest` (Hilfe `web/src/test/renderApp.tsx`).
+- **Playwright:** `web/e2e/selftest.spec.ts` öffnet `/selftest` direkt; neu `web/e2e/navigation.spec.ts` (von `/` per Klick zu `/selftest` und zurück, direkter Aufruf von `/devices/plc-1`, unbekannte Adresse zeigt `NotFound` mit Rückweg; jeweils keine Konsolenfehler).
+- **`backend/Dockerfile`, Stufe `web-build`:** erwartete Laufzeitliste und Hinweisschleife um die fünf Pakete ergänzt, Kommentar angepasst.
+- **Doku:** neu `web/src/pages/README.md` (Adressen, Rahmen, Navigation, Datenabruf mit Beispiel); `web/openapi/README.md` um die Query-Optionen ergänzt.
+
+### Wie wurde getestet?
+
+`W` = `docker compose -p twox-023-web -f deploy/compose/compose.web.yaml`, `D` = `docker compose -p twox-023`; `.env` aus `.env.example` mit `TWOX_API_PORT=18023`.
+
+| Nr. | Ergebnis | Tatsächliche Ausgabe (gekürzt) |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` (Server 29.9.3), `docker compose version` (v5.7.0): Exit 0 |
+| 1 | erfüllt | `W --profile dev build web-dev`: Exit 0; `W run --rm web-dev npm ci`: Exit 0 (danach `npm install --save-exact` der zwei Pakete: „added 5 packages“) |
+| 2 | erfüllt | `lint`, `typecheck`: Exit 0 ohne Meldung; `test`: „Test Files 6 passed (6), Tests 73 passed (73)“; `build`: `dist/assets/index-….js 417.64 kB` (gzip 131.16 kB); `licenses`: „402 packages … License check passed.“ – je Exit 0 |
+| 3 | erfüllt | `npm run api:generate`: Exit 0; `git diff --exit-code -- web/openapi web/src/api`: Exit 0, `git status --porcelain --untracked-files=all` leer |
+| 4 | erfüllt | `D --profile dev build migrate api worker web-dev`: Exit 0 (Prüfung der Laufzeitliste lief durch); `D up -d --wait …`: alle gesund; `…urlopen('http://localhost:8000/selftest').status` → `200` |
+| 5 | erfüllt | siehe Befehl unten: `True True True True True` |
+| 6 | erfüllt | `pull`, `npm ci`: Exit 0; `D --profile e2e run --rm e2e`: „5 passed (3.3s)“ (`i18n.spec.ts`, drei Fälle in `navigation.spec.ts`, `selftest.spec.ts`), Exit 0 |
+| 7 | erfüllt | `D --profile dev --profile e2e down -v` und `W --profile dev down -v`: Exit 0; danach keine Container, Volumes oder Netze mit `twox-023` |
+
+Prüfung zu Kriterium 5 (nach `D up …`):
+
+```
+D exec api python -c "import urllib.request as u; t=u.urlopen('http://localhost:8000/static/THIRD-PARTY-NOTICES.txt').read().decode(); print(chr(10)+'react-router 8.5.2 (MIT)' in t, chr(10)+'cookie-es 3.1.1 (MIT)' in t, chr(10)+'@remix-run/route-pattern 0.22.1 (MIT)' in t, chr(10)+'@tanstack/react-query 5.108.2 (MIT)' in t, chr(10)+'@tanstack/query-core 5.108.2 (MIT)' in t)"
+```
+
+Weil `backend/Dockerfile` geändert ist, zusätzlich die Backend-Prüfungen aus der CI mit `D` (nach `D --profile dev build backend-dev`): `ruff check` („All checks passed!“), `ruff format --check` („69 files already formatted“), `mypy` („no issues found in 69 source files“), `pytest` („184 passed, 4 deselected“), `pytest -m worker` („4 passed“), `makemigrations --check --dry-run` („No changes detected“), Lizenzprüfung Python („License check passed.“), OpenAPI-Schema neu erzeugt und `git diff --exit-code -- web/openapi web/src/api` ohne Unterschied. Alle Exit 0.
+
+**Ausgabe von `npm ls --omit=dev --all --parseable`** (im Container `web-dev`):
+
+```
+/app
+/app/node_modules/@tanstack/react-query
+/app/node_modules/i18next
+/app/node_modules/react-dom
+/app/node_modules/react-i18next
+/app/node_modules/react-router
+/app/node_modules/react
+/app/node_modules/@tanstack/query-core
+/app/node_modules/@types/react
+/app/node_modules/typescript
+/app/node_modules/scheduler
+/app/node_modules/html-parse-stringify
+/app/node_modules/@remix-run/route-pattern
+/app/node_modules/@types/react-dom
+/app/node_modules/cookie-es
+/app/node_modules/csstype
+```
+
+Neu als optionaler Peer erscheint `@types/react-dom` (von react-router); `@types/react` ist zusätzlich optionaler Peer von react-router und @tanstack/react-query. Die Laufzeitliste im Dockerfile ist genau diese Ausgabe; Hinweise bekommen nur Pakete mit ausgeliefertem Code. `npm run licenses` führt `@types/react-dom` (MIT) deshalb jetzt als `production`; die Regeln brauchten keine Änderung.
+
+### Zweig und Arbeitsverzeichnis
+
+Zweig `worktree-agent-aeff8cc079c3890b1`, Arbeitsverzeichnis `.claude/worktrees/agent-aeff8cc079c3890b1`. Nicht gepusht, nicht zusammengeführt.
+
+### Abweichungen und Hinweise
+
+- **`web/e2e/i18n.spec.ts` geändert** (nicht im Bereich genannt): öffnet jetzt `/selftest` statt `/`, weil die Selbsttest-Seite nicht mehr unter `/` liegt. Sonst unverändert.
+- **`web/openapi/README.md` geändert** (nicht im Bereich genannt): Die Aussage „der erzeugte Code hat keine Laufzeitabhängigkeit“ stimmt mit dem Plugin nicht mehr; drei Zeilen angepasst.
+- **Selbsttest-Seite** bleibt bei ihrem eigenen Ladecode aus M0 (`web/src/api/selftest.ts`), nur verschoben. Die erzeugten Query-Optionen sind in `errors.test.tsx` mit `Loading` und `ErrorMessage` geprüft; die erste echte Nutzung kommt mit den Fachseiten.
+- **Bündel** wächst von 292,6 kB auf 417,6 kB (gzip 131,2 kB), vor allem durch react-router.
+- **`docs/ARCHITECTURE.md`** nennt noch `web/src/SelftestPage.tsx` und die Seite unter `/`; außerhalb des Bereichs, Nachzug in Auftrag 038.
+- Der Eintrag in `docs/DECISIONS.md` (Abhängigkeitstabelle) bleibt der Leitstelle.
