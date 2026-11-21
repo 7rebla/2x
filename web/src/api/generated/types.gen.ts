@@ -93,6 +93,20 @@ export type Device = {
 };
 
 /**
+ * Form of a device list import (``multipart/form-data``).
+ */
+export type DeviceImportForm = {
+    /**
+     * The device list as CSV: UTF-8, comma, the 13 columns of format version 1; at most TWOX_UPLOAD_MAX_BYTES bytes.
+     */
+    file: Blob | File;
+    /**
+     * Check and count only, save nothing (default). Send false to save.
+     */
+    dry_run?: boolean;
+};
+
+/**
  * Input for creating and changing a device. ``plant`` is the id of the plant.
  *
  * An empty IP address is stored as no address (``null``).
@@ -224,6 +238,50 @@ export type ErrorDetail = {
  */
 export type Health = {
     status: StatusEnum;
+};
+
+/**
+ * What an import did, or would do in a dry run, at one level of the structure.
+ */
+export type ImportCounts = {
+    created: number;
+    updated: number;
+    unchanged: number;
+};
+
+/**
+ * Result of a device list import.
+ *
+ * ``saved`` is true only if the changes were saved. With errors nothing is
+ * saved and all counts are zero.
+ */
+export type ImportReport = {
+    dry_run: boolean;
+    saved: boolean;
+    /**
+     * Number of data rows read.
+     */
+    rows: number;
+    sites: ImportCounts;
+    areas: ImportCounts;
+    plants: ImportCounts;
+    devices: ImportCounts;
+    errors: Array<ImportRowError>;
+};
+
+/**
+ * An error in the imported file.
+ */
+export type ImportRowError = {
+    /**
+     * Line where the row starts (the header is line 1); null for the whole file.
+     */
+    line: number | null;
+    /**
+     * Column of the file; null for the whole row or file.
+     */
+    column: string | null;
+    message: string;
 };
 
 /**
@@ -839,6 +897,36 @@ export type HealthRetrieveResponses = {
 };
 
 export type HealthRetrieveResponse = HealthRetrieveResponses[keyof HealthRetrieveResponses];
+
+export type DevicesImportData = {
+    body: DeviceImportForm;
+    path?: never;
+    query?: never;
+    url: '/api/v1/imports/devices/';
+};
+
+export type DevicesImportErrors = {
+    /**
+     * Invalid form: no file, or dry_run no boolean.
+     */
+    400: unknown;
+    /**
+     * Not the role manage.
+     */
+    403: ErrorDetail;
+    /**
+     * Larger than TWOX_UPLOAD_MAX_BYTES.
+     */
+    413: ErrorDetail;
+};
+
+export type DevicesImportError = DevicesImportErrors[keyof DevicesImportErrors];
+
+export type DevicesImportResponses = {
+    200: ImportReport;
+};
+
+export type DevicesImportResponse = DevicesImportResponses[keyof DevicesImportResponses];
 
 export type MeRetrieveData = {
     body?: never;

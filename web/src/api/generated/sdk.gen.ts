@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AreasCreateData, AreasCreateResponses, AreasListData, AreasListResponses, AreasPartialUpdateData, AreasPartialUpdateResponses, AreasRetrieveData, AreasRetrieveResponses, AreasUpdateData, AreasUpdateResponses, AuditLogListData, AuditLogListResponses, DeviceDocumentsCreateData, DeviceDocumentsCreateErrors, DeviceDocumentsCreateResponses, DeviceDocumentsListData, DeviceDocumentsListErrors, DeviceDocumentsListResponses, DevicesCreateData, DevicesCreateResponses, DevicesListData, DevicesListResponses, DevicesPartialUpdateData, DevicesPartialUpdateResponses, DevicesRetrieveData, DevicesRetrieveResponses, DevicesUpdateData, DevicesUpdateResponses, DocumentRetrieveData, DocumentRetrieveErrors, DocumentRetrieveResponses, DocumentVersionCreateData, DocumentVersionCreateErrors, DocumentVersionCreateResponses, DocumentVersionDownloadData, DocumentVersionDownloadErrors, DocumentVersionDownloadResponses, HealthRetrieveData, HealthRetrieveResponses, MeRetrieveData, MeRetrieveResponses, PlantsCreateData, PlantsCreateResponses, PlantsListData, PlantsListResponses, PlantsPartialUpdateData, PlantsPartialUpdateResponses, PlantsRetrieveData, PlantsRetrieveResponses, PlantsUpdateData, PlantsUpdateResponses, SelftestRetrieveData, SelftestRetrieveResponses, SitesCreateData, SitesCreateResponses, SitesListData, SitesListResponses, SitesPartialUpdateData, SitesPartialUpdateResponses, SitesRetrieveData, SitesRetrieveResponses, SitesUpdateData, SitesUpdateResponses } from './types.gen';
+import type { AreasCreateData, AreasCreateResponses, AreasListData, AreasListResponses, AreasPartialUpdateData, AreasPartialUpdateResponses, AreasRetrieveData, AreasRetrieveResponses, AreasUpdateData, AreasUpdateResponses, AuditLogListData, AuditLogListResponses, DeviceDocumentsCreateData, DeviceDocumentsCreateErrors, DeviceDocumentsCreateResponses, DeviceDocumentsListData, DeviceDocumentsListErrors, DeviceDocumentsListResponses, DevicesCreateData, DevicesCreateResponses, DevicesImportData, DevicesImportErrors, DevicesImportResponses, DevicesListData, DevicesListResponses, DevicesPartialUpdateData, DevicesPartialUpdateResponses, DevicesRetrieveData, DevicesRetrieveResponses, DevicesUpdateData, DevicesUpdateResponses, DocumentRetrieveData, DocumentRetrieveErrors, DocumentRetrieveResponses, DocumentVersionCreateData, DocumentVersionCreateErrors, DocumentVersionCreateResponses, DocumentVersionDownloadData, DocumentVersionDownloadErrors, DocumentVersionDownloadResponses, HealthRetrieveData, HealthRetrieveResponses, MeRetrieveData, MeRetrieveResponses, PlantsCreateData, PlantsCreateResponses, PlantsListData, PlantsListResponses, PlantsPartialUpdateData, PlantsPartialUpdateResponses, PlantsRetrieveData, PlantsRetrieveResponses, PlantsUpdateData, PlantsUpdateResponses, SelftestRetrieveData, SelftestRetrieveResponses, SitesCreateData, SitesCreateResponses, SitesListData, SitesListResponses, SitesPartialUpdateData, SitesPartialUpdateResponses, SitesRetrieveData, SitesRetrieveResponses, SitesUpdateData, SitesUpdateResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -289,6 +289,30 @@ export const documentVersionCreate = <ThrowOnError extends boolean = false>(opti
  * Open to everyone on purpose: container health checks carry no credentials.
  */
 export const healthRetrieve = <ThrowOnError extends boolean = false>(options?: Options<HealthRetrieveData, ThrowOnError>): RequestResult<HealthRetrieveResponses, unknown, ThrowOnError> => (options?.client ?? client).get<HealthRetrieveResponses, unknown, ThrowOnError>({ url: '/api/v1/health/', ...options });
+
+/**
+ * Check a device list and, without dry run, save it.
+ *
+ * A dry run (the default) checks the file and counts what an import
+ * would create, update or leave unchanged, and saves nothing. Without
+ * dry run everything is saved in one transaction, or nothing if any row
+ * has an error. Errors in the file come back in ``errors`` with line and
+ * column, with status 200; ``saved`` tells whether anything was saved.
+ */
+export const devicesImport = <ThrowOnError extends boolean = false>(options: Options<DevicesImportData, ThrowOnError>): RequestResult<DevicesImportResponses, DevicesImportErrors, ThrowOnError> => (options.client ?? client).post<DevicesImportResponses, DevicesImportErrors, ThrowOnError>({
+    ...formDataBodySerializer,
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/imports/devices/',
+    ...options,
+    headers: {
+        'Content-Type': null,
+        ...options.headers
+    }
+});
 
 /**
  * The signed-in user and their role.

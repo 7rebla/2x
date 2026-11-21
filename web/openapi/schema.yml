@@ -535,6 +535,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/Health'
           description: ''
+  /api/v1/imports/devices/:
+    post:
+      operationId: devices_import
+      description: |-
+        Check a device list and, without dry run, save it.
+
+        A dry run (the default) checks the file and counts what an import
+        would create, update or leave unchanged, and saves nothing. Without
+        dry run everything is saved in one transaction, or nothing if any row
+        has an error. Errors in the file come back in ``errors`` with line and
+        column, with status 200; ``saved`` tells whether anything was saved.
+      tags:
+      - imports
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceImportForm'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportReport'
+          description: ''
+        '400':
+          description: 'Invalid form: no file, or dry_run no boolean.'
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Not the role manage.
+        '413':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Larger than TWOX_UPLOAD_MAX_BYTES.
   /api/v1/me/:
     get:
       operationId: me_retrieve
@@ -1016,6 +1058,22 @@ components:
       - site
       - software_version
       - updated_at
+    DeviceImportForm:
+      type: object
+      description: Form of a device list import (``multipart/form-data``).
+      properties:
+        file:
+          type: string
+          format: binary
+          description: 'The device list as CSV: UTF-8, comma, the 13 columns of format
+            version 1; at most TWOX_UPLOAD_MAX_BYTES bytes.'
+        dry_run:
+          type: boolean
+          default: true
+          description: Check and count only, save nothing (default). Send false to
+            save.
+      required:
+      - file
     DeviceWrite:
       type: object
       description: |-
@@ -1257,6 +1315,76 @@ components:
           $ref: '#/components/schemas/StatusEnum'
       required:
       - status
+    ImportCounts:
+      type: object
+      description: What an import did, or would do in a dry run, at one level of the
+        structure.
+      properties:
+        created:
+          type: integer
+        updated:
+          type: integer
+        unchanged:
+          type: integer
+      required:
+      - created
+      - unchanged
+      - updated
+    ImportReport:
+      type: object
+      description: |-
+        Result of a device list import.
+
+        ``saved`` is true only if the changes were saved. With errors nothing is
+        saved and all counts are zero.
+      properties:
+        dry_run:
+          type: boolean
+        saved:
+          type: boolean
+        rows:
+          type: integer
+          description: Number of data rows read.
+        sites:
+          $ref: '#/components/schemas/ImportCounts'
+        areas:
+          $ref: '#/components/schemas/ImportCounts'
+        plants:
+          $ref: '#/components/schemas/ImportCounts'
+        devices:
+          $ref: '#/components/schemas/ImportCounts'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportRowError'
+      required:
+      - areas
+      - devices
+      - dry_run
+      - errors
+      - plants
+      - rows
+      - saved
+      - sites
+    ImportRowError:
+      type: object
+      description: An error in the imported file.
+      properties:
+        line:
+          type: integer
+          nullable: true
+          description: Line where the row starts (the header is line 1); null for
+            the whole file.
+        column:
+          type: string
+          nullable: true
+          description: Column of the file; null for the whole row or file.
+        message:
+          type: string
+      required:
+      - column
+      - line
+      - message
     KindEnum:
       enum:
       - document

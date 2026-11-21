@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { areasCreate, areasList, areasPartialUpdate, areasRetrieve, areasUpdate, auditLogList, deviceDocumentsCreate, deviceDocumentsList, devicesCreate, devicesList, devicesPartialUpdate, devicesRetrieve, devicesUpdate, documentRetrieve, documentVersionCreate, documentVersionDownload, healthRetrieve, meRetrieve, type Options, plantsCreate, plantsList, plantsPartialUpdate, plantsRetrieve, plantsUpdate, selftestRetrieve, sitesCreate, sitesList, sitesPartialUpdate, sitesRetrieve, sitesUpdate } from '../sdk.gen';
-import type { AreasCreateData, AreasCreateResponse, AreasListData, AreasListResponse, AreasPartialUpdateData, AreasPartialUpdateResponse, AreasRetrieveData, AreasRetrieveResponse, AreasUpdateData, AreasUpdateResponse, AuditLogListData, AuditLogListResponse, DeviceDocumentsCreateData, DeviceDocumentsCreateError, DeviceDocumentsCreateResponse, DeviceDocumentsListData, DeviceDocumentsListError, DeviceDocumentsListResponse, DevicesCreateData, DevicesCreateResponse, DevicesListData, DevicesListResponse, DevicesPartialUpdateData, DevicesPartialUpdateResponse, DevicesRetrieveData, DevicesRetrieveResponse, DevicesUpdateData, DevicesUpdateResponse, DocumentRetrieveData, DocumentRetrieveError, DocumentRetrieveResponse, DocumentVersionCreateData, DocumentVersionCreateError, DocumentVersionCreateResponse, DocumentVersionDownloadData, DocumentVersionDownloadError, DocumentVersionDownloadResponse, HealthRetrieveData, HealthRetrieveResponse, MeRetrieveData, MeRetrieveResponse, PlantsCreateData, PlantsCreateResponse, PlantsListData, PlantsListResponse, PlantsPartialUpdateData, PlantsPartialUpdateResponse, PlantsRetrieveData, PlantsRetrieveResponse, PlantsUpdateData, PlantsUpdateResponse, SelftestRetrieveData, SelftestRetrieveResponse, SitesCreateData, SitesCreateResponse, SitesListData, SitesListResponse, SitesPartialUpdateData, SitesPartialUpdateResponse, SitesRetrieveData, SitesRetrieveResponse, SitesUpdateData, SitesUpdateResponse } from '../types.gen';
+import { areasCreate, areasList, areasPartialUpdate, areasRetrieve, areasUpdate, auditLogList, deviceDocumentsCreate, deviceDocumentsList, devicesCreate, devicesImport, devicesList, devicesPartialUpdate, devicesRetrieve, devicesUpdate, documentRetrieve, documentVersionCreate, documentVersionDownload, healthRetrieve, meRetrieve, type Options, plantsCreate, plantsList, plantsPartialUpdate, plantsRetrieve, plantsUpdate, selftestRetrieve, sitesCreate, sitesList, sitesPartialUpdate, sitesRetrieve, sitesUpdate } from '../sdk.gen';
+import type { AreasCreateData, AreasCreateResponse, AreasListData, AreasListResponse, AreasPartialUpdateData, AreasPartialUpdateResponse, AreasRetrieveData, AreasRetrieveResponse, AreasUpdateData, AreasUpdateResponse, AuditLogListData, AuditLogListResponse, DeviceDocumentsCreateData, DeviceDocumentsCreateError, DeviceDocumentsCreateResponse, DeviceDocumentsListData, DeviceDocumentsListError, DeviceDocumentsListResponse, DevicesCreateData, DevicesCreateResponse, DevicesImportData, DevicesImportError, DevicesImportResponse, DevicesListData, DevicesListResponse, DevicesPartialUpdateData, DevicesPartialUpdateResponse, DevicesRetrieveData, DevicesRetrieveResponse, DevicesUpdateData, DevicesUpdateResponse, DocumentRetrieveData, DocumentRetrieveError, DocumentRetrieveResponse, DocumentVersionCreateData, DocumentVersionCreateError, DocumentVersionCreateResponse, DocumentVersionDownloadData, DocumentVersionDownloadError, DocumentVersionDownloadResponse, HealthRetrieveData, HealthRetrieveResponse, MeRetrieveData, MeRetrieveResponse, PlantsCreateData, PlantsCreateResponse, PlantsListData, PlantsListResponse, PlantsPartialUpdateData, PlantsPartialUpdateResponse, PlantsRetrieveData, PlantsRetrieveResponse, PlantsUpdateData, PlantsUpdateResponse, SelftestRetrieveData, SelftestRetrieveResponse, SitesCreateData, SitesCreateResponse, SitesListData, SitesListResponse, SitesPartialUpdateData, SitesPartialUpdateResponse, SitesRetrieveData, SitesRetrieveResponse, SitesUpdateData, SitesUpdateResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -423,6 +423,29 @@ export const healthRetrieveOptions = (options?: Options<HealthRetrieveData>) => 
     },
     queryKey: healthRetrieveQueryKey(options)
 });
+
+/**
+ * Check a device list and, without dry run, save it.
+ *
+ * A dry run (the default) checks the file and counts what an import
+ * would create, update or leave unchanged, and saves nothing. Without
+ * dry run everything is saved in one transaction, or nothing if any row
+ * has an error. Errors in the file come back in ``errors`` with line and
+ * column, with status 200; ``saved`` tells whether anything was saved.
+ */
+export const devicesImportMutation = (options?: Partial<Options<DevicesImportData>>): UseMutationOptions<DevicesImportResponse, DevicesImportError, Options<DevicesImportData>> => {
+    const mutationOptions: UseMutationOptions<DevicesImportResponse, DevicesImportError, Options<DevicesImportData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await devicesImport({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
 
 export const meRetrieveQueryKey = (options?: Options<MeRetrieveData>) => createQueryKey('meRetrieve', options);
 
