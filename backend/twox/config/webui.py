@@ -1,13 +1,16 @@
 """Entry page of the web UI.
 
 The built UI lives in STATIC_ROOT (collected at image build time). WhiteNoise
-serves its files below STATIC_URL; this view returns its index.html at ``/``.
+serves its files below STATIC_URL; this view returns its index.html at ``/``
+and at every page path of the UI (the UI routes in the browser, see
+twox/config/urls.py for the paths that stay out).
 """
 
 from pathlib import Path
 
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_safe
 
 INDEX_FILE_NAME = "index.html"
@@ -20,8 +23,13 @@ def index_file() -> Path:
 
 
 @require_safe
+@ensure_csrf_cookie
 def web_index(request: HttpRequest) -> HttpResponse:
-    """Return the index.html of the built web UI, or 404 if there is none."""
+    """Return the index.html of the built web UI, or 404 if there is none.
+
+    The response sets the CSRF cookie: the UI sends its value back in the
+    ``X-CSRFToken`` header with every write to the API.
+    """
     try:
         content = index_file().read_bytes()
     except FileNotFoundError:
