@@ -9,6 +9,7 @@ library. The format is described in ``testfactory/README.md``.
 Command line::
 
     python -m testfactory.manifest_tools check [--complete] [PATH]
+    python -m testfactory.manifest_tools format [--check] [PATH]
 """
 
 from __future__ import annotations
@@ -64,7 +65,9 @@ _FETCH_BY_KIND: Final[dict[str, tuple[str, ...]]] = {
 
 # Fields that must be set (not null) for each kind.
 _REQUIRED_BY_KIND: Final[dict[str, tuple[str, ...]]] = {
-    KIND_FILE: ("url", "target"),
+    # ``url`` or ``landing_page`` in addition, depending on ``fetch``; see
+    # ``_parse_entry``.
+    KIND_FILE: ("target",),
     KIND_GIT_ARCHIVE: ("repository", "branch", "commit", "target"),
     KIND_CONTAINER_IMAGE: ("image", "tag", "digest"),
     KIND_REFERENCE: (),
@@ -84,7 +87,7 @@ _KINDS_BY_FIELD: Final[dict[str, tuple[str, ...]]] = {
     "generated_by": (KIND_LOCAL,),
     "sha256": (KIND_FILE, KIND_LOCAL),
     "tree_sha256": (KIND_GIT_ARCHIVE,),
-    "size_bytes": (KIND_FILE, KIND_GIT_ARCHIVE, KIND_LOCAL),
+    "size_bytes": (KIND_FILE, KIND_GIT_ARCHIVE, KIND_REFERENCE, KIND_LOCAL),
     "target": (KIND_FILE, KIND_GIT_ARCHIVE, KIND_LOCAL),
 }
 
@@ -573,6 +576,15 @@ def _parse_entry(
             raw.get(key) is None for key in ("url", "landing_page", "repository")
         ):
             out.add("url", "a reference needs url, landing_page or repository")
+        if kind == KIND_FILE:
+            # A file that a person fetches by hand (for example behind a
+            # form) may have no direct address, but then it needs the page
+            # on which it is offered.
+            if fetch == FETCH_MANUAL:
+                if raw.get("landing_page") is None:
+                    out.add("landing_page", "required for kind 'file' with fetch 'manual'")
+            elif raw.get("url") is None:
+                out.add("url", "required for kind 'file' unless fetch is 'manual'")
 
     if (
         len(problems) > before
@@ -635,8 +647,9 @@ def parse_manifest(text: str, *, allow_insecure_loopback: bool = False) -> Manif
     version = data.get("schema_version")
     if version is None:
         out.add("schema_version", "required field is missing")
-    elif isinstance(version, bool) or version != SCHEMA_VERSION:
-        out.add("schema_version", f"must be {SCHEMA_VERSION}")
+    elif type(version) is not int or version != SCHEMA_VERSION:
+        # Deliberately strict: 1.0, "1" and true are not the integer 1.
+        out.add("schema_version", f"must be the integer {SCHEMA_VERSION}")
 
     root = _required_str(data, "root", out)
     if root is not None:
@@ -679,6 +692,16 @@ def parse_manifest(text: str, *, allow_insecure_loopback: bool = False) -> Manif
             entry = _parse_entry(raw_entry, position, problems, allow_insecure_loopback)
             if entry is not None:
                 entries.append(entry)
+        # No target may lie inside another target. Compared by path
+        # segments, so "vendor/doc" and "vendor/doc-2" do not collide.
+        for raw_target, owner in seen_targets.items():
+            segments = raw_target.split("/")
+            for length in range(1, len(segments)):
+                other = seen_targets.get("/".join(segments[:length]))
+                if other is not None:
+                    problems.append(
+                        Problem(owner, "target", f"lies inside the target of entry '{other}'")
+                    )
 
     if problems or root is None:
         raise ManifestError(problems)
@@ -786,7 +809,46 @@ def target_path(manifest_path: str | Path, manifest: Manifest, entry: Entry) -> 
     """
     if entry.target is None:
         return None
-    return Path(manifest_path).parent / PurePosixPath(manifest.root) / PurePosixPath(entry.target)
+    return root_path(manifest_path, manifest) / PurePosixPath(entry.target)
+
+
+class UnsafePathError(ValueError):
+    """Raised when a target would leave its root directory."""
+
+
+def root_path(manifest_path: str | Path, manifest: Manifest) -> Path:
+    """Return the directory that every ``target`` of ``manifest`` refers to."""
+    return Path(manifest_path).parent / PurePosixPath(manifest.root)
+
+
+def checked_target_path(root_dir: str | Path, target: str) -> Path:
+    """Return ``root_dir / target`` after checking that it stays below ``root_dir``.
+
+    Call this before writing to a target. Raises ``UnsafePathError`` if
+    ``target`` is not a clean relative path, if any existing part of the chain
+    below ``root_dir`` is a symbolic link (or a junction), or if the resolved
+    path does not lie below the resolved ``root_dir``. ``root_dir`` itself is
+    taken as given and resolved.
+    """
+    message = relative_path_problem(target)
+    if message is not None:
+        raise UnsafePathError(f"target '{target}': {message}")
+    root = Path(root_dir)
+    current = root
+    for segment in target.split("/"):
+        current = current / segment
+        if current.is_symlink() or current.is_junction():
+            raise UnsafePathError(
+                f"target '{target}': '{current.relative_to(root).as_posix()}' is a symbolic link"
+            )
+    try:
+        resolved_root = root.resolve()
+        resolved = current.resolve()
+    except (OSError, RuntimeError) as error:
+        raise UnsafePathError(f"target '{target}': cannot be resolved: {error}") from error
+    if resolved == resolved_root or not resolved.is_relative_to(resolved_root):
+        raise UnsafePathError(f"target '{target}': leaves the root directory")
+    return current
 
 
 def file_sha256(path: str | Path) -> str:
@@ -796,6 +858,11 @@ def file_sha256(path: str | Path) -> str:
         while chunk := handle.read(1024 * 1024):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _raise_walk_error(error: OSError) -> None:
+    # os.walk skips directories it cannot list unless the error is raised.
+    raise error
 
 
 def tree_sha256(directory: str | Path) -> str:
@@ -808,13 +875,16 @@ def tree_sha256(directory: str | Path) -> str:
     The records are sorted by the bytes of the path and hashed with SHA-256.
     Directories (also empty ones), time stamps and permissions do not count.
     Symbolic links are never followed; a link counts as a file whose content
-    is the link target as UTF-8 text.
+    is the link target as UTF-8 text. A directory that cannot be read raises
+    ``OSError``; it is never skipped silently.
     """
     base = Path(directory)
     if not base.is_dir():
         raise ValueError(f"not a directory: {base}")
     records: list[tuple[bytes, str]] = []
-    for current, dir_names, file_names in os.walk(base, followlinks=False):
+    for current, dir_names, file_names in os.walk(
+        base, followlinks=False, onerror=_raise_walk_error
+    ):
         current_path = Path(current)
         for name in [*dir_names, *file_names]:
             path = current_path / name
@@ -854,23 +924,69 @@ def _build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_MANIFEST_PATH,
         help=f"manifest file (default: {DEFAULT_MANIFEST_PATH})",
     )
+    formatter = commands.add_parser(
+        "format",
+        help="rewrite a manifest file in the canonical form (content unchanged)",
+    )
+    formatter.add_argument(
+        "--check",
+        action="store_true",
+        help="do not write; fail if the file is not in the canonical form",
+    )
+    formatter.add_argument(
+        "path",
+        nargs="?",
+        default=DEFAULT_MANIFEST_PATH,
+        help=f"manifest file (default: {DEFAULT_MANIFEST_PATH})",
+    )
     return parser
+
+
+def _report_invalid(path: str, error: ManifestError) -> int:
+    for problem in error.problems:
+        print(f"{path}: {problem}", file=sys.stderr)
+    print(f"{path}: INVALID ({len(error.problems)} problem(s))", file=sys.stderr)
+    return 1
+
+
+def _format_command(path: str, check_only: bool) -> int:
+    """Bring a manifest file into the canonical form. Returns the exit code."""
+    try:
+        # Read as bytes: the canonical form also fixes the line endings.
+        # Deliberately without allow_insecure_loopback, as in ``check``.
+        original = Path(path).read_bytes()
+        manifest = parse_manifest(original.decode("utf-8"))
+    except (OSError, UnicodeDecodeError) as error:
+        return _report_invalid(
+            path, ManifestError([Problem(None, "file", f"cannot be read: {error}")])
+        )
+    except ManifestError as error:
+        return _report_invalid(path, error)
+    if dump_manifest(manifest).encode("utf-8") == original:
+        print(f"{path}: already in canonical form")
+        return 0
+    if check_only:
+        print(f"{path}: NOT in canonical form", file=sys.stderr)
+        return 1
+    write_manifest(path, manifest)
+    print(f"{path}: rewritten in canonical form")
+    return 0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the command line. Returns the exit code."""
     arguments = _build_parser().parse_args(argv)
     path: str = arguments.path
+    if arguments.command == "format":
+        check_only: bool = arguments.check
+        return _format_command(path, check_only)
     complete: bool = arguments.complete
     try:
         # Deliberately without allow_insecure_loopback: the command line
         # accepts https:// only.
         manifest = load_manifest(path)
     except ManifestError as error:
-        for problem in error.problems:
-            print(f"{path}: {problem}", file=sys.stderr)
-        print(f"{path}: INVALID ({len(error.problems)} problem(s))", file=sys.stderr)
-        return 1
+        return _report_invalid(path, error)
     if complete:
         incomplete = find_incomplete(manifest)
         if incomplete:
