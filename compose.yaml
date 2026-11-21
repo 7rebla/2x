@@ -1,0 +1,4 @@
+# Entry point so that plain `docker compose ...` works from the repository root.
+# The actual configuration lives in deploy/compose.
+include:
+  - deploy/compose/compose.yaml

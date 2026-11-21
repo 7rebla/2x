@@ -1,0 +1,52 @@
+# All paths are relative to this file (deploy/compose).
+# Values come from the .env file in the repository root; see .env.example.
+
+x-backend-environment: &backend-environment
+  TWOX_SECRET_KEY: ${TWOX_SECRET_KEY:?Copy .env.example to .env first}
+  TWOX_DEBUG: ${TWOX_DEBUG:-}
+  TWOX_ALLOWED_HOSTS: ${TWOX_ALLOWED_HOSTS:-}
+  TWOX_DB_HOST: ${TWOX_DB_HOST:-db}
+  TWOX_DB_PORT: ${TWOX_DB_PORT:-5432}
+  TWOX_DB_NAME: ${TWOX_DB_NAME:?Copy .env.example to .env first}
+  TWOX_DB_USER: ${TWOX_DB_USER:?Copy .env.example to .env first}
+  TWOX_DB_PASSWORD: ${TWOX_DB_PASSWORD:?Copy .env.example to .env first}
+  TWOX_LLM_BASE_URL: ${TWOX_LLM_BASE_URL:-}
+  TWOX_DOCLING_URL: ${TWOX_DOCLING_URL:-}
+
+services:
+  db:
+    image: pgvector/pgvector:0.8.7-pg18
+    environment:
+      POSTGRES_DB: ${TWOX_DB_NAME:?Copy .env.example to .env first}
+      POSTGRES_USER: ${TWOX_DB_USER:?Copy .env.example to .env first}
+      POSTGRES_PASSWORD: ${TWOX_DB_PASSWORD:?Copy .env.example to .env first}
+    volumes:
+      # PostgreSQL 18 images keep their data below /var/lib/postgresql,
+      # not /var/lib/postgresql/data as in 17 and older.
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      # TCP on purpose: the temporary server during first initialisation only
+      # listens on the Unix socket and must not count as healthy.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+      start_interval: 1s
+
+  backend-dev:
+    profiles: ["dev"]
+    build:
+      context: ../../backend
+      target: dev
+    environment: *backend-environment
+    volumes:
+      - ../../backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  db-data:
