@@ -57,6 +57,8 @@ Alle Befehle im Wurzelverzeichnis. `D` steht für `docker compose -p twox-014`, 
 
 ## Vorgaben und Hinweise
 
+**Nachtrag der Leitstelle (21.11.2026, aus der Prüfung von Auftrag 002):** Der Dienst `web-dev` liegt im Profil `dev`. Deshalb gilt abweichend vom Wortlaut dieses Auftrags: Bauen mit `build web-dev` oder `--profile dev build`; Abräumen mit `--profile dev down -v` (bei Playwright zusätzlich `--profile e2e`); den Dienst immer über `run --rm web-dev` ansprechen – ein bloßes `build`, `up` oder `down -v` ohne Profil tut nichts und meldet trotzdem Erfolg. `git check-ignore -q` nimmt nur einen Pfad je Aufruf. Zugelassene Lizenzen bei reinen Entwicklungs- und Build-Paketen zusätzlich: BlueOak-1.0.0, CC-BY-3.0, CC-BY-4.0, CC0-1.0 (E-25).
+
 - **Voraussetzung:** Die Aufträge 011, 012 und 013 sind zusammengeführt (und damit alle davor außer 004 und 007).
 - **Abhängigkeiten.** Mit der Freigabe der Auftragsliste genehmigt a7 `@playwright/test`, das offizielle Playwright-Container-Image und den darin enthaltenen Browser Chromium (nur für Tests, nicht Teil des Produkts). Mitgezogene npm-Pakete sind mitgenehmigt, soweit die Lizenzprüfung sie durchlässt. Jede weitere direkte Abhängigkeit ist nicht genehmigt.
 - **Stand der Recherche vom 21.11.2026 (belegt):** `@playwright/test` 1.65.1, Apache-2.0, Node >=20.

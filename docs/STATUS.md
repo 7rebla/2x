@@ -11,9 +11,9 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 | Nr. | Auftrag | Stufe | Welle | Hängt ab von | Status |
 | --- | --- | --- | --- | --- | --- |
-| 001 | Backend: Werkzeuge und Container | C | 1 | – | in Arbeit |
-| 002 | Oberfläche als Grundgerüst | C | 1 | – | in Arbeit |
-| 003 | Suche nach Geheimnissen | C | 1 | – | zusammengeführt; CI-Lauf wartet auf Push |
+| 001 | Backend: Werkzeuge und Container | C | 1 | – | zur Prüfung |
+| 002 | Oberfläche als Grundgerüst | C | 1 | – | erledigt |
+| 003 | Suche nach Geheimnissen | C | 1 | – | erledigt (CI grün) |
 | 004 | Messung Dateizugriff | B | 2 | 001, 002 | offen |
 | 005 | API-Grundlage | C | 3 | 001 | offen |
 | 006 | Lizenzprüfung | C | 3 | 001, 002 | offen |

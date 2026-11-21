@@ -48,6 +48,8 @@ Lokale Läufe im Wurzelverzeichnis mit `-p twox-011`; vorher `.env.example` nach
 
 ## Vorgaben und Hinweise
 
+**Nachtrag der Leitstelle (21.11.2026, aus der Prüfung von Auftrag 002):** Der Dienst `web-dev` liegt im Profil `dev`. Deshalb gilt abweichend vom Wortlaut dieses Auftrags: Bauen mit `build web-dev` oder `--profile dev build`; Abräumen mit `--profile dev down -v` (bei Playwright zusätzlich `--profile e2e`); den Dienst immer über `run --rm web-dev` ansprechen – ein bloßes `build`, `up` oder `down -v` ohne Profil tut nichts und meldet trotzdem Erfolg. `git check-ignore -q` nimmt nur einen Pfad je Aufruf. Zugelassene Lizenzen bei reinen Entwicklungs- und Build-Paketen zusätzlich: BlueOak-1.0.0, CC-BY-3.0, CC-BY-4.0, CC0-1.0 (E-25).
+
 - **Voraussetzung:** Die Aufträge 002, 005, 006 und 008 sind zusammengeführt (und damit 001).
 - **Abhängigkeiten.** Mit der Freigabe der Auftragsliste genehmigt a7 die Action `actions/checkout` (MIT, laut Prüfbefund vom 21.11.2026 an der LICENSE-Datei belegt). Jede weitere Fremd-Action (auch für Zwischenspeicher oder Docker-Build) ist nicht genehmigt; wird eine gebraucht: Frage in den Auftrag mit Lizenz und Quelle, Status „wartet auf a7“.
 - **Prüfpunkte zu den GitHub-Runnern (ungeprüft, an der GitHub-Doku prüfen):**

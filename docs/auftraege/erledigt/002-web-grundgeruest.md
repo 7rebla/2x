@@ -1,6 +1,6 @@
 # Auftrag 002 – Oberfläche als Grundgerüst
 
-Meilenstein: M0 · Freigabestufe: C · Status: wartet auf a7 (Frage 3)
+Meilenstein: M0 · Freigabestufe: C · Status: erledigt (Frage 3)
 
 ## Ziel
 
@@ -92,7 +92,7 @@ Alle Befehle im Wurzelverzeichnis des Arbeitsverzeichnisses. `W` steht für `doc
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
 
-**Status: wartet auf a7** (Frage 3, Lizenzen mitgezogener Entwicklungswerkzeuge). Technisch ist der Auftrag fertig; alle Prüfungen liefen am 21.11.2026 im Container.
+**Status: erledigt** (Frage 3, Lizenzen mitgezogener Entwicklungswerkzeuge). Technisch ist der Auftrag fertig; alle Prüfungen liefen am 21.11.2026 im Container.
 
 ### Was wurde gebaut?
 

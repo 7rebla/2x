@@ -1,6 +1,6 @@
 # Auftrag 003 – Suche nach Geheimnissen
 
-Meilenstein: M0 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: M0 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 

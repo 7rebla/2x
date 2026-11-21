@@ -57,6 +57,8 @@ Alle Befehle im Wurzelverzeichnis. `D` steht für `docker compose -p twox-013`. 
 
 ## Vorgaben und Hinweise
 
+**Nachtrag der Leitstelle (21.11.2026, aus der Prüfung von Auftrag 002):** Der Dienst `web-dev` liegt im Profil `dev`. Deshalb gilt abweichend vom Wortlaut dieses Auftrags: Bauen mit `build web-dev` oder `--profile dev build`; Abräumen mit `--profile dev down -v` (bei Playwright zusätzlich `--profile e2e`); den Dienst immer über `run --rm web-dev` ansprechen – ein bloßes `build`, `up` oder `down -v` ohne Profil tut nichts und meldet trotzdem Erfolg. `git check-ignore -q` nimmt nur einen Pfad je Aufruf. Zugelassene Lizenzen bei reinen Entwicklungs- und Build-Paketen zusätzlich: BlueOak-1.0.0, CC-BY-3.0, CC-BY-4.0, CC0-1.0 (E-25).
+
 - **Voraussetzung:** Die Aufträge 002, 009 und 010 sind zusammengeführt (und damit 001, 005, 006, 008). Auftrag 011 liegt ebenfalls auf `main` (für Kriterium 8).
 - **Abhängigkeiten.** Mit der Freigabe der Auftragsliste genehmigt a7 – wenn er Frage 1 mit (a) beantwortet – das Paket WhiteNoise. Jede weitere direkte Abhängigkeit ist nicht genehmigt. Ergibt die Lizenzprüfung (Kriterium 9) eine nicht gedeckte Lizenz: nicht einbauen, Frage in den Auftrag, Status „wartet auf a7“.
 - **Stand der Recherche vom 21.11.2026 (belegt):** WhiteNoise 6.12.0, MIT; der Classifier nennt Django nur bis 6.0. Ob es unter Django 6.1 fehlerfrei läuft, ist ungeprüft – die Kriterien 3 und 4 sind der Nachweis. Klappt es nicht: nicht ausweichen, sondern Frage in den Auftrag.

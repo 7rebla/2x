@@ -124,3 +124,14 @@ Jede neue Abhängigkeit bekommt hier einen Eintrag (Leitplanke 7). Bevorzugt: MI
 | --- | --- | --- | --- | --- |
 | gitleaks (Kommandozeile, Image `ghcr.io/gitleaks/gitleaks:v8.30.1`, per Digest festgelegt) | MIT | Suche nach Geheimnissen, lokal und in der CI | 003 | nach E-23 |
 | actions/checkout v7.0.1 (per Commit festgelegt) | MIT | Auschecken in GitHub Actions | 003 | nach E-23 |
+| react, react-dom 19.3.1 | MIT | Oberfläche (einzige Laufzeitpakete im ausgelieferten Build, mit scheduler) | 002 | nach E-23 |
+| typescript 6.0.3 | Apache-2.0 | Typprüfung der Oberfläche (Entwicklung) | 002 | nach E-23 |
+| vite 8.3.8, @vitejs/plugin-react 6.3.0 | MIT | Build der Oberfläche | 002 | nach E-23 |
+| tailwindcss 4.3.5, @tailwindcss/vite 4.3.5 | MIT | CSS (Build) | 002 | nach E-23 |
+| lightningcss 1.33.0 samt Plattformpaketen (mitgezogen) | MPL-2.0 | CSS-Verarbeitung beim Build, nicht im ausgelieferten Code | 002 | benannte Ausnahme nach E-23 |
+| vitest 5.1.1, @testing-library/react 16.3.3, @testing-library/dom 10.4.2, jsdom 31.0.1 | MIT | Tests der Oberfläche | 002 | nach E-23 |
+| @types/react 19.3.0, @types/react-dom 19.3.0 | MIT | Typen (Entwicklung) | 002 | nach E-23 |
+| eslint 10.15.0, typescript-eslint 8.73.0, eslint-plugin-react-hooks 7.1.1 | MIT | Linter der Oberfläche | 002 | nach E-23 |
+| license-checker-rseidelsohn 5.0.1 | BSD-3-Clause | Lizenzliste der npm-Pakete (Entwicklung) | 002 | nach E-23 |
+| Mitgezogene Entwicklungspakete der Oberfläche (über jsdom, @tailwindcss/node, license-checker, ESLint): ISC, 0BSD, BlueOak-1.0.0, CC-BY-3.0, CC-BY-4.0, CC0-1.0 | wie genannt | nur Entwicklung und Build, nicht im ausgelieferten Code | 002 | E-23 und E-25 |
+| Image `node:24-slim` (nur per Tag festgelegt) | Node.js: MIT; Lizenzen des Debian-Grundsystems im Image ungeprüft | Build- und Testumgebung der Oberfläche, nicht im Betrieb | 002 | nach E-23 |
