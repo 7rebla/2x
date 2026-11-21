@@ -4,6 +4,219 @@ info:
   version: 0.0.0
   description: Asset records with sourced answers.
 paths:
+  /api/v1/devices/{device_id}/documents/:
+    get:
+      operationId: device_documents_list
+      description: The files of the device, each with its newest version, ordered
+        by title.
+      parameters:
+      - in: path
+        name: device_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - devices
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Document'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: No role, or not allowed.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Not found.
+    post:
+      operationId: device_documents_create
+      description: |-
+        Upload a new file of the device as version 1.
+
+        ``duplicates`` lists other places with the same content; the upload is
+        accepted all the same.
+      parameters:
+      - in: path
+        name: device_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - devices
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentUpload'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResult'
+          description: ''
+        '400':
+          description: Invalid form, or a configuration file.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: No role, or not allowed.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Not found.
+        '413':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Larger than TWOX_UPLOAD_MAX_BYTES.
+  /api/v1/document-versions/{version_id}/download/:
+    get:
+      operationId: document_version_download
+      description: 'Download the version: streamed from the storage, always as an
+        attachment.'
+      parameters:
+      - in: path
+        name: version_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - document-versions
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+          description: The file as an attachment. Content-Type is the stored type
+            if it is a known document or image type, otherwise application/octet-stream.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: No role, or not allowed.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Not found.
+  /api/v1/documents/{document_id}/:
+    get:
+      operationId: document_retrieve
+      description: The file with all versions, oldest first.
+      parameters:
+      - in: path
+        name: document_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - documents
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDetail'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: No role, or not allowed.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Not found.
+  /api/v1/documents/{document_id}/versions/:
+    post:
+      operationId: document_version_create
+      description: |-
+        Upload a new version of the file.
+
+        409 if the content equals the newest version; the answer names that
+        version. The same content as an older version or another file is
+        accepted and listed in ``duplicates``.
+      parameters:
+      - in: path
+        name: document_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - documents
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VersionUpload'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResult'
+          description: ''
+        '400':
+          description: Invalid form, or a configuration file.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: No role, or not allowed.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Not found.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DuplicateVersionError'
+          description: ''
+        '413':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Larger than TWOX_UPLOAD_MAX_BYTES.
   /api/v1/health/:
     get:
       operationId: health_retrieve
@@ -74,6 +287,204 @@ components:
       - error
       - ok
       - server_version
+    Document:
+      type: object
+      description: A file of a device with its newest version.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        device:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/KindEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+          description: User name of the creator; null for the system.
+        latest_version:
+          allOf:
+          - $ref: '#/components/schemas/DocumentVersion'
+          nullable: true
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - device
+      - id
+      - kind
+      - latest_version
+      - title
+    DocumentDetail:
+      type: object
+      description: A file of a device with all its versions, oldest first.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        device:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/KindEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+          description: User name of the creator; null for the system.
+        latest_version:
+          allOf:
+          - $ref: '#/components/schemas/DocumentVersion'
+          nullable: true
+          readOnly: true
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentVersion'
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - device
+      - id
+      - kind
+      - latest_version
+      - title
+      - versions
+    DocumentUpload:
+      type: object
+      description: Form of a new file (``multipart/form-data``).
+      properties:
+        file:
+          type: string
+          format: binary
+          description: The file; at most TWOX_UPLOAD_MAX_BYTES bytes.
+        title:
+          type: string
+          description: Title of the document; the file name if empty or missing.
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/KindEnum'
+          default: document
+          description: |-
+            Only 'document' is accepted for now; configurations follow with redaction.
+
+            * `document` - document
+            * `configuration` - configuration
+      required:
+      - file
+    DocumentVersion:
+      type: object
+      description: One immutable version of a document; its bytes come from the download
+        endpoint.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        number:
+          type: integer
+          readOnly: true
+        sha256:
+          type: string
+          readOnly: true
+          title: SHA-256
+        size:
+          type: integer
+          readOnly: true
+          title: Size in bytes
+        content_type:
+          type: string
+          readOnly: true
+        original_filename:
+          type: string
+          readOnly: true
+          title: Original file name
+        uploaded_by:
+          type: string
+          readOnly: true
+          nullable: true
+          description: User name of the uploader; null for the system.
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - content_type
+      - created_at
+      - id
+      - number
+      - original_filename
+      - sha256
+      - size
+      - uploaded_by
+    Duplicate:
+      type: object
+      description: Another place where the same content is already stored.
+      properties:
+        device:
+          type: integer
+        device_key:
+          type: string
+        device_name:
+          type: string
+        document:
+          type: integer
+        document_title:
+          type: string
+        version:
+          type: integer
+        version_number:
+          type: integer
+      required:
+      - device
+      - device_key
+      - device_name
+      - document
+      - document_title
+      - version
+      - version_number
+    DuplicateVersionError:
+      type: object
+      description: '409: the upload equals the newest version of the document.'
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+        existing_version:
+          $ref: '#/components/schemas/DocumentVersion'
+      required:
+      - code
+      - detail
+      - existing_version
+    ErrorDetail:
+      type: object
+      description: An error with a message, for example 404 or 413.
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
     Health:
       type: object
       description: Shape of the health response, used for the OpenAPI schema.
@@ -82,6 +493,14 @@ components:
           $ref: '#/components/schemas/StatusEnum'
       required:
       - status
+    KindEnum:
+      enum:
+      - document
+      - configuration
+      type: string
+      description: |-
+        * `document` - document
+        * `configuration` - configuration
     Me:
       type: object
       description: The signed-in user as the web UI needs it.
@@ -125,6 +544,33 @@ components:
       - ok
       type: string
       description: '* `ok` - ok'
+    UploadResult:
+      type: object
+      description: 'Answer to an upload: the document, the new version and other places
+        of its content.'
+      properties:
+        document:
+          $ref: '#/components/schemas/Document'
+        version:
+          $ref: '#/components/schemas/DocumentVersion'
+        duplicates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Duplicate'
+      required:
+      - document
+      - duplicates
+      - version
+    VersionUpload:
+      type: object
+      description: Form of a new version of an existing file (``multipart/form-data``).
+      properties:
+        file:
+          type: string
+          format: binary
+          description: The file; at most TWOX_UPLOAD_MAX_BYTES bytes.
+      required:
+      - file
     WorkerCheck:
       type: object
       properties:
