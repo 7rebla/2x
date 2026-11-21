@@ -8,7 +8,8 @@ export type SelftestOutcome =
   | { kind: "answered"; selftest: Selftest }
   | { kind: "unreachable" }
   | { kind: "http-error"; status: number }
-  | { kind: "invalid-answer" };
+  | { kind: "invalid-answer" }
+  | { kind: "unexpected-error" };
 
 /**
  * Calls the self-test endpoint through the generated client.
@@ -17,12 +18,29 @@ export type SelftestOutcome =
  * Network errors and timeouts become "unreachable", any non-2xx answer becomes "http-error",
  * and a 2xx answer that is not the expected JSON object becomes "invalid-answer"
  * (for example an HTML page from a proxy or a dev server).
+ * The timeout uses AbortController and setTimeout only, so older browsers are not excluded.
  */
 export async function loadSelftest(signal: AbortSignal): Promise<SelftestOutcome> {
-  const result = await selftestRetrieve({
-    parseAs: "json",
-    signal: AbortSignal.any([signal, AbortSignal.timeout(SELFTEST_TIMEOUT_MS)]),
-  });
+  const controller = new AbortController();
+  const abort = (): void => {
+    controller.abort();
+  };
+  const timer = setTimeout(abort, SELFTEST_TIMEOUT_MS);
+  if (signal.aborted) {
+    abort();
+  } else {
+    signal.addEventListener("abort", abort, { once: true });
+  }
+  try {
+    return await requestSelftest(controller.signal);
+  } finally {
+    clearTimeout(timer);
+    signal.removeEventListener("abort", abort);
+  }
+}
+
+async function requestSelftest(signal: AbortSignal): Promise<SelftestOutcome> {
+  const result = await selftestRetrieve({ parseAs: "json", signal });
   if (result.response === undefined) {
     return { kind: "unreachable" };
   }

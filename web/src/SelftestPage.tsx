@@ -13,9 +13,13 @@ export function SelftestPage(): ReactElement {
 
   useEffect(() => {
     const controller = new AbortController();
-    void loadSelftest(controller.signal).then((outcome) => {
+    // Any error outside the generated client must end in a visible state, never in endless loading.
+    const outcome = loadSelftest(controller.signal).catch(
+      (): SelftestOutcome => ({ kind: "unexpected-error" }),
+    );
+    void outcome.then((result) => {
       if (!controller.signal.aborted) {
-        setState(outcome);
+        setState(result);
       }
     });
     return () => {
@@ -63,6 +67,8 @@ function SelftestBody({ state }: { state: PageState }): ReactElement {
       return <ApiError message={texts.selftest.apiHttpError(state.status)} />;
     case "invalid-answer":
       return <ApiError message={texts.selftest.apiInvalidAnswer} />;
+    case "unexpected-error":
+      return <ApiError message={texts.selftest.unexpectedError} />;
     case "answered":
       return (
         <div className="space-y-4">

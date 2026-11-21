@@ -15,6 +15,7 @@ export const texts = {
     apiHttpError: (status: number): string =>
       `The API answered with HTTP status ${String(status)}.`,
     apiInvalidAnswer: "The API sent an answer this page cannot read.",
+    unexpectedError: "The self-test could not be run in this browser. Please try again.",
     database: {
       heading: "Database",
       serverVersion: "Server version",
