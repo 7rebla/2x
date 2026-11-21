@@ -54,6 +54,7 @@ Quelle der Einträge E-01 bis E-13: `STARTUNTERLAGE.md`, Entwurf 2 vom 21.11.202
 | E-44 | CSV-Import genau im Format von `testfactory/layout/devices.csv` (13 Spalten, Komma, UTF-8); Abgleich über `plant_id` und `device_id`, anlegen und aktualisieren, nie löschen, alles oder nichts, Probelauf als Standard (F-31, F-32) | ✔ | 21.11.2026 |
 | E-45 | Neue Abhängigkeiten für M1 zugelassen: django-allauth[headless] mit pyjwt, cryptography, cffi, pycparser; django-auditlog; i18next und react-i18next (mit html-parse-stringify); react-router (mit cookie-es, @remix-run/route-pattern); @tanstack/react-query (mit query-core). Die Lizenz MIT-0 (cffi) kommt in die Lizenzregeln (F-6, F-10, F-17, F-18, F-24) | ✔ | 21.11.2026 |
 | E-46 | GNU gettext (GPL) ist als Werkzeug im Dev-Image und in einer Bau-Stufe zugelassen, nicht im Laufzeit-Image und nicht eingebunden; `.mo`-Dateien kommen nie ins Repository (F-33) | ✔ | 21.11.2026 |
+| E-47 | Font Awesome Free 6.7.2 (CC-BY-4.0) ist als benannte Ausnahme zugelassen, nur als Teil des unveränderten Django-Admins (`admin/img/*.svg`); die Namensnennung liefert die mitgelieferte `admin/img/README.md` | ✔ | 21.11.2026 |
 
 ## Begründungen
 
@@ -186,3 +187,6 @@ Jede neue Abhängigkeit bekommt hier einen Eintrag (Leitplanke 7). Bevorzugt: MI
 | Image `mcr.microsoft.com/playwright:v1.65.1-noble` (per Digest festgelegt; Ubuntu 24.04) | Playwright Apache-2.0, Chromium BSD-3-Clause, Node MIT; im Image zusätzlich Firefox (MPL-2.0), WebKit (LGPL/BSD) und ein Chrome-for-Testing-Build mit Google-Nutzungsbedingungen und WidevineCdm (proprietär) | unveränderte Testlaufzeit nur in CI und lokal, wird nicht weitergegeben; der Test nutzt Chromium | 014 | nach E-23 (unveränderte Laufzeit); Hinweis an a7 |
 | ruff 0.17.6 im Prüf-Image der Testfabrik | MIT | Lint und Formatprüfung der Testfabrik-Skripte (zweiter Einbauort, dieselbe Version wie in 001) | 114 | nach E-23 |
 | i18next 27.2.3, react-i18next 18.0.3, html-parse-stringify 4.0.1 (mitgezogen) | MIT | Zweisprachige Oberfläche; im ausgelieferten Bündel, Hinweise in `THIRD-PARTY-NOTICES.txt`. typescript, @types/react und csstype erscheinen als optionale Peer-Abhängigkeiten in der Laufzeitliste, kommen aber nicht ins Bündel | 018 | E-45 |
+| Fremdbibliotheken des Django-Admins (mit Django 6.1.3, unverändert ausgeliefert): jQuery 3.7.1, Select2 4.0.13, XRegExp 5.1.1 (enthält Teile von core-js) | MIT, abgelesen an den mitgelieferten Lizenzdateien | Admin für Superuser (E-39) | 016 | E-39 |
+| Font Awesome Free 6.7.2 (Symbole im Django-Admin) | CC-BY-4.0 | Admin für Superuser; Namensnennung in `admin/img/README.md` | 016 | ✔ a7, 21.11.2026 (E-47) |
+| redis (redis-py) 8.1.0 – seit 016 auch direkt von Djangos `RedisCache` genutzt (bisher nur über `celery[redis]` im Lock) | MIT | Zwischenspeicher in Valkey | 016 | nach E-23; bei Änderungen an der Celery-Abhängigkeit beachten |

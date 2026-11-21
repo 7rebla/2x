@@ -98,7 +98,7 @@ Nichts davon hält die laufende Arbeit auf.
 
 | Nr. | Auftrag | Stufe | Welle | Status |
 | --- | --- | --- | --- | --- |
-| 016 | Backend-Grundlage: Sitzungen, Admin, CSRF, Sprachen, Zwischenspeicher | C | 1 | in Arbeit |
+| 016 | Backend-Grundlage: Sitzungen, Admin, CSRF, Sprachen, Zwischenspeicher | C | 1 | erledigt |
 | 017 | Selbsttest: Zeitlimit Ergebnisspeicher | B | 1 | in Arbeit |
 | 018 | Oberfläche zweisprachig | C | 1 | erledigt |
 | 019 | Datenmodell Standort, Bereich, Anlage, Gerät | C | 1 | erledigt |
@@ -121,3 +121,7 @@ Nichts davon hält die laufende Arbeit auf.
 | 036 | Oberfläche: Dateien | B | 7 | offen |
 | 037 | Nachweis der M1-Abnahme | B | 8 | offen |
 | 038 | README und ARCHITECTURE für M1 | B | 8 | offen |
+
+Hinweise aus Welle 1:
+- 016: Die Upload-Grenze „200 MB“ ist dezimal umgesetzt (200 000 000 Byte, einstellbar über `TWOX_UPLOAD_MAX_BYTES`); Entscheidung der Leitstelle, kein Widerspruch zu E-42.
+- 016: Bis Auftrag 030 meldet man sich am Admin über dessen eigenes Formular an (ohne Ratenbegrenzung); 030 soll prüfen, dass `/admin/login/` danach keine Sitzung mehr ohne Ratenbegrenzung vergibt.
