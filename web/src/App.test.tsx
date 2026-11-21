@@ -1,9 +1,9 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Selftest } from "./api/generated";
-import { App } from "./App.tsx";
 import { changeLanguage } from "./i18n.ts";
+import { renderApp } from "./test/renderApp.tsx";
 
 const healthy: Selftest = {
   database: { ok: true, server_version: "18.7 (Debian 18.7-1.pgdg12+2)", error: "" },
@@ -59,17 +59,17 @@ afterEach(async () => {
   window.localStorage.clear();
 });
 
-describe("self-test page", () => {
+describe("self-test page at /selftest", () => {
   it("renders the heading", () => {
     stubApi(() => Promise.resolve(jsonResponse(healthy)));
-    render(<App />);
+    renderApp("/selftest");
 
     expect(screen.getByRole("heading", { level: 1, name: "2x" })).toBeDefined();
   });
 
   it("shows database version and worker result when everything is fine", async () => {
     stubApi(() => Promise.resolve(jsonResponse(healthy)));
-    render(<App />);
+    renderApp("/selftest");
 
     expect(screen.getByTestId("selftest-loading").textContent).toBe("Checking…");
     expect((await screen.findByTestId("database-version")).textContent).toBe(
@@ -84,7 +84,7 @@ describe("self-test page", () => {
 
   it("shows the API's error text when the worker is down", async () => {
     stubApi(() => Promise.resolve(jsonResponse(workerDown)));
-    render(<App />);
+    renderApp("/selftest");
 
     expect((await screen.findByTestId("worker-error")).textContent).toBe(
       "no result from a worker within 5 seconds",
@@ -100,7 +100,7 @@ describe("self-test page", () => {
 
   it("shows a separate state when the API does not respond", async () => {
     const fetchMock = stubApi(() => Promise.reject(new TypeError("Failed to fetch")));
-    render(<App />);
+    renderApp("/selftest");
 
     const error = await screen.findByTestId("selftest-error");
     expect(fetchMock).toHaveBeenCalled();
@@ -112,7 +112,7 @@ describe("self-test page", () => {
 
   it("shows the HTTP status when the API answers with an error", async () => {
     stubApi(() => Promise.resolve(jsonResponse({ detail: "Server Error" }, 502)));
-    render(<App />);
+    renderApp("/selftest");
 
     expect((await screen.findByTestId("selftest-error")).textContent).toBe(
       "The API answered with HTTP status 502.",
@@ -130,7 +130,7 @@ describe("self-test page", () => {
         ),
       () => Promise.resolve(jsonResponse({ detail: "unexpected" })),
     );
-    render(<App />);
+    renderApp("/selftest");
 
     expect((await screen.findByTestId("selftest-error")).textContent).toBe(
       "The API sent an answer this page cannot read.",
@@ -147,7 +147,7 @@ describe("self-test page", () => {
       () => Promise.reject(new TypeError("Failed to fetch")),
       () => Promise.resolve(jsonResponse(healthy)),
     );
-    render(<App />);
+    renderApp("/selftest");
     await screen.findByTestId("selftest-error");
     const callsBefore = fetchMock.mock.calls.length;
 
@@ -162,7 +162,7 @@ describe("self-test page", () => {
 describe("language switch", () => {
   it("switches texts, number format and <html lang> to German and back", async () => {
     stubApi(() => Promise.resolve(jsonResponse(workerDown)));
-    render(<App />);
+    renderApp("/selftest");
     expect(await screen.findByTestId("worker-duration")).toBeDefined();
     expect(document.documentElement.lang).toBe("en");
     expect(screen.getByTestId("worker-duration").textContent).toBe("5,019 ms");
@@ -193,7 +193,7 @@ describe("language switch", () => {
   it("shows German error texts with the HTTP status", async () => {
     await changeLanguage("de");
     stubApi(() => Promise.resolve(jsonResponse({ detail: "Server Error" }, 502)));
-    render(<App />);
+    renderApp("/selftest");
 
     expect((await screen.findByTestId("selftest-error")).textContent).toBe(
       "Die API hat mit dem HTTP-Status 502 geantwortet.",
@@ -202,7 +202,7 @@ describe("language switch", () => {
 
   it("ignores values that are not a supported language", async () => {
     stubApi(() => Promise.resolve(jsonResponse(healthy)));
-    render(<App />);
+    renderApp("/selftest");
     await screen.findByTestId("worker-result");
 
     fireEvent.change(screen.getByTestId("language-switch"), { target: { value: "fr" } });

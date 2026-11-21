@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 // Acceptance of milestone M0: the page served by Django shows a value from the
-// database and a result from the worker, read live through the API.
+// database and a result from the worker, read live through the API. The page
+// is opened directly at /selftest, so Django's delivery of index.html for UI
+// paths (work order 016) is checked as well.
 test("self-test page shows the database version and the worker result", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
@@ -13,7 +15,7 @@ test("self-test page shows the database version and the worker result", async ({
     consoleErrors.push(error.message);
   });
 
-  const response = await page.goto("/");
+  const response = await page.goto("/selftest");
   expect(response?.status()).toBe(200);
 
   // Wait for content (with the expect timeout), never for a fixed time.
