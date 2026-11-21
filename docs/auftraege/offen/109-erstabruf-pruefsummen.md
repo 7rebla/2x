@@ -1,6 +1,6 @@
 # Auftrag 109 – Erstabruf: Unterlagen laden und Prüfsummen eintragen
 
-Meilenstein: T1 · Freigabestufe: B · Status: offen
+Meilenstein: T1 · Freigabestufe: B · Status: zur Prüfung
 
 ## Ziel
 
@@ -60,7 +60,85 @@ In den Befehlen steht `TF` für `docker compose -f deploy/compose/testfactory.ya
 Keine.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Keine offene Frage an a7. Kein `auto`-Eintrag ist fehlgeschlagen.
+
+### Was wurde gebaut?
+
+- **Erstabruf** mit `fetch --record` (Docker Engine 29.9.3, Compose v5.7.0, Projektname `-p twox-109`): alle 26 Einträge mit `fetch: auto` geladen, `sha256` (23 Dateien) bzw. `tree_sha256` (3 Repositories: `aps-repository`, `aps-repository-dev`, `opnsense-docs`) eingetragen. Ausgabe: `testfactory/manifest.yaml: 26 checksum(s) recorded`, Exit 0.
+- Dauer des Abrufs: **89 Sekunden** (ganzer `run`-Aufruf). Gesamtgröße: **284.296.463 Byte (rund 271 MiB) in 1.520 Dateien** unter `testfactory/extern/` (28 + 540 + 929 Dateien der drei Repositories, 23 Einzeldateien).
+- `size_bytes` und `retrieved_on` blieben unverändert: Jede gemessene Größe ist gleich der Vorab-Angabe (keine Meldung `SIZE DIFFERS`), das Abrufdatum war schon 2026-11-21. Der Diff des Manifests ändert deshalb nur 26 Zeilen `sha256`/`tree_sha256`; keine `notes` geändert.
+- Gegenwerte aus Auftrag 102 bestätigt: Die in `notes` vermerkten SHA-256 von `aps-documentation-de` (`662ae19b…`) und `aps-documentation-en` (`f4555cab…`) sind gleich den jetzt eingetragenen Prüfsummen.
+- `testfactory/tests/test_crossrefs.py` (5 Tests): jede Kennung in `assigned_to` ist `plant_id` oder `device_id` in `layout/devices.csv`; jedes Gerät hat mindestens einen Manifest-Eintrag; Ausnahmeliste `DEVICES_WITHOUT_ENTRY` (leer, weil alle 13 Geräte einen Eintrag haben; jede Ausnahme braucht einen Grund und muss ein Gerät ohne Eintrag sein); keine Kennung ist zugleich Anlage und Gerät.
+
+Zusammenfassung des letzten Laufs (zweiter vollständiger Lauf ohne `--record`, Exit 0):
+
+| ID | Ergebnis | Größe (Byte) | Größe laut Quellen-Datei |
+| --- | --- | ---: | --- |
+| aps-repository | ok | 8067956 | gleich (quellen-fertigungslinie.md Z. 40) |
+| aps-repository-dev | ok | 13628940 | gleich (Z. 87) |
+| aps-quick-start-de | ok | 640769 | gleich (Z. 130) |
+| aps-documentation-de | ok | 2531482 | gleich (Z. 131) |
+| aps-assignment-plans-de | ok | 1175306 | gleich (Z. 132) |
+| aps-calibration-de | ok | 13329798 | gleich (Z. 133) |
+| aps-troubleshooting-de | ok | 168049 | gleich (Z. 134) |
+| aps-change-ip-address-de | ok | 10089795 | gleich (Z. 135) |
+| aps-software-versions-de | ok | 249791 | gleich (Z. 146) |
+| aps-software-update-de | ok | 3344210 | gleich (Z. 148) |
+| aps-quick-start-en | ok | 639540 | gleich (Z. 138) |
+| aps-documentation-en | ok | 2650705 | gleich (Z. 139) |
+| aps-assignment-plans-en | ok | 1178112 | gleich (Z. 140) |
+| aps-calibration-en | ok | 23223044 | gleich (Z. 141) |
+| aps-troubleshooting-en | ok | 121035 | gleich (Z. 142) |
+| aps-change-ip-address-en | ok | 2222861 | gleich (Z. 143) |
+| aps-software-versions-en | ok | 212679 | gleich (Z. 147) |
+| aps-software-update-en | ok | 3319480 | gleich (Z. 149) |
+| aps-rpi-image | reference-only | – | – |
+| siemens-s7-1200-system-manual-v4-6-de | manual | – | nicht geladen (E-27) |
+| siemens-s7-1200-system-manual-v4-7-de | reference-only | – | – |
+| rpi4b-datasheet-en | ok | 413147 | gleich (quellen-standardgeraete-roboter-firewall.md Z. 118) |
+| rpi4b-product-brief-en | ok | 21375446 | gleich (Z. 119) |
+| rpi-documentation | reference-only | – | – |
+| tl-wr902ac-user-guide-v3-en | ok | 8504388 | gleich (Z. 136) |
+| ur5e-user-manual-de | ok | 21703593 | gleich (Z. 169) |
+| ur5e-software-handbook-en | ok | 11470539 | gleich (Z. 171) |
+| ur5e-script-directory-en | ok | 2089986 | gleich (Z. 172) |
+| ur5e-service-manual-en | ok | 23785655 | gleich (Z. 173, 181) |
+| ursim-e-series | reference-only | – | – |
+| opnsense-docs | ok | 108160157 | gleich (Z. 275) |
+
+`31 entries, 26 ok, 4 reference-only, 1 manual`
+
+**Handabrufe (a7):** nur `siemens-s7-1200-system-manual-v4-6-de` – im Browser von https://support.industry.siemens.com/cs/ww/de/view/109814829 laden und ablegen als `testfactory/extern/siemens/s7-1200/documents/de/v4.6/s71200_system_manual_de-DE_de-DE.pdf`, danach `fetch --record --only siemens-s7-1200-system-manual-v4-6-de`. Nach E-27 hier nicht geladen, keine Prüfsumme eingetragen.
+
+**Gefüllter Ordner:** `testfactory/extern/` im Arbeitsverzeichnis `.claude/worktrees/agent-a4723b0798caa03b2` (Unterordner `fischertechnik`, `opnsense`, `raspberry-pi`, `tp-link`, `universal-robots`). Nicht gelöscht; er verschwindet mit dem Arbeitsverzeichnis.
+
+### Wie wurde getestet?
+
+`TF` = `docker compose -p twox-109 -f deploy/compose/testfactory.yaml`.
+
+| Akzeptanzkriterium | Ergebnis |
+| --- | --- |
+| `docker version`, `docker compose version` | Exit 0 (29.9.3 / v5.7.0) |
+| `TF run --rm fetch python -m testfactory.fetch` | Exit 0, `31 entries, 26 ok, 4 reference-only, 1 manual`, kein `failed` |
+| `TF run --rm fetch python -m testfactory.fetch --verify` | Exit 0, `26 ok`, kein `mismatch` |
+| `TF run --rm fetch python -m testfactory.manifest_tools check --complete` | Exit 0, `testfactory/manifest.yaml: OK (31 entries)` |
+| Tests in `check` | `Ran 183 tests`, `OK (skipped=1)`, die 5 aus `test_crossrefs` dabei; ebenso in `check-offline` |
+| mypy in `check` | `Success: no issues found in 11 source files` |
+| `git status --porcelain` | nichts unter `testfactory/extern/` (nur als ignoriert `!! testfactory/extern/`); vor jedem Commit geprüft |
+| `git diff --stat main...HEAD` | `testfactory/manifest.yaml`, `testfactory/tests/test_crossrefs.py` und diese Auftragsdatei |
+| verbotene Felder im Manifest-Diff | keine Zeile mit `url`, `commit`, `digest`, `fetch`, `license`, `redistribution`, `note`, `verified` geändert |
+
+Zusätzlich: `manifest_tools format --check` → `already in canonical form`. Größenabgleich mit den Quellen-Dateien der Aufträge 102 und 103 siehe Tabelle (alle 26 gleich). Keine geladene Datei geöffnet.
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig `worktree-agent-a4723b0798caa03b2`
+- Arbeitsverzeichnis `.claude/worktrees/agent-a4723b0798caa03b2` (relativ zum Projektordner)
+
+### Abweichungen
+
+1. Der Auftrag nennt „Nachträge der Leitstelle“ unter „Vorgaben und Hinweise“; in der Datei gibt es keinen solchen Abschnitt (die Überschrift lautet „Vorgaben und Hinweise109“). Umgesetzt sind die Hinweise aus der Startnachricht der Leitstelle.
+2. Die Startnachricht der Leitstelle nennt als berührte Dateien nur Manifest und Auftragsdatei; Umfang Punkt 6 und die Akzeptanzkriterien verlangen zusätzlich `testfactory/tests/test_crossrefs.py`. Die Testdatei ist nach dem Auftrag angelegt.
+3. U-14 (Größe des komprimierten `opnsense-docs`-Archivs) bleibt offen: `fetch.py` gibt nur die entpackte Größe aus und verwirft das Archiv; ohne Änderung am Skript oder zweiten Abruf nicht messbar.
+4. Eine gemessene Dauer gibt es nur für den ganzen Lauf (89 s), nicht je Eintrag.
