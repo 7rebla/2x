@@ -16,7 +16,7 @@ script loads the material onto the developer's machine.
 | --- | --- |
 | `manifest.yaml` | One entry per document or source: origin, software version, checksum, terms of use, assigned device. Repositories are pinned to a fixed commit. |
 | `manifest_tools.py` | Loads, validates and writes manifest files. Standard library only. |
-| `fetch.py` | Loads everything with `fetch: auto` into `extern/` and verifies checksums (work order 104). |
+| `fetch.py` | Loads everything with `fetch: auto` into `extern/` and verifies checksums; see "Fetching". Standard library only. |
 | `layout/` | Structure of the test factory: device list (CSV), network plan, description. Written by the project itself. |
 | `generated/` | Configurations produced by the project itself with original vendor software (URSim, OPNsense), each with its software version. |
 | `extern/` | Downloaded vendor material. Ignored by Git, never committed. |
@@ -50,6 +50,14 @@ TF run --rm fetch python -m testfactory.manifest_tools check
 TF run --rm fetch python -m testfactory.manifest_tools check --complete
 TF run --rm fetch python -m testfactory.manifest_tools check testdata/klein/manifest.yaml
 
+# Bring a manifest edited by hand into the canonical form
+TF run --rm fetch python -m testfactory.manifest_tools format
+TF run --rm fetch python -m testfactory.manifest_tools format --check
+
+# Load and verify the material (see "Fetching")
+TF run --rm fetch python -m testfactory.fetch --dry-run
+TF run --rm fetch python -m testfactory.fetch
+
 # Tests, with and without network
 TF build check
 TF run --rm check python -m unittest discover -s testfactory/tests -t . -v
@@ -61,9 +69,14 @@ TF run --rm check mypy --config-file testfactory/mypy.ini testfactory
 
 | Service | Image | Use |
 | --- | --- | --- |
-| `fetch` | official `python` image, unmodified | `manifest_tools.py`, later `fetch.py`. The repository is mounted writable so that `extern/` can be filled. |
+| `fetch` | official `python` image, unmodified | `manifest_tools.py` and `fetch.py`. The repository is mounted writable so that `extern/` can be filled and the manifest can be updated. |
 | `check` | the same image plus the type checker | tests and type checking; the repository is mounted read-only |
 | `check-offline` | as `check`, with `network_mode: none` | proof that the tests need no network |
+
+The `fetch` service runs as `root` and writes into the mounted repository:
+`fetch.py` below `extern/` and, with `--record`, into the manifest;
+`manifest_tools format` into the manifest. On a Linux host the files created
+this way belong to `root`. Everything else in the repository is left alone.
 
 `testfactory` is a Python package. Import the tools as
 `from testfactory import manifest_tools` and run them with
@@ -85,6 +98,124 @@ TF run --rm check mypy --config-file testfactory/mypy.ini testfactory
 
 The command line accepts `https://` addresses only. There is no option to
 relax this.
+
+### `format`
+
+`python -m testfactory.manifest_tools format [--check] [PATH]`
+
+- Reads `PATH` (default `testfactory/manifest.yaml`) and writes it back in
+  the canonical form described under "Notation". The content does not change,
+  only the notation: order of the fields, indentation, line endings.
+- Exit code 0 with `PATH: rewritten in canonical form` or
+  `PATH: already in canonical form`.
+- An invalid file is reported as by `check` (exit code 1) and left untouched.
+- With `--check` nothing is written; exit code 1 if the file is not in the
+  canonical form.
+
+## Fetching
+
+`fetch.py` loads the material that the manifest lists into the `root`
+directory of the manifest, which is `testfactory/extern/` for the test
+factory.
+
+**Vendor documents never go into the repository.** `extern/` is ignored by
+Git and must stay that way; never add files from it with `git add -f`. The
+only exception is material under an explicitly free license, and that is
+listed as `kind: local` and not loaded by this script.
+
+```sh
+# Show what would be done; loads and writes nothing
+TF run --rm fetch python -m testfactory.fetch --dry-run
+
+# Load every entry with fetch: auto and verify everything
+TF run --rm fetch python -m testfactory.fetch
+
+# Only some entries
+TF run --rm fetch python -m testfactory.fetch --only ur5e-user-manual-de aps-repository
+
+# Load nothing, only check what is there (works without network)
+TF run --rm fetch python -m testfactory.fetch --verify
+
+# First fetch: compute and store the checksums of entries that have none
+TF run --rm fetch python -m testfactory.fetch --record
+```
+
+| Switch | Effect |
+| --- | --- |
+| (none) | Load every `auto` entry and verify it. A file or directory that is already there and has the right checksum is not loaded again, so a second run needs no network. |
+| `--only ID [ID ...]` | Handle only these entries. An unknown ID ends the run with exit code 2. |
+| `--verify` | Load nothing. Check what is there against the manifest. |
+| `--record` | For entries without checksum: load, compute `sha256` or `tree_sha256`, `size_bytes` and `retrieved_on`, and write them into the manifest. The same is done for material fetched by hand that is present. A checksum that is already in the manifest is never changed. Review the diff of the manifest before committing it: the recorded checksum is what the source delivered at that moment. Not together with `--verify`. |
+| `--dry-run` | Only show what would be done. Loads nothing, writes nothing, exit code 0. |
+| `--strict` | Missing material that has to be fetched by hand leads to exit code 1. |
+| `--manifest PATH` | Manifest file. Default `testfactory/manifest.yaml`. |
+| `--dest PATH` | Directory to load into, instead of the `root` named in the manifest. |
+| `--max-size MIB` | Largest allowed download. Default 2048 MiB. An extracted archive may be four times as large. |
+
+### What happens per entry
+
+| Entry | What the script does |
+| --- | --- |
+| `file`, `fetch: auto` | Loads `url` over HTTPS into a working file, computes the checksum while writing, and moves the file to `target` only if the checksum matches. Otherwise the download is discarded. |
+| `git-archive`, `fetch: auto` | Loads the archive of the fixed commit from GitHub (`https://github.com/OWNER/REPOSITORY/archive/COMMIT.tar.gz`, the pattern from GitHub's documentation on source code archives), extracts it without its top-level directory, and moves it to `target` only if `tree_sha256` matches. No `git` is needed. Only repositories on `github.com` are supported. |
+| `fetch: manual` | Never loaded. If the file or directory lies at `target` it is verified; otherwise the summary says where to get it (`landing_page`) and where to put it. |
+| `local` | Never loaded; the checked-in file is verified against `sha256`. |
+| `container-image`, `reference` | Nothing is loaded or checked; listed as `reference-only`. |
+
+### Results
+
+The run ends with a table: ID, result, HTTP status (if the server answered
+with an error) and size in bytes, followed by one line of explanation for
+every entry that needs one.
+
+| Result | Meaning | Exit code |
+| --- | --- | --- |
+| `loaded` | Loaded now; checksum matches. | 0 |
+| `recorded` | `--record`: checksum, size and date were written into the manifest. | 0 |
+| `ok` | Already there; checksum matches. Nothing was loaded. | 0 |
+| `reference-only` | Not something this script loads. | 0 |
+| `manual` | Has to be fetched by hand and is not there yet. | 0, with a warning; 1 with `--strict` |
+| `unverified` | Fetched by hand and present, but the manifest has no checksum yet. | 0 |
+| `would-load`, `would-record` | `--dry-run`: what a real run would do. | 0 |
+| `no-checksum` | `fetch: auto` without checksum. Nothing is loaded, because it could not be verified; use `--record` once. | 1 |
+| `missing` | `--verify`: not there. Also: a `local` file that does not exist. | 1 |
+| `mismatch` | The checksum (or the size) differs from the manifest. A download is discarded; a file that is already in place is left as it is. | 1 |
+| `failed` | Could not be loaded or extracted: server error (with HTTP status), unreachable server, size limit, refused address, unsafe archive, unsafe target. | 1 |
+
+Exit code 0 means: every requested `auto` entry is present and its checksum
+matches. Exit code 2: the manifest is not valid, an ID is unknown, or the
+arguments are wrong; nothing was done.
+
+### Safety
+
+The script writes foreign files onto the machine, so it is deliberately
+narrow:
+
+- Only `https://`, also for every redirect (at most five). Every address
+  goes through `manifest_tools.address_problem`, the one place that decides.
+  The command line has no switch and no environment variable to relax this;
+  `allow_insecure_loopback` exists only as a parameter in code, for the tests.
+- Certificates are verified. Proxy settings of the environment are ignored.
+  No cookies, no credentials. The `User-Agent` is the fixed text
+  `twox-testfactory-fetch/1.0`.
+- One download at a time. 60 seconds without data or one hour in total end
+  an attempt. Unreachable or overloaded servers are tried three times with a
+  pause; errors such as 404 are final.
+- Downloads are written block by block and stop at the size limit, or at
+  `size_bytes` if the manifest names one.
+- Work happens in `<root>/.fetch-partial/`, which is removed afterwards.
+  Nothing unverified ever lies at a `target`.
+- Before writing, every target is checked against the root directory
+  (`manifest_tools.checked_target_path`): no symbolic link in the chain, no
+  way out of the root.
+- Archives: member names must be clean relative paths below the one
+  top-level directory; regular files and directories additionally pass the
+  `data` filter of the standard library. No link is ever created: a symbolic
+  link in a repository is stored as a small file containing the link target,
+  which is exactly how `tree_sha256` counts links. Hard links, devices and
+  pipes make the archive fail, as do too many members or too much content.
+- Loaded content is never imported or executed. ZIP files from vendors stay
+  as they are.
 
 ## Manifest format
 
@@ -111,7 +242,7 @@ minimal diffs. Files edited by hand should be brought into this form as well.
 
 | Field | Required | Meaning |
 | --- | --- | --- |
-| `schema_version` | yes | Version of this format. Currently `1`. |
+| `schema_version` | yes | Version of this format. Currently `1`, written as an integer (not `1.0`, not `"1"`). |
 | `root` | yes | Directory that every `target` refers to, relative to the folder of the manifest file. `extern` for `testfactory/manifest.yaml`, `.` for `testdata/klein/manifest.yaml`. A relative path without `..`. |
 | `entries` | yes | List of entries; may be empty. |
 
@@ -124,8 +255,8 @@ minimal diffs. Files edited by hand should be brought into this form as well.
 | `language` | `de`, `en`, or `""` if the source has no language or several. |
 | `kind` | What the source is; see "Kinds". Required. |
 | `fetch` | How the material gets onto the machine; see "Fetch modes". Required. |
-| `url` | Address of the file itself. Required for `file`. For `reference` and `local` the address the material originates from. |
-| `landing_page` | Page on which the vendor offers the material (for humans). Allowed for every kind. |
+| `url` | Address of the file itself. Required for `file` with `fetch: auto`; optional for `file` with `fetch: manual` (for example a download behind a form). For `reference` and `local` the address the material originates from. |
+| `landing_page` | Page on which the vendor offers the material (for humans). Allowed for every kind. Required for `file` with `fetch: manual`. |
 | `repository` | Address of a Git repository. |
 | `branch` | Branch on which `commit` was found. Informational; the commit decides. |
 | `commit` | Full commit ID, 40 lower-case hexadecimal characters. Short IDs, tags and branch names are not accepted. `repository`, `branch` and `commit` are required for `git-archive` and allowed for `reference` and `local`; `branch` and `commit` need `repository`. |
@@ -139,8 +270,8 @@ minimal diffs. Files edited by hand should be brought into this form as well.
 | `version_source` | Where the version statements come from: title page, file name, tag, release page … |
 | `sha256` | SHA-256 of the file, 64 lower-case hexadecimal characters. For `file` and `local`. Required for `local`; for `file` it may be `null` until the first fetch. |
 | `tree_sha256` | Checksum of the extracted repository tree, see "Tree checksum". Only for `git-archive`; may be `null` until the first fetch. |
-| `size_bytes` | Size in bytes (for `git-archive`: sum of all files). Optional, for `file`, `git-archive` and `local`. |
-| `target` | Where the file (or, for `git-archive`, the directory) lies: a relative path below `root` with forward slashes, without `..`. Required for `file`, `git-archive` and `local`, not allowed otherwise. Unique within the file. |
+| `size_bytes` | Size in bytes (for `git-archive`: sum of all files; for `reference`: the size the source states, for information). Optional, for `file`, `git-archive`, `reference` and `local`. |
+| `target` | Where the file (or, for `git-archive`, the directory) lies: a relative path below `root` with forward slashes, without `..`. Required for `file`, `git-archive` and `local`, not allowed otherwise. Unique within the file, and no target may lie inside the target of another entry (`vendor/repo` and `vendor/repo/a.pdf` collide, `vendor/repo` and `vendor/repo-2` do not). |
 | `terms` | Terms of use; see below. Required. |
 | `assigned_to` | List of `plant_id` or `device_id` values from `layout/devices.csv` that the material belongs to. May be empty. |
 | `retrieved_on` | Date of the download or of the last check of the source, `YYYY-MM-DD`. |
@@ -162,7 +293,7 @@ minimal diffs. Files edited by hand should be brought into this form as well.
 
 | `kind` | Meaning | Allowed `fetch` | Required fields |
 | --- | --- | --- | --- |
-| `file` | A single file loaded over HTTPS. | `auto`, `manual` | `url`, `target` |
+| `file` | A single file loaded over HTTPS. | `auto`, `manual` | `target`; `url` with `auto`, `landing_page` with `manual` |
 | `git-archive` | The state of a Git repository at a fixed commit. | `auto`, `manual` | `repository`, `branch`, `commit`, `target` |
 | `container-image` | A container image; only name, tag and digest are recorded. It is not loaded. | `none` | `image`, `tag`, `digest` |
 | `reference` | A pointer to a source that is not loaded. | `none` | at least one of `url`, `landing_page`, `repository` |
@@ -206,7 +337,8 @@ packs the archive.
 Symbolic links are never followed. A link counts as a file whose content is
 the link target as UTF-8 text, so the result is the same whether an extractor
 creates real links or writes them as small text files. The checksum of an
-empty directory is the SHA-256 of empty input.
+empty directory is the SHA-256 of empty input. A subdirectory that cannot be
+read is an error (`OSError`); it is never left out silently.
 
 The function is `manifest_tools.tree_sha256(directory)`;
 `manifest_tools.file_sha256(path)` gives the checksum of a single file.
@@ -225,3 +357,9 @@ for entry in manifest.entries:
 list names entry, field and message of every finding. `Manifest`, `Entry` and
 `Terms` are frozen data classes; use `dataclasses.replace` to change a value
 and `write_manifest` to store the result.
+
+Code that writes to a target calls
+`manifest_tools.checked_target_path(root_dir, entry.target)` first
+(`root_dir` from `manifest_tools.root_path(manifest_path, manifest)`). It
+raises `UnsafePathError` if any existing part of the path below the root is a
+symbolic link or if the resolved path does not lie below the resolved root.
