@@ -115,8 +115,15 @@ describe("addresses", () => {
     expect(await screen.findByTestId("structure-tree")).toBeDefined();
   });
 
+  it("/import shows the import page", async () => {
+    fakeApi(manager);
+    renderApp("/import");
+
+    expect((await pageHeading()).textContent).toBe("Import");
+    expect(await screen.findByTestId("import-form")).toBeDefined();
+  });
+
   it.each([
-    ["/import", "Import"],
     ["/documents/42", "File"],
   ])("%s shows the page %s", async (path, heading) => {
     fakeApi(manager);

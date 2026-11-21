@@ -1,1 +1,51 @@
-{}
+{
+  "intro": "Laden Sie die Geräteliste als CSV-Datei hoch. Ein Probelauf zeigt, was angelegt oder geändert würde, und nennt jeden Fehler. Gespeichert wird erst mit „Übernehmen“.",
+  "format": {
+    "heading": "Erwartetes Format",
+    "header": "Die erste Zeile enthält genau diese 13 Spalten in dieser Reihenfolge:",
+    "encoding": "UTF-8, Spalten durch Komma getrennt, Werte mit Komma oder Zeilenumbruch in doppelten Anführungszeichen.",
+    "matching": "Anlagen werden über plant_id erkannt, Geräte über device_id. Vorhandene Einträge werden aktualisiert, neue angelegt, nichts wird gelöscht.",
+    "plantRow": "Eine Zeile ohne device_id beschreibt nur die Anlage; sie darf notes füllen, aber keine Gerätespalte.",
+    "allOrNothing": "Hat eine Zeile einen Fehler, wird nichts gespeichert."
+  },
+  "file": {
+    "label": "CSV-Datei",
+    "check": "Probelauf starten",
+    "checking": "Prüfe …",
+    "save": "Übernehmen",
+    "saving": "Übernehme …"
+  },
+  "report": {
+    "heading": "Ergebnis",
+    "dryRun_one": "Probelauf: Noch nichts gespeichert. {{count}} Zeile gelesen.",
+    "dryRun_other": "Probelauf: Noch nichts gespeichert. {{count}} Zeilen gelesen.",
+    "saved_one": "Gespeichert. {{count}} Zeile übernommen.",
+    "saved_other": "Gespeichert. {{count}} Zeilen übernommen.",
+    "hasErrors_one": "Die Datei enthält {{count}} Fehler. Nichts wurde gespeichert.",
+    "hasErrors_other": "Die Datei enthält {{count}} Fehler. Nichts wurde gespeichert.",
+    "fixAndRetry": "Korrigieren Sie die Datei und starten Sie den Probelauf erneut.",
+    "readyToSave": "Keine Fehler gefunden. Mit „Übernehmen“ werden diese Änderungen gespeichert.",
+    "toStructure": "Zur Struktur",
+    "countsCaption": "Einträge je Ebene",
+    "level": "Ebene",
+    "created": "Angelegt",
+    "updated": "Geändert",
+    "unchanged": "Unverändert",
+    "sites": "Standorte",
+    "areas": "Bereiche",
+    "plants": "Anlagen",
+    "devices": "Geräte"
+  },
+  "errors": {
+    "caption": "Fehler in der Datei",
+    "line": "Zeile",
+    "column": "Spalte",
+    "message": "Meldung",
+    "wholeFile": "ganze Datei",
+    "wholeRow": "–"
+  },
+  "problem": {
+    "invalid": "Der Server hat den Upload nicht angenommen.",
+    "tooLarge": "Die Datei ist größer, als der Server annimmt."
+  }
+}

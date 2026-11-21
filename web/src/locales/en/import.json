@@ -1,1 +1,51 @@
-{}
+{
+  "intro": "Upload the device list as a CSV file. A dry run shows what would be created or changed and lists every error. Nothing is saved until you choose “Apply”.",
+  "format": {
+    "heading": "Expected format",
+    "header": "The first line holds exactly these 13 columns, in this order:",
+    "encoding": "UTF-8, columns separated by commas, values with commas or line breaks in double quotes.",
+    "matching": "Plants are matched by plant_id, devices by device_id. Existing entries are updated, new ones created, nothing is deleted.",
+    "plantRow": "A row without device_id describes only the plant; it may fill notes, but no device column.",
+    "allOrNothing": "If one row has an error, nothing is saved."
+  },
+  "file": {
+    "label": "CSV file",
+    "check": "Start dry run",
+    "checking": "Checking…",
+    "save": "Apply",
+    "saving": "Applying…"
+  },
+  "report": {
+    "heading": "Result",
+    "dryRun_one": "Dry run: nothing has been saved yet. {{count}} row read.",
+    "dryRun_other": "Dry run: nothing has been saved yet. {{count}} rows read.",
+    "saved_one": "Saved. {{count}} row imported.",
+    "saved_other": "Saved. {{count}} rows imported.",
+    "hasErrors_one": "The file has {{count}} error. Nothing has been saved.",
+    "hasErrors_other": "The file has {{count}} errors. Nothing has been saved.",
+    "fixAndRetry": "Correct the file and start the dry run again.",
+    "readyToSave": "No errors found. Choose “Apply” to save these changes.",
+    "toStructure": "Show the structure",
+    "countsCaption": "Entries per level",
+    "level": "Level",
+    "created": "Created",
+    "updated": "Changed",
+    "unchanged": "Unchanged",
+    "sites": "Sites",
+    "areas": "Areas",
+    "plants": "Plants",
+    "devices": "Devices"
+  },
+  "errors": {
+    "caption": "Errors in the file",
+    "line": "Line",
+    "column": "Column",
+    "message": "Message",
+    "wholeFile": "whole file",
+    "wholeRow": "–"
+  },
+  "problem": {
+    "invalid": "The server did not accept the upload.",
+    "tooLarge": "The file is larger than the server accepts."
+  }
+}
