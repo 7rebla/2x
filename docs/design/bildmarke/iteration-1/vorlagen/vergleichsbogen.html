@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Bildmarke Iteration 1 – Vergleichsbogen</title>
+<style>
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #fff; color: #222; }
+  h1 { font-size: 20px; margin: 24px 24px 4px; }
+  p.note { margin: 0 24px 16px; color: #555; }
+  table { border-collapse: collapse; margin: 0 24px 32px; }
+  th, td { padding: 10px 14px; text-align: center; vertical-align: middle; }
+  th { font-weight: 600; font-size: 12px; color: #555; }
+  td.name { text-align: left; font-weight: 600; white-space: nowrap; }
+  tr + tr td { border-top: 1px solid #e5e5e5; }
+  .light { background: #F8F6F9; }
+  .dark { background: #19171D; color: #ccc; }
+  img { display: block; margin: 0 auto; }
+  small { display: block; font-size: 11px; color: #888; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1>Bildmarke Iteration 1 – Vergleichsbogen</h1>
+<p class="note">Je Entwurf: Master einfarbig, Markenfarbe (Original #765477, Abbild #49334F), Vorschau hell und dunkel, dazu die Größen 16, 24, 32 und 64 px. Bei 16 px steht links der verkleinerte Master, rechts die Kleinversion. Keine Auswahl getroffen.</p>
+<table>
+  <tr>
+    <th></th><th>Monochrom</th><th>Aubergine</th><th>Vorschau hell</th><th>Vorschau dunkel</th>
+    <th class="light">16 Master / 16 klein</th><th class="light">24</th><th class="light">32</th><th class="light">64</th>
+    <th class="dark">16 Master / 16 klein</th><th class="dark">24</th><th class="dark">32</th><th class="dark">64</th>
+  </tr>
+  <tbody id="rows"></tbody>
+</table>
+<script>
+/*SVGDATA*/
+const src = (p) => "data:image/svg+xml," + encodeURIComponent(SVG[p]);
+  const names = ["01-diagonal", "02-nebeneinander", "03-kreise", "04-spiegelung", "05-eingeschrieben", "06-dahinter"];
+  const img = (p, size) => `<img src="${src(p)}" width="${size}" height="${size}" alt="">`;
+  const rows = names.map((n) => {
+    const p = `${n}/${n}`;
+    const sizes = (mode) => `
+      <td class="${mode}"><div style="display:flex;gap:10px;justify-content:center">${img(`${p}-${mode}.svg`, 16)}${img(`${p}-16-${mode}.svg`, 16)}</div></td>
+      <td class="${mode}">${img(`${p}-${mode}.svg`, 24)}</td>
+      <td class="${mode}">${img(`${p}-${mode}.svg`, 32)}</td>
+      <td class="${mode}">${img(`${p}-${mode}.svg`, 64)}</td>`;
+    return `<tr>
+      <td class="name">${n}</td>
+      <td>${img(`${p}-mono.svg`, 96)}</td>
+      <td>${img(`${p}-aubergine.svg`, 96)}</td>
+      <td>${img(`${p}-preview-light.svg`, 96)}</td>
+      <td>${img(`${p}-preview-dark.svg`, 96)}</td>
+      ${sizes("light")}${sizes("dark")}
+    </tr>`;
+  });
+  document.getElementById("rows").outerHTML = `<tbody>${rows.join("")}</tbody>`;
+</script>
+</body>
+</html>

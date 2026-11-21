@@ -1,0 +1,1169 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Bildmarke Iteration 1 – Größenvergleich</title>
+<style>
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #fff; color: #222; }
+  h1 { font-size: 20px; margin: 24px 24px 4px; }
+  h2 { font-size: 15px; margin: 24px 24px 8px; }
+  p.note { margin: 0 24px 16px; color: #555; }
+  .band { display: grid; grid-template-columns: 120px repeat(6, 1fr); align-items: center; margin: 0 24px; padding: 14px 0; }
+  .band + .band { border-top: 1px solid rgba(128,128,128,.25); }
+  .light { background: #F8F6F9; }
+  .dark { background: #19171D; color: #bbb; }
+  .label { padding-left: 12px; font-size: 12px; }
+  .cell { display: flex; gap: 14px; justify-content: center; align-items: center; }
+  .head { font-size: 12px; font-weight: 600; text-align: center; }
+  /* Simulated browser tab: mark at 16 px next to a title */
+  .tab { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px 8px 0 0; font-size: 12px; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 24px; padding: 10px; }
+</style>
+</head>
+<body>
+<h1>Bildmarke Iteration 1 – Größenvergleich</h1>
+<p class="note">Alle sechs Entwürfe nebeneinander in 16, 24, 32 und 64 px. In der Zeile „16 klein“ steht die eigene Kleinversion (16er-Raster), in „16“ der verkleinerte Master. Unten eine nachgestellte Browser-Tab-Leiste.</p>
+<div id="out"></div>
+<script>
+const SVG = {
+"01-diagonal/01-diagonal-16-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s1" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <rect x="5" y="5" width="11" height="11" rx="3" fill="#000"/>
+  </mask>
+</defs>
+<rect x="1" y="1" width="9" height="9" rx="2" fill="#A98BAD" mask="url(#s1)"/>
+<rect x="6.5" y="6.5" width="8" height="8" rx="1.5" fill="none" stroke="#A98BAD" stroke-width="1"/>
+<circle cx="10.5" cy="10.5" r="1.5" fill="#A98BAD"/>
+</svg>
+`,
+"01-diagonal/01-diagonal-16-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s1" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <rect x="5" y="5" width="11" height="11" rx="3" fill="#000"/>
+  </mask>
+</defs>
+<rect x="1" y="1" width="9" height="9" rx="2" fill="#765477" mask="url(#s1)"/>
+<rect x="6.5" y="6.5" width="8" height="8" rx="1.5" fill="none" stroke="#765477" stroke-width="1"/>
+<circle cx="10.5" cy="10.5" r="1.5" fill="#765477"/>
+</svg>
+`,
+"01-diagonal/01-diagonal-16-mono.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s1" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <rect x="5" y="5" width="11" height="11" rx="3" fill="#000"/>
+  </mask>
+</defs>
+<rect x="1" y="1" width="9" height="9" rx="2" fill="#000000" mask="url(#s1)"/>
+<rect x="6.5" y="6.5" width="8" height="8" rx="1.5" fill="none" stroke="#000000" stroke-width="1"/>
+<circle cx="10.5" cy="10.5" r="1.5" fill="#000000"/>
+</svg>
+`,
+"01-diagonal/01-diagonal-16.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s1" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <rect x="5" y="5" width="11" height="11" rx="3" fill="#000"/>
+  </mask>
+</defs>
+<rect x="1" y="1" width="9" height="9" rx="2" fill="currentColor" mask="url(#s1)"/>
+<rect x="6.5" y="6.5" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1"/>
+<circle cx="10.5" cy="10.5" r="1.5" fill="currentColor"/>
+</svg>
+`,
+"01-diagonal/01-diagonal-aubergine.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m1" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="20" y="20" width="44" height="44" rx="12" fill="#000"/>
+  </mask>
+</defs>
+<rect x="4" y="4" width="36" height="36" rx="8" fill="#765477" mask="url(#m1)"/>
+<rect x="26" y="26" width="32" height="32" rx="6" fill="none" stroke="#49334F" stroke-width="4"/>
+<g stroke="#49334F" stroke-width="2" stroke-linecap="round">
+  <line x1="35" y1="35" x2="49" y2="41"/>
+  <line x1="35" y1="35" x2="41" y2="49"/>
+  <line x1="49" y1="41" x2="41" y2="49"/>
+</g>
+<g fill="#49334F">
+  <circle cx="35" cy="35" r="3"/>
+  <circle cx="49" cy="41" r="3"/>
+  <circle cx="41" cy="49" r="3"/>
+</g>
+</svg>
+`,
+"01-diagonal/01-diagonal-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m1" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="20" y="20" width="44" height="44" rx="12" fill="#000"/>
+  </mask>
+</defs>
+<rect x="4" y="4" width="36" height="36" rx="8" fill="#A98BAD" mask="url(#m1)"/>
+<rect x="26" y="26" width="32" height="32" rx="6" fill="none" stroke="#A98BAD" stroke-width="4"/>
+<g stroke="#A98BAD" stroke-width="2" stroke-linecap="round">
+  <line x1="35" y1="35" x2="49" y2="41"/>
+  <line x1="35" y1="35" x2="41" y2="49"/>
+  <line x1="49" y1="41" x2="41" y2="49"/>
+</g>
+<g fill="#A98BAD">
+  <circle cx="35" cy="35" r="3"/>
+  <circle cx="49" cy="41" r="3"/>
+  <circle cx="41" cy="49" r="3"/>
+</g>
+</svg>
+`,
+"01-diagonal/01-diagonal-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m1" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="20" y="20" width="44" height="44" rx="12" fill="#000"/>
+  </mask>
+</defs>
+<rect x="4" y="4" width="36" height="36" rx="8" fill="#765477" mask="url(#m1)"/>
+<rect x="26" y="26" width="32" height="32" rx="6" fill="none" stroke="#765477" stroke-width="4"/>
+<g stroke="#765477" stroke-width="2" stroke-linecap="round">
+  <line x1="35" y1="35" x2="49" y2="41"/>
+  <line x1="35" y1="35" x2="41" y2="49"/>
+  <line x1="49" y1="41" x2="41" y2="49"/>
+</g>
+<g fill="#765477">
+  <circle cx="35" cy="35" r="3"/>
+  <circle cx="49" cy="41" r="3"/>
+  <circle cx="41" cy="49" r="3"/>
+</g>
+</svg>
+`,
+"01-diagonal/01-diagonal-mono.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m1" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="20" y="20" width="44" height="44" rx="12" fill="#000"/>
+  </mask>
+</defs>
+<rect x="4" y="4" width="36" height="36" rx="8" fill="#000000" mask="url(#m1)"/>
+<rect x="26" y="26" width="32" height="32" rx="6" fill="none" stroke="#000000" stroke-width="4"/>
+<g stroke="#000000" stroke-width="2" stroke-linecap="round">
+  <line x1="35" y1="35" x2="49" y2="41"/>
+  <line x1="35" y1="35" x2="41" y2="49"/>
+  <line x1="49" y1="41" x2="41" y2="49"/>
+</g>
+<g fill="#000000">
+  <circle cx="35" cy="35" r="3"/>
+  <circle cx="49" cy="41" r="3"/>
+  <circle cx="41" cy="49" r="3"/>
+</g>
+</svg>
+`,
+"01-diagonal/01-diagonal-preview-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="192" height="192">
+<rect width="96" height="96" fill="#19171D"/>
+<svg x="16" y="16" width="64" height="64" viewBox="0 0 64 64">
+<defs>
+  <mask id="m1" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="20" y="20" width="44" height="44" rx="12" fill="#000"/>
+  </mask>
+</defs>
+<rect x="4" y="4" width="36" height="36" rx="8" fill="#A98BAD" mask="url(#m1)"/>
+<rect x="26" y="26" width="32" height="32" rx="6" fill="none" stroke="#A98BAD" stroke-width="4"/>
+<g stroke="#A98BAD" stroke-width="2" stroke-linecap="round">
+  <line x1="35" y1="35" x2="49" y2="41"/>
+  <line x1="35" y1="35" x2="41" y2="49"/>
+  <line x1="49" y1="41" x2="41" y2="49"/>
+</g>
+<g fill="#A98BAD">
+  <circle cx="35" cy="35" r="3"/>
+  <circle cx="49" cy="41" r="3"/>
+  <circle cx="41" cy="49" r="3"/>
+</g>
+</svg>
+</svg>
+`,
+"01-diagonal/01-diagonal-preview-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="192" height="192">
+<rect width="96" height="96" fill="#F8F6F9"/>
+<svg x="16" y="16" width="64" height="64" viewBox="0 0 64 64">
+<defs>
+  <mask id="m1" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="20" y="20" width="44" height="44" rx="12" fill="#000"/>
+  </mask>
+</defs>
+<rect x="4" y="4" width="36" height="36" rx="8" fill="#765477" mask="url(#m1)"/>
+<rect x="26" y="26" width="32" height="32" rx="6" fill="none" stroke="#765477" stroke-width="4"/>
+<g stroke="#765477" stroke-width="2" stroke-linecap="round">
+  <line x1="35" y1="35" x2="49" y2="41"/>
+  <line x1="35" y1="35" x2="41" y2="49"/>
+  <line x1="49" y1="41" x2="41" y2="49"/>
+</g>
+<g fill="#765477">
+  <circle cx="35" cy="35" r="3"/>
+  <circle cx="49" cy="41" r="3"/>
+  <circle cx="41" cy="49" r="3"/>
+</g>
+</svg>
+</svg>
+`,
+"01-diagonal/01-diagonal.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m1" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="20" y="20" width="44" height="44" rx="12" fill="#000"/>
+  </mask>
+</defs>
+<rect x="4" y="4" width="36" height="36" rx="8" fill="currentColor" mask="url(#m1)"/>
+<rect x="26" y="26" width="32" height="32" rx="6" fill="none" stroke="currentColor" stroke-width="4"/>
+<g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+  <line x1="35" y1="35" x2="49" y2="41"/>
+  <line x1="35" y1="35" x2="41" y2="49"/>
+  <line x1="49" y1="41" x2="41" y2="49"/>
+</g>
+<g fill="currentColor">
+  <circle cx="35" cy="35" r="3"/>
+  <circle cx="49" cy="41" r="3"/>
+  <circle cx="41" cy="49" r="3"/>
+</g>
+</svg>
+`,
+"02-nebeneinander/02-nebeneinander-16-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s2" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <circle cx="12" cy="9" r="1.5" fill="#000"/>
+  </mask>
+</defs>
+<rect x="1" y="2" width="6" height="10" rx="1.5" fill="#A98BAD"/>
+<rect x="9" y="4" width="6" height="10" rx="1.5" fill="#A98BAD" mask="url(#s2)"/>
+</svg>
+`,
+"02-nebeneinander/02-nebeneinander-16-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s2" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <circle cx="12" cy="9" r="1.5" fill="#000"/>
+  </mask>
+</defs>
+<rect x="1" y="2" width="6" height="10" rx="1.5" fill="#765477"/>
+<rect x="9" y="4" width="6" height="10" rx="1.5" fill="#765477" mask="url(#s2)"/>
+</svg>
+`,
+"02-nebeneinander/02-nebeneinander-16-mono.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s2" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <circle cx="12" cy="9" r="1.5" fill="#000"/>
+  </mask>
+</defs>
+<rect x="1" y="2" width="6" height="10" rx="1.5" fill="#000000"/>
+<rect x="9" y="4" width="6" height="10" rx="1.5" fill="#000000" mask="url(#s2)"/>
+</svg>
+`,
+"02-nebeneinander/02-nebeneinander-16.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s2" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <circle cx="12" cy="9" r="1.5" fill="#000"/>
+  </mask>
+</defs>
+<rect x="1" y="2" width="6" height="10" rx="1.5" fill="currentColor"/>
+<rect x="9" y="4" width="6" height="10" rx="1.5" fill="currentColor" mask="url(#s2)"/>
+</svg>
+`,
+"02-nebeneinander/02-nebeneinander-aubergine.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m2" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <line x1="41" y1="28" x2="51" y2="44" stroke="#000" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="41" cy="28" r="4.5" fill="#000"/>
+    <circle cx="51" cy="44" r="4.5" fill="#000"/>
+  </mask>
+</defs>
+<rect x="6" y="8" width="24" height="40" rx="6" fill="#765477"/>
+<rect x="34" y="16" width="24" height="40" rx="6" fill="#49334F" mask="url(#m2)"/>
+</svg>
+`,
+"02-nebeneinander/02-nebeneinander-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m2" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <line x1="41" y1="28" x2="51" y2="44" stroke="#000" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="41" cy="28" r="4.5" fill="#000"/>
+    <circle cx="51" cy="44" r="4.5" fill="#000"/>
+  </mask>
+</defs>
+<rect x="6" y="8" width="24" height="40" rx="6" fill="#A98BAD"/>
+<rect x="34" y="16" width="24" height="40" rx="6" fill="#A98BAD" mask="url(#m2)"/>
+</svg>
+`,
+"02-nebeneinander/02-nebeneinander-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m2" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <line x1="41" y1="28" x2="51" y2="44" stroke="#000" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="41" cy="28" r="4.5" fill="#000"/>
+    <circle cx="51" cy="44" r="4.5" fill="#000"/>
+  </mask>
+</defs>
+<rect x="6" y="8" width="24" height="40" rx="6" fill="#765477"/>
+<rect x="34" y="16" width="24" height="40" rx="6" fill="#765477" mask="url(#m2)"/>
+</svg>
+`,
+"02-nebeneinander/02-nebeneinander-mono.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m2" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <line x1="41" y1="28" x2="51" y2="44" stroke="#000" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="41" cy="28" r="4.5" fill="#000"/>
+    <circle cx="51" cy="44" r="4.5" fill="#000"/>
+  </mask>
+</defs>
+<rect x="6" y="8" width="24" height="40" rx="6" fill="#000000"/>
+<rect x="34" y="16" width="24" height="40" rx="6" fill="#000000" mask="url(#m2)"/>
+</svg>
+`,
+"02-nebeneinander/02-nebeneinander-preview-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="192" height="192">
+<rect width="96" height="96" fill="#19171D"/>
+<svg x="16" y="16" width="64" height="64" viewBox="0 0 64 64">
+<defs>
+  <mask id="m2" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <line x1="41" y1="28" x2="51" y2="44" stroke="#000" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="41" cy="28" r="4.5" fill="#000"/>
+    <circle cx="51" cy="44" r="4.5" fill="#000"/>
+  </mask>
+</defs>
+<rect x="6" y="8" width="24" height="40" rx="6" fill="#A98BAD"/>
+<rect x="34" y="16" width="24" height="40" rx="6" fill="#A98BAD" mask="url(#m2)"/>
+</svg>
+</svg>
+`,
+"02-nebeneinander/02-nebeneinander-preview-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="192" height="192">
+<rect width="96" height="96" fill="#F8F6F9"/>
+<svg x="16" y="16" width="64" height="64" viewBox="0 0 64 64">
+<defs>
+  <mask id="m2" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <line x1="41" y1="28" x2="51" y2="44" stroke="#000" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="41" cy="28" r="4.5" fill="#000"/>
+    <circle cx="51" cy="44" r="4.5" fill="#000"/>
+  </mask>
+</defs>
+<rect x="6" y="8" width="24" height="40" rx="6" fill="#765477"/>
+<rect x="34" y="16" width="24" height="40" rx="6" fill="#765477" mask="url(#m2)"/>
+</svg>
+</svg>
+`,
+"02-nebeneinander/02-nebeneinander.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m2" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <line x1="41" y1="28" x2="51" y2="44" stroke="#000" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="41" cy="28" r="4.5" fill="#000"/>
+    <circle cx="51" cy="44" r="4.5" fill="#000"/>
+  </mask>
+</defs>
+<rect x="6" y="8" width="24" height="40" rx="6" fill="currentColor"/>
+<rect x="34" y="16" width="24" height="40" rx="6" fill="currentColor" mask="url(#m2)"/>
+</svg>
+`,
+"03-kreise/03-kreise-16-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s3" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <circle cx="10.5" cy="8" r="5.5" fill="#000"/>
+  </mask>
+</defs>
+<circle cx="5.5" cy="8" r="4.5" fill="#A98BAD" mask="url(#s3)"/>
+<circle cx="10.5" cy="8" r="4" fill="none" stroke="#A98BAD" stroke-width="1"/>
+<circle cx="10.5" cy="8" r="1.5" fill="#A98BAD"/>
+</svg>
+`,
+"03-kreise/03-kreise-16-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s3" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <circle cx="10.5" cy="8" r="5.5" fill="#000"/>
+  </mask>
+</defs>
+<circle cx="5.5" cy="8" r="4.5" fill="#765477" mask="url(#s3)"/>
+<circle cx="10.5" cy="8" r="4" fill="none" stroke="#765477" stroke-width="1"/>
+<circle cx="10.5" cy="8" r="1.5" fill="#765477"/>
+</svg>
+`,
+"03-kreise/03-kreise-16-mono.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s3" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <circle cx="10.5" cy="8" r="5.5" fill="#000"/>
+  </mask>
+</defs>
+<circle cx="5.5" cy="8" r="4.5" fill="#000000" mask="url(#s3)"/>
+<circle cx="10.5" cy="8" r="4" fill="none" stroke="#000000" stroke-width="1"/>
+<circle cx="10.5" cy="8" r="1.5" fill="#000000"/>
+</svg>
+`,
+"03-kreise/03-kreise-16.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s3" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <circle cx="10.5" cy="8" r="5.5" fill="#000"/>
+  </mask>
+</defs>
+<circle cx="5.5" cy="8" r="4.5" fill="currentColor" mask="url(#s3)"/>
+<circle cx="10.5" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1"/>
+<circle cx="10.5" cy="8" r="1.5" fill="currentColor"/>
+</svg>
+`,
+"03-kreise/03-kreise-aubergine.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m3" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <circle cx="42" cy="32" r="22" fill="#000"/>
+  </mask>
+</defs>
+<circle cx="22" cy="32" r="18" fill="#765477" mask="url(#m3)"/>
+<circle cx="42" cy="32" r="16" fill="none" stroke="#49334F" stroke-width="4"/>
+<g stroke="#49334F" stroke-width="2" stroke-linecap="round">
+  <polyline points="33,36 39,27 45,37 51,28" fill="none" stroke-linejoin="round"/>
+</g>
+<g fill="#49334F">
+  <circle cx="33" cy="36" r="3"/>
+  <circle cx="39" cy="27" r="3"/>
+  <circle cx="45" cy="37" r="3"/>
+  <circle cx="51" cy="28" r="3"/>
+</g>
+</svg>
+`,
+"03-kreise/03-kreise-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m3" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <circle cx="42" cy="32" r="22" fill="#000"/>
+  </mask>
+</defs>
+<circle cx="22" cy="32" r="18" fill="#A98BAD" mask="url(#m3)"/>
+<circle cx="42" cy="32" r="16" fill="none" stroke="#A98BAD" stroke-width="4"/>
+<g stroke="#A98BAD" stroke-width="2" stroke-linecap="round">
+  <polyline points="33,36 39,27 45,37 51,28" fill="none" stroke-linejoin="round"/>
+</g>
+<g fill="#A98BAD">
+  <circle cx="33" cy="36" r="3"/>
+  <circle cx="39" cy="27" r="3"/>
+  <circle cx="45" cy="37" r="3"/>
+  <circle cx="51" cy="28" r="3"/>
+</g>
+</svg>
+`,
+"03-kreise/03-kreise-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m3" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <circle cx="42" cy="32" r="22" fill="#000"/>
+  </mask>
+</defs>
+<circle cx="22" cy="32" r="18" fill="#765477" mask="url(#m3)"/>
+<circle cx="42" cy="32" r="16" fill="none" stroke="#765477" stroke-width="4"/>
+<g stroke="#765477" stroke-width="2" stroke-linecap="round">
+  <polyline points="33,36 39,27 45,37 51,28" fill="none" stroke-linejoin="round"/>
+</g>
+<g fill="#765477">
+  <circle cx="33" cy="36" r="3"/>
+  <circle cx="39" cy="27" r="3"/>
+  <circle cx="45" cy="37" r="3"/>
+  <circle cx="51" cy="28" r="3"/>
+</g>
+</svg>
+`,
+"03-kreise/03-kreise-mono.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m3" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <circle cx="42" cy="32" r="22" fill="#000"/>
+  </mask>
+</defs>
+<circle cx="22" cy="32" r="18" fill="#000000" mask="url(#m3)"/>
+<circle cx="42" cy="32" r="16" fill="none" stroke="#000000" stroke-width="4"/>
+<g stroke="#000000" stroke-width="2" stroke-linecap="round">
+  <polyline points="33,36 39,27 45,37 51,28" fill="none" stroke-linejoin="round"/>
+</g>
+<g fill="#000000">
+  <circle cx="33" cy="36" r="3"/>
+  <circle cx="39" cy="27" r="3"/>
+  <circle cx="45" cy="37" r="3"/>
+  <circle cx="51" cy="28" r="3"/>
+</g>
+</svg>
+`,
+"03-kreise/03-kreise-preview-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="192" height="192">
+<rect width="96" height="96" fill="#19171D"/>
+<svg x="16" y="16" width="64" height="64" viewBox="0 0 64 64">
+<defs>
+  <mask id="m3" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <circle cx="42" cy="32" r="22" fill="#000"/>
+  </mask>
+</defs>
+<circle cx="22" cy="32" r="18" fill="#A98BAD" mask="url(#m3)"/>
+<circle cx="42" cy="32" r="16" fill="none" stroke="#A98BAD" stroke-width="4"/>
+<g stroke="#A98BAD" stroke-width="2" stroke-linecap="round">
+  <polyline points="33,36 39,27 45,37 51,28" fill="none" stroke-linejoin="round"/>
+</g>
+<g fill="#A98BAD">
+  <circle cx="33" cy="36" r="3"/>
+  <circle cx="39" cy="27" r="3"/>
+  <circle cx="45" cy="37" r="3"/>
+  <circle cx="51" cy="28" r="3"/>
+</g>
+</svg>
+</svg>
+`,
+"03-kreise/03-kreise-preview-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="192" height="192">
+<rect width="96" height="96" fill="#F8F6F9"/>
+<svg x="16" y="16" width="64" height="64" viewBox="0 0 64 64">
+<defs>
+  <mask id="m3" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <circle cx="42" cy="32" r="22" fill="#000"/>
+  </mask>
+</defs>
+<circle cx="22" cy="32" r="18" fill="#765477" mask="url(#m3)"/>
+<circle cx="42" cy="32" r="16" fill="none" stroke="#765477" stroke-width="4"/>
+<g stroke="#765477" stroke-width="2" stroke-linecap="round">
+  <polyline points="33,36 39,27 45,37 51,28" fill="none" stroke-linejoin="round"/>
+</g>
+<g fill="#765477">
+  <circle cx="33" cy="36" r="3"/>
+  <circle cx="39" cy="27" r="3"/>
+  <circle cx="45" cy="37" r="3"/>
+  <circle cx="51" cy="28" r="3"/>
+</g>
+</svg>
+</svg>
+`,
+"03-kreise/03-kreise.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m3" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <circle cx="42" cy="32" r="22" fill="#000"/>
+  </mask>
+</defs>
+<circle cx="22" cy="32" r="18" fill="currentColor" mask="url(#m3)"/>
+<circle cx="42" cy="32" r="16" fill="none" stroke="currentColor" stroke-width="4"/>
+<g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+  <polyline points="33,36 39,27 45,37 51,28" fill="none" stroke-linejoin="round"/>
+</g>
+<g fill="currentColor">
+  <circle cx="33" cy="36" r="3"/>
+  <circle cx="39" cy="27" r="3"/>
+  <circle cx="45" cy="37" r="3"/>
+  <circle cx="51" cy="28" r="3"/>
+</g>
+</svg>
+`,
+"04-spiegelung/04-spiegelung-16-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<path d="M1 7A3 3 0 0 1 4 4H6A1 1 0 0 1 7 5V9A1 1 0 0 1 6 10H2A1 1 0 0 1 1 9Z" fill="#A98BAD"/>
+<path fill-rule="evenodd" fill="#A98BAD" d="M15 9A3 3 0 0 0 12 6H10A1 1 0 0 0 9 7V11A1 1 0 0 0 10 12H14A1 1 0 0 0 15 11Z M14 9A2 2 0 0 0 12 7H10V11H14Z"/>
+<circle cx="11.5" cy="9.5" r="1" fill="#A98BAD"/>
+</svg>
+`,
+"04-spiegelung/04-spiegelung-16-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<path d="M1 7A3 3 0 0 1 4 4H6A1 1 0 0 1 7 5V9A1 1 0 0 1 6 10H2A1 1 0 0 1 1 9Z" fill="#765477"/>
+<path fill-rule="evenodd" fill="#765477" d="M15 9A3 3 0 0 0 12 6H10A1 1 0 0 0 9 7V11A1 1 0 0 0 10 12H14A1 1 0 0 0 15 11Z M14 9A2 2 0 0 0 12 7H10V11H14Z"/>
+<circle cx="11.5" cy="9.5" r="1" fill="#765477"/>
+</svg>
+`,
+"04-spiegelung/04-spiegelung-16-mono.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<path d="M1 7A3 3 0 0 1 4 4H6A1 1 0 0 1 7 5V9A1 1 0 0 1 6 10H2A1 1 0 0 1 1 9Z" fill="#000000"/>
+<path fill-rule="evenodd" fill="#000000" d="M15 9A3 3 0 0 0 12 6H10A1 1 0 0 0 9 7V11A1 1 0 0 0 10 12H14A1 1 0 0 0 15 11Z M14 9A2 2 0 0 0 12 7H10V11H14Z"/>
+<circle cx="11.5" cy="9.5" r="1" fill="#000000"/>
+</svg>
+`,
+"04-spiegelung/04-spiegelung-16.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<path d="M1 7A3 3 0 0 1 4 4H6A1 1 0 0 1 7 5V9A1 1 0 0 1 6 10H2A1 1 0 0 1 1 9Z" fill="currentColor"/>
+<path fill-rule="evenodd" fill="currentColor" d="M15 9A3 3 0 0 0 12 6H10A1 1 0 0 0 9 7V11A1 1 0 0 0 10 12H14A1 1 0 0 0 15 11Z M14 9A2 2 0 0 0 12 7H10V11H14Z"/>
+<circle cx="11.5" cy="9.5" r="1" fill="currentColor"/>
+</svg>
+`,
+"04-spiegelung/04-spiegelung-aubergine.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<path d="M4 28A13 13 0 0 1 17 15H26A4 4 0 0 1 30 19V37A4 4 0 0 1 26 41H8A4 4 0 0 1 4 37Z" fill="#765477"/>
+<path fill-rule="evenodd" fill="#49334F" d="M60 36A13 13 0 0 0 47 23H38A4 4 0 0 0 34 27V45A4 4 0 0 0 38 49H56A4 4 0 0 0 60 45Z M56 36A9 9 0 0 0 47 27H38V45H56Z"/>
+<g stroke="#49334F" stroke-width="2" stroke-linecap="round">
+  <line x1="43" y1="32" x2="43" y2="40"/>
+  <line x1="43" y1="40" x2="51" y2="40"/>
+</g>
+<g fill="#49334F">
+  <circle cx="43" cy="32" r="2.5"/>
+  <circle cx="43" cy="40" r="2.5"/>
+  <circle cx="51" cy="40" r="2.5"/>
+</g>
+</svg>
+`,
+"04-spiegelung/04-spiegelung-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<path d="M4 28A13 13 0 0 1 17 15H26A4 4 0 0 1 30 19V37A4 4 0 0 1 26 41H8A4 4 0 0 1 4 37Z" fill="#A98BAD"/>
+<path fill-rule="evenodd" fill="#A98BAD" d="M60 36A13 13 0 0 0 47 23H38A4 4 0 0 0 34 27V45A4 4 0 0 0 38 49H56A4 4 0 0 0 60 45Z M56 36A9 9 0 0 0 47 27H38V45H56Z"/>
+<g stroke="#A98BAD" stroke-width="2" stroke-linecap="round">
+  <line x1="43" y1="32" x2="43" y2="40"/>
+  <line x1="43" y1="40" x2="51" y2="40"/>
+</g>
+<g fill="#A98BAD">
+  <circle cx="43" cy="32" r="2.5"/>
+  <circle cx="43" cy="40" r="2.5"/>
+  <circle cx="51" cy="40" r="2.5"/>
+</g>
+</svg>
+`,
+"04-spiegelung/04-spiegelung-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<path d="M4 28A13 13 0 0 1 17 15H26A4 4 0 0 1 30 19V37A4 4 0 0 1 26 41H8A4 4 0 0 1 4 37Z" fill="#765477"/>
+<path fill-rule="evenodd" fill="#765477" d="M60 36A13 13 0 0 0 47 23H38A4 4 0 0 0 34 27V45A4 4 0 0 0 38 49H56A4 4 0 0 0 60 45Z M56 36A9 9 0 0 0 47 27H38V45H56Z"/>
+<g stroke="#765477" stroke-width="2" stroke-linecap="round">
+  <line x1="43" y1="32" x2="43" y2="40"/>
+  <line x1="43" y1="40" x2="51" y2="40"/>
+</g>
+<g fill="#765477">
+  <circle cx="43" cy="32" r="2.5"/>
+  <circle cx="43" cy="40" r="2.5"/>
+  <circle cx="51" cy="40" r="2.5"/>
+</g>
+</svg>
+`,
+"04-spiegelung/04-spiegelung-mono.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<path d="M4 28A13 13 0 0 1 17 15H26A4 4 0 0 1 30 19V37A4 4 0 0 1 26 41H8A4 4 0 0 1 4 37Z" fill="#000000"/>
+<path fill-rule="evenodd" fill="#000000" d="M60 36A13 13 0 0 0 47 23H38A4 4 0 0 0 34 27V45A4 4 0 0 0 38 49H56A4 4 0 0 0 60 45Z M56 36A9 9 0 0 0 47 27H38V45H56Z"/>
+<g stroke="#000000" stroke-width="2" stroke-linecap="round">
+  <line x1="43" y1="32" x2="43" y2="40"/>
+  <line x1="43" y1="40" x2="51" y2="40"/>
+</g>
+<g fill="#000000">
+  <circle cx="43" cy="32" r="2.5"/>
+  <circle cx="43" cy="40" r="2.5"/>
+  <circle cx="51" cy="40" r="2.5"/>
+</g>
+</svg>
+`,
+"04-spiegelung/04-spiegelung-preview-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="192" height="192">
+<rect width="96" height="96" fill="#19171D"/>
+<svg x="16" y="16" width="64" height="64" viewBox="0 0 64 64">
+<path d="M4 28A13 13 0 0 1 17 15H26A4 4 0 0 1 30 19V37A4 4 0 0 1 26 41H8A4 4 0 0 1 4 37Z" fill="#A98BAD"/>
+<path fill-rule="evenodd" fill="#A98BAD" d="M60 36A13 13 0 0 0 47 23H38A4 4 0 0 0 34 27V45A4 4 0 0 0 38 49H56A4 4 0 0 0 60 45Z M56 36A9 9 0 0 0 47 27H38V45H56Z"/>
+<g stroke="#A98BAD" stroke-width="2" stroke-linecap="round">
+  <line x1="43" y1="32" x2="43" y2="40"/>
+  <line x1="43" y1="40" x2="51" y2="40"/>
+</g>
+<g fill="#A98BAD">
+  <circle cx="43" cy="32" r="2.5"/>
+  <circle cx="43" cy="40" r="2.5"/>
+  <circle cx="51" cy="40" r="2.5"/>
+</g>
+</svg>
+</svg>
+`,
+"04-spiegelung/04-spiegelung-preview-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="192" height="192">
+<rect width="96" height="96" fill="#F8F6F9"/>
+<svg x="16" y="16" width="64" height="64" viewBox="0 0 64 64">
+<path d="M4 28A13 13 0 0 1 17 15H26A4 4 0 0 1 30 19V37A4 4 0 0 1 26 41H8A4 4 0 0 1 4 37Z" fill="#765477"/>
+<path fill-rule="evenodd" fill="#765477" d="M60 36A13 13 0 0 0 47 23H38A4 4 0 0 0 34 27V45A4 4 0 0 0 38 49H56A4 4 0 0 0 60 45Z M56 36A9 9 0 0 0 47 27H38V45H56Z"/>
+<g stroke="#765477" stroke-width="2" stroke-linecap="round">
+  <line x1="43" y1="32" x2="43" y2="40"/>
+  <line x1="43" y1="40" x2="51" y2="40"/>
+</g>
+<g fill="#765477">
+  <circle cx="43" cy="32" r="2.5"/>
+  <circle cx="43" cy="40" r="2.5"/>
+  <circle cx="51" cy="40" r="2.5"/>
+</g>
+</svg>
+</svg>
+`,
+"04-spiegelung/04-spiegelung.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<path d="M4 28A13 13 0 0 1 17 15H26A4 4 0 0 1 30 19V37A4 4 0 0 1 26 41H8A4 4 0 0 1 4 37Z" fill="currentColor"/>
+<path fill-rule="evenodd" fill="currentColor" d="M60 36A13 13 0 0 0 47 23H38A4 4 0 0 0 34 27V45A4 4 0 0 0 38 49H56A4 4 0 0 0 60 45Z M56 36A9 9 0 0 0 47 27H38V45H56Z"/>
+<g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+  <line x1="43" y1="32" x2="43" y2="40"/>
+  <line x1="43" y1="40" x2="51" y2="40"/>
+</g>
+<g fill="currentColor">
+  <circle cx="43" cy="32" r="2.5"/>
+  <circle cx="43" cy="40" r="2.5"/>
+  <circle cx="51" cy="40" r="2.5"/>
+</g>
+</svg>
+`,
+"05-eingeschrieben/05-eingeschrieben-16-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <g id="u5">
+    <rect x="5.5" y="5.5" width="9" height="9" rx="1.5" fill="none" stroke-width="1"/>
+    <circle cx="8" cy="8" r="1" stroke="none"/>
+    <circle cx="12" cy="12" r="1" stroke="none"/>
+  </g>
+  <mask id="s5a" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <use href="#u5" stroke="#000" fill="#000"/>
+  </mask>
+  <mask id="s5b" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <rect x="1" y="1" width="10" height="10" rx="2" fill="#000"/>
+  </mask>
+</defs>
+<rect x="1" y="1" width="10" height="10" rx="2" fill="#A98BAD" mask="url(#s5a)"/>
+<use href="#u5" stroke="#A98BAD" fill="#A98BAD" mask="url(#s5b)"/>
+</svg>
+`,
+"05-eingeschrieben/05-eingeschrieben-16-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <g id="u5">
+    <rect x="5.5" y="5.5" width="9" height="9" rx="1.5" fill="none" stroke-width="1"/>
+    <circle cx="8" cy="8" r="1" stroke="none"/>
+    <circle cx="12" cy="12" r="1" stroke="none"/>
+  </g>
+  <mask id="s5a" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <use href="#u5" stroke="#000" fill="#000"/>
+  </mask>
+  <mask id="s5b" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <rect x="1" y="1" width="10" height="10" rx="2" fill="#000"/>
+  </mask>
+</defs>
+<rect x="1" y="1" width="10" height="10" rx="2" fill="#765477" mask="url(#s5a)"/>
+<use href="#u5" stroke="#765477" fill="#765477" mask="url(#s5b)"/>
+</svg>
+`,
+"05-eingeschrieben/05-eingeschrieben-16-mono.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <g id="u5">
+    <rect x="5.5" y="5.5" width="9" height="9" rx="1.5" fill="none" stroke-width="1"/>
+    <circle cx="8" cy="8" r="1" stroke="none"/>
+    <circle cx="12" cy="12" r="1" stroke="none"/>
+  </g>
+  <mask id="s5a" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <use href="#u5" stroke="#000" fill="#000"/>
+  </mask>
+  <mask id="s5b" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <rect x="1" y="1" width="10" height="10" rx="2" fill="#000"/>
+  </mask>
+</defs>
+<rect x="1" y="1" width="10" height="10" rx="2" fill="#000000" mask="url(#s5a)"/>
+<use href="#u5" stroke="#000000" fill="#000000" mask="url(#s5b)"/>
+</svg>
+`,
+"05-eingeschrieben/05-eingeschrieben-16.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <g id="u5">
+    <rect x="5.5" y="5.5" width="9" height="9" rx="1.5" fill="none" stroke-width="1"/>
+    <circle cx="8" cy="8" r="1" stroke="none"/>
+    <circle cx="12" cy="12" r="1" stroke="none"/>
+  </g>
+  <mask id="s5a" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <use href="#u5" stroke="#000" fill="#000"/>
+  </mask>
+  <mask id="s5b" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <rect x="1" y="1" width="10" height="10" rx="2" fill="#000"/>
+  </mask>
+</defs>
+<rect x="1" y="1" width="10" height="10" rx="2" fill="currentColor" mask="url(#s5a)"/>
+<use href="#u5" stroke="currentColor" fill="currentColor" mask="url(#s5b)"/>
+</svg>
+`,
+"05-eingeschrieben/05-eingeschrieben-aubergine.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <g id="t5">
+    <rect x="22" y="22" width="36" height="36" rx="6" fill="none" stroke-width="4"/>
+    <line x1="31" y1="31" x2="50" y2="50" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="31" cy="31" r="3" stroke="none"/>
+    <circle cx="40.5" cy="40.5" r="3" stroke="none"/>
+    <circle cx="50" cy="50" r="3" stroke="none"/>
+  </g>
+  <mask id="m5a" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <use href="#t5" stroke="#000" fill="#000"/>
+  </mask>
+  <mask id="m5b" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="4" y="4" width="40" height="40" rx="8" fill="#000"/>
+  </mask>
+</defs>
+<rect x="4" y="4" width="40" height="40" rx="8" fill="#765477" mask="url(#m5a)"/>
+<use href="#t5" stroke="#49334F" fill="#49334F" mask="url(#m5b)"/>
+</svg>
+`,
+"05-eingeschrieben/05-eingeschrieben-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <g id="t5">
+    <rect x="22" y="22" width="36" height="36" rx="6" fill="none" stroke-width="4"/>
+    <line x1="31" y1="31" x2="50" y2="50" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="31" cy="31" r="3" stroke="none"/>
+    <circle cx="40.5" cy="40.5" r="3" stroke="none"/>
+    <circle cx="50" cy="50" r="3" stroke="none"/>
+  </g>
+  <mask id="m5a" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <use href="#t5" stroke="#000" fill="#000"/>
+  </mask>
+  <mask id="m5b" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="4" y="4" width="40" height="40" rx="8" fill="#000"/>
+  </mask>
+</defs>
+<rect x="4" y="4" width="40" height="40" rx="8" fill="#A98BAD" mask="url(#m5a)"/>
+<use href="#t5" stroke="#A98BAD" fill="#A98BAD" mask="url(#m5b)"/>
+</svg>
+`,
+"05-eingeschrieben/05-eingeschrieben-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <g id="t5">
+    <rect x="22" y="22" width="36" height="36" rx="6" fill="none" stroke-width="4"/>
+    <line x1="31" y1="31" x2="50" y2="50" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="31" cy="31" r="3" stroke="none"/>
+    <circle cx="40.5" cy="40.5" r="3" stroke="none"/>
+    <circle cx="50" cy="50" r="3" stroke="none"/>
+  </g>
+  <mask id="m5a" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <use href="#t5" stroke="#000" fill="#000"/>
+  </mask>
+  <mask id="m5b" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="4" y="4" width="40" height="40" rx="8" fill="#000"/>
+  </mask>
+</defs>
+<rect x="4" y="4" width="40" height="40" rx="8" fill="#765477" mask="url(#m5a)"/>
+<use href="#t5" stroke="#765477" fill="#765477" mask="url(#m5b)"/>
+</svg>
+`,
+"05-eingeschrieben/05-eingeschrieben-mono.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <g id="t5">
+    <rect x="22" y="22" width="36" height="36" rx="6" fill="none" stroke-width="4"/>
+    <line x1="31" y1="31" x2="50" y2="50" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="31" cy="31" r="3" stroke="none"/>
+    <circle cx="40.5" cy="40.5" r="3" stroke="none"/>
+    <circle cx="50" cy="50" r="3" stroke="none"/>
+  </g>
+  <mask id="m5a" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <use href="#t5" stroke="#000" fill="#000"/>
+  </mask>
+  <mask id="m5b" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="4" y="4" width="40" height="40" rx="8" fill="#000"/>
+  </mask>
+</defs>
+<rect x="4" y="4" width="40" height="40" rx="8" fill="#000000" mask="url(#m5a)"/>
+<use href="#t5" stroke="#000000" fill="#000000" mask="url(#m5b)"/>
+</svg>
+`,
+"05-eingeschrieben/05-eingeschrieben-preview-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="192" height="192">
+<rect width="96" height="96" fill="#19171D"/>
+<svg x="16" y="16" width="64" height="64" viewBox="0 0 64 64">
+<defs>
+  <g id="t5">
+    <rect x="22" y="22" width="36" height="36" rx="6" fill="none" stroke-width="4"/>
+    <line x1="31" y1="31" x2="50" y2="50" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="31" cy="31" r="3" stroke="none"/>
+    <circle cx="40.5" cy="40.5" r="3" stroke="none"/>
+    <circle cx="50" cy="50" r="3" stroke="none"/>
+  </g>
+  <mask id="m5a" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <use href="#t5" stroke="#000" fill="#000"/>
+  </mask>
+  <mask id="m5b" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="4" y="4" width="40" height="40" rx="8" fill="#000"/>
+  </mask>
+</defs>
+<rect x="4" y="4" width="40" height="40" rx="8" fill="#A98BAD" mask="url(#m5a)"/>
+<use href="#t5" stroke="#A98BAD" fill="#A98BAD" mask="url(#m5b)"/>
+</svg>
+</svg>
+`,
+"05-eingeschrieben/05-eingeschrieben-preview-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="192" height="192">
+<rect width="96" height="96" fill="#F8F6F9"/>
+<svg x="16" y="16" width="64" height="64" viewBox="0 0 64 64">
+<defs>
+  <g id="t5">
+    <rect x="22" y="22" width="36" height="36" rx="6" fill="none" stroke-width="4"/>
+    <line x1="31" y1="31" x2="50" y2="50" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="31" cy="31" r="3" stroke="none"/>
+    <circle cx="40.5" cy="40.5" r="3" stroke="none"/>
+    <circle cx="50" cy="50" r="3" stroke="none"/>
+  </g>
+  <mask id="m5a" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <use href="#t5" stroke="#000" fill="#000"/>
+  </mask>
+  <mask id="m5b" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="4" y="4" width="40" height="40" rx="8" fill="#000"/>
+  </mask>
+</defs>
+<rect x="4" y="4" width="40" height="40" rx="8" fill="#765477" mask="url(#m5a)"/>
+<use href="#t5" stroke="#765477" fill="#765477" mask="url(#m5b)"/>
+</svg>
+</svg>
+`,
+"05-eingeschrieben/05-eingeschrieben.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <g id="t5">
+    <rect x="22" y="22" width="36" height="36" rx="6" fill="none" stroke-width="4"/>
+    <line x1="31" y1="31" x2="50" y2="50" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="31" cy="31" r="3" stroke="none"/>
+    <circle cx="40.5" cy="40.5" r="3" stroke="none"/>
+    <circle cx="50" cy="50" r="3" stroke="none"/>
+  </g>
+  <mask id="m5a" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <use href="#t5" stroke="#000" fill="#000"/>
+  </mask>
+  <mask id="m5b" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="4" y="4" width="40" height="40" rx="8" fill="#000"/>
+  </mask>
+</defs>
+<rect x="4" y="4" width="40" height="40" rx="8" fill="currentColor" mask="url(#m5a)"/>
+<use href="#t5" stroke="currentColor" fill="currentColor" mask="url(#m5b)"/>
+</svg>
+`,
+"06-dahinter/06-dahinter-16-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s6" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <rect x="0" y="6" width="12" height="10" rx="2.5" fill="#000"/>
+  </mask>
+</defs>
+<g mask="url(#s6)">
+  <rect x="5.5" y="2.5" width="9" height="6" rx="1" fill="none" stroke="#A98BAD" stroke-width="1"/>
+  <circle cx="9.5" cy="4.5" r="1" fill="#A98BAD"/>
+</g>
+<rect x="1" y="7" width="10" height="7" rx="1.5" fill="#A98BAD"/>
+</svg>
+`,
+"06-dahinter/06-dahinter-16-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s6" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <rect x="0" y="6" width="12" height="10" rx="2.5" fill="#000"/>
+  </mask>
+</defs>
+<g mask="url(#s6)">
+  <rect x="5.5" y="2.5" width="9" height="6" rx="1" fill="none" stroke="#765477" stroke-width="1"/>
+  <circle cx="9.5" cy="4.5" r="1" fill="#765477"/>
+</g>
+<rect x="1" y="7" width="10" height="7" rx="1.5" fill="#765477"/>
+</svg>
+`,
+"06-dahinter/06-dahinter-16-mono.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s6" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <rect x="0" y="6" width="12" height="10" rx="2.5" fill="#000"/>
+  </mask>
+</defs>
+<g mask="url(#s6)">
+  <rect x="5.5" y="2.5" width="9" height="6" rx="1" fill="none" stroke="#000000" stroke-width="1"/>
+  <circle cx="9.5" cy="4.5" r="1" fill="#000000"/>
+</g>
+<rect x="1" y="7" width="10" height="7" rx="1.5" fill="#000000"/>
+</svg>
+`,
+"06-dahinter/06-dahinter-16.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<defs>
+  <mask id="s6" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/>
+    <rect x="0" y="6" width="12" height="10" rx="2.5" fill="#000"/>
+  </mask>
+</defs>
+<g mask="url(#s6)">
+  <rect x="5.5" y="2.5" width="9" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1"/>
+  <circle cx="9.5" cy="4.5" r="1" fill="currentColor"/>
+</g>
+<rect x="1" y="7" width="10" height="7" rx="1.5" fill="currentColor"/>
+</svg>
+`,
+"06-dahinter/06-dahinter-aubergine.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m6" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="0" y="24" width="48" height="36" rx="10" fill="#000"/>
+  </mask>
+</defs>
+<g mask="url(#m6)">
+  <rect x="22" y="10" width="36" height="24" rx="4" fill="none" stroke="#49334F" stroke-width="4"/>
+  <g stroke="#49334F" stroke-width="2" stroke-linecap="round">
+    <line x1="30" y1="18" x2="42" y2="18"/>
+    <line x1="42" y1="18" x2="52" y2="28"/>
+  </g>
+  <g fill="#49334F">
+    <circle cx="30" cy="18" r="3"/>
+    <circle cx="42" cy="18" r="3"/>
+    <circle cx="52" cy="28" r="3"/>
+  </g>
+</g>
+<rect x="4" y="28" width="40" height="28" rx="6" fill="#765477"/>
+</svg>
+`,
+"06-dahinter/06-dahinter-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m6" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="0" y="24" width="48" height="36" rx="10" fill="#000"/>
+  </mask>
+</defs>
+<g mask="url(#m6)">
+  <rect x="22" y="10" width="36" height="24" rx="4" fill="none" stroke="#A98BAD" stroke-width="4"/>
+  <g stroke="#A98BAD" stroke-width="2" stroke-linecap="round">
+    <line x1="30" y1="18" x2="42" y2="18"/>
+    <line x1="42" y1="18" x2="52" y2="28"/>
+  </g>
+  <g fill="#A98BAD">
+    <circle cx="30" cy="18" r="3"/>
+    <circle cx="42" cy="18" r="3"/>
+    <circle cx="52" cy="28" r="3"/>
+  </g>
+</g>
+<rect x="4" y="28" width="40" height="28" rx="6" fill="#A98BAD"/>
+</svg>
+`,
+"06-dahinter/06-dahinter-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m6" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="0" y="24" width="48" height="36" rx="10" fill="#000"/>
+  </mask>
+</defs>
+<g mask="url(#m6)">
+  <rect x="22" y="10" width="36" height="24" rx="4" fill="none" stroke="#765477" stroke-width="4"/>
+  <g stroke="#765477" stroke-width="2" stroke-linecap="round">
+    <line x1="30" y1="18" x2="42" y2="18"/>
+    <line x1="42" y1="18" x2="52" y2="28"/>
+  </g>
+  <g fill="#765477">
+    <circle cx="30" cy="18" r="3"/>
+    <circle cx="42" cy="18" r="3"/>
+    <circle cx="52" cy="28" r="3"/>
+  </g>
+</g>
+<rect x="4" y="28" width="40" height="28" rx="6" fill="#765477"/>
+</svg>
+`,
+"06-dahinter/06-dahinter-mono.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m6" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="0" y="24" width="48" height="36" rx="10" fill="#000"/>
+  </mask>
+</defs>
+<g mask="url(#m6)">
+  <rect x="22" y="10" width="36" height="24" rx="4" fill="none" stroke="#000000" stroke-width="4"/>
+  <g stroke="#000000" stroke-width="2" stroke-linecap="round">
+    <line x1="30" y1="18" x2="42" y2="18"/>
+    <line x1="42" y1="18" x2="52" y2="28"/>
+  </g>
+  <g fill="#000000">
+    <circle cx="30" cy="18" r="3"/>
+    <circle cx="42" cy="18" r="3"/>
+    <circle cx="52" cy="28" r="3"/>
+  </g>
+</g>
+<rect x="4" y="28" width="40" height="28" rx="6" fill="#000000"/>
+</svg>
+`,
+"06-dahinter/06-dahinter-preview-dark.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="192" height="192">
+<rect width="96" height="96" fill="#19171D"/>
+<svg x="16" y="16" width="64" height="64" viewBox="0 0 64 64">
+<defs>
+  <mask id="m6" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="0" y="24" width="48" height="36" rx="10" fill="#000"/>
+  </mask>
+</defs>
+<g mask="url(#m6)">
+  <rect x="22" y="10" width="36" height="24" rx="4" fill="none" stroke="#A98BAD" stroke-width="4"/>
+  <g stroke="#A98BAD" stroke-width="2" stroke-linecap="round">
+    <line x1="30" y1="18" x2="42" y2="18"/>
+    <line x1="42" y1="18" x2="52" y2="28"/>
+  </g>
+  <g fill="#A98BAD">
+    <circle cx="30" cy="18" r="3"/>
+    <circle cx="42" cy="18" r="3"/>
+    <circle cx="52" cy="28" r="3"/>
+  </g>
+</g>
+<rect x="4" y="28" width="40" height="28" rx="6" fill="#A98BAD"/>
+</svg>
+</svg>
+`,
+"06-dahinter/06-dahinter-preview-light.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="192" height="192">
+<rect width="96" height="96" fill="#F8F6F9"/>
+<svg x="16" y="16" width="64" height="64" viewBox="0 0 64 64">
+<defs>
+  <mask id="m6" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="0" y="24" width="48" height="36" rx="10" fill="#000"/>
+  </mask>
+</defs>
+<g mask="url(#m6)">
+  <rect x="22" y="10" width="36" height="24" rx="4" fill="none" stroke="#765477" stroke-width="4"/>
+  <g stroke="#765477" stroke-width="2" stroke-linecap="round">
+    <line x1="30" y1="18" x2="42" y2="18"/>
+    <line x1="42" y1="18" x2="52" y2="28"/>
+  </g>
+  <g fill="#765477">
+    <circle cx="30" cy="18" r="3"/>
+    <circle cx="42" cy="18" r="3"/>
+    <circle cx="52" cy="28" r="3"/>
+  </g>
+</g>
+<rect x="4" y="28" width="40" height="28" rx="6" fill="#765477"/>
+</svg>
+</svg>
+`,
+"06-dahinter/06-dahinter.svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<defs>
+  <mask id="m6" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <rect x="0" y="24" width="48" height="36" rx="10" fill="#000"/>
+  </mask>
+</defs>
+<g mask="url(#m6)">
+  <rect x="22" y="10" width="36" height="24" rx="4" fill="none" stroke="currentColor" stroke-width="4"/>
+  <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <line x1="30" y1="18" x2="42" y2="18"/>
+    <line x1="42" y1="18" x2="52" y2="28"/>
+  </g>
+  <g fill="currentColor">
+    <circle cx="30" cy="18" r="3"/>
+    <circle cx="42" cy="18" r="3"/>
+    <circle cx="52" cy="28" r="3"/>
+  </g>
+</g>
+<rect x="4" y="28" width="40" height="28" rx="6" fill="currentColor"/>
+</svg>
+`,
+};
+const src = (p) => "data:image/svg+xml," + encodeURIComponent(SVG[p]);
+  const names = ["01-diagonal", "02-nebeneinander", "03-kreise", "04-spiegelung", "05-eingeschrieben", "06-dahinter"];
+  const rows = [["16 Master", 16, ""], ["16 klein", 16, "16-"], ["24", 24, ""], ["32", 32, ""], ["64", 64, ""]];
+  let html = "";
+  for (const mode of ["light", "dark"]) {
+    html += `<h2>${mode === "light" ? "Heller Hintergrund #F8F6F9, Marke #765477" : "Dunkler Hintergrund #19171D, Marke #A98BAD"}</h2>`;
+    html += `<div class="band ${mode}"><div></div>${names.map((n) => `<div class="head">${n}</div>`).join("")}</div>`;
+    for (const [label, size, prefix] of rows) {
+      html += `<div class="band ${mode}"><div class="label">${label}</div>${names
+        .map((n) => `<div class="cell"><img src="${src(`${n}/${n}-${prefix}${mode}.svg`)}" width="${size}" height="${size}" alt=""></div>`)
+        .join("")}</div>`;
+    }
+    html += `<div class="tabs ${mode}">${names
+      .map((n) => `<span class="tab" style="background:${mode === "light" ? "#fff" : "#2a2730"}"><img src="${src(`${n}/${n}-16-${mode}.svg`)}" width="16" height="16" alt="">Entwurf ${n.slice(0, 2)}</span>`)
+      .join("")}</div>`;
+  }
+  document.getElementById("out").innerHTML = html;
+</script>
+</body>
+</html>

@@ -55,6 +55,7 @@ Quelle der Einträge E-01 bis E-13: `STARTUNTERLAGE.md`, Entwurf 2 vom 21.11.202
 | E-45 | Neue Abhängigkeiten für M1 zugelassen: django-allauth[headless] mit pyjwt, cryptography, cffi, pycparser; django-auditlog; i18next und react-i18next (mit html-parse-stringify); react-router (mit cookie-es, @remix-run/route-pattern); @tanstack/react-query (mit query-core). Die Lizenz MIT-0 (cffi) kommt in die Lizenzregeln (F-6, F-10, F-17, F-18, F-24) | ✔ | 21.11.2026 |
 | E-46 | GNU gettext (GPL) ist als Werkzeug im Dev-Image und in einer Bau-Stufe zugelassen, nicht im Laufzeit-Image und nicht eingebunden; `.mo`-Dateien kommen nie ins Repository (F-33) | ✔ | 21.11.2026 |
 | E-47 | Font Awesome Free 6.7.2 (CC-BY-4.0) ist als benannte Ausnahme zugelassen, nur als Teil des unveränderten Django-Admins (`admin/img/*.svg`); die Namensnennung liefert die mitgelieferte `admin/img/README.md` | ✔ | 21.11.2026 |
+| E-48 | Eine vereinfachte, **interaktive** Landkarte wird als Vorschau auf M7 vorgezogen (M1b, Auftrag 039): Struktur und Geräte als Knoten, zusätzlich IP-Netze der Geräte; keine abgeleiteten Verbindungen vor M5/M7. Darstellung mit React Flow (`@xyflow/react`, MIT) als neue Abhängigkeit; Lizenz und Version prüft der Bearbeiter an der Quelle | ✔ | 22.11.2026 |
 
 ## Begründungen
 

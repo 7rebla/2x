@@ -121,6 +121,7 @@ Nichts davon hält die laufende Arbeit auf.
 | 036 | Oberfläche: Dateien | B | 7 | erledigt |
 | 037 | Nachweis der M1-Abnahme | B | 8 | offen |
 | 038 | README und ARCHITECTURE für M1 | B | 8 | offen |
+| 039 | Landkarte als interaktive Vorschau (M1b, E-48) | C | – | in Arbeit |
 
 Hinweise aus Welle 1:
 - Ab 21.11.2026 startet jeder Auftrag, sobald seine eigenen Voraussetzungen auf `main` liegen, nicht erst nach der ganzen Welle.

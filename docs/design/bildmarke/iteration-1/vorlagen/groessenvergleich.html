@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Bildmarke Iteration 1 – Größenvergleich</title>
+<style>
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #fff; color: #222; }
+  h1 { font-size: 20px; margin: 24px 24px 4px; }
+  h2 { font-size: 15px; margin: 24px 24px 8px; }
+  p.note { margin: 0 24px 16px; color: #555; }
+  .band { display: grid; grid-template-columns: 120px repeat(6, 1fr); align-items: center; margin: 0 24px; padding: 14px 0; }
+  .band + .band { border-top: 1px solid rgba(128,128,128,.25); }
+  .light { background: #F8F6F9; }
+  .dark { background: #19171D; color: #bbb; }
+  .label { padding-left: 12px; font-size: 12px; }
+  .cell { display: flex; gap: 14px; justify-content: center; align-items: center; }
+  .head { font-size: 12px; font-weight: 600; text-align: center; }
+  /* Simulated browser tab: mark at 16 px next to a title */
+  .tab { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px 8px 0 0; font-size: 12px; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 24px; padding: 10px; }
+</style>
+</head>
+<body>
+<h1>Bildmarke Iteration 1 – Größenvergleich</h1>
+<p class="note">Alle sechs Entwürfe nebeneinander in 16, 24, 32 und 64 px. In der Zeile „16 klein“ steht die eigene Kleinversion (16er-Raster), in „16“ der verkleinerte Master. Unten eine nachgestellte Browser-Tab-Leiste.</p>
+<div id="out"></div>
+<script>
+/*SVGDATA*/
+const src = (p) => "data:image/svg+xml," + encodeURIComponent(SVG[p]);
+  const names = ["01-diagonal", "02-nebeneinander", "03-kreise", "04-spiegelung", "05-eingeschrieben", "06-dahinter"];
+  const rows = [["16 Master", 16, ""], ["16 klein", 16, "16-"], ["24", 24, ""], ["32", 32, ""], ["64", 64, ""]];
+  let html = "";
+  for (const mode of ["light", "dark"]) {
+    html += `<h2>${mode === "light" ? "Heller Hintergrund #F8F6F9, Marke #765477" : "Dunkler Hintergrund #19171D, Marke #A98BAD"}</h2>`;
+    html += `<div class="band ${mode}"><div></div>${names.map((n) => `<div class="head">${n}</div>`).join("")}</div>`;
+    for (const [label, size, prefix] of rows) {
+      html += `<div class="band ${mode}"><div class="label">${label}</div>${names
+        .map((n) => `<div class="cell"><img src="${src(`${n}/${n}-${prefix}${mode}.svg`)}" width="${size}" height="${size}" alt=""></div>`)
+        .join("")}</div>`;
+    }
+    html += `<div class="tabs ${mode}">${names
+      .map((n) => `<span class="tab" style="background:${mode === "light" ? "#fff" : "#2a2730"}"><img src="${src(`${n}/${n}-16-${mode}.svg`)}" width="16" height="16" alt="">Entwurf ${n.slice(0, 2)}</span>`)
+      .join("")}</div>`;
+  }
+  document.getElementById("out").innerHTML = html;
+</script>
+</body>
+</html>
