@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Selftest } from "./api/generated";
 import { App } from "./App.tsx";
-import { texts } from "./texts.ts";
+import { changeLanguage } from "./i18n.ts";
 
 const healthy: Selftest = {
   database: { ok: true, server_version: "18.7 (Debian 18.7-1.pgdg12+2)", error: "" },
@@ -52,9 +52,11 @@ function stubApi(...answers: (() => Promise<Response>)[]): ReturnType<typeof vi.
   return fetchMock;
 }
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   vi.unstubAllGlobals();
+  await changeLanguage("en");
+  window.localStorage.clear();
 });
 
 describe("self-test page", () => {
@@ -62,21 +64,21 @@ describe("self-test page", () => {
     stubApi(() => Promise.resolve(jsonResponse(healthy)));
     render(<App />);
 
-    expect(screen.getByRole("heading", { level: 1, name: texts.appTitle })).toBeDefined();
+    expect(screen.getByRole("heading", { level: 1, name: "2x" })).toBeDefined();
   });
 
   it("shows database version and worker result when everything is fine", async () => {
     stubApi(() => Promise.resolve(jsonResponse(healthy)));
     render(<App />);
 
-    expect(screen.getByTestId("selftest-loading").textContent).toBe(texts.selftest.checking);
+    expect(screen.getByTestId("selftest-loading").textContent).toBe("Checking…");
     expect((await screen.findByTestId("database-version")).textContent).toBe(
       "18.7 (Debian 18.7-1.pgdg12+2)",
     );
     expect(screen.getByTestId("worker-result").textContent).toBe("pong");
     expect(screen.getByTestId("worker-duration").textContent).toBe("15 ms");
-    expect(screen.getByTestId("database-status").textContent).toBe(texts.selftest.statusOk);
-    expect(screen.getByTestId("worker-status").textContent).toBe(texts.selftest.statusOk);
+    expect(screen.getByTestId("database-status").textContent).toBe("OK");
+    expect(screen.getByTestId("worker-status").textContent).toBe("OK");
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -87,8 +89,8 @@ describe("self-test page", () => {
     expect((await screen.findByTestId("worker-error")).textContent).toBe(
       "no result from a worker within 5 seconds",
     );
-    expect(screen.getByTestId("worker-status").textContent).toBe(texts.selftest.statusFailed);
-    expect(screen.getByTestId("worker-duration").textContent).toBe("5019 ms");
+    expect(screen.getByTestId("worker-status").textContent).toBe("Failed");
+    expect(screen.getByTestId("worker-duration").textContent).toBe("5,019 ms");
     expect(screen.queryByTestId("worker-result")).toBeNull();
     expect(screen.getByTestId("database-version").textContent).toBe(
       "18.7 (Debian 18.7-1.pgdg12+2)",
@@ -102,7 +104,7 @@ describe("self-test page", () => {
 
     const error = await screen.findByTestId("selftest-error");
     expect(fetchMock).toHaveBeenCalled();
-    expect(error.textContent).toBe(texts.selftest.apiUnreachable);
+    expect(error.textContent).toBe("The API did not respond. Is the server running?");
     expect(error.getAttribute("role")).toBe("alert");
     expect(screen.queryByTestId("database-check")).toBeNull();
     expect(screen.queryByTestId("worker-check")).toBeNull();
@@ -113,7 +115,7 @@ describe("self-test page", () => {
     render(<App />);
 
     expect((await screen.findByTestId("selftest-error")).textContent).toBe(
-      texts.selftest.apiHttpError(502),
+      "The API answered with HTTP status 502.",
     );
   });
 
@@ -131,13 +133,13 @@ describe("self-test page", () => {
     render(<App />);
 
     expect((await screen.findByTestId("selftest-error")).textContent).toBe(
-      texts.selftest.apiInvalidAnswer,
+      "The API sent an answer this page cannot read.",
     );
 
-    fireEvent.click(screen.getByRole("button", { name: texts.selftest.recheck }));
+    fireEvent.click(screen.getByRole("button", { name: "Check again" }));
 
-    expect(await screen.findByRole("button", { name: texts.selftest.recheck })).toBeDefined();
-    expect(screen.getByTestId("selftest-error").textContent).toBe(texts.selftest.apiInvalidAnswer);
+    expect(await screen.findByRole("button", { name: "Check again" })).toBeDefined();
+    expect(screen.getByTestId("selftest-error").textContent).toBe("The API sent an answer this page cannot read.");
   });
 
   it("fetches again when the user clicks the recheck button", async () => {
@@ -149,10 +151,64 @@ describe("self-test page", () => {
     await screen.findByTestId("selftest-error");
     const callsBefore = fetchMock.mock.calls.length;
 
-    fireEvent.click(screen.getByRole("button", { name: texts.selftest.recheck }));
+    fireEvent.click(screen.getByRole("button", { name: "Check again" }));
 
     expect((await screen.findByTestId("worker-result")).textContent).toBe("pong");
     expect(fetchMock.mock.calls.length).toBe(callsBefore + 1);
     expect(screen.queryByTestId("selftest-error")).toBeNull();
+  });
+});
+
+describe("language switch", () => {
+  it("switches texts, number format and <html lang> to German and back", async () => {
+    stubApi(() => Promise.resolve(jsonResponse(workerDown)));
+    render(<App />);
+    expect(await screen.findByTestId("worker-duration")).toBeDefined();
+    expect(document.documentElement.lang).toBe("en");
+    expect(screen.getByTestId("worker-duration").textContent).toBe("5,019 ms");
+
+    fireEvent.change(screen.getByTestId("language-switch"), { target: { value: "de" } });
+
+    expect(await screen.findByRole("heading", { level: 2, name: "Selbsttest" })).toBeDefined();
+    expect(document.documentElement.lang).toBe("de");
+    expect(screen.getByTestId("database-heading").textContent).toBe("Datenbank");
+    expect(screen.getByTestId("worker-heading").textContent).toBe("Hintergrunddienst");
+    expect(screen.getByTestId("worker-status").textContent).toBe("Fehlgeschlagen");
+    expect(screen.getByTestId("worker-duration").textContent).toBe("5.019 ms");
+    expect(screen.getByRole("button", { name: "Erneut prüfen" })).toBeDefined();
+    expect(screen.getByText("Sprache")).toBeDefined();
+    // The API's own error text is data and stays as sent.
+    expect(screen.getByTestId("worker-error").textContent).toBe(
+      "no result from a worker within 5 seconds",
+    );
+    expect(window.localStorage.getItem("twox.language")).toBe("de");
+
+    fireEvent.change(screen.getByTestId("language-switch"), { target: { value: "en" } });
+
+    expect(await screen.findByRole("heading", { level: 2, name: "Self-test" })).toBeDefined();
+    expect(document.documentElement.lang).toBe("en");
+    expect(window.localStorage.getItem("twox.language")).toBe("en");
+  });
+
+  it("shows German error texts with the HTTP status", async () => {
+    await changeLanguage("de");
+    stubApi(() => Promise.resolve(jsonResponse({ detail: "Server Error" }, 502)));
+    render(<App />);
+
+    expect((await screen.findByTestId("selftest-error")).textContent).toBe(
+      "Die API hat mit dem HTTP-Status 502 geantwortet.",
+    );
+  });
+
+  it("ignores values that are not a supported language", async () => {
+    stubApi(() => Promise.resolve(jsonResponse(healthy)));
+    render(<App />);
+    await screen.findByTestId("worker-result");
+
+    fireEvent.change(screen.getByTestId("language-switch"), { target: { value: "fr" } });
+
+    expect(document.documentElement.lang).toBe("en");
+    expect(screen.getByRole("heading", { level: 2, name: "Self-test" })).toBeDefined();
+    expect(window.localStorage.getItem("twox.language")).toBeNull();
   });
 });

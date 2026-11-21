@@ -1,13 +1,14 @@
 import { type ReactElement, type ReactNode, useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { DatabaseCheck, WorkerCheck } from "./api/generated";
 import { loadSelftest, type SelftestOutcome } from "./api/selftest.ts";
-import { texts } from "./texts.ts";
 
 type PageState = { kind: "loading" } | SelftestOutcome;
 
 /** Test page: shows the database and worker checks of GET /api/v1/selftest/. */
 export function SelftestPage(): ReactElement {
+  const { t } = useTranslation("selftest");
   const [state, setState] = useState<PageState>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
 
@@ -37,38 +38,39 @@ export function SelftestPage(): ReactElement {
   return (
     <section className="w-full max-w-xl space-y-4" aria-busy={loading}>
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold">{texts.selftest.heading}</h2>
+        <h2 className="text-2xl font-semibold">{t("heading")}</h2>
         <button
           type="button"
           onClick={recheck}
           disabled={loading}
           className="rounded bg-slate-800 px-4 py-2 text-white disabled:opacity-50"
         >
-          {loading ? texts.selftest.checking : texts.selftest.recheck}
+          {loading ? t("checking") : t("recheck")}
         </button>
       </div>
-      <p className="text-slate-600">{texts.selftest.intro}</p>
+      <p className="text-slate-600">{t("intro")}</p>
       <SelftestBody state={state} />
     </section>
   );
 }
 
 function SelftestBody({ state }: { state: PageState }): ReactElement {
+  const { t } = useTranslation("selftest");
   switch (state.kind) {
     case "loading":
       return (
         <p role="status" data-testid="selftest-loading">
-          {texts.selftest.checking}
+          {t("checking")}
         </p>
       );
     case "unreachable":
-      return <ApiError message={texts.selftest.apiUnreachable} />;
+      return <ApiError message={t("apiUnreachable")} />;
     case "http-error":
-      return <ApiError message={texts.selftest.apiHttpError(state.status)} />;
+      return <ApiError message={t("apiHttpError", { status: state.status })} />;
     case "invalid-answer":
-      return <ApiError message={texts.selftest.apiInvalidAnswer} />;
+      return <ApiError message={t("apiInvalidAnswer")} />;
     case "unexpected-error":
-      return <ApiError message={texts.selftest.unexpectedError} />;
+      return <ApiError message={t("unexpectedError")} />;
     case "answered":
       return (
         <div className="space-y-4">
@@ -92,10 +94,11 @@ function ApiError({ message }: { message: string }): ReactElement {
 }
 
 function DatabaseCard({ check }: { check: DatabaseCheck }): ReactElement {
+  const { t } = useTranslation("selftest");
   return (
-    <Card heading={texts.selftest.database.heading} ok={check.ok} testId="database">
+    <Card heading={t("database.heading")} ok={check.ok} testId="database">
       {check.ok ? (
-        <Field label={texts.selftest.database.serverVersion}>
+        <Field label={t("database.serverVersion")}>
           <span data-testid="database-version">{check.server_version}</span>
         </Field>
       ) : (
@@ -106,18 +109,19 @@ function DatabaseCard({ check }: { check: DatabaseCheck }): ReactElement {
 }
 
 function WorkerCard({ check }: { check: WorkerCheck }): ReactElement {
+  const { t } = useTranslation("selftest");
   return (
-    <Card heading={texts.selftest.worker.heading} ok={check.ok} testId="worker">
+    <Card heading={t("worker.heading")} ok={check.ok} testId="worker">
       {check.ok ? (
-        <Field label={texts.selftest.worker.result}>
+        <Field label={t("worker.result")}>
           <span data-testid="worker-result">{check.result}</span>
         </Field>
       ) : (
         <CheckError message={check.error} testId="worker-error" />
       )}
-      <Field label={texts.selftest.worker.duration}>
+      <Field label={t("worker.duration")}>
         <span data-testid="worker-duration">
-          {texts.selftest.worker.durationValue(check.duration_ms)}
+          {t("worker.durationValue", { duration: check.duration_ms })}
         </span>
       </Field>
     </Card>
@@ -135,15 +139,16 @@ function Card({
   testId: string;
   children: ReactNode;
 }): ReactElement {
+  const { t } = useTranslation("selftest");
   return (
     <article
       data-testid={`${testId}-check`}
       className={`rounded border p-4 ${ok ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50"}`}
     >
       <h3 className="flex items-center justify-between font-semibold">
-        {heading}
+        <span data-testid={`${testId}-heading`}>{heading}</span>
         <span data-testid={`${testId}-status`} className={ok ? "text-green-800" : "text-red-800"}>
-          {ok ? texts.selftest.statusOk : texts.selftest.statusFailed}
+          {ok ? t("statusOk") : t("statusFailed")}
         </span>
       </h3>
       <dl className="mt-2 space-y-1">{children}</dl>
@@ -161,8 +166,9 @@ function Field({ label, children }: { label: string; children: ReactNode }): Rea
 }
 
 function CheckError({ message, testId }: { message: string; testId: string }): ReactElement {
+  const { t } = useTranslation("selftest");
   return (
-    <Field label={texts.selftest.errorLabel}>
+    <Field label={t("errorLabel")}>
       <span role="alert" data-testid={testId} className="text-red-800">
         {message}
       </span>
