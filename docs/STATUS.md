@@ -4,24 +4,81 @@ Stand: 21.11.2026 · gepflegt von der Leitstelle
 
 ## Freigegeben
 
-- Aufträge für M0 und T1 starten ohne Einzelfreigabe (E-21). Die Liste folgt, sobald die Auftragsdateien unter `docs/auftraege/offen/` liegen.
+Alle Aufträge für M0 und T1 (E-21). Die Fragen in den Aufträgen sind nach Empfehlung entschieden (E-23).
+Höchstens drei Bearbeiter gleichzeitig, M0 und T1 zusammen gezählt. Eine Welle startet erst, wenn ihre Voraussetzungen nach `main` zusammengeführt sind. M0 hat Vorrang, damit früh etwas zum Ansehen da ist; T1-Aufträge füllen freie Plätze.
+
+### M0 – Gerüst
+
+| Nr. | Auftrag | Stufe | Welle | Hängt ab von | Status |
+| --- | --- | --- | --- | --- | --- |
+| 001 | Backend: Werkzeuge und Container | C | 1 | – | in Arbeit |
+| 002 | Oberfläche als Grundgerüst | C | 1 | – | in Arbeit |
+| 003 | Suche nach Geheimnissen | C | 1 | – | in Arbeit |
+| 004 | Messung Dateizugriff | B | 2 | 001, 002 | offen |
+| 005 | API-Grundlage | C | 3 | 001 | offen |
+| 006 | Lizenzprüfung | C | 3 | 001, 002 | offen |
+| 007 | Prüfung der Erreichbarkeit von Ollama | B | 3 | 001 | offen |
+| 008 | Celery-Worker mit Valkey | C | 4 | 005 | offen |
+| 009 | docling-serve als Container | C | 5 | 008 | offen |
+| 010 | Testseite, Teil API | C | 5 | 005, 008 | offen |
+| 011 | CI-Hauptworkflow | C | 5 | 002, 005, 006, 008 | offen |
+| 012 | Testseite, Teil Oberfläche | C | 6 | 002, 010 | offen |
+| 013 | Auslieferung der Oberfläche durch Django | C | 6 | 002, 009, 010 | offen |
+| 014 | Playwright-Test der Testseite | C | 7 | 011, 012, 013 | offen |
+| 015 | ARCHITECTURE.md und README | B | 8 | 006, 007, 009, 013, 014 | offen |
+
+### T1 – Testfabrik Teil 1
+
+| Nr. | Auftrag | Stufe | Welle | Hängt ab von | Status |
+| --- | --- | --- | --- | --- | --- |
+| 101 | Manifest-Format und Werkzeug-Container | C | 1 | – (Python-Version aus 001 eintragen) | offen |
+| 102 | Quellen und Lizenzlage der Fertigungslinie | C | 1 | – | offen |
+| 103 | Quellen und Nutzungsbedingungen: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 1 | – | offen |
+| 104 | Lade-Skript `fetch.py` | B | 2 | 101 | offen |
+| 105 | Manifest-Einträge der Fertigungslinie | C | 2 | 101, 102 | offen |
+| 106 | Aufbau der Testfabrik: Geräteliste, Netzplan, Beschreibung | C | 2 | 101, 102 | offen |
+| 107 | Manifest-Einträge: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 3 | 103, 105 | offen |
+| 108 | Frei lizenzierte Testunterlagen in `testdata/klein` | C | 3 | 101, 103 | offen |
+| 109 | Erstabruf: Unterlagen laden und Prüfsummen eintragen | B | 4 | 104, 105, 106, 107 | offen |
+| 110 | Stände und Nutzungsvermerke nachtragen | C | 5 | 109 | offen |
+| 111 | Prüffragen der Fertigungslinie mit Fundstelle | C | 5 | 109 | offen |
+| 112 | Prüffragen des Roboters (Fragen 9 und 10) | C | 6 | 110, 111 | offen |
+| 113 | Nachweis der drei Bedingungen je Anlage und Gerät | C | 6 | 106, 110 | offen |
+| 114 | Testfabrik-Prüfungen in CI und Werkzeugkette | B | 7 | 101, 112, 113, 011 | offen |
 
 ## In Arbeit
 
-- Leitstelle: Aufträge für M0 und T1 werden entworfen und geprüft (noch nicht in `docs/auftraege/offen/`).
+- 001, 002, 003 (gestartet am 21.11.2026).
 
 ## Wartet auf a7
 
-1. **Freigabe für den ersten Push** nach `https://github.com/7rebla/2x` (öffentlich, E-19). Bis dahin liegt alles nur lokal (E-14).
+Nichts davon hält die laufende Arbeit auf.
+
+1. **Freigabe für den ersten Push** nach `https://github.com/7rebla/2x` (öffentlich, E-19). Empfehlung: nach Welle 1, sobald die Geheimnissuche (003) zusammengeführt ist und der Verlauf sauber geprüft wurde. Erst nach einem Push lässt sich „CI ist grün" prüfen (003 Kriterium 8, 011 Kriterien 8 und 9, 014 Kriterium 12, 114 letztes Kriterium).
+2. **Durchsicht der Entscheidungen nach E-23** in `docs/DECISIONS.md`, vor allem die Lizenz-Ausnahmen (psycopg LGPL, pathspec und lightningcss MPL-2.0, pandoc GPL als Einmalwerkzeug) und das Zusammenführen von Stufe-C-Aufträgen ohne Einzelfreigabe.
+3. **Lizenzlage fischertechnik (Auftrag 102, Frage 1):** Beide Repositories haben keine Lizenz, die Zentralsteuerung ist ausdrücklich „UNLICENSED". Soll a7 beim Hersteller anfragen? Den Entwurf der Anfrage liefert Auftrag 102. Bis dahin gilt: laden ja, weitergeben nein.
+4. **URSim (Auftrag 103, Frage 3):** Die Nutzungsbedingungen erlauben nur eigene interne Nutzung. Anfrage bei Universal Robots vor T2? Arbeitsstand bis dahin: nur selbst erzeugte Dateien einchecken.
+5. **GitHub Secret Scanning mit Push Protection** am Repository einschalten (Auftrag 003, Frage 1) – Einstellung am Konto, nimmt a7 selbst vor.
+6. **Prüffragen in der CI (Auftrag 011, Frage 1):** Empfehlung: aufgezeichnete Antworten in der CI, dazu der echte Lauf lokal vor jedem Zusammenführen. Entscheidung spätestens zu M3.
+7. **Startunterlage berichtigen (Auftrag 102, Frage 5):** Laut Recherche haben fünf statt vier Module eine S7-1200 (zusätzlich DPS). Die Leitstelle ändert die Startunterlage nicht ohne a7.
+
+## Offene Abnahmebedingungen M0
+
+1. `check_llm` ist einmal mit „OK:" gegen das echte Ollama gelaufen (Auftrag 007).
+2. Der Subagent `auftrag` startet in einem eigenen Arbeitsverzeichnis unter `.claude/worktrees/` mit eigenem Zweig (Prüfung beim Start von Welle 1).
+3. Entscheidung zur Messung aus 004 (im Windows-Ordner bleiben oder ins WSL-2-Dateisystem umziehen).
+4. CI-Läufe grün nach freigegebenem Push.
+5. Sichtprüfung der Testseite unter `http://localhost:8000/` nach dem Zusammenführen von 012 und 013.
+6. Abnahme durch a7.
 
 ## Erledigt seit dem letzten Bericht
 
-- Startunterlage gelesen, Zusammenfassung von a7 bestätigt.
-- Rechner geprüft: Git 2.55, GitHub CLI, WSL 2, Docker Desktop (Client 29.9.3, Compose 5.7.0), Ollama 0.40.17 (noch kein Modell geladen; Modellwahl in M2/M3).
-- Grundgerüst angelegt: Git-Repository (`main`), `.gitignore`, `.gitattributes`, `.worktreeinclude`, `LICENSE` (Apache-2.0), `CLAUDE.md`, `.claude/settings.json`, `.claude/agents/auftrag.md`, `docs/DECISIONS.md`, `docs/ROADMAP.md`, `docs/STATUS.md`, `docs/auftraege/VORLAGE.md`.
-- Entscheidungen E-14 bis E-22 protokolliert (Push nur auf Freigabe, Desktop-App, öffentliches Repository, Startunterlage bleibt lokal, selbstständiges Bauen, „a7" statt Name).
+- Rechner geprüft: Git 2.55, GitHub CLI, WSL 2, Docker Desktop (Engine 29.9.3, Compose 5.7.0), Ollama 0.40.17 (noch kein Modell geladen; Modellwahl in M2/M3).
+- Grundgerüst angelegt und auf `main` committet.
+- Entscheidungen E-14 bis E-23 protokolliert.
+- 29 Aufträge für M0 und T1 recherchiert, entworfen, von drei Prüfern gegengelesen (64 Befunde) und überarbeitet.
 
 ## Als Nächstes
 
-- Aufträge für M0 und T1 nach `docs/auftraege/offen/` schreiben.
-- Erste Welle Auftragsbearbeiter starten (höchstens drei gleichzeitig), Ergebnisse prüfen und nach `main` zusammenführen.
+- Welle 1 prüfen und zusammenführen, dann 004 (Messung) und danach 005, 006, 007.
+- Freie Plätze mit T1 füllen: zuerst 102 und 103 (reine Recherche), dann 101.

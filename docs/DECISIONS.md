@@ -30,6 +30,7 @@ Quelle der Einträge E-01 bis E-13: `STARTUNTERLAGE.md`, Entwurf 2 vom 21.11.202
 | E-20 | `STARTUNTERLAGE.md` kommt nicht ins Repository. Sie bleibt lokal (`.gitignore`) und wird über `.worktreeinclude` in Arbeitsverzeichnisse kopiert | ✔ | 21.11.2026 |
 | E-21 | Die Leitstelle beginnt selbstständig mit dem Bauen, sobald sie kann; die bisher mit ◻ markierten Punkte gelten als bestätigt | ✔ | 21.11.2026 |
 | E-22 | In Repository-Dateien heißt der Projektinhaber „a7"; Personennamen stehen nicht im Repository | ✔ | 21.11.2026 |
+| E-23 | Die Fragen in den Aufträgen für M0 und T1 entscheidet die Leitstelle gemäß der jeweiligen Empfehlung; a7 kann jede Entscheidung nachträglich ändern | ✔ (aus E-14 und E-21 abgeleitet) | 21.11.2026 |
 
 ## Begründungen
 
@@ -85,6 +86,23 @@ Folge: Die Leitstelle committet auf `main` und führt Auftragszweige zusammen, o
 
 Wortlaut von a7 am 21.11.2026 auf die Bitte, die vier ◻-Punkte zu bestätigen: „okay, sobald du schon sachen bauen kannst fange selbstständig an, damit ich so früh wie möglich die ersten sachen lokal testen/ansehen kann".
 Auslegung der Leitstelle: E-03, die Auswahl der Testfabrik (E-06), der Bezeichner `twox` (E-09) und die Freigabestufen (8.2, mit der Änderung aus E-14) sind bestätigt. Aufträge für M0 und T1 dürfen ohne Einzelfreigabe der Liste starten; die dort aufgeführten Abhängigkeiten des Stacks aus Abschnitt 5.2 gelten als genehmigt. Fragen der Stufe C darüber hinaus (Lizenzklärung fremder Unterlagen, Anmeldung, Rechte, Schwärzen, Abnahme) gehen weiterhin an a7. Widerspricht a7 dieser Auslegung, wird der Eintrag korrigiert.
+
+### E-23 Fragen in den Aufträgen nach Empfehlung entschieden
+
+Grundlage: a7 am 21.11.2026: „ich gebe nur push auf github frei, rest machst du" und „fange selbstständig an". Die Leitstelle hat daraus abgeleitet, dass sie die in den Aufträgen 001–015 und 101–114 gestellten Fragen selbst nach der dort begründeten Empfehlung entscheidet, damit die Arbeit nicht steht. Das ist eine Auslegung der Leitstelle, keine wörtliche Entscheidung von a7.
+
+Die wichtigsten so getroffenen Festlegungen (Einzelheiten und Alternativen stehen im jeweiligen Auftrag):
+
+- **Python 3.14**, **PostgreSQL 18** mit pgvector, **Valkey 9.1.x**, **Node 24**, **TypeScript 6** (Version 7 tragen typescript-eslint und der Client-Generator noch nicht).
+- **Compose:** `compose.yaml` im Wurzelverzeichnis bindet `deploy/compose/compose.yaml` ein, damit `docker compose up` wörtlich gilt.
+- **Typprüfung** mit mypy (strict) und django-stubs. **ASGI-Server** uvicorn. **Auslieferung der Oberfläche** über WhiteNoise. **API-Client** mit @hey-api/openapi-ts.
+- **Eigenes Benutzermodell** (`accounts.User`, unveränderte Ableitung von `AbstractUser`) schon in M0, weil ein späterer Wechsel aufwendig ist. Anmeldung und Rollen bleiben M1.
+- **Lizenzen:** ISC, 0BSD, PSF-2.0 und Python-2.0 gelten als gleichwertig freizügig. Benannte Ausnahmen: psycopg (LGPL-3.0-only, in Leitplanke 7 selbst genannt), pathspec (MPL-2.0, nur Entwicklung, über mypy), lightningcss (MPL-2.0, nur Build, über Tailwind und Vite). pandoc (GPL-2.0-or-later) nur als einmaliges Werkzeug im Wegwerf-Container, nicht eingebunden.
+- **Geheimnissuche** mit der gitleaks-Kommandozeile (MIT), nicht mit der gitleaks-action (proprietäre Bedingungen).
+- **Testfabrik:** eigener kleiner Rahmen unabhängig vom Django-Gerüst; Manifest in JSON-Schreibweise ohne YAML-Bibliothek; Dokumente auf Deutsch, Quellen unter `docs/testfabrik/`; UR5e und URSim auf Softwarestand 5.25.1; Raspberry-Pi-Abbild nur als Verweis.
+- **Stufe C wie Stufe B zusammenführen**, wenn beim Abschluss nichts über das im Auftrag Genannte hinaus dazugekommen ist (keine weitere Abhängigkeit, keine nicht gedeckte Lizenz, keine offene Frage, keine Abweichung).
+
+Nicht entscheidbar durch die Leitstelle und deshalb unter „Wartet auf a7" in `docs/STATUS.md`: Anfragen an Hersteller zur Lizenzlage, Einstellungen am GitHub-Konto, Push, Abnahme.
 
 ### E-19 Repository von Anfang an öffentlich
 
