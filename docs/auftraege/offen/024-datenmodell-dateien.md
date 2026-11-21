@@ -1,6 +1,6 @@
 # Auftrag 024 – Datenmodell Dateien und Versionen mit Prüfsumme und Dubletten-Erkennung
 
-Meilenstein: M1 · Freigabestufe: C · Status: offen
+Meilenstein: M1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -115,7 +115,49 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 Die Größenobergrenze: siehe Auftrag 029, Frage 1.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Alle Akzeptanzkriterien erfüllt, Läufe am 21.11.2026 im Container auf dem committeten Stand. Keine offene Frage an a7.
+
+**Was wurde gebaut?**
+
+- `backend/twox/files/models.py`:
+  - `DocumentKind` (`TextChoices`: `document`, `configuration`).
+  - `Document`: `device` (`PROTECT`, `related_name="documents"`), `title` (200), `kind` (Standard `document`, zusätzlich `CheckConstraint` `files_document_kind_valid`), `created_at`, `created_by` (`PROTECT`, leer erlaubt, `related_name="created_documents"`). Ordnung nach Titel.
+  - `DocumentVersion`: `document` (`PROTECT`, `related_name="versions"`), `number` (`UniqueConstraint` `files_version_document_number_unique` mit `document`, `CheckConstraint` `files_version_number_min` ≥ 1), `blob_key` (100), `sha256` (64, Index, Prüfung auf 64 kleine Hex-Zeichen), `size` (`PositiveBigIntegerField`), `content_type` (100, Prüfung `typ/untertyp` mit den Zeichen aus RFC 6838), `original_filename` (255), `uploaded_by` (`PROTECT`, leer erlaubt, `related_name="uploaded_versions"`), `created_at`.
+  - Unveränderlich: `save()` auf einer bestehenden Version (auch mit `update_fields` oder `force_update`) löst `VersionImmutableError` aus.
+  - `verbose_name`, `verbose_name_plural` und Feldbezeichnungen mit `gettext_lazy`.
+- `backend/twox/files/migrations/0001_initial.py` (von `makemigrations` erzeugt, mit `ruff format` formatiert) und `__init__.py`.
+- `backend/twox/files/services.py`:
+  - `create_document(device, upload, title, kind, user) -> UploadResult` und `add_version(document, upload, user) -> UploadResult`. `UploadResult` hat `document`, `version` und `duplicates` (Tupel aus `DuplicateLocation` mit `document`, `version`, `device`).
+  - `Upload` ist ein schmales Protokoll (`name`, `size`, `content_type`, `chunks()`); Djangos `UploadedFile` passt (von mypy geprüft). Die Teile werden über einen kleinen Adapter mit Größenzähler an `store_blob` der Speicher-Schnittstelle aus 022 gegeben.
+  - Ablauf: Art prüfen → angegebene Größe prüfen → in `transaction.atomic()` Inhalt speichern, Zeilen anlegen (`full_clean()` vor `save()`), Dubletten an anderer Stelle sammeln. In `add_version` wird nach dem Speichern das Dokument mit `select_for_update()` gesperrt, die neueste Version gelesen und die Nummer vergeben.
+  - Fehler (alle von `UploadError` abgeleitet, Meldungen mit `gettext`): `UploadTooLargeError` (angegebene Größe und beim Lesen gezählte Größe gegen `TWOX_UPLOAD_MAX_BYTES`), `ConfigurationNotAcceptedError` (`kind=configuration`; auch `add_version` auf ein Dokument dieser Art), `DuplicateVersionError` (mit `version` = neueste Version). Eine unbekannte Art ergibt `ValueError`.
+  - Bereinigung: `clean_filename` (Pfadanteile bis zum letzten `/` oder `\`, Steuer- und Formatzeichen der Unicode-Kategorien Cc und Cf, Leerraum am Rand, Kürzen auf 255 unter Erhalt einer Endung bis 20 Zeichen; leer, `.` und `..` werden `unnamed`), `clean_title` (siehe Abweichungen), `clean_content_type` (Parameter weg, klein geschrieben, ungültig oder leer wird `application/octet-stream`).
+  - Für M2: Die Dienste rufen nichts weiter auf; ein Einlese-Auftrag kann am zurückgegebenen `UploadResult` ansetzen.
+- `backend/tests/files/test_services.py` (48 Testfälle mit Parametrisierung): Nummern 1 und 2 samt aller Felder; gespeicherter Inhalt gleich Upload; gleiche Bytes wie die neueste Version ergeben `DuplicateVersionError`, nichts wird angelegt; gleiche Bytes wie eine ältere Version derselben Datei werden angenommen und gemeldet; gleiche Bytes an anderem Gerät werden angelegt, als Dublette (Dokument, Version, Gerät) gemeldet, und unter `sha256/` liegt genau eine Datei; Version unveränderlich; `PROTECT` bei Gerät, Dokument und Benutzer; zu große Datei abgewiesen (nichts gespeichert), Datei genau an der Grenze angenommen; falsch angegebene Größe wird beim Lesen erkannt (keine Reste in `tmp/`); `kind=configuration` abgewiesen (als Enum und als Text, nichts im Speicher); unbekannte Art abgewiesen; Dateinamen `../../etc/passwd`, `C:\x\y.pdf`, gemischte Trenner, Steuerzeichen (NUL, 0x1f, DEL, Zeilenumbruch), Rechts-nach-links-Zeichen, leer, `..`, Umlaute, über 255 Zeichen mit und ohne Endung; Titel; Inhaltstyp; Modellprüfung von `sha256` und `content_type`; `verbose_name`; vier gleichzeitige `add_version` in Threads mit eigener Datenbankverbindung ergeben die Nummern 2 bis 5 ohne Fehler.
+
+**Wie wurde getestet?** `D` = `docker compose -p twox-024`, `.env` aus `.env.example` mit `TWOX_API_PORT=18024`, Docker Engine 29.9.3, Compose v5.7.0.
+
+| AK | Ergebnis |
+| --- | --- |
+| 0 | erfüllt: beide Befehle Exit 0 |
+| 1 | erfüllt: Bau Exit 0, `up -d --wait` Exit 0; `D logs migrate`: `Applying files.0001_initial... OK` |
+| 2 | erfüllt: `All checks passed!`; `77 files already formatted`, Exit 0; `Success: no issues found in 77 source files` |
+| 3 | erfüllt: `264 passed, 4 deselected`, 0 fehlgeschlagen, 0 übersprungen (`-rs` ohne Eintrag); `pytest -m worker`: `4 passed` |
+| 4 | erfüllt: `No changes detected` |
+| 5 | erfüllt: `spectacular` Exit 0, `git diff --exit-code -- web/openapi` Exit 0, keine neue Datei |
+| 6 | erfüllt: `D --profile dev --profile e2e down -v` Exit 0 |
+
+Zusätzlich wie in der CI: `sh scripts/check-licenses.sh` meldet `License check passed.`; e2e-Job (Bau mit `web-dev`, `pull e2e`, `npm ci`, Playwright): `2 passed`.
+
+**Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-a9fde717ec95c6289`, Arbeitsverzeichnis `.claude/worktrees/agent-a9fde717ec95c6289`. Nicht gepusht, nichts zusammengeführt.
+
+**Abweichungen und Hinweise**
+
+1. **Titel ohne Entfernen von Pfadanteilen.** Der Umfang nennt die Bereinigung für Dateiname und Titel gemeinsam. Beim Titel bleiben `/` und `\` erhalten, weil Titel wie „S7-1200 / ET 200SP“ sonst verstümmelt würden; der Titel ist kein Pfad und wird nirgends als Pfad benutzt. Steuerzeichen werden entfernt, Zeilenumbrüche und Tabulatoren zu Leerzeichen, Leerraum zusammengefasst, auf 200 gekürzt. Ein leerer Titel wird durch den bereinigten Dateinamen ersetzt (nicht durch einen festen Text); nur wenn auch der leer ist, greift der feste Ersatz `unnamed`. Soll es wörtlich nach Umfang sein, sind es zwei Zeilen in `clean_title`.
+2. **Ungültiger oder fehlender Inhaltstyp** wird nicht abgewiesen, sondern als `application/octet-stream` gespeichert; der Typ stammt vom Browser und ist nicht verlässlich (Erkennung aus dem Inhalt ist Nicht-Ziel).
+3. **Reihenfolge Speichern und Sperre:** Der Inhalt wird innerhalb der Transaktion, aber vor der Sperre auf das Dokument geschrieben, damit ein langer Upload andere Schreiber nicht blockiert. Bei `DuplicateVersionError` entsteht dadurch keine neue Datei (gleicher Inhalt, gleicher Schlüssel). Scheitert die Transaktion nach dem Schreiben, bleibt der Inhalt ohne Version im Speicher liegen; das ist harmlos, ein Löschen gibt es in M1 nicht. Für 038 als Grenze vormerkbar.
+4. **Unveränderlichkeit** gilt für `save()`. `QuerySet.update()` umgeht sie; der Code benutzt es für Versionen nicht. Ein Schutz in der Datenbank (Trigger) wäre eine Architekturfrage und ist nicht gebaut.
+5. **Benutzer-Löschen:** `created_by` und `uploaded_by` mit `PROTECT` verhindern das Löschen eines Benutzers mit Uploads (getestet); Sperren statt Löschen bleibt möglich.
+6. `ConfigurationNotAcceptedError` auch in `add_version`, falls ein Dokument der Art `configuration` auf anderem Weg (Admin, Shell) angelegt wurde.
+7. Keine neue Abhängigkeit. `settings.py`, `assets/`, `storage.py`, `docs/DECISIONS.md` und `docs/STATUS.md` nicht berührt.
