@@ -1,6 +1,6 @@
 # Auftrag 106 – Aufbau der Testfabrik: Geräteliste, Netzplan, Beschreibung
 
-Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: T1 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 

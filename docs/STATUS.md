@@ -36,7 +36,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 103 | Quellen und Nutzungsbedingungen: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 1 | – | erledigt |
 | 104 | Lade-Skript `fetch.py` | B | 2 | 101 | in Arbeit |
 | 105 | Manifest-Einträge der Fertigungslinie | C | 2 | 101, 102 | erledigt |
-| 106 | Aufbau der Testfabrik: Geräteliste, Netzplan, Beschreibung | C | 2 | 101, 102 | in Arbeit |
+| 106 | Aufbau der Testfabrik: Geräteliste, Netzplan, Beschreibung | C | 2 | 101, 102 | erledigt |
 | 107 | Manifest-Einträge: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 3 | 103, 105 | offen |
 | 108 | Frei lizenzierte Testunterlagen in `testdata/klein` | C | 3 | 101, 103 | offen |
 | 109 | Erstabruf: Unterlagen laden und Prüfsummen eintragen | B | 4 | 104, 105, 106, 107 | offen |
@@ -48,7 +48,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 ## In Arbeit
 
-- 008, 104, 106 als Subagenten.
+- 008, 104 als Subagenten.
 
 ## Wartet auf a7
 

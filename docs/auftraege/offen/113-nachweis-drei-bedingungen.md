@@ -52,7 +52,7 @@ In den Befehlen steht `TF` für `docker compose -f deploy/compose/testfactory.ya
 - Jeder Punkt aus Umfang 5 erscheint als `offen` bzw. `folgt in T2` oder ist mit Beleg als geklärt vermerkt.
 - `git diff --stat main...HEAD` zeigt nur die drei genannten Dateien sowie die eigene Auftragsdatei unter `docs/auftraege/offen/`; `git status --porcelain` zeigt nichts unter `testfactory/extern/`.
 
-## Vorgaben und Hinweise
+## Vorgaben und Hinweise113
 
 - Voraussetzung: Die Aufträge 106 und 110 sind zusammengeführt. a7s Antworten auf die Fragen 1 bis 3 unten liegen mit der Freigabe der Liste vor und sind vor dem Start hier eingetragen; sie bestimmen Statuswerte, Tabelle und Test. Ohne Antworten: nicht starten. Läuft gleichzeitig mit 112, das andere Dateien schreibt.
 - Kein Push. Der Bearbeiter committet nur auf seinem Auftragszweig; die Leitstelle pusht auf a7s Freigabe (Vorgabe vom 21.11.2026, weicht von Abschnitt 8.2 Stufe A ab).
