@@ -7,10 +7,11 @@
 //
 // Every page except /login needs a session (RequireSession) and a role
 // (RequireRole, from navigation.ts).
-import type { ReactElement } from "react";
+import { lazy, type ReactElement, Suspense } from "react";
 import type { RouteObject } from "react-router";
 
 import { Layout } from "./components/Layout.tsx";
+import { Loading } from "./components/Loading.tsx";
 import { NotFound } from "./components/NotFound.tsx";
 import { RouteError } from "./components/RouteError.tsx";
 import { RequireRole, RequireSession } from "./components/SessionGuards.tsx";
@@ -22,6 +23,12 @@ import { ImportPage } from "./pages/ImportPage.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
 import { SelftestPage } from "./pages/SelftestPage.tsx";
 import { StructurePage } from "./pages/StructurePage.tsx";
+
+// The map page brings React Flow along; it is loaded only when the page is opened.
+const MapPage = lazy(async () => {
+  const module = await import("./pages/MapPage.tsx");
+  return { default: module.MapPage };
+});
 
 /** A page that needs the role of `path` in navigation.ts ("read" if it has no entry). */
 function guarded(path: string, page: ReactElement): ReactElement {
@@ -44,6 +51,15 @@ export const routes: RouteObject[] = [
             element: <RequireSession />,
             children: [
               { index: true, element: guarded("/", <StructurePage />) },
+              {
+                path: "map",
+                element: guarded(
+                  "/map",
+                  <Suspense fallback={<Loading />}>
+                    <MapPage />
+                  </Suspense>,
+                ),
+              },
               { path: "devices/:deviceId", element: guarded("/devices", <DevicePage />) },
               { path: "documents/:documentId", element: guarded("/documents", <DocumentPage />) },
               { path: "import", element: guarded("/import", <ImportPage />) },

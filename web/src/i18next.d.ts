@@ -9,6 +9,7 @@ import type auth from "./locales/en/auth.json";
 import type common from "./locales/en/common.json";
 import type files from "./locales/en/files.json";
 import type importCatalog from "./locales/en/import.json";
+import type map from "./locales/en/map.json";
 import type nav from "./locales/en/nav.json";
 import type selftest from "./locales/en/selftest.json";
 
@@ -24,6 +25,7 @@ declare module "i18next" {
       audit: typeof audit;
       import: typeof importCatalog;
       files: typeof files;
+      map: typeof map;
     };
     returnNull: false;
   }

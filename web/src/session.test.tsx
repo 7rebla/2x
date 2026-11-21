@@ -116,7 +116,7 @@ describe("navigation and role", () => {
     renderApp("/");
 
     expect((await screen.findByTestId("user-role")).textContent).toBe("Manage");
-    expect(navigationTexts()).toEqual(["Structure", "Import", "Change log", "Self-test"]);
+    expect(navigationTexts()).toEqual(["Structure", "Map", "Import", "Change log", "Self-test"]);
     expect(screen.queryByTestId("no-role")).toBeNull();
   });
 
@@ -125,7 +125,7 @@ describe("navigation and role", () => {
     renderApp("/");
 
     expect((await screen.findByTestId("user-role")).textContent).toBe("Read");
-    expect(navigationTexts()).toEqual(["Structure", "Self-test"]);
+    expect(navigationTexts()).toEqual(["Structure", "Map", "Self-test"]);
 
     fireEvent.change(screen.getByTestId("language-switch"), { target: { value: "de" } });
 
@@ -134,7 +134,7 @@ describe("navigation and role", () => {
       within(screen.getByRole("navigation", { name: "Hauptnavigation" }))
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Struktur", "Selbsttest"]);
+    ).toEqual(["Struktur", "Landkarte", "Selbsttest"]);
   });
 
   it.each(["/import", "/audit"])("a reader who opens %s directly gets a notice, no redirect", async (path) => {
@@ -174,12 +174,14 @@ describe("navigation and role", () => {
   it("navigation.ts names a role for every entry; import and change log need manage", () => {
     expect(navigation.map((entry) => [entry.path, entry.requires])).toEqual([
       ["/", "read"],
+      ["/map", "read"],
       ["/import", "manage"],
       ["/audit", "manage"],
       ["/selftest", "read"],
     ]);
-    expect(visibleNavigation("manage")).toHaveLength(4);
-    expect(visibleNavigation("read").map((entry) => entry.path)).toEqual(["/", "/selftest"]);
+    expect(visibleNavigation("manage")).toHaveLength(5);
+    expect(visibleNavigation("read").map((entry) => entry.path)).toEqual(["/", "/map", "/selftest"]);
+    expect(requiredRole("/map")).toBe("read");
     expect(visibleNavigation(null)).toEqual([]);
     expect(requiredRole("/import")).toBe("manage");
     expect(requiredRole("/devices")).toBe("read");

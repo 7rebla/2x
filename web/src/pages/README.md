@@ -9,6 +9,7 @@ so each address can be opened directly or reloaded.
 | Address | Page file | Built by work order |
 | --- | --- | --- |
 | `/` | `StructurePage.tsx` | 032 |
+| `/map` | `MapPage.tsx` (loaded lazily) | 039 |
 | `/devices/:deviceId` | `DevicePage.tsx` | 032 |
 | `/documents/:documentId` | `DocumentPage.tsx` | 036 |
 | `/import` | `ImportPage.tsx` | 035 |
@@ -112,3 +113,19 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 - File names, titles and user names are rendered as text, never through the interpolation of i18next.
 - Tests fake the file API with `../components/files/testData.ts`. Under jsdom, Node's Request cannot read
   jsdom files, so tests use `textFile()` and `fakeUploadApi()`, which send forms as multipart text.
+
+## Map
+
+- `MapPage.tsx` (`/map`, role `read`) is an interactive preview of milestone M7 (work order 039, E-48), drawn with
+  React Flow (`@xyflow/react`). `routes.tsx` loads it with `lazy()`, so React Flow is not part of the main bundle.
+- It reads the same four lists as the structure page. `map/graph.ts` turns them into nodes and edges: sites, areas and
+  plants as groups (parent nodes), devices inside their plant, and one network node per IPv4 /24 or IPv6 /64 that
+  holds a device address. The only edges are the dashed "device is in network" lines. Nothing else is derived; links
+  from configuration files come with M5/M7.
+- The layout is a grid per group, computed from fixed node sizes; inputs are sorted first, so the same data gives the
+  same positions. Moved nodes are not saved; a reload, or new data, restores the layout.
+- A click or Enter on a device opens `/devices/:id`. Selected, focused and found devices are highlighted with their
+  network line. The search (name, key, IP address) marks matches and fits the view to them. The network nodes can be
+  hidden. The React Flow attribution link stays visible (the project asks to remove it only with a Pro subscription).
+- Node components live in `map/nodes.tsx`; every text from the data is rendered as text. Under jsdom the tests stub
+  `ResizeObserver`, `DOMMatrixReadOnly`, `offsetWidth`/`offsetHeight` and `getBBox` (`map/MapPage.test.tsx`).

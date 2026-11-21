@@ -1,0 +1,50 @@
+{
+  "intro": "Standorte, Bereiche, Anlagen und Geräte wie erfasst, dazu die IP-Netze der Geräte. Die Karte zeigt nur, was gespeichert ist; Verbindungen aus Konfigurationen folgen in einem späteren Meilenstein.",
+  "listLink": "Struktur als Liste ansehen",
+  "empty": "Noch keine Struktur erfasst.",
+  "emptyLink": "Zur Struktur",
+  "legend": "Gestrichelte Linie: Die Adresse des Geräts liegt in diesem Netz (IPv4 nach /24, IPv6 nach /64). Andere Verbindungen werden nicht gezeichnet.",
+  "label": "Karte der Standorte, Bereiche, Anlagen, Geräte und Netze",
+  "kind": {
+    "site": "Standort",
+    "area": "Bereich",
+    "plant": "Anlage",
+    "device": "Gerät",
+    "network": "Netz"
+  },
+  "edge": {
+    "inNetwork": "im Netz"
+  },
+  "search": {
+    "label": "Auf der Karte suchen",
+    "placeholder": "Name, Kennung oder IP-Adresse",
+    "matches_one": "{{count}} Treffer",
+    "matches_other": "{{count}} Treffer",
+    "noMatch": "Kein Treffer"
+  },
+  "showNetworks": "Netze anzeigen",
+  "aria": {
+    "node": "Knoten",
+    "group": "{{kind}} {{name}}",
+    "plant": "Anlage {{name}} ({{key}})",
+    "device": "Gerät {{name}} ({{key}}), öffnet die Geräteseite",
+    "deviceWithIp": "Gerät {{name}} ({{key}}), {{ip}} im Netz {{network}}, öffnet die Geräteseite",
+    "network_one": "Netz {{cidr}} mit {{count}} Gerät",
+    "network_other": "Netz {{cidr}} mit {{count}} Geräten",
+    "direction": {
+      "up": "oben",
+      "down": "unten",
+      "left": "links",
+      "right": "rechts"
+    },
+    "nodeHelp": "Mit Tab von Knoten zu Knoten. Enter auf einem Gerät öffnet seine Seite. Die Leertaste wählt einen Knoten aus, die Pfeiltasten verschieben ein ausgewähltes Gerät, Escape hebt die Auswahl auf.",
+    "edgeHelp": "Gerät liegt in diesem Netz.",
+    "moved": "Nach {{direction}} verschoben, jetzt bei {{x}}, {{y}}",
+    "controls": "Steuerung der Karte",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern",
+    "fitView": "Ansicht einpassen",
+    "minimap": "Übersicht der ganzen Karte",
+    "handle": "Ankerpunkt einer Netzlinie"
+  }
+}

@@ -2,7 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { createQueryClient } from "./api/queryClient.ts";
 import { fakeFilesApi } from "./components/files/testData.ts";
@@ -17,6 +17,12 @@ import { renderApp } from "./test/renderApp.tsx";
 
 // Routing inside the frame for a signed-in manager (who may see every page).
 // Sign-in, redirects and roles: session.test.tsx.
+
+// The map page is loaded lazily (React Flow); importing it once here keeps the
+// first click on its entry within the usual waiting time.
+beforeAll(async () => {
+  await import("./pages/MapPage.tsx");
+});
 
 afterEach(async () => {
   cleanup();
@@ -57,6 +63,7 @@ describe("frame", () => {
     const nav = await screen.findByRole("navigation", { name: "Hauptnavigation" });
     expect(within(nav).getAllByRole("link").map((link) => link.textContent)).toEqual([
       "Struktur",
+      "Landkarte",
       "Import",
       "Änderungsprotokoll",
       "Selbsttest",
