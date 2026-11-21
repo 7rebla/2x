@@ -1,6 +1,6 @@
 # Auftrag 022 – Dateispeicher: Schnittstelle, atomare Ablage nach Prüfsumme, Volume
 
-Meilenstein: M1 · Freigabestufe: C · Status: offen
+Meilenstein: M1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -107,7 +107,50 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
    - Empfehlung: (a).
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Alle Akzeptanzkriterien erfüllt, Läufe am 21.11.2026 im Container. Keine offene Frage an a7.
+
+**Was wurde gebaut?**
+
+- `backend/twox/files/storage.py` (neu):
+  - `BlobStorage` (`Protocol`) mit `store_blob(stream) -> StoredBlob`, `open_blob(key) -> IO[bytes]`, `blob_exists(key) -> bool`. `stream` ist ein schmales `ReadableStream`-Protokoll (nur `read(size)`), damit später auch Djangos Upload-Objekte passen.
+  - `StoredBlob` (unveränderliche Dataclass: `key`, `sha256`, `size`).
+  - Ausnahmen: `BlobStorageError` als Basis; `InvalidBlobKeyError` (auch `ValueError`), `BlobNotFoundError` (auch `LookupError`), `BlobConflictError`.
+  - `FileSystemBlobStorage(root)`: `mkstemp` in `<root>/tmp/`, Lesen und Prüfsumme in Blöcken zu 1 MiB (`CHUNK_SIZE`), `fsync`, Rechte `0440`, dann `os.link` nach `sha256/ab/cd/<sha256>`. `os.link` ersetzt nie: Von zwei gleichzeitigen Schreibern legt genau einer den Eintrag an. Liegt der Schlüssel schon vor, wird die Größe verglichen (bei Abweichung `BlobConflictError`, die vorhandene Datei bleibt unberührt). Die temporäre Datei wird in `finally` immer entfernt.
+  - Schlüsselprüfung mit `fullmatch` auf `sha256/[0-9a-f]{2}/[0-9a-f]{2}/[0-9a-f]{64}`; zusätzlich müssen die beiden Ordner die ersten vier Zeichen der Prüfsumme wiederholen. Nicht-Strings werden abgewiesen.
+  - `get_blob_storage()` liefert `FileSystemBlobStorage(settings.TWOX_MEDIA_ROOT)`. Keine URLs, kein Löschen.
+- `backend/tests/files/test_storage.py` (neu, 29 Fälle, eigene Fixture mit temporärem Wurzelverzeichnis): gleicher Inhalt gleicher Schlüssel und nur einmal geschrieben (Inode, mtime, Linkzahl unverändert); Prüfsumme gleich `hashlib`; leere Datei; 20 MB in Blöcken (jeder `read` höchstens `CHUNK_SIZE`); vier Threads mit gleichem Inhalt über eine `Barrier` ergeben einen Schlüssel und eine Datei mit richtigem Inhalt; abgebrochener Datenstrom und Fehler bei `os.link` hinterlassen nichts; Konflikt bei falscher Größe; 13 ungültige Schlüssel (u. a. `../x`, `sha256/zz/…`, Großbuchstaben, Zeilenende, `tmp/…`, falsche Ordner); unbekannter gültiger Schlüssel (`blob_exists` gibt `False`, `open_blob` `BlobNotFoundError`); `get_blob_storage` folgt `TWOX_MEDIA_ROOT`.
+- `deploy/compose/compose.yaml`: Volume `media-data`, eingebunden unter `/data/media` in `api` und `worker`; `TWOX_MEDIA_ROOT` und `TWOX_UPLOAD_MAX_BYTES` im gemeinsamen Umgebungsblock (leer heißt Standard aus `settings.py`).
+- `backend/Dockerfile`, Stufe `runtime`: `install -d -m 0750 -o twox -g twox /data/media`. `/app` bleibt root-eigen und schreibgeschützt.
+- `.env.example`: beide Variablen mit Kommentar (`/data/media`, `200000000`).
+
+**Wie wurde getestet?** `D` = `docker compose -p twox-022`, `.env` aus `.env.example` mit `TWOX_API_PORT=18022`, Docker Engine 29.9.3, Compose v5.7.0, auf dem committeten Stand.
+
+| AK | Ergebnis |
+| --- | --- |
+| 0 | erfüllt: beide Befehle Exit 0 |
+| 1 | erfüllt: Bau Exit 0; `up -d --wait`: db, valkey, api, worker `Healthy`, Exit 0 |
+| 2 | erfüllt: `api` und `worker` je `10001`, `10001`, `writable` |
+| 3 | erfüllt: `touch: cannot touch '/app/probe': Permission denied`, Exit 1 |
+| 4 | erfüllt (Befehle unten): `api` gibt `sha256/b5/95/b595b214…03de b595b214b5d4865e79bd091744879680590d80e7656edd099474752aa09703de 2` und `b'2x'` aus; `worker` gibt `True` aus. Gegenprobe `hashlib.sha256(b'2x')` ergibt denselben Wert. Im Volume: `-r--r----- 10001 10001`, `tmp/` leer |
+| 5 | erfüllt: `All checks passed!`; `72 files already formatted`, Exit 0; `Success: no issues found in 72 source files` |
+| 6 | erfüllt: `213 passed, 4 deselected`, 0 fehlgeschlagen, 0 übersprungen; `pytest -m worker`: `4 passed` |
+| 7 | erfüllt: `No changes detected` |
+| 8 | erfüllt: Bau, `pull e2e`, `npm ci` Exit 0; `2 passed` |
+| 9 | erfüllt: `down -v` Exit 0; danach weder Container noch Volume des Projekts `twox-022` (vorher auch `twox-022_media-data`) |
+
+Zusätzlich wie im CI-Job `backend`: `sh scripts/check-licenses.sh` meldet `License check passed.` (53 Pakete); `spectacular --file /out/schema.yml` ohne Änderung an `web/openapi`.
+
+Befehle zu Kriterium 4 (Python-Code jeweils als ein Argument von `-c`):
+
+```
+D exec api python manage.py shell -c "import io; from twox.files.storage import get_blob_storage as g; s = g(); b = s.store_blob(io.BytesIO(b'2x')); print(b.key, b.sha256, b.size); print(s.open_blob(b.key).read())"
+D exec worker python manage.py shell -c "from twox.files.storage import get_blob_storage as g; print(g().blob_exists('sha256/b5/95/b595b214b5d4865e79bd091744879680590d80e7656edd099474752aa09703de'))"
+```
+
+**Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-a62b0f840248257be`, Arbeitsverzeichnis `.claude/worktrees/agent-a62b0f840248257be`.
+
+**Abweichungen**
+
+- Keine vom Umfang. Zusätzlich zum Auftrag: `BlobConflictError` für einen vorhandenen Schlüssel mit anderer Größe (der Auftrag sagt nur „Größe vergleichen"); Schlüssel müssen in den Ordnern die Prüfsumme wiederholen; abgelegte Dateien sind `0440`. Kein Rückfall für Dateisysteme ohne harte Links (`os.link`); das Docker-Volume unterstützt sie. Eine künftige Umsetzung auf solchen Dateisystemen oder S3 bräuchte einen eigenen Weg.
+- Hinweis für die Doku (038): `TWOX_MEDIA_ROOT` muss zum Einhängepunkt des Volumes passen; die Compose-Datei hängt fest unter `/data/media` ein.
