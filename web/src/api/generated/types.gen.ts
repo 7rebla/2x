@@ -17,6 +17,23 @@ export type Health = {
     status: StatusEnum;
 };
 
+/**
+ * The signed-in user as the web UI needs it.
+ */
+export type Me = {
+    username: string;
+    role: RoleEnum | NullEnum | null;
+    is_superuser: boolean;
+};
+
+export type NullEnum = never;
+
+/**
+ * * `manage` - manage
+ * * `read` - read
+ */
+export type RoleEnum = 'manage' | 'read';
+
 export type Selftest = {
     database: DatabaseCheck;
     worker: WorkerCheck;
@@ -46,6 +63,19 @@ export type HealthRetrieveResponses = {
 };
 
 export type HealthRetrieveResponse = HealthRetrieveResponses[keyof HealthRetrieveResponses];
+
+export type MeRetrieveData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/me/';
+};
+
+export type MeRetrieveResponses = {
+    200: Me;
+};
+
+export type MeRetrieveResponse = MeRetrieveResponses[keyof MeRetrieveResponses];
 
 export type SelftestRetrieveData = {
     body?: never;
