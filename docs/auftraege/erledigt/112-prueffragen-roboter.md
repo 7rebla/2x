@@ -1,6 +1,6 @@
 # Auftrag 112 – Prüffragen des Roboters (Fragen 9 und 10): erwartete Antworten mit Fundstelle
 
-Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: T1 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 

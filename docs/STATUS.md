@@ -42,13 +42,13 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 109 | Erstabruf: Unterlagen laden und Prüfsummen eintragen | B | 4 | 104, 105, 106, 107 | erledigt |
 | 110 | Stände und Nutzungsvermerke nachtragen | C | 5 | 109 | erledigt |
 | 111 | Prüffragen der Fertigungslinie mit Fundstelle | C | 5 | 109 | erledigt |
-| 112 | Prüffragen des Roboters (Fragen 9 und 10) | C | 6 | 110, 111 | in Arbeit |
-| 113 | Nachweis der drei Bedingungen je Anlage und Gerät | C | 6 | 106, 110 | offen |
+| 112 | Prüffragen des Roboters (Fragen 9 und 10) | C | 6 | 110, 111 | erledigt |
+| 113 | Nachweis der drei Bedingungen je Anlage und Gerät | C | 6 | 106, 110 | in Arbeit |
 | 114 | Testfabrik-Prüfungen in CI und Werkzeugkette | B | 7 | 101, 112, 113, 011 | offen |
 
 ## In Arbeit
 
-- 013 und 112 als Subagenten.
+- 013 und 113 als Subagenten.
 
 ## Wartet auf a7
 
