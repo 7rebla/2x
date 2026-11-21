@@ -328,6 +328,19 @@ headless = [
 ]
 
 [[package]]
+name = "django-auditlog"
+version = "3.4.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "python-dateutil" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c0/59/7439889cd3ccff70436bb30b11d7d5d1297396c3a56877fa91153105b1a9/django_auditlog-3.4.2.tar.gz", hash = "sha256:c4682982f2a7e18867a0893b4242fcc1608ed8256a1ddf885b5f80120addc2a3", size = 93937, upload-time = "2026-11-08T14:55:07.21Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/08/07/8804ebdbd476b906f18381a9d6a0c1706824064dc51550dd3c7bd1bc5c4d/django_auditlog-3.4.2-py3-none-any.whl", hash = "sha256:7fa9db632da82d617dd51060736c436aa607c5a7f8cf180fec08a17ebbefa01d", size = 52545, upload-time = "2026-11-08T14:55:05.879Z" },
+]
+
+[[package]]
 name = "django-stubs"
 version = "6.1.2"
 source = { registry = "https://pypi.org/simple" }
@@ -869,6 +882,7 @@ dependencies = [
     { name = "celery", extra = ["redis"] },
     { name = "django" },
     { name = "django-allauth", extra = ["headless"] },
+    { name = "django-auditlog" },
     { name = "djangorestframework" },
     { name = "drf-spectacular" },
     { name = "psycopg", extra = ["binary"] },
@@ -893,6 +907,7 @@ requires-dist = [
     { name = "celery", extras = ["redis"], specifier = ">=5.7.0,<5.8" },
     { name = "django", specifier = ">=6.1.3,<6.2" },
     { name = "django-allauth", extras = ["headless"], specifier = ">=65.22.1,<65.23" },
+    { name = "django-auditlog", specifier = ">=3.4.2,<3.5" },
     { name = "djangorestframework", specifier = ">=3.18.3,<3.19" },
     { name = "drf-spectacular", specifier = ">=0.30.0,<0.31" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.9,<3.4" },
