@@ -1,6 +1,6 @@
 # Auftrag 021 – Rollen „Verwalten“ und „Lesen“, Konto-Endpunkt, Befehl zum Anlegen von Konten
 
-Meilenstein: M1 · Freigabestufe: C · Status: offen
+Meilenstein: M1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -120,7 +120,42 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
    - Empfehlung: (a) in M1.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Was wurde gebaut?**
+
+- `roles.py`: `Role = Literal["manage", "read"]`, Konstanten `MANAGE`, `READ`, `ROLES` (absteigend nach Rechten), `ROLE_LABELS` mit `gettext_lazy` („Manage“, „Read“; die deutschen Texte „Verwalten“/„Lesen“ kommen mit dem Katalog aus Auftrag 034). `user_role(user)`: `None` für Anonyme, Inaktive und Benutzer ohne Rollengruppe; Superuser → `manage`; in beiden Gruppen → `manage`; andere Gruppen zählen nicht.
+- `migrations/0002_role_groups.py`: legt die Gruppen `manage` und `read` an (`get_or_create`). Rückwärts bleiben die Gruppen stehen (`noop`), damit niemand still seine Rolle verliert.
+- `permissions.py`, Namen für 025, 026, 028, 029, 031: **`CanRead`**, **`CanManageOrReadOnly`**, **`CanManage`**. Lesend = `SAFE_METHODS` (GET, HEAD, OPTIONS). Anonym und ohne Rolle: 403.
+- `serializers.py` (`Me`, `MeSerializer`), `views.py` (`MeView`, `IsAuthenticated`, `operation_id="me_retrieve"`), `urls.py`: `GET /api/v1/me/` mit `username`, `role` (`manage`/`read`/`null`), `is_superuser`. Andere Methoden: 405.
+- `management/commands/create_account.py`: `create_account <username> --role manage|read [--update]`. Kennwort aus `TWOX_ACCOUNT_PASSWORD` oder zweimal per `getpass` im Terminal; leer, ungleich oder ohne Variable und Terminal → Fehler. Prüft Benutzername (`full_clean` ohne Kennwort) und Kennwort (`validate_password`, Prüfer aus 016). Setzt Kennwort und genau eine Rollengruppe in einer Transaktion; andere Gruppen bleiben. Setzt nie `is_staff`/`is_superuser`, ändert `is_active` nicht. Ausgabe: `Created account 'x' with role 'read'.` bzw. `Updated …`; Fehler als `CommandError` (Exit-Code 1).
+- `admin.py`: `accounts.User` mit `UserAdmin`.
+- Tests in `backend/tests/accounts/`: `users.py` (Hilfen), `conftest.py` (Fixture `user_factory`), `test_roles.py`, `test_permissions.py` (3 Klassen × 7 Methoden × 5 Benutzerarten), `test_me.py` (anonym 403, ohne Rolle `role: null`, `read`, `manage`, Superuser, 405 für Schreibmethoden, Schema), `test_create_account.py` (u. a. Kennwort nicht in Ausgabe und Fehlermeldung, vier schwache Kennwörter, zweiter Aufruf ohne/mit `--update`, Flags bleiben `False`, Terminal-Eingabe, kein `--password`), `test_admin.py`. `expected_paths/accounts.py`: `/api/v1/me/`.
+- `web/openapi/schema.yml` und `web/src/api/generated/**` neu erzeugt (`Me`, `RoleEnum`, `NullEnum`, `MeRetrieve…`, Sicherheitsschema `cookieAuth`).
+
+**Wie wurde getestet?** `docker compose -p twox-021`, `.env` aus `.env.example` mit `TWOX_API_PORT=18021`, Docker Engine 29.9.3, Compose v5.7.0.
+
+| AK | Ergebnis |
+| --- | --- |
+| 0 | erfüllt: `docker version` und `docker compose version` Exit 0 |
+| 1 | erfüllt: Bau Exit 0, `up -d --wait` Exit 0 (db, api, worker healthy) |
+| 2 | erfüllt: erster Aufruf Exit 0 (`Created account 'reader1' with role 'read'.`), zweiter Exit 1 (`… exists already …`), mit `--update` Exit 0; das Kennwort stand in keiner Ausgabe. Zusätzlich: ohne Variable und mit `-T` Exit 1 (`No password …`) |
+| 3 | erfüllt: `403` |
+| 4 | erfüllt: `All checks passed!`, `ruff format --check` Exit 0, `Success: no issues found in 85 source files` |
+| 5 | erfüllt: `342 passed, 4 deselected`, 0 fehlgeschlagen, 0 übersprungen; `pytest -m worker`: `4 passed` |
+| 6 | erfüllt: `No changes detected` |
+| 7 | erfüllt: `spectacular` ohne Ausgabe; Schema enthält `/api/v1/me/`; nach dem Commit erneut erzeugt, `git diff --exit-code -- web/openapi` ohne Unterschied |
+| 8 | erfüllt: Bau, `npm ci`, `api:generate` Exit 0, danach kein Unterschied in `web/openapi web/src/api`; `typecheck` Exit 0, `test` 38 passed. Zusätzlich `lint`, `build`, `licenses` (`License check passed.`) Exit 0 |
+| 9 | erfüllt: `D --profile dev --profile e2e down -v` und `W --profile dev down -v` Exit 0; keine Container und Volumes von `twox-021` mehr |
+
+Zusätzlich wie in der CI: Lizenzprüfung Python `License check passed.` (53 Pakete); e2e (`--profile e2e run --rm e2e`) `2 passed`.
+
+**Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-ab8bd3f1a2da076f6`, Arbeitsverzeichnis `.claude/worktrees/agent-ab8bd3f1a2da076f6`.
+
+**Abweichungen und Hinweise**
+
+1. Zusätzliche Testdateien `tests/accounts/users.py` und `conftest.py` (gemeinsame Testbenutzer) sowie `test_admin.py`; alle im genannten Ordner.
+2. Die Anzeigenamen liegen in `roles.py` (`ROLE_LABELS`), nicht an der Gruppe: Djangos `Group` hat nur `name`. Im Admin erscheinen die Gruppen als `manage` und `read`. Die deutsche Übersetzung folgt mit Auftrag 034.
+3. `create_account --update` auf ein bestehendes Superuser-Konto lässt `is_superuser`/`is_staff` unverändert (der Befehl setzt sie nie, entzieht sie aber auch nicht); `is_active` bleibt ebenfalls unverändert. Ein gesperrtes Konto wird also durch `--update` nicht entsperrt.
+4. Die Docstring von `MeView` erscheint als Beschreibung im Schema und im erzeugten Client.
+
+Keine neue Abhängigkeit. `settings.py`, `config/urls.py`, `pyproject.toml`, `adapter.py`, `taskqueue.py`, `test_selftest.py`, `test_user_model.py`, `docs/DECISIONS.md`, `docs/STATUS.md` nicht geändert. Kein Push.
