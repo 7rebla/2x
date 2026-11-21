@@ -124,7 +124,7 @@ docker compose run --rm backend-dev sh scripts/check-licenses.sh
 Translation catalogue up to date (regenerates `backend/locale/de/LC_MESSAGES/django.po` from the texts marked with `gettext` or `gettext_lazy`; any difference apart from the creation date means the catalogue is out of date):
 
 ```sh
-docker compose run --rm backend-dev python manage.py makemessages -l de
+docker compose run --rm backend-dev python manage.py makemessages -l de --add-location=file
 git diff --exit-code -I '^"POT-Creation-Date:' -- backend/locale
 test -z "$(git status --porcelain --untracked-files=all -- backend/locale)"
 ```

@@ -66,7 +66,7 @@ jobs:
       # them; tests/config/test_i18n.py checks that there are none.
       - name: Translation catalogue up to date
         run: |
-          docker compose run --rm backend-dev python manage.py makemessages -l de
+          docker compose run --rm backend-dev python manage.py makemessages -l de --add-location=file
           git diff --exit-code -I '^"POT-Creation-Date:' -- backend/locale
           test -z "$(git status --porcelain --untracked-files=all -- backend/locale)"
 

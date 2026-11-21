@@ -145,6 +145,11 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 
 **Hinweise und offene Punkte**
 
-- `makemessages` schreibt Zeilennummern in die Fundstellen (`#: twox/…py:NN`). Verschiebt eine Änderung Zeilen in einer Datei mit markierten Texten, schlägt der CI-Schritt fehl, bis `makemessages` neu läuft; parallele Backend-Zweige geraten in der `.po` leicht in Konflikt. Abhilfe wäre ein eigener `makemessages`-Befehl mit `--add-location=file` (Fundstelle nur mit Datei). Nicht umgesetzt, weil der Auftrag den Befehl wörtlich vorgibt – Entscheidung der Leitstelle bzw. von a7.
+- Zeilennummern in den Fundstellen: erledigt mit der Nacharbeit unten (Entscheidung der Leitstelle).
 - `get_object_or_404` liefert über DRF „No Device matches the given query.“; dieser Text stammt von Django ohne Übersetzung und bleibt Englisch.
 - Die Lizenzausnahme für gettext (E-46) steht noch nicht in der Abhängigkeitstabelle von `docs/DECISIONS.md`; das ändert nur die Leitstelle. Vorschlag: „GNU gettext 0.23.1 (Debian trixie, Paket gettext 0.23.1-2) | GPL (Programme), LGPL (libintl), Version der Lizenz nicht einzeln geprüft | makemessages, compilemessages, msgfmt in den Tests; nur Dev-Image und Bau-Stufe `locale-build`, nicht im Laufzeit-Image | 034 | E-46“.
+**Nacharbeit (Entscheidung der Leitstelle nach der Prüfung)**
+
+- `makemessages -l de --add-location=file` überall: CI-Schritt in `ci.yml`, README (Abschnitt Backend), Kopfkommentar der `.po`. Die `.po` ist damit neu erzeugt; die Fundstellen nennen nur noch die Datei (`#: twox/accounts/roles.py`), keine Zeilennummern. Inhalt und Übersetzungen unverändert.
+- `.dockerignore`: `**/*.mo`, damit lokale `.mo`-Dateien nicht in den Build-Kontext gelangen.
+- Prüfungen (`-p twox-034`): Schritt „Translation catalogue up to date“ wie in `ci.yml` Exit 0 (nach dem Commit), `pytest` 1093 bestanden, 0 fehlgeschlagen, 0 übersprungen; `ruff check` „All checks passed!“, `ruff format --check` Exit 0, `mypy` „Success: no issues found in 132 source files“; `ci.yml` mit PyYAML im Container geladen, der Schritt enthält die neuen Befehle; keine `.mo` unter `backend/locale`; `down -v` Exit 0.
