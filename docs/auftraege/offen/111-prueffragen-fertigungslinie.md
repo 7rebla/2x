@@ -85,7 +85,56 @@ Weitere Hinweise
    - Empfehlung: A.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Keine offene Frage an a7.
+
+### Was wurde gebaut?
+
+- `testfactory/questions.yaml` (JSON-Schreibweise wie das Manifest, kanonische Form wie `write_manifest`): Dateifelder `schema_version`, `manifest`, `notes`, `questions`, `candidates`. Elf Fragen mit `id`, `question` (Wortlaut Abschnitt 11), `kind`, `status`, `expected_answer`, `key_facts`, `sources` (`manifest_id`, `locator`, `supports`), `verified_on`, `notes`. Fragen 1–8 und 11 `verified` (2026-11-21), 9 und 10 `pending` ohne Antwort und Quelle. Drei Kandidaten `c1` bis `c3`.
+- `testfactory/tests/test_questions.py` (16 Tests): Wortlaut gegen hinterlegte Liste, IDs 1–11, Felder, `kind` (6 `contradiction`, 11 `no-evidence`, sonst `fact`), `pending` nur für 9/10 und dann leer, Quellenzahl (≥1, Frage 6 ≥2 mit verschiedenen Fundstellen, Frage 11 keine), jede `manifest_id` im Manifest und mit `target` (geladenes Material), `locator`/`supports` gefüllt, Antwort ≤ 400 Zeichen, `key_facts` kommen in der Antwort vor, kein Zitatfeld, kanonische Form, keine doppelten Schlüssel, Kandidaten-Form.
+
+Erwartete Antworten in Kürze (Handbuch = `aps-documentation-de`, Dev = `aps-repository-dev`, Repository 1 = `aps-repository`):
+
+| Nr. | Antwort | Wichtigste Fundstelle |
+| --- | --- | --- |
+| 1 | 192.168.0.100 (feste Adresse, Oberfläche per Browser) | Handbuch PDF-S. 31 (gedr. 30), PDF-S. 18 (gedr. 17), PDF-S. 38; Dev `README.md` Z. 150 |
+| 2 | Port 1880 | Handbuch PDF-S. 38; Repository 1 `README.md` Z. 43; Dev `README.md` Z. 181, `docker-compose-prod.yml` Z. 55–56, `nodeRed/settings.js` Z. 144 |
+| 3 | MQTT (Broker auf dem Raspberry Pi, Port 1883) | Handbuch PDF-S. 36 (gedr. 35), PDF-S. 38; Dev `README.md` Z. 120, 136 |
+| 4 | MQTT-Auftrag → Node-RED → OPC UA auf den Server der SPS (4840), Rückweg per Abfrage | Handbuch PDF-S. 36, 38; Dev `docs/04-opcua-relationship.md` Z. 106–117, 134–136, `docs/02-architecture.md` Z. 66–68; `Node-RED/flows.json` Z. 1342 |
+| 5 | TIA Portal V18 | Handbuch PDF-S. 34 (gedr. 33); Repository 1 `README.md` Z. 47, Ordner `PLC-programs/S7_1200_TIAv18/` |
+| 6 | Widerspruch: „S7-1200 mit CPU1512SP“ gegen nur S7-1200 | A: Handbuch PDF-S. 34 (gedr. 33); B: PDF-S. 36 (gedr. 35), PDF-S. 38 (gedr. 37), Ordnername |
+| 7 | Reset-Button in der Oberfläche (Aufträge werden gelöscht), danach FTS vor DPS stellen und „Docke an DPS“ | Handbuch PDF-S. 27 (gedr. 26), PDF-S. 22 (gedr. 21) |
+| 8 | abonniert `module/v1/ff/<serial>/order`, `…/instantAction`; veröffentlicht `…/state`, `…/connection`, `…/factsheet` | Dev `docs/06-modules/drill.md` Z. 31–32 und 8, `docs/06-modules.md` Z. 34–46, `docs/02-architecture.md` Z. 121–127 |
+| 11 | „Dazu finde ich nichts in den Unterlagen“ | keine Quelle; Suche nach Wartung/maintenance ohne Datum |
+
+Kandidaten: `c1` Widerspruch Adressplan SPS (Handbuch PDF-S. 38 und `flows.json` Z. 1315/1342/1396/1423/1450 gegen Dev `docker-compose.yml` Z. 53–58), `c2` abgewandeltes VDA 5050 v2.0 für alle Module (Handbuch PDF-S. 37; Dev `docs/11-appendices.md` Z. 18, 26; `docs/01-introduction.md` Z. 48–52), `c3` WebSocket-Port 9001 nur in Dev.
+
+### Wie wurde getestet?
+
+`TF` = `docker compose -p twox-111 -f deploy/compose/testfactory.yaml`.
+
+| Akzeptanzkriterium | Ergebnis |
+| --- | --- |
+| `docker version`, `docker compose version` | Exit 0 (29.9.3 / v5.7.0) |
+| Abruf `TF run --rm fetch python -m testfactory.fetch` (ohne `--record`) | Exit 0, `31 entries, 26 loaded, 4 reference-only, 1 manual` (Siemens, E-27), etwa 95 s |
+| `TF run --rm fetch python -m testfactory.fetch --verify` | Exit 0, `31 entries, 26 ok, 4 reference-only, 1 manual` |
+| `TF run --rm check python -m unittest discover -s testfactory/tests -t . -v` | `Ran 199 tests`, `OK (skipped=1)`, darin 16 aus `test_questions`; ebenso in `check-offline` |
+| `TF run --rm check mypy --config-file testfactory/mypy.ini testfactory` | `Success: no issues found in 12 source files` |
+| Frage 6 / 11 / 9 und 10 | 4 Fundstellen mit zwei Aussagen / `no-evidence` ohne Quelle / `pending` |
+| `git diff --stat main...HEAD` | `testfactory/questions.yaml`, `testfactory/tests/test_questions.py` und diese Auftragsdatei |
+| `git status --porcelain` | nichts unter `testfactory/extern/` (nur ignoriert); vor jedem Commit geprüft |
+
+Jede Fundstelle wurde in den geladenen Dateien nachgeschlagen: PDF-Seiten als Text, Repository-Dateien mit den Lese- und Suchwerkzeugen der Sitzung.
+
+### Zweig und Arbeitsverzeichnis
+
+Zweig `worktree-agent-afaf884b5a6ae8c9d`, Arbeitsverzeichnis `.claude/worktrees/agent-afaf884b5a6ae8c9d`. Nicht gepusht, nichts zusammengeführt. `testfactory/extern/` ist dort gefüllt und nicht gelöscht.
+
+### Abweichungen
+
+1. **PDF lesen:** Das Lese-Werkzeug der Sitzung kann keine PDF-Seiten darstellen (kein Renderer). Handbuch DE, Fehlersuche DE/EN und Quick-Start DE wurden wie in Auftrag 106 in einem Wegwerf-Container (offizielles Python-Image, einmalig `poppler-utils`, GPL, nur als Werkzeug) seitenweise in Text umgewandelt, außerhalb des Projekts abgelegt und danach gelöscht. Keine neue Abhängigkeit.
+2. **Fundstellen gegenüber dem Vorbefund:** Frage 1 ohne Dev-README Z. 171 (steht direkt neben Zugangsdaten; Z. 150 belegt dasselbe). Frage 2 mit `docker-compose-prod.yml` Z. 55–56 (Betrieb auf dem Raspberry Pi) statt `docker-compose.yml` Z. 59–60. Frage 3: Dev-README Z. 7 betrifft Node-RED und die SPS, nicht die TXT-Controller; verwendet sind Z. 120 und 136. Frage 8: `docs/02-architecture.md` enger gefasst (Z. 121–127), dazu `drill.md` Z. 8 (Seriennummer).
+3. **Frage 7:** Das Fehlersuche-PDF hat keinen Eintrag zum Spurverlust (sein FTS-Eintrag betrifft ein anderes Fehlerbild); es ist deshalb keine Quelle, nur in `notes` vermerkt. Ergänzt ist Handbuch PDF-S. 22 (neues Andocken nach Reset).
+4. **Frage 6:** Dass die CPU 1512SP nicht zur S7-1200-Reihe gehört, steht in keiner geladenen Unterlage (Siemens nicht geladen, E-27) und ist nicht Teil der erwarteten Antwort.
+5. **Über den Umfang hinaus:** Feld `notes` je Frage, Dateifelder `schema_version`, `manifest`, `notes`; Kandidat `c3` (Port 9001); zusätzliche Testregeln (kanonische Form, `key_facts` in der Antwort, Quelle mit `target`).
+6. **Beobachtung:** Abschnitt 10.2 der Startunterlage nennt die S7-1200 in vier Modulen (HBW, DRILL, MILL, AIQS); die Tabelle im Handbuch PDF-S. 38 führt auch für DPS eine SPS-Adresse (.90), ebenso `flows.json` Z. 1423. Nicht geändert, nur vermerkt.
