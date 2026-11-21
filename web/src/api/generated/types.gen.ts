@@ -23,6 +23,48 @@ export type AreaRef = {
     readonly name: string;
 };
 
+/**
+ * * `create` - create
+ * * `update` - update
+ * * `delete` - delete
+ */
+export type AuditActionEnum = 'create' | 'update' | 'delete';
+
+/**
+ * One entry of the change log: who changed which object when, and how.
+ */
+export type AuditLogEntry = {
+    readonly id: number;
+    readonly timestamp: string;
+    /**
+     * User name of the actor; null for changes without a signed-in user.
+     */
+    readonly actor: string | null;
+    action: AuditActionEnum;
+    /**
+     * App label and model, for example assets.device.
+     */
+    readonly object_type: string;
+    readonly object_id: number | null;
+    /**
+     * Object representation
+     */
+    readonly object_repr: string;
+    /**
+     * Changed fields by name. A plain field has [old, new]; on create old is null, on delete new is null. Times are UTC, written without a zone ("2026-01-31 12:00:00.000000"); a reference to another object is its id. The groups of a user (the role) have {"type": "m2m", "operation": "add" or "delete", "objects": [group names]}.
+     */
+    readonly changes: {
+        [key: string]: [
+            unknown,
+            unknown
+        ] | {
+            type: 'm2m';
+            operation: 'add' | 'delete';
+            objects: Array<string>;
+        };
+    };
+};
+
 export type DatabaseCheck = {
     ok: boolean;
     server_version: string;
@@ -85,6 +127,13 @@ export type Me = {
 };
 
 export type NullEnum = never;
+
+export type PaginatedAuditLogEntryList = {
+    count: number;
+    next?: string | null;
+    previous?: string | null;
+    results: Array<AuditLogEntry>;
+};
 
 /**
  * An area of a site. ``site`` is the id of the site.
@@ -207,6 +256,20 @@ export type WorkerCheck = {
 export type AreaWritable = {
     site: number;
     name: string;
+};
+
+/**
+ * One entry of the change log: who changed which object when, and how.
+ */
+export type AuditLogEntryWritable = {
+    [key: string]: unknown;
+};
+
+export type PaginatedAuditLogEntryListWritable = {
+    count: number;
+    next?: string | null;
+    previous?: string | null;
+    results: Array<AuditLogEntryWritable>;
 };
 
 /**
@@ -335,6 +398,36 @@ export type AreasUpdateResponses = {
 };
 
 export type AreasUpdateResponse = AreasUpdateResponses[keyof AreasUpdateResponses];
+
+export type AuditLogListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Only entries of the user with this user name.
+         */
+        actor?: string;
+        /**
+         * Only entries of the object with this id (use with object_type).
+         */
+        object_id?: number;
+        /**
+         * Only entries of this kind of object, for example assets.device.
+         */
+        object_type?: string;
+        /**
+         * A page number within the paginated result set.
+         */
+        page?: number;
+    };
+    url: '/api/v1/audit-log/';
+};
+
+export type AuditLogListResponses = {
+    200: PaginatedAuditLogEntryList;
+};
+
+export type AuditLogListResponse = AuditLogListResponses[keyof AuditLogListResponses];
 
 export type DevicesListData = {
     body?: never;

@@ -122,6 +122,47 @@ paths:
               schema:
                 $ref: '#/components/schemas/Area'
           description: ''
+  /api/v1/audit-log/:
+    get:
+      operationId: audit_log_list
+      description: |-
+        The change log: who changed what and when, newest first (E-43).
+
+        For the role "Manage" only. Read-only: there is no way to change or
+        delete entries through the API.
+      parameters:
+      - in: query
+        name: actor
+        schema:
+          type: string
+        description: Only entries of the user with this user name.
+      - in: query
+        name: object_id
+        schema:
+          type: integer
+        description: Only entries of the object with this id (use with object_type).
+      - in: query
+        name: object_type
+        schema:
+          type: string
+        description: Only entries of this kind of object, for example assets.device.
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - audit-log
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditLogEntryList'
+          description: ''
   /api/v1/devices/:
     get:
       operationId: devices_list
@@ -592,6 +633,92 @@ components:
       required:
       - id
       - name
+    AuditActionEnum:
+      enum:
+      - create
+      - update
+      - delete
+      type: string
+      description: |-
+        * `create` - create
+        * `update` - update
+        * `delete` - delete
+    AuditLogEntry:
+      type: object
+      description: 'One entry of the change log: who changed which object when, and
+        how.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        timestamp:
+          type: string
+          format: date-time
+          readOnly: true
+        actor:
+          type: string
+          readOnly: true
+          nullable: true
+          description: User name of the actor; null for changes without a signed-in
+            user.
+        action:
+          allOf:
+          - $ref: '#/components/schemas/AuditActionEnum'
+          readOnly: true
+        object_type:
+          type: string
+          description: App label and model, for example assets.device.
+          readOnly: true
+        object_id:
+          type: integer
+          readOnly: true
+          nullable: true
+        object_repr:
+          type: string
+          readOnly: true
+          title: Object representation
+        changes:
+          type: object
+          description: 'Changed fields by name. A plain field has [old, new]; on create
+            old is null, on delete new is null. Times are UTC, written without a zone
+            ("2026-01-31 12:00:00.000000"); a reference to another object is its id.
+            The groups of a user (the role) have {"type": "m2m", "operation": "add"
+            or "delete", "objects": [group names]}.'
+          additionalProperties:
+            oneOf:
+            - type: array
+              items: {}
+              minItems: 2
+              maxItems: 2
+            - type: object
+              properties:
+                type:
+                  type: string
+                  enum:
+                  - m2m
+                operation:
+                  type: string
+                  enum:
+                  - add
+                  - delete
+                objects:
+                  type: array
+                  items:
+                    type: string
+              required:
+              - type
+              - operation
+              - objects
+          readOnly: true
+      required:
+      - action
+      - actor
+      - changes
+      - id
+      - object_id
+      - object_repr
+      - object_type
+      - timestamp
     DatabaseCheck:
       type: object
       properties:
@@ -739,6 +866,29 @@ components:
     NullEnum:
       enum:
       - null
+    PaginatedAuditLogEntryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogEntry'
     PatchedArea:
       type: object
       description: An area of a site. ``site`` is the id of the site.
