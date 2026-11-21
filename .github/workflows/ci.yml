@@ -136,3 +136,53 @@ jobs:
         run: |
           docker compose -f "$WEB_COMPOSE" --profile dev ps -a
           docker compose -f "$WEB_COMPOSE" --profile dev logs --no-color --timestamps
+
+  # Tests, type check, lint and manifest checks of the test factory
+  # (testfactory/), with the same commands as locally (testfactory/README.md,
+  # "Checks"). Nothing from the vendors is downloaded here: fetch.py is not run
+  # and testfactory/extern/ stays empty; the tests run without any network.
+  testfactory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      TF_COMPOSE: deploy/compose/testfactory.yaml
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Show runner user and Docker versions
+        run: |
+          id
+          docker version
+          docker compose version
+
+      - name: Build check image
+        run: docker compose -f "$TF_COMPOSE" build check
+
+      - name: Lint (ruff check)
+        run: docker compose -f "$TF_COMPOSE" run --rm check ruff check --config backend/pyproject.toml testfactory
+
+      - name: Format check (ruff format)
+        run: docker compose -f "$TF_COMPOSE" run --rm check ruff format --config backend/pyproject.toml --check testfactory
+
+      - name: Type check (mypy)
+        run: docker compose -f "$TF_COMPOSE" run --rm check mypy --config-file testfactory/mypy.ini testfactory
+
+      - name: Tests without network (unittest)
+        run: docker compose -f "$TF_COMPOSE" run --rm check-offline python -m unittest discover -s testfactory/tests -t . -v
+
+      - name: Manifest check (testfactory)
+        run: |
+          docker compose -f "$TF_COMPOSE" run --rm fetch python -m testfactory.manifest_tools check
+          docker compose -f "$TF_COMPOSE" run --rm fetch python -m testfactory.manifest_tools format --check
+
+      - name: Manifest check (testdata/klein)
+        run: |
+          docker compose -f "$TF_COMPOSE" run --rm fetch python -m testfactory.manifest_tools check --complete testdata/klein/manifest.yaml
+          docker compose -f "$TF_COMPOSE" run --rm fetch python -m testfactory.manifest_tools format --check testdata/klein/manifest.yaml
+
+      # Proof that nothing above loaded vendor material.
+      - name: No downloaded material
+        run: test ! -e testfactory/extern
