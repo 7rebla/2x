@@ -61,7 +61,7 @@ Nichts davon hält die laufende Arbeit auf.
 5. **GitHub Secret Scanning mit Push Protection** am Repository einschalten (Auftrag 003, Frage 1) – Einstellung am Konto, nimmt a7 selbst vor.
 6. **Prüffragen in der CI (Auftrag 011, Frage 1):** Empfehlung: aufgezeichnete Antworten in der CI, dazu der echte Lauf lokal vor jedem Zusammenführen. Entscheidung spätestens zu M3.
 7. **Startunterlage berichtigen (Auftrag 102, Frage 5):** Laut Recherche haben fünf statt vier Module eine S7-1200 (zusätzlich DPS). Die Leitstelle ändert die Startunterlage nicht ohne a7.
-8. **Gebündelte Bibliotheken in psycopg-binary (Auftrag 006):** Zwei davon stehen unter LGPL (keyutils, libxcrypt), dazu OLDAP-2.8 und BSD-Varianten mit Nennungsklausel. Alle sind unverändert als eigene Dateien eingebunden – derselbe Fall wie psycopg selbst nach Leitplanke 7. Empfehlung: als Teil der benannten Ausnahme psycopg bestätigen. Die Lizenz von keyutils ist nur aus einer Zweitquelle belegt.
+8. ~~Gebündelte Bibliotheken in psycopg-binary~~ – bestätigt mit E-28.
 9. ~~Siemens: Klausel gegen Text- und Data-Mining~~ – entschieden mit E-27: nur lokal, von Hand geladen.
 10. **Siemens: welche Ausgabe (Auftrag 103, Frage 6).** Aktuell ist V4.7 (12/2024, nur im Browser abrufbar); V4.6 (11/2022) passt vermutlich besser zu TIA Portal V18, das ist nicht bestätigt. Empfehlung und Arbeitsstand: beide führen, V4.6 maßgeblich, V4.7 als Verweis; beides ohne automatischen Abruf.
 
