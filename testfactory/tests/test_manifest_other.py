@@ -84,9 +84,7 @@ class OtherManifestTests(unittest.TestCase):
         manifest = manifest_tools.load_manifest(MANIFEST_PATH)
         cls.all_entries = manifest.entries
         cls.entries = {
-            entry.id: entry
-            for entry in manifest.entries
-            if not entry.id.startswith(APS_PREFIX)
+            entry.id: entry for entry in manifest.entries if not entry.id.startswith(APS_PREFIX)
         }
 
     def test_expected_entries_are_present(self) -> None:

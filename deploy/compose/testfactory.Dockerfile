@@ -14,4 +14,12 @@ RUN pip install --no-cache-dir --disable-pip-version-check --root-user-action=ig
         librt==0.17.0 \
         ast-serialize==0.13.1
 
+# Ruff (MIT, no dependencies) in the same version as the backend
+# (backend/uv.lock). The settings come from backend/pyproject.toml, see
+# "Checks" in testfactory/README.md. The repository is mounted read-only,
+# so the cache goes to /tmp.
+RUN pip install --no-cache-dir --disable-pip-version-check --root-user-action=ignore \
+        ruff==0.17.6
+ENV RUFF_CACHE_DIR=/tmp/ruff_cache
+
 WORKDIR /work

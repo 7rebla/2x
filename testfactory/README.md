@@ -112,6 +112,45 @@ relax this.
 - With `--check` nothing is written; exit code 1 if the file is not in the
   canonical form.
 
+## Checks
+
+The same set of checks runs locally and in the job `testfactory` of the CI
+workflow (`.github/workflows/ci.yml`) on every push and pull request. From
+the repository root, with `TF` as above:
+
+```sh
+TF build check
+
+# Lint and formatting with the Ruff version and settings of the backend
+TF run --rm check ruff check --config backend/pyproject.toml testfactory
+TF run --rm check ruff format --config backend/pyproject.toml --check testfactory
+
+# Type checking
+TF run --rm check mypy --config-file testfactory/mypy.ini testfactory
+
+# Tests without any network
+TF run --rm check-offline python -m unittest discover -s testfactory/tests -t . -v
+
+# Manifest files
+TF run --rm fetch python -m testfactory.manifest_tools check
+TF run --rm fetch python -m testfactory.manifest_tools format --check
+TF run --rm fetch python -m testfactory.manifest_tools check --complete testdata/klein/manifest.yaml
+TF run --rm fetch python -m testfactory.manifest_tools format --check testdata/klein/manifest.yaml
+```
+
+- Ruff takes its settings from `backend/pyproject.toml` (`[tool.ruff]`),
+  so the test factory follows the same rules as the backend. Without
+  `--config` Ruff falls back to its defaults, which differ (for example the
+  line length).
+- None of these checks needs `extern/` or downloads vendor material. The CI
+  never runs `fetch.py`; the tests work on a fresh clone without `extern/`.
+- One test is skipped when the tests run as `root`, as they do in the
+  container: it needs a directory that its user cannot read. With
+  `--user 1000:1000` it runs as well.
+- To fix findings, run Ruff with a writable mount of the repository, for
+  example `ruff format` and `ruff check --fix` in a container started with
+  `docker run --rm -v "$PWD:/work" -w /work twox-testfactory-check:local`.
+
 ## Fetching
 
 `fetch.py` loads the material that the manifest lists into the `root`
@@ -353,7 +392,11 @@ from testfactory import manifest_tools
 
 manifest = manifest_tools.load_manifest("testfactory/manifest.yaml")
 for entry in manifest.entries:
-    print(entry.id, entry.kind, manifest_tools.target_path("testfactory/manifest.yaml", manifest, entry))
+    print(
+        entry.id,
+        entry.kind,
+        manifest_tools.target_path("testfactory/manifest.yaml", manifest, entry),
+    )
 ```
 
 `load_manifest` and `parse_manifest` raise `ManifestError`; its `problems`

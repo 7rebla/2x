@@ -9,8 +9,8 @@ import json
 import os
 import tempfile
 import unittest
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
 from unittest import mock
 
 from testfactory import manifest_tools
@@ -306,9 +306,7 @@ class InvalidManifestTest(ManifestTestCase):
     def test_local_without_sha256_is_rejected(self) -> None:
         for entry in (local_entry(sha256=None), without(local_entry(), "sha256")):
             with self.subTest(entry=entry):
-                self.assertEqual(
-                    self.problems(manifest_text(entry)), {("free-doc-page", "sha256")}
-                )
+                self.assertEqual(self.problems(manifest_text(entry)), {("free-doc-page", "sha256")})
 
     def test_fields_of_other_kinds_are_rejected(self) -> None:
         cases: list[tuple[dict[str, object], tuple[str | None, str]]] = [
@@ -345,7 +343,15 @@ class InvalidManifestTest(ManifestTestCase):
         )
 
     def test_unsafe_target_is_rejected(self) -> None:
-        for bad in ("/etc/passwd", "../outside.pdf", "a/../../b", "a\\b.pdf", "C:/x.pdf", "a//b", "./a"):
+        for bad in (
+            "/etc/passwd",
+            "../outside.pdf",
+            "a/../../b",
+            "a\\b.pdf",
+            "C:/x.pdf",
+            "a//b",
+            "./a",
+        ):
             with self.subTest(target=bad):
                 self.assertEqual(
                     self.problems(manifest_text(file_entry(target=bad))),
@@ -390,9 +396,7 @@ class InvalidManifestTest(ManifestTestCase):
         ]
         for entry, field in cases:
             with self.subTest(field=field, value=entry[field]):
-                self.assertEqual(
-                    self.problems(manifest_text(entry)), {("vendor-manual-en", field)}
-                )
+                self.assertEqual(self.problems(manifest_text(entry)), {("vendor-manual-en", field)})
 
     def test_all_problems_are_reported_together(self) -> None:
         text = manifest_text(file_entry(url=None, sha256="abc"), git_archive_entry(commit="1234"))
@@ -411,9 +415,7 @@ class AddressTest(ManifestTestCase):
         for field in ("url", "landing_page"):
             with self.subTest(field=field):
                 entry = file_entry(**{field: "http://example.org/docs/manual.pdf"})
-                self.assertEqual(
-                    self.problems(manifest_text(entry)), {("vendor-manual-en", field)}
-                )
+                self.assertEqual(self.problems(manifest_text(entry)), {("vendor-manual-en", field)})
         self.assertEqual(
             self.problems(manifest_text(git_archive_entry(repository="http://example.org/r"))),
             {("vendor-repository", "repository")},
@@ -516,8 +518,9 @@ class CommandLineTest(ManifestTestCase):
         path = self.write(manifest_text(file_entry(url="http://127.0.0.1:8000/manual.pdf")))
         for option in ("--allow-insecure-loopback", "--allow_insecure_loopback", "--insecure"):
             with self.subTest(option=option):
-                with self.assertRaises(SystemExit) as caught, contextlib.redirect_stderr(
-                    io.StringIO()
+                with (
+                    self.assertRaises(SystemExit) as caught,
+                    contextlib.redirect_stderr(io.StringIO()),
                 ):
                     manifest_tools.main(["check", option, str(path)])
                 self.assertEqual(caught.exception.code, 2)
@@ -561,7 +564,7 @@ class WriteTest(ManifestTestCase):
     def full_manifest(self) -> manifest_tools.Manifest:
         return manifest_tools.parse_manifest(
             manifest_text(
-                file_entry(title="Handbuch für Gerät – Ausgabe „A“", language="de"),
+                file_entry(title="Handbuch für Gerät \u2013 Ausgabe „A“", language="de"),
                 git_archive_entry(tree_sha256=None),
                 container_image_entry(),
                 reference_entry(),
@@ -583,7 +586,7 @@ class WriteTest(ManifestTestCase):
         self.assertEqual(path.read_bytes(), first)
         self.assertTrue(first.endswith(b"}\n"))
         self.assertNotIn(b"\r", first)
-        self.assertIn("für Gerät – Ausgabe „A“".encode("utf-8"), first)
+        self.assertIn("für Gerät \u2013 Ausgabe „A“".encode(), first)
 
     def test_key_order_of_input_does_not_matter(self) -> None:
         entry = file_entry()
@@ -728,9 +731,8 @@ class CheckedTargetPathTest(ManifestTestCase):
 
     def test_unclean_target_is_rejected(self) -> None:
         for bad in ("../outside.pdf", "/etc/passwd", "a/../../b", "a\\b", ".", ""):
-            with self.subTest(target=bad):
-                with self.assertRaises(manifest_tools.UnsafePathError):
-                    manifest_tools.checked_target_path(self.tmp, bad)
+            with self.subTest(target=bad), self.assertRaises(manifest_tools.UnsafePathError):
+                manifest_tools.checked_target_path(self.tmp, bad)
 
     def test_link_in_the_chain_is_rejected(self) -> None:
         root = self.tmp / "extern"
@@ -742,9 +744,8 @@ class CheckedTargetPathTest(ManifestTestCase):
         # A link is rejected even if it points to a place below the root.
         self.symlink(root / "inside", root / "alias")
         for target in ("escape/manual.pdf", "escape", "alias/manual.pdf", "inside/../escape/x"):
-            with self.subTest(target=target):
-                with self.assertRaises(manifest_tools.UnsafePathError):
-                    manifest_tools.checked_target_path(root, target)
+            with self.subTest(target=target), self.assertRaises(manifest_tools.UnsafePathError):
+                manifest_tools.checked_target_path(root, target)
         self.assertEqual(list(outside.iterdir()), [])
 
     def test_link_as_target_is_rejected(self) -> None:
@@ -757,9 +758,8 @@ class CheckedTargetPathTest(ManifestTestCase):
         except OSError as error:
             self.skipTest(f"symbolic links are not available here: {error}")
         for target in ("manual.pdf", "dangling.pdf"):
-            with self.subTest(target=target):
-                with self.assertRaises(manifest_tools.UnsafePathError):
-                    manifest_tools.checked_target_path(root, target)
+            with self.subTest(target=target), self.assertRaises(manifest_tools.UnsafePathError):
+                manifest_tools.checked_target_path(root, target)
 
     def test_root_itself_may_be_reached_through_a_link(self) -> None:
         real = self.tmp / "real"
@@ -804,7 +804,7 @@ class FollowUpValidationTest(ManifestTestCase):
         """Follow-up 4."""
         for bad in ("1.0", '"1"', "true", "1e0", "[1]"):
             with self.subTest(schema_version=bad):
-                text = '{"schema_version": %s, "root": "extern", "entries": []}' % bad
+                text = f'{{"schema_version": {bad}, "root": "extern", "entries": []}}'
                 self.assertEqual(self.problems(text), {(None, "schema_version")})
         text = '{"schema_version": 1, "root": "extern", "entries": []}'
         self.assertEqual(manifest_tools.parse_manifest(text).schema_version, 1)
@@ -853,14 +853,13 @@ class UnreadableDirectoryTest(ManifestTestCase):
         complete = manifest_tools.tree_sha256(base)
         real_scandir = os.scandir
 
-        def scandir(path: Any) -> Any:
+        def scandir(path: str | os.PathLike[str]) -> Iterator[os.DirEntry[str]]:
             if Path(os.fspath(path)).name == "locked":
                 raise PermissionError(13, "Permission denied", os.fspath(path))
             return real_scandir(path)
 
-        with mock.patch.object(os, "scandir", scandir):
-            with self.assertRaises(PermissionError):
-                manifest_tools.tree_sha256(base)
+        with mock.patch.object(os, "scandir", scandir), self.assertRaises(PermissionError):
+            manifest_tools.tree_sha256(base)
         self.assertEqual(manifest_tools.tree_sha256(base), complete)
 
     def test_really_unreadable_subdirectory_is_an_error(self) -> None:

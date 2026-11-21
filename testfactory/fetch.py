@@ -19,6 +19,7 @@ Loaded content is data. It is stored and hashed, never imported or executed.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import dataclasses
 import datetime
 import hashlib
@@ -263,9 +264,7 @@ def _read_body(
         digest.update(chunk)
         handle.write(chunk)
     if announced is not None and received != announced:
-        raise FetchError(
-            f"incomplete: {received} of {announced} bytes received", retryable=True
-        )
+        raise FetchError(f"incomplete: {received} of {announced} bytes received", retryable=True)
     return Download(digest.hexdigest(), received)
 
 
@@ -545,10 +544,8 @@ def _load(
         return Outcome(entry.id, RESULT_LOADED, size_bytes=measured.size_bytes)
     finally:
         shutil.rmtree(work, ignore_errors=True)
-        try:
+        with contextlib.suppress(OSError):
             partial.rmdir()
-        except OSError:
-            pass
 
 
 def _with_checksum(entry: Entry, measured: Download, today: str) -> Entry:
@@ -714,9 +711,7 @@ def process_entry(
             entry, root, options, settings, today, allow_insecure_loopback=allow_insecure_loopback
         )
     except FetchError as error:
-        return Outcome(
-            entry.id, RESULT_FAILED, http_status=error.http_status, detail=_clean(error)
-        )
+        return Outcome(entry.id, RESULT_FAILED, http_status=error.http_status, detail=_clean(error))
     except (OSError, ValueError) as error:
         return Outcome(entry.id, RESULT_FAILED, detail=_clean(error))
 
@@ -735,7 +730,8 @@ def format_summary(outcomes: Sequence[Outcome]) -> str:
         )
     widths = [max(len(row[column]) for row in rows) for column in range(4)]
     lines = [
-        f"{row[0]:<{widths[0]}}  {row[1]:<{widths[1]}}  {row[2]:>{widths[2]}}  {row[3]:>{widths[3]}}"
+        f"{row[0]:<{widths[0]}}  {row[1]:<{widths[1]}}  "
+        f"{row[2]:>{widths[2]}}  {row[3]:>{widths[3]}}"
         for row in rows
     ]
     counts: dict[str, int] = {}

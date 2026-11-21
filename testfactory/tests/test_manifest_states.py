@@ -131,9 +131,7 @@ class ManifestStateTests(unittest.TestCase):
         for field, expected in PINNED_FIELDS.items():
             with self.subTest(field=field):
                 self.assertLessEqual(expected, known, "the list names an unknown entry")
-                present = {
-                    entry.id for entry in self.entries if getattr(entry, field) is not None
-                }
+                present = {entry.id for entry in self.entries if getattr(entry, field) is not None}
                 self.assertEqual(present, set(expected))
 
 
