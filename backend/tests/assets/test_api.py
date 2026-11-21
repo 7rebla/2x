@@ -552,7 +552,14 @@ def operations(schema: dict[str, Any], prefix: str) -> dict[str, str]:
 
 @pytest.mark.parametrize("resource", ["sites", "areas", "plants", "devices"])
 def test_schema_names_the_operations(schema: dict[str, Any], resource: str) -> None:
-    assert operations(schema, f"/api/v1/{resource}/") == {
+    # Nested paths of other apps (the documents of a device, 029) are not
+    # operations of the structure API.
+    own = {
+        key: operation_id
+        for key, operation_id in operations(schema, f"/api/v1/{resource}/").items()
+        if key.split(" ", 1)[1] in {f"/api/v1/{resource}/", f"/api/v1/{resource}/{{id}}/"}
+    }
+    assert own == {
         f"GET /api/v1/{resource}/": f"{resource}_list",
         f"POST /api/v1/{resource}/": f"{resource}_create",
         f"GET /api/v1/{resource}/{{id}}/": f"{resource}_retrieve",
