@@ -106,7 +106,7 @@ Nichts davon hält die laufende Arbeit auf.
 | 021 | Rollen, Konto-Endpunkt, Befehl create_account | C | 2 | in Arbeit |
 | 022 | Dateispeicher nach Prüfsumme | C | 2 | erledigt |
 | 023 | Oberfläche: Routing, Rahmen, Datenabruf | C | 3 | in Arbeit |
-| 024 | Datenmodell Dateien und Versionen | C | 3 | offen |
+| 024 | Datenmodell Dateien und Versionen | C | 3 | in Arbeit |
 | 025 | API-Rechte: Standard nur mit Rolle | C | 3 | offen |
 | 026 | API und Admin für die Struktur | C | 4 | offen |
 | 027 | Testkonto in CI, Selbsttest nur für Angemeldete | C | 4 | offen |
