@@ -1,6 +1,6 @@
 # Auftrag 015 – ARCHITECTURE.md und README
 
-Meilenstein: M0 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M0 · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 

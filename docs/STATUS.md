@@ -25,7 +25,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 012 | Testseite, Teil Oberfläche | C | 6 | 002, 010 | erledigt |
 | 013 | Auslieferung der Oberfläche durch Django | C | 6 | 002, 009, 010 | erledigt |
 | 014 | Playwright-Test der Testseite | C | 7 | 011, 012, 013 | erledigt |
-| 015 | ARCHITECTURE.md und README | B | 8 | 006, 007, 009, 013, 014 | in Arbeit |
+| 015 | ARCHITECTURE.md und README | B | 8 | 006, 007, 009, 013, 014 | erledigt |
 
 ### T1 – Testfabrik Teil 1
 
@@ -48,7 +48,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 ## In Arbeit
 
-- 004 und 015 als Subagenten.
+- 004 als Subagent (Messung läuft).
 
 ## Wartet auf a7
 
@@ -90,3 +90,4 @@ Nichts davon hält die laufende Arbeit auf.
 - Für M2 vorgemerkt (aus 009): Jede Anfrage an Docling muss `ocr_preset: "rapidocr"` mitschicken, sonst antwortet der Dienst mit 422 (E-31). Docling lädt seine Modelle erst bei der ersten Umwandlung; `healthy` heißt nur „Server läuft". `backend-dev` erreicht Docling absichtlich nicht.
 - Für M1 vorgemerkt (aus 013): Mit dem Django-Admin muss `AppDirectoriesFinder` wieder in `STATICFILES_FINDERS`.
 - Für die Abnahme T1 vorgemerkt (aus 113, `testfactory/layout/evidence.md`): 69 Nachweise, davon 37 erfüllt, 24 offen, 8 „folgt in T2". Zentral offen ist O-1: Keine fischertechnik-Unterlage nennt einen APS-Softwarestand, damit ist Bedingung 2 für die ganze Fertigungslinie offen. Auslegung des Bearbeiters: Bedingung 1 gilt über den Release-Stand APS 1.3.0 als erfüllt. Beides entscheidet a7 bei der Abnahme.
+- Für M6 vorgemerkt (aus 015): Eine eigene `.env`-Vorlage für Tester ohne Debug und ohne Entwicklungs-Kennwörter; `.env.example` ist eine reine Entwicklungsvorlage. Der Schema-Befehl in `web/openapi/README.md` braucht unter Git Bash `MSYS_NO_PATHCONV=1`.
