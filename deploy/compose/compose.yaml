@@ -10,6 +10,8 @@ x-backend-environment: &backend-environment
   TWOX_DB_NAME: ${TWOX_DB_NAME:?Copy .env.example to .env first}
   TWOX_DB_USER: ${TWOX_DB_USER:?Copy .env.example to .env first}
   TWOX_DB_PASSWORD: ${TWOX_DB_PASSWORD:?Copy .env.example to .env first}
+  TWOX_CELERY_BROKER_URL: ${TWOX_CELERY_BROKER_URL:-}
+  TWOX_CELERY_RESULT_BACKEND: ${TWOX_CELERY_RESULT_BACKEND:-}
   TWOX_LLM_BASE_URL: ${TWOX_LLM_BASE_URL:-}
   TWOX_DOCLING_URL: ${TWOX_DOCLING_URL:-}
 
@@ -34,6 +36,21 @@ services:
       start_period: 30s
       start_interval: 1s
 
+  # Broker and result store for Celery. Reachable inside the compose network
+  # only: no host port.
+  valkey:
+    image: valkey/valkey:9.1.4
+    volumes:
+      - valkey-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
+      start_interval: 1s
+    restart: unless-stopped
+
   # Applies the migrations once and exits. A separate service instead of a
   # start script in the API container, so that several API instances never
   # migrate at the same time.
@@ -56,6 +73,8 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      valkey:
+        condition: service_healthy
     ports:
       # Reachable from this machine only.
       - "127.0.0.1:${TWOX_API_PORT:-8000}:8000"
@@ -76,6 +95,44 @@ services:
       start_interval: 1s
     restart: unless-stopped
 
+  # One worker for all three queues. Splitting it into one service per queue
+  # only needs a different -Q list.
+  worker:
+    build: *backend-runtime-build
+    command:
+      - celery
+      - -A
+      - twox.config
+      - worker
+      - --queues
+      - ingest,embed,default
+      - --loglevel
+      - INFO
+    environment: *backend-environment
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      # Asks exactly this worker through the broker; fails if the worker or
+      # Valkey is gone.
+      test:
+        - CMD-SHELL
+        - celery -A twox.config inspect ping --destination "celery@$$HOSTNAME" --timeout 5
+      interval: 15s
+      timeout: 10s
+      retries: 4
+      start_period: 30s
+      start_interval: 2s
+    restart: unless-stopped
+
+  # Depends on the database only: plain `pytest` must not need Valkey or the
+  # worker. `pytest -m worker` expects both to be running already.
   backend-dev:
     profiles: ["dev"]
     build:
@@ -92,3 +149,4 @@ services:
 
 volumes:
   db-data:
+  valkey-data:
