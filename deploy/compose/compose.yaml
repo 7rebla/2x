@@ -147,6 +147,13 @@ services:
       DOCLING_SERVE_OTEL_ENABLE_PROMETHEUS: "false"
       DOCLING_SERVE_OTEL_ENABLE_TRACES: "false"
       DOCLING_SERVE_OTEL_ENABLE_OTLP_METRICS: "false"
+      # Operation without internet: the models ship in the image
+      # (DOCLING_SERVE_ARTIFACTS_PATH is set by the image). No remote
+      # inference services, no external plugins, no Hugging Face Hub access.
+      DOCLING_SERVE_ENABLE_REMOTE_SERVICES: "false"
+      DOCLING_SERVE_ALLOW_EXTERNAL_PLUGINS: "false"
+      HF_HUB_OFFLINE: "1"
+      HF_HUB_DISABLE_TELEMETRY: "1"
     healthcheck:
       # /ready answers 503 until the models are loaded. The image has no curl;
       # its Python is used instead.
