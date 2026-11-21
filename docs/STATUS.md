@@ -108,11 +108,11 @@ Nichts davon hält die laufende Arbeit auf.
 | 023 | Oberfläche: Routing, Rahmen, Datenabruf | C | 3 | erledigt |
 | 024 | Datenmodell Dateien und Versionen | C | 3 | erledigt |
 | 025 | API-Rechte: Standard nur mit Rolle | C | 3 | erledigt |
-| 026 | API und Admin für die Struktur | C | 4 | in Arbeit |
-| 027 | Testkonto in CI, Selbsttest nur für Angemeldete | C | 4 | in Arbeit |
-| 028 | Protokoll (Backend) | C | 5 | offen |
+| 026 | API und Admin für die Struktur | C | 4 | erledigt |
+| 027 | Testkonto in CI, Selbsttest nur für Angemeldete | C | 4 | erledigt |
+| 028 | Protokoll (Backend) | C | 5 | in Arbeit |
 | 029 | Datei-API | C | 5 | in Arbeit |
-| 030 | Anmeldung in der Oberfläche | C | 5 | offen |
+| 030 | Anmeldung in der Oberfläche | C | 5 | in Arbeit |
 | 031 | CSV-Import (Backend) | C | 6 | offen |
 | 032 | Oberfläche: Struktur und Geräte | B | 6 | offen |
 | 033 | Oberfläche: Protokoll | B | 6 | offen |
@@ -132,3 +132,5 @@ Hinweise aus Welle 1:
 - 024: Grenzen für 038: Scheitert eine Transaktion nach dem Speichern, bleibt der Inhalt ohne Version im Speicher; Unveränderlichkeit der Versionen nur über `save()`, nicht in der Datenbank; als Dokument hochgeladene Konfigurationen werden nicht erkannt (Restrisiko zu Leitplanke 5, E-42).
 - 020: allauth-Pfade für Kennwort ändern, Kennwort zurücksetzen und E-Mail-Verwaltung liefern 404 (E-38). Eine Sperre nach Fehlversuchen meldet allauth mit 400 und `too_many_login_attempts`, nicht mit 429 (für 030). Hinter einem Reverse-Proxy (M6) `ALLAUTH_TRUSTED_PROXY_COUNT` setzen, sonst zählen alle Fehlversuche auf die Proxy-Adresse.
 - 025: Für 027: `/api/v1/selftest/` wirklich aus `OPEN_PATHS` entfernen; der Pfadtest bemerkt einen veralteten Ausnahme-Eintrag nicht von selbst. Pfade in `OPEN_PATHS` und `ROLELESS_PATHS` werden mit allen Methoden übersprungen.
+- 026: Legen zwei Anfragen gleichzeitig dieselbe Kennung bzw. denselben Namen an, endet die zweite mit 500 statt 400 (Datenbank-Constraint hält). Für 031 vorgemerkt: `save()` in den Struktur-Views in `transaction.atomic()` kapseln und `IntegrityError` je Constraint als Feldfehler (400) melden, mit Test.
+- 027: Testkonto `e2e-manager` mit dem öffentlichen Entwicklungskennwort aus `.env.example`; es entsteht nur durch den Schritt „Create test account" (CI-Job e2e oder README), nie automatisch in der Testumgebung.

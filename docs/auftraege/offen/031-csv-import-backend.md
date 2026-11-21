@@ -94,6 +94,8 @@ Alle Befehle laufen im Wurzelverzeichnis des Arbeitsverzeichnisses, in der Form 
 
 ## Vorgaben und Hinweise
 
+- **Nachtrag der Leitstelle (aus der Prüfung von 026):** Gleichzeitiges Anlegen derselben Kennung endet heute mit 500. Kapsle in diesem Auftrag `save()` in den Struktur-Views (`twox/assets/views.py`) in `transaction.atomic()`, fange `IntegrityError` ab und melde ihn je Constraint als Feldfehler (400); dazu ein Test, der den Wettlauf nachstellt. Der Import nutzt dieselben Constraints.
+
 Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“); 019, 021, 026, 028 und 029 sind nach `main` zusammengeführt; Antworten von a7 auf Frage 1 und 2.
 
 - Welle 6, parallel zu 032 und 033 (Oberfläche).
