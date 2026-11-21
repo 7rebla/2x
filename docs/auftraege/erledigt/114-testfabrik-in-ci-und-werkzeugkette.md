@@ -1,6 +1,6 @@
 # Auftrag 114 – Testfabrik-Prüfungen in CI und Werkzeugkette übernehmen
 
-Meilenstein: T1 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: T1 · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 

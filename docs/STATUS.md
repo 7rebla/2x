@@ -24,8 +24,8 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 011 | CI-Hauptworkflow | C | 5 | 002, 005, 006, 008 | erledigt (CI grün auf GitHub) |
 | 012 | Testseite, Teil Oberfläche | C | 6 | 002, 010 | erledigt |
 | 013 | Auslieferung der Oberfläche durch Django | C | 6 | 002, 009, 010 | erledigt |
-| 014 | Playwright-Test der Testseite | C | 7 | 011, 012, 013 | in Arbeit |
-| 015 | ARCHITECTURE.md und README | B | 8 | 006, 007, 009, 013, 014 | offen |
+| 014 | Playwright-Test der Testseite | C | 7 | 011, 012, 013 | erledigt |
+| 015 | ARCHITECTURE.md und README | B | 8 | 006, 007, 009, 013, 014 | in Arbeit |
 
 ### T1 – Testfabrik Teil 1
 
@@ -44,11 +44,11 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 111 | Prüffragen der Fertigungslinie mit Fundstelle | C | 5 | 109 | erledigt |
 | 112 | Prüffragen des Roboters (Fragen 9 und 10) | C | 6 | 110, 111 | erledigt |
 | 113 | Nachweis der drei Bedingungen je Anlage und Gerät | C | 6 | 106, 110 | erledigt |
-| 114 | Testfabrik-Prüfungen in CI und Werkzeugkette | B | 7 | 101, 112, 113, 011 | in Arbeit |
+| 114 | Testfabrik-Prüfungen in CI und Werkzeugkette | B | 7 | 101, 112, 113, 011 | erledigt |
 
 ## In Arbeit
 
-- 004, 014 und 114 als Subagenten.
+- 004 und 015 als Subagenten.
 
 ## Wartet auf a7
 

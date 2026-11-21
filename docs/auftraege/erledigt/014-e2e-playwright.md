@@ -1,6 +1,6 @@
 # Auftrag 014 – Playwright-Test der Testseite
 
-Meilenstein: M0 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: M0 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 
