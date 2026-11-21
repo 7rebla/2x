@@ -1,6 +1,6 @@
 # Auftrag 105 – Manifest-Einträge der Fertigungslinie
 
-Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: T1 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 
