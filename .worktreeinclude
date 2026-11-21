@@ -1,0 +1,3 @@
+# Files that are ignored by Git but must be copied into new worktrees.
+.env
+STARTUNTERLAGE.md

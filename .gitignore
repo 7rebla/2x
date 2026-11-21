@@ -1,0 +1,43 @@
+# Claude Code
+.claude/worktrees/
+.claude/settings.local.json
+Claude outputs/
+
+# Project brief stays local (decision E-20); copied into worktrees via .worktreeinclude
+STARTUNTERLAGE.md
+
+# Test factory: vendor material is never committed (STARTUNTERLAGE 10.4)
+testfactory/extern/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Web
+node_modules/
+web/dist/
+playwright-report/
+test-results/
+
+# Runtime data
+/media/
+/staticfiles/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
