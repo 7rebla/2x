@@ -56,7 +56,7 @@ Der aktuelle Stand steht in `docs/STATUS.md`, Entscheidungen in `docs/DECISIONS.
 
 1. Die Leitstelle schreibt `docs/auftraege/offen/NNN-kurztitel.md` nach `docs/auftraege/VORLAGE.md` und nennt die Freigabestufe.
 2. Freigegebene Aufträge stehen in `docs/STATUS.md` unter „Freigegeben". Für M0 und T1 startet die Leitstelle selbstständig (E-21).
-3. Die Leitstelle startet je Auftrag einen Auftragsbearbeiter, höchstens drei gleichzeitig. Gleichzeitige Aufträge berühren verschiedene Dateien.
+3. Die Leitstelle startet je Auftrag einen Auftragsbearbeiter, höchstens fünf gleichzeitig (E-24), als Subagent oder als eigene Sitzung. Gleichzeitige Aufträge berühren verschiedene Dateien.
 4. Der Bearbeiter arbeitet, testet, committet auf seinem Zweig und trägt den Kurzbericht ein. Fragen an a7 schreibt er in den Auftrag.
 5. Die Leitstelle prüft Akzeptanzkriterien, Tests, Diff und Lizenzen.
 6. Stufe B: zusammenführen. Stufe C oder offene Frage: Zweig stehen lassen, Eintrag unter „Wartet auf a7" mit Optionen und Empfehlung.

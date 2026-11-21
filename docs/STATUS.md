@@ -5,7 +5,7 @@ Stand: 21.11.2026 · gepflegt von der Leitstelle
 ## Freigegeben
 
 Alle Aufträge für M0 und T1 (E-21). Die Fragen in den Aufträgen sind nach Empfehlung entschieden (E-23).
-Höchstens drei Bearbeiter gleichzeitig, M0 und T1 zusammen gezählt. Eine Welle startet erst, wenn ihre Voraussetzungen nach `main` zusammengeführt sind. M0 hat Vorrang, damit früh etwas zum Ansehen da ist; T1-Aufträge füllen freie Plätze.
+Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Eine Welle startet erst, wenn ihre Voraussetzungen nach `main` zusammengeführt sind. M0 hat Vorrang, damit früh etwas zum Ansehen da ist; T1-Aufträge füllen freie Plätze.
 
 ### M0 – Gerüst
 
@@ -32,8 +32,8 @@ Höchstens drei Bearbeiter gleichzeitig, M0 und T1 zusammen gezählt. Eine Welle
 | Nr. | Auftrag | Stufe | Welle | Hängt ab von | Status |
 | --- | --- | --- | --- | --- | --- |
 | 101 | Manifest-Format und Werkzeug-Container | C | 1 | – (Python-Version aus 001 eintragen) | offen |
-| 102 | Quellen und Lizenzlage der Fertigungslinie | C | 1 | – | offen |
-| 103 | Quellen und Nutzungsbedingungen: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 1 | – | offen |
+| 102 | Quellen und Lizenzlage der Fertigungslinie | C | 1 | – | in Arbeit (eigene Sitzung) |
+| 103 | Quellen und Nutzungsbedingungen: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 1 | – | in Arbeit (eigene Sitzung) |
 | 104 | Lade-Skript `fetch.py` | B | 2 | 101 | offen |
 | 105 | Manifest-Einträge der Fertigungslinie | C | 2 | 101, 102 | offen |
 | 106 | Aufbau der Testfabrik: Geräteliste, Netzplan, Beschreibung | C | 2 | 101, 102 | offen |
@@ -48,7 +48,7 @@ Höchstens drei Bearbeiter gleichzeitig, M0 und T1 zusammen gezählt. Eine Welle
 
 ## In Arbeit
 
-- 001, 002, 003 (gestartet am 21.11.2026).
+- 001, 002, 003 als Subagenten; 102, 103 als eigene Sitzungen (gestartet am 21.11.2026).
 
 ## Wartet auf a7
 
