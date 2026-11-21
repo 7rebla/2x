@@ -19,6 +19,11 @@ WEB_UI_PATH = rf"^(?!(?:{_RESERVED_ALTERNATIVES})(?:/|$)).+$"
 
 urlpatterns: list[URLPattern | URLResolver] = [
     path("admin/", admin.site.urls),
+    # django-allauth: the headless API for the web UI (sign-in, sign-out,
+    # session). accounts/ is where allauth expects its own URLs; with
+    # HEADLESS_ONLY and without OpenID Connect it registers none yet.
+    path("_allauth/", include("allauth.headless.urls")),
+    path("accounts/", include("allauth.urls")),
     path("api/v1/health/", HealthView.as_view(), name="health"),
     path("api/v1/selftest/", SelftestView.as_view(), name="selftest"),
     # One urls.py per app; each app adds its endpoints there.
