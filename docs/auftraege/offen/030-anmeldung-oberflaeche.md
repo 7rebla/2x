@@ -173,3 +173,32 @@ Zweig `worktree-agent-a92bb24ee2559d8d2`, Arbeitsverzeichnis `.claude/worktrees/
 5. **Fehlertexte der Anmeldung** stammen aus `auth.json` je Fehlercode von allauth; die (englische) Meldung von allauth selbst wird nicht gezeigt.
 6. **Nicht geändert:** `README.md` (Abschnitt „Browser test“ stimmt weiterhin; der Hinweis auf die Anmeldung je Worker könnte mit 038 dazukommen). Der Admin bietet Superusern weiter `/admin/password_change/` an; das ist kein Anmeldeweg und entspricht Frage 1 (a) („Superuser setzen Kennwörter im Admin“).
 7. Die Sitzungsabfrage gilt 60 Sekunden als frisch. Eine abgelaufene Sitzung fällt bei der nächsten 403 einer Abfrage auf, sonst beim nächsten Fensterfokus nach Ablauf der 60 Sekunden; ein reiner Seitenwechsel fragt `me` nicht neu.
+
+### Nacharbeit (nach Prüfung der Leitstelle)
+
+**Befund: Open Redirect in `safeNextPath`.** Die Prüfung auf `//` und `/\` lief nur am Rohwert, zurückgegeben wurde der normalisierte Wert. Der URL-Parser löst Punkt-Segmente auf und macht aus Backslashes Schrägstriche. Dadurch wurden z. B. `/.//evil.test/`, `/%2e//evil.test/`, `/x/..//evil.test/` und `/admin/..//evil.test/` zu `//evil.test/`.
+
+**Behebung (Commit `9b0e158`):**
+- `web/src/session.ts`: Alle Prüfungen laufen jetzt am normalisierten Ergebnis (Pfad, Query, Fragment). Abgewiesen wird, was mit `//` beginnt, einen Backslash oder ein Steuerzeichen enthält, unter `api/`, `static/`, `_allauth/` oder `accounts/` liegt oder `/login` ist. Vorab bleibt nur die Prüfung, dass der Rohwert mit `/` beginnt, und der Vergleich des Ursprungs.
+- `web/src/session.test.tsx`: 22 neue Fälle.
+  - 14 Werte führen zu `/`: die vier Beispiele, Varianten mit `%2E`, `%2e%2e` und mehrfachem `..`, Backslash-Varianten (`/.\/…`, `/.\\…`, `/x/..\/…`, `/x/..\\…`, `/admin/..\\…`), Tab plus Backslash, Zeilenumbruch.
+  - 7 Werte mit `%5c`/`%5C` bleiben als kodierter Pfad dieser Anwendung erhalten, nie mit `//` am Anfang, nie mit Backslash, Ursprung unverändert: `/%5c/…`, `/%5C%5C…`, `/.%5c/…`, `/x/..%5c/…`, `/x/..%5c%5c…`, dazu `//` und `%5c` in der Query.
+  - Ein Durchlauf über die Seite: Anmeldung mit `next=/x/..//evil.test/` landet auf `/`.
+- **Weitere Stellen mit Umleitungszielen geprüft:**
+  - `SessionGuards.tsx` baut `next` nur aus der eigenen Router-Adresse (`encodeURIComponent`).
+  - `UserMenu.tsx` (Abmelden) springt fest auf `/login`.
+  - `LoginPage.tsx` nutzt nur das Ergebnis von `safeNextPath`, auch für den Seitenladen in den Admin.
+  - `Layout.tsx` verwendet keine Umleitungsziele.
+- **Backend gehärtet:** `backend/twox/config/admin_site.py` (`is_plain_path`) weist `next` mit Punkt-Segmenten (auch `%2e%2e`), Backslash (auch `%5c`) oder leeren Segmenten (`//`) ab. Vorher hätte `/admin/..//example.test/` die Prüfung bestanden; der Browser hätte daraus `http://<eigener Host>//example.test/` gemacht, also keinen fremden Host, aber einen Pfad außerhalb des Admins.
+- **Tests dazu:** `backend/tests/config/test_admin.py` bekommt sechs neue Werte für die anonyme Umleitung und einen Fall für den angemeldeten Superuser.
+
+**Prüfungen nach der Nacharbeit** (`-p twox-030` / `twox-030-web`, `TWOX_API_PORT=18030`):
+
+| Prüfung | Ergebnis |
+| --- | --- |
+| web: `build web-dev`, `npm ci`, `lint`, `typecheck`, `test`, `build`, `licenses`, `api:generate` | je Exit 0; `test`: 9 Dateien, 173 Fälle; `git diff --exit-code -- web/openapi web/src/api` ohne Unterschied |
+| backend: `ruff check`, `ruff format --check`, `mypy` | `All checks passed!`, `103 files already formatted`, `Success: no issues found in 103 source files` |
+| backend: `pytest`, `pytest -m worker` | `732 passed, 4 deselected`, nichts übersprungen; `4 passed` |
+| AK 2 | `http://localhost:8000/login?next=%2Fadmin%2F` |
+| e2e: Bau, `up --wait`, `pull`, `npm ci`, „Create test account“, `run e2e` | je Exit 0; `12 passed` |
+| Abräumen `D --profile dev --profile e2e down -v`, `W --profile dev down -v` | Exit 0; kein Container und kein Volume mit `twox-030` |
