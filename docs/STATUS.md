@@ -102,9 +102,9 @@ Nichts davon hält die laufende Arbeit auf.
 | 017 | Selbsttest: Zeitlimit Ergebnisspeicher | B | 1 | in Arbeit |
 | 018 | Oberfläche zweisprachig | C | 1 | erledigt |
 | 019 | Datenmodell Standort, Bereich, Anlage, Gerät | C | 1 | erledigt |
-| 020 | Anmeldung mit django-allauth, Ratenbegrenzung | C | 2 | offen |
-| 021 | Rollen, Konto-Endpunkt, Befehl create_account | C | 2 | offen |
-| 022 | Dateispeicher nach Prüfsumme | C | 2 | offen |
+| 020 | Anmeldung mit django-allauth, Ratenbegrenzung | C | 2 | in Arbeit |
+| 021 | Rollen, Konto-Endpunkt, Befehl create_account | C | 2 | in Arbeit |
+| 022 | Dateispeicher nach Prüfsumme | C | 2 | in Arbeit |
 | 023 | Oberfläche: Routing, Rahmen, Datenabruf | C | 3 | offen |
 | 024 | Datenmodell Dateien und Versionen | C | 3 | offen |
 | 025 | API-Rechte: Standard nur mit Rolle | C | 3 | offen |
