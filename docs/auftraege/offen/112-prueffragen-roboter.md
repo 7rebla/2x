@@ -1,6 +1,6 @@
 # Auftrag 112 – Prüffragen des Roboters (Fragen 9 und 10): erwartete Antworten mit Fundstelle
 
-Meilenstein: T1 · Freigabestufe: C · Status: offen
+Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -58,7 +58,45 @@ In den Befehlen steht `TF` für `docker compose -f deploy/compose/testfactory.ya
    - Empfehlung: A; die Auskunft muss ohnehin deutsch aus englischen Quellen antworten können.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Keine blockierende Frage; eine Beobachtung zur Begriffswahl bei Frage 10 (siehe Abweichungen, Punkt 3).
+
+### Was wurde gebaut?
+
+- `testfactory/questions.yaml`, nur Einträge 9 und 10: `status: verified`, Antwort, `key_facts`, Quellen, `verified_on` 2026-11-21, `notes`.
+- `testfactory/tests/test_questions.py`: `pending` ist nicht mehr erlaubt (Status nur `verified`; das Wort `pending` kommt in der Datei nicht vor); die Fragen 9 und 10 haben je mindestens eine Quelle, deren Manifest-Eintrag dem Gerät `ur5e` zugeordnet ist. Die beiden Tests für `pending` sind entfallen.
+
+| Nr. | Erwartete Antwort | Fundstellen (Benutzerhandbuch = `ur5e-user-manual-de`) |
+| --- | --- | --- |
+| 9 | Maximale Nutzlast 5 kg (11 lb); die zulässige Nennnutzlast hängt vom Schwerpunktversatz ab (Kennlinie), Greifer und Werkstück zählen zusammen. `key_facts`: „5 kg“ | Benutzerhandbuch PDF-S. 16 (gedr. S. 19), Kap. 3.1; PDF-S. 101 und 102 (gedr. S. 104 und 105), Kap. 9.1 |
+| 10 | Schutzstopp (SF2, Stoppkategorie 2) über den Sicherheitseingang einer Schutzeinrichtung, Antrieb bleibt an. Mit konfiguriertem Schutz-Reset gibt erst eine steigende Flanke am Reset-Eingang frei (z. B. zweikanalige Reset-Taste außerhalb der Schutzzone); ohne Reset geht es automatisch weiter, sobald die Schutzeinrichtung nicht mehr auslöst. `key_facts`: „Schutz-Reset“, „steigende Flanke“ | Benutzerhandbuch PDF-S. 86 (gedr. S. 89), Kap. 8.6.1; PDF-S. 84 (gedr. S. 87) und PDF-S. 81 (gedr. S. 84), Kap. 8.6; PDF-S. 252 (gedr. S. 255), Kap. 21; dazu englisch `ur5e-software-handbook-en` PDF-S. 46 (gedr. S. 46), Kap. 2.7 |
+
+### Wie wurde getestet?
+
+`TF` = `docker compose -p twox-112 -f deploy/compose/testfactory.yaml`.
+
+| Akzeptanzkriterium | Ergebnis |
+| --- | --- |
+| `docker version`, `docker compose version` | Exit 0 (29.9.3 / v5.7.0) |
+| Abruf `TF run --rm fetch python -m testfactory.fetch --only` mit den vier UR-IDs, ohne `--record` | Exit 0, `4 entries, 4 loaded` |
+| `TF run --rm fetch python -m testfactory.fetch --verify --only` mit den vier UR-IDs | Exit 0, `4 entries, 4 ok` |
+| `TF run --rm check python -m unittest discover -s testfactory/tests -t . -v` | `Ran 200 tests`, `OK (skipped=1)`; ebenso in `check-offline` |
+| `TF run --rm check mypy --config-file testfactory/mypy.ini testfactory` | `Success: no issues found in 12 source files` |
+| `git grep -c pending -- testfactory/questions.yaml` | keine Ausgabe, Exit 1 |
+| `git diff main...HEAD -- testfactory/questions.yaml` | zwei Abschnitte, nur in den Einträgen 9 und 10 |
+| `git diff --stat main...HEAD` | `questions.yaml`, `test_questions.py` und diese Auftragsdatei |
+| `git status --porcelain` | nichts unter `testfactory/extern/`; vor jedem Commit geprüft |
+
+Jede Fundstelle wurde in den geladenen, geprüften Dateien nachgeschlagen: PDF-Seiten in einem Wegwerf-Container (`debian:trixie-slim`, einmalig `poppler-utils` als Werkzeug, keine Projektabhängigkeit) seitenweise in Text umgewandelt, außerhalb des Projekts abgelegt; Inhaltsverzeichnis und Seitenzahlen in der Fußzeile verglichen.
+
+### Zweig und Arbeitsverzeichnis
+
+Zweig `worktree-agent-a0b86bcf2d94dd08d`, Arbeitsverzeichnis `.claude/worktrees/agent-a0b86bcf2d94dd08d`. Nicht gepusht, nichts zusammengeführt. `testfactory/extern/` enthält dort nur die vier UR-Unterlagen und ist nicht gelöscht.
+
+### Abweichungen
+
+1. **Abruf nur der UR-Einträge:** Statt des vollständigen Abrufs (271 MiB) wurden nach Hinweis im Auftrag nur die vier UR-Einträge mit `--only` geladen und mit `--verify --only` geprüft. Ein `--verify` über alle Einträge würde hier an den fehlenden Dateien der Fertigungslinie scheitern.
+2. **Vorbefund widerlegt:** Für beide Fragen gibt es Fundstellen, für Frage 10 auch im deutschen Benutzerhandbuch. Die englische Fundstelle (E-23, Option A) ist nur ergänzend.
+3. **Begriff „Schutzstopp“ (Beobachtung für a7):** Das deutsche Benutzerhandbuch nennt den Halt über die Schutzeinrichtung (SF2, englisch Safeguard Stop) „Schutzstopp“; die erwartete Antwort folgt dieser Bedeutung. Der englische Begriff „protective stop“ meint dagegen den vom Roboter selbst ausgelösten Halt (heute „Robot Stop“/„Roboterstopp“, Benutzerhandbuch PDF-S. 230, gedr. S. 233). Für ihn verlangt das Service-Handbuch (PDF-S. 118, gedr. S. 112, Kap. 7.6.1), die Ursache zu prüfen und bewusst durch eine Person fortzusetzen. Das steht nur in `notes`. Meint a7 mit der Frage diesen Halt, wäre die Antwort entsprechend zu ändern.
+4. **Softwarestand:** Das Benutzerhandbuch nennt auf PDF-S. 266 „Softwareversion: 5.25.1“ (Titelblatt nur „PolyScope 5“); das Software-Handbuch nennt auf dem Titelblatt SW 5.25.1. Das Manifest (Auftrag 110) wurde nicht geändert.
+5. **Nicht geändert:** Die Datei-Notiz in `questions.yaml` sagt noch, die Fragen 9 und 10 folgten in Auftrag 112. Sie liegt außerhalb der Einträge 9 und 10 und bleibt deshalb stehen; die Leitstelle kann sie beim Zusammenführen anpassen.

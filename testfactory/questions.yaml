@@ -277,23 +277,75 @@
       "id": 9,
       "question": "Welche Nutzlast hat der UR5e?",
       "kind": "fact",
-      "status": "pending",
-      "expected_answer": null,
-      "key_facts": [],
-      "sources": [],
-      "verified_on": null,
-      "notes": "Filled in by work order 112."
+      "status": "verified",
+      "expected_answer": "Der UR5e hat eine maximale Nutzlast von 5 kg (11 lb). Wie viel er tatsächlich tragen darf, hängt vom Schwerpunktversatz der Nutzlast zur Mitte des Werkzeugflanschs ab; das Handbuch zeigt dazu eine Kennlinie. Zur Nutzlast zählen Greifer und Werkstück zusammen.",
+      "key_facts": [
+        "5 kg"
+      ],
+      "sources": [
+        {
+          "manifest_id": "ur5e-user-manual-de",
+          "locator": "PDF-S. 16 (gedr. S. 19), Kap. 3.1 Technische Spezifikationen UR5e, Zeile Maximale Nutzlast",
+          "supports": "The maximum payload of the UR5e is 5 kg / 11 lb."
+        },
+        {
+          "manifest_id": "ur5e-user-manual-de",
+          "locator": "PDF-S. 101 (gedr. S. 104), Kap. 9.1 Maximale Nutzlast",
+          "supports": "The rated payload depends on the offset of the payload's centre of gravity from the centre of the tool flange; gripper and workpiece both count as payload."
+        },
+        {
+          "manifest_id": "ur5e-user-manual-de",
+          "locator": "PDF-S. 102 (gedr. S. 105), Kap. 9.1 Maximale Nutzlast, Diagramm Nutzlast über Schwerpunktversatz",
+          "supports": "Diagram of the rated payload in kg over the centre-of-gravity offset in mm; it gives no tabulated values."
+        }
+      ],
+      "verified_on": "2026-11-21",
+      "notes": "Only one value is stated without a condition (5 kg in the technical specifications); the lower payloads at larger offsets are only drawn as a curve and are therefore not key facts. The manual names 5.25.1 as its software version on PDF-S. 266 (version page); its title page names only PolyScope 5. The software handbook and the service manual name no other payload for the UR5e (text search for payload values in kg); the declaration of conformity (PDF-S. 241, gedr. S. 244) only mentions the 12.5 kg upgrade of the UR10e."
     },
     {
       "id": 10,
       "question": "Wie wird der UR5e nach einem Schutzstopp wieder freigegeben?",
       "kind": "fact",
-      "status": "pending",
-      "expected_answer": null,
-      "key_facts": [],
-      "sources": [],
-      "verified_on": null,
-      "notes": "Filled in by work order 112."
+      "status": "verified",
+      "expected_answer": "Der Schutzstopp (SF2, Stoppkategorie 2) kommt von einer externen Schutzeinrichtung am Sicherheitseingang; der Antrieb bleibt an. Mit konfiguriertem Schutz-Reset gibt erst eine steigende Flanke (LOW auf HIGH) am Reset-Eingang den Roboter frei, etwa per zweikanaliger Reset-Taste außerhalb der Schutzzone. Ohne Reset geht es automatisch weiter, sobald die Schutzeinrichtung nicht mehr auslöst.",
+      "key_facts": [
+        "Schutz-Reset",
+        "steigende Flanke"
+      ],
+      "sources": [
+        {
+          "manifest_id": "ur5e-user-manual-de",
+          "locator": "PDF-S. 86 (gedr. S. 89), Kap. 8.6.1 Sicherheits-E/A-Signale, Tabelle Controller-Eingänge, Zeilen Zurücksetzen der Schutzeinrichtung und Schutzstopp",
+          "supports": "The safeguard stop is triggered by a safety input and performs a stop of category 2; a rising edge on the safeguard reset input returns the robot from the safeguard stop state, which is held until then."
+        },
+        {
+          "manifest_id": "ur5e-user-manual-de",
+          "locator": "PDF-S. 86 (gedr. S. 89), Kap. 8.6.1, erste Warnung unter der Tabelle",
+          "supports": "With the default safeguard reset disabled, the reset happens automatically as soon as the safeguard no longer triggers; the external reset is to be used where people could be exposed to hazards."
+        },
+        {
+          "manifest_id": "ur5e-user-manual-de",
+          "locator": "PDF-S. 84 (gedr. S. 87), Kap. 8.6, Abschnitt Schutzstopp mit Reset-Taste",
+          "supports": "With a light curtain, the reset must be made from outside the safety zone with a two-channel reset button on configurable inputs."
+        },
+        {
+          "manifest_id": "ur5e-user-manual-de",
+          "locator": "PDF-S. 81 (gedr. S. 84), Kap. 8.6 Sicherheits-E/A, Tabelle Not-Halt, Schutzstopp, 3PE Stop",
+          "supports": "During a safeguard stop the drive power stays on, the program pauses, reset is automatic or manual and no new initialisation is needed."
+        },
+        {
+          "manifest_id": "ur5e-user-manual-de",
+          "locator": "PDF-S. 252 (gedr. S. 255), Kap. 21 Tabellen zu Sicherheitsfunktionen, Zeile Schutzstopp-Reset",
+          "supports": "With the safeguard reset configured, a change of the external connections from LOW to HIGH resets the safeguard stop SF2."
+        },
+        {
+          "manifest_id": "ur5e-software-handbook-en",
+          "locator": "PDF-S. 46 (gedr. S. 46), Kap. 2.7 Safety I/O, Tabelle Control Box Inputs, Zeilen Safeguard Reset und Safeguard Stop, Warnung darunter",
+          "supports": "English source only: same statements on the Safeguard Reset input and on the automatic reset when the default reset is disabled; the title page names SW 5.25.1."
+        }
+      ],
+      "verified_on": "2026-11-21",
+      "notes": "Terminology: the German user manual uses Schutzstopp for the safeguard stop SF2 (English Safeguard Stop, software handbook PDF-S. 46). The English term protective stop means another stop, raised by the robot itself, e.g. on a collision or a limit; it is now called Robot Stop (Roboterstopp; user manual PDF-S. 230, gedr. S. 233; software handbook PDF-S. 227). For that stop the service manual (PDF-S. 118, gedr. S. 112, Kap. 7.6.1) requires checking the cause and a deliberate action by a user before resuming. It is not used as evidence here. The emergency stop section of the user manual (PDF-S. 206, gedr. S. 209) also speaks of a Schutzstopp-Schalter but means the emergency stop button; not used."
     },
     {
       "id": 11,

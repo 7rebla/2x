@@ -1,4 +1,4 @@
-"""Checks of the test questions with expected answers (work order 111).
+"""Checks of the test questions with expected answers (work orders 111, 112).
 
 ``testfactory/questions.yaml`` holds the eleven test questions of section 11
 of the project brief, the expected answers and their evidence. The file is
@@ -41,7 +41,10 @@ QUESTIONS = [
 
 NO_EVIDENCE_ANSWER = "Dazu finde ich nichts in den Unterlagen"
 KINDS_BY_ID = {6: "contradiction", 11: "no-evidence"}
-PENDING_ALLOWED = {9, 10}
+# Questions on the robot cell; their evidence lies in the UR documents
+# (work order 112).
+ROBOT_QUESTION_IDS = {9, 10}
+ROBOT_DEVICE = "ur5e"
 MAX_ANSWER_LENGTH = 400
 
 FILE_FIELDS = {"schema_version", "manifest", "notes", "questions", "candidates"}
@@ -58,7 +61,8 @@ ITEM_FIELDS = {
 }
 SOURCE_FIELDS = {"manifest_id", "locator", "supports"}
 KINDS = {"fact", "contradiction", "no-evidence"}
-STATUSES = {"verified", "pending"}
+# Since work order 112 every question has its evidence; pending is gone.
+STATUSES = {"verified"}
 # Field names that would hold text copied from a source. None is allowed.
 QUOTE_FIELD = re.compile(r"quot|zitat|excerpt|auszug|verbatim|citation_text", re.I)
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -152,22 +156,26 @@ class QuestionTest(unittest.TestCase):
                 expected = KINDS_BY_ID.get(question["id"], "fact")
                 self.assertEqual(question["kind"], expected)
 
-    def test_pending_only_for_nine_and_ten(self) -> None:
+    def test_every_question_is_verified(self) -> None:
         for question in _questions():
             with self.subTest(question=_label(question)):
                 self.assertIn(question["status"], STATUSES)
-                if question["status"] == "pending":
-                    self.assertIn(question["id"], PENDING_ALLOWED)
 
-    def test_pending_questions_are_empty(self) -> None:
+    def test_no_pending_anywhere_in_the_file(self) -> None:
+        self.assertNotIn("pending", _raw())
+
+    def test_robot_questions_cite_a_ur_document(self) -> None:
+        manifest = manifest_tools.load_manifest(MANIFEST_PATH)
+        robot_entries = {
+            entry.id for entry in manifest.entries if ROBOT_DEVICE in entry.assigned_to
+        }
+        self.assertTrue(robot_entries, "the manifest has no UR entries")
         for question in _questions():
-            if question["status"] != "pending":
+            if question["id"] not in ROBOT_QUESTION_IDS:
                 continue
             with self.subTest(question=_label(question)):
-                self.assertIsNone(question["expected_answer"])
-                self.assertEqual(question["key_facts"], [])
-                self.assertEqual(question["sources"], [])
-                self.assertIsNone(question["verified_on"])
+                cited = {source["manifest_id"] for source in question["sources"]}
+                self.assertTrue(cited & robot_entries, "no source is a UR document")
 
     def test_verified_questions_have_sources(self) -> None:
         for question in _questions():
