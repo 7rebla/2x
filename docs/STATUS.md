@@ -103,11 +103,11 @@ Nichts davon hält die laufende Arbeit auf.
 | 018 | Oberfläche zweisprachig | C | 1 | erledigt |
 | 019 | Datenmodell Standort, Bereich, Anlage, Gerät | C | 1 | erledigt |
 | 020 | Anmeldung mit django-allauth, Ratenbegrenzung | C | 2 | in Arbeit |
-| 021 | Rollen, Konto-Endpunkt, Befehl create_account | C | 2 | in Arbeit |
+| 021 | Rollen, Konto-Endpunkt, Befehl create_account | C | 2 | erledigt |
 | 022 | Dateispeicher nach Prüfsumme | C | 2 | erledigt |
 | 023 | Oberfläche: Routing, Rahmen, Datenabruf | C | 3 | in Arbeit |
 | 024 | Datenmodell Dateien und Versionen | C | 3 | in Arbeit |
-| 025 | API-Rechte: Standard nur mit Rolle | C | 3 | offen |
+| 025 | API-Rechte: Standard nur mit Rolle | C | 3 | in Arbeit |
 | 026 | API und Admin für die Struktur | C | 4 | offen |
 | 027 | Testkonto in CI, Selbsttest nur für Angemeldete | C | 4 | offen |
 | 028 | Protokoll (Backend) | C | 5 | offen |
@@ -127,3 +127,4 @@ Hinweise aus Welle 1:
 - 016: Die Upload-Grenze „200 MB“ ist dezimal umgesetzt (200 000 000 Byte, einstellbar über `TWOX_UPLOAD_MAX_BYTES`); Entscheidung der Leitstelle, kein Widerspruch zu E-42.
 - 016: Bis Auftrag 030 meldet man sich am Admin über dessen eigenes Formular an (ohne Ratenbegrenzung); 030 soll prüfen, dass `/admin/login/` danach keine Sitzung mehr ohne Ratenbegrenzung vergibt.
 - 022: Temporäre Upload-Dateien (`<TWOX_MEDIA_ROOT>/tmp/upload-*.part`) bleiben nach einem harten Prozessabbruch (SIGKILL, OOM) liegen. Für 029 vorgemerkt: alte `.part`-Dateien beim Start oder regelmäßig entfernen, sonst in der Doku (038) als Grenze nennen.
+- 021: Für 027 vorgemerkt: Das Testkennwort für `create_account` nur als Variablenname durchreichen (`-e TWOX_ACCOUNT_PASSWORD`), nicht als Wert in den Argumenten von `docker compose`.
