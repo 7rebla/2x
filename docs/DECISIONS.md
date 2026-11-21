@@ -144,3 +144,5 @@ Jede neue Abhängigkeit bekommt hier einen Eintrag (Leitplanke 7). Bevorzugt: MI
 | pathspec 1.1.1 (mitgezogen von mypy) | MPL-2.0 | nur Entwicklung | 001 | benannte Ausnahme nach E-23 |
 | typing_extensions 4.16.0 (mitgezogen von mypy und django-stubs) | PSF-2.0 | nur Entwicklung | 001 | nach E-23 |
 | Image `pgvector/pgvector:0.8.7-pg18` (PostgreSQL 18.7 mit pgvector 0.8.7) | PostgreSQL-Lizenz | Datenbank | 001 | nach E-23 |
+| Image `python:3.14.10-slim-trixie` (per Digest festgelegt) als Laufzeit der Testfabrik-Skripte; Debian-Grundsystem mit 87 Paketen, darunter GPL- und LGPL-Programme | Python: PSF-2.0; Grundsystem gemischt | unveränderte Laufzeit, nicht eingebunden | 101 | nach E-23 |
+| mypy 2.4.1 mit mypy_extensions, librt, ast-serialize (MIT), typing_extensions (PSF-2.0), pathspec (MPL-2.0) im Prüf-Image der Testfabrik | wie genannt | Typprüfung der Testfabrik-Skripte (zweiter Einbauort, dieselben Versionen wie in 001) | 101 | nach E-23 |

@@ -1,6 +1,6 @@
 # Auftrag 101 – Manifest-Format und Werkzeug-Container der Testfabrik
 
-Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: T1 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 

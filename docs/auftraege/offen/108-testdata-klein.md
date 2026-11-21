@@ -45,6 +45,8 @@ In den Befehlen steht `TF` für `docker compose -f deploy/compose/testfactory.ya
 
 ## Vorgaben und Hinweise
 
+**Nachtrag der Leitstelle (21.11.2026, aus der Prüfung von Auftrag 101):** `repository` immer als volle `https://github.com/...`-Adresse. Ziele (`target`) nicht ineinander verschachteln; Archive bekommen getrennte Unterordner. `size_bytes` bei `kind: reference` und `file`+`manual` ohne `url` lässt das Werkzeug erst nach Auftrag 104 zu – ist 104 noch nicht zusammengeführt, die Größe vorerst in `notes` führen und das im Kurzbericht nennen. Vor dem Commit die Datei in die kanonische Form bringen (`load_manifest`/`write_manifest` im Dienst `fetch`, nach Auftrag 104 der dortige Unterbefehl) und `check` laufen lassen. Maßgebliche Quelle ist `docs/testfabrik/quellen-fertigungslinie.md` bzw. die Quellen-Datei aus Auftrag 103.
+
 - Voraussetzung: Die Aufträge 101 und 103 sind zusammengeführt (Format mit `kind: local`; geprüfter Commit und Lizenzbefund der OPNsense-Doku). Läuft gleichzeitig mit 107, das andere Dateien schreibt.
 - Kein Push. Der Bearbeiter committet nur auf seinem Auftragszweig; die Leitstelle pusht auf a7s Freigabe (Vorgabe vom 21.11.2026, weicht von Abschnitt 8.2 Stufe A ab).
 - Fehlt Docker: nichts unter Windows installieren oder ausführen, Status „wartet auf a7“ mit dem Satz „Docker Desktop fehlt“.

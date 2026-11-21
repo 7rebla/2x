@@ -51,6 +51,8 @@ In den Befehlen steht `TF` für `docker compose -f deploy/compose/testfactory.ya
 
 ## Vorgaben und Hinweise
 
+**Nachtrag der Leitstelle (21.11.2026, aus der Prüfung von Auftrag 101):** `repository` immer als volle `https://github.com/...`-Adresse. Ziele (`target`) nicht ineinander verschachteln; Archive bekommen getrennte Unterordner. `size_bytes` bei `kind: reference` und `file`+`manual` ohne `url` lässt das Werkzeug erst nach Auftrag 104 zu – ist 104 noch nicht zusammengeführt, die Größe vorerst in `notes` führen und das im Kurzbericht nennen. Vor dem Commit die Datei in die kanonische Form bringen (`load_manifest`/`write_manifest` im Dienst `fetch`, nach Auftrag 104 der dortige Unterbefehl) und `check` laufen lassen. Maßgebliche Quelle ist `docs/testfabrik/quellen-fertigungslinie.md` bzw. die Quellen-Datei aus Auftrag 103.
+
 - Voraussetzung: Die Aufträge 101 und 102 sind zusammengeführt, und a7s Antworten zu den Fragen 2 bis 5 in Auftrag 102 liegen vor. Fehlt eine Antwort, gilt die dortige Empfehlung nur, wenn a7 die Liste ohne Änderung freigegeben hat; sonst Frage und Status „wartet auf a7“.
 - Kein Push. Der Bearbeiter committet nur auf seinem Auftragszweig; die Leitstelle pusht auf a7s Freigabe (Vorgabe vom 21.11.2026, weicht von Abschnitt 8.2 Stufe A ab).
 - Fehlt Docker: nichts unter Windows installieren oder ausführen, Status „wartet auf a7“ mit dem Satz „Docker Desktop fehlt“.

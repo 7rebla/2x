@@ -57,6 +57,8 @@ In den Befehlen steht `TF` für `docker compose -f deploy/compose/testfactory.ya
 
 ## Vorgaben und Hinweise
 
+**Nachtrag der Leitstelle (21.11.2026, aus der Prüfung von Auftrag 101):** Zusätzlich im Umfang, jeweils klein und mit Test, in `testfactory/manifest_tools.py`: (1) Vor dem Schreiben den aufgelösten Zielpfad gegen den aufgelösten `root` prüfen – kein symbolischer Link in der Kette, kein Ausbruch. (2) Das Ziel eines Eintrags darf nicht Präfix-Verzeichnis eines anderen Ziels sein (Prüfung auf Segmentgrenzen). (3) `tree_sha256` reicht nicht lesbare Unterverzeichnisse als Fehler weiter, statt sie zu überspringen. (4) `schema_version` nur als Ganzzahl (nicht 1.0, nicht "1"). (5) `size_bytes` auch bei `kind: reference` zulassen (README-Tabelle anpassen). (6) Bei `kind: file` mit `fetch: manual` ist `url` optional, dafür `landing_page` Pflicht. (7) Ein Unterbefehl, der eine Manifest-Datei in die kanonische Form bringt (lesen und unverändert zurückschreiben), mit Aufruf in der README. Der Dienst `fetch` schreibt als root in das eingebundene Repository – in der README vermerken.
+
 - Voraussetzung: Auftrag 101 ist zusammengeführt. Läuft gleichzeitig mit 105 und 106; `testfactory/manifest.yaml` wird hier nicht geändert.
 - Kein Push. Der Bearbeiter committet nur auf seinem Auftragszweig; die Leitstelle pusht auf a7s Freigabe (Vorgabe vom 21.11.2026, weicht von Abschnitt 8.2 Stufe A ab).
 - Fehlt Docker: nichts unter Windows installieren oder ausführen, Status „wartet auf a7“ mit dem Satz „Docker Desktop fehlt“.
