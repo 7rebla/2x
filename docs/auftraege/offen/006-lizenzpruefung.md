@@ -43,6 +43,8 @@ Eine automatische Prüfung stellt sicher, dass jede direkte und jede mitgezogene
 
 ## Vorgaben und Hinweise
 
+**Nachtrag der Leitstelle (21.11.2026, aus der Prüfung von Auftrag 001):** (1) `pip-licenses` blendet in der Voreinstellung sich selbst, prettytable und wcwidth aus; das Prüfskript ruft es deshalb mit `--with-system` auf (Schalter an der Paketdoku prüfen). tzdata und colorama stehen nur wegen Windows-Markern in `uv.lock` und sind im Container nicht installiert – im Kurzbericht vermerken. (2) PSF-2.0 (typing_extensions, Python selbst) gehört nach E-23 in die Erlaubt-Liste. (3) Zusätzlicher Punkt im Umfang: Lizenzen der in psycopg-binary gebündelten Bibliotheken je Bibliothek an der Originalquelle belegen (libpq, OpenSSL 3, MIT Kerberos, OpenLDAP, Cyrus SASL, keyutils, libxcrypt, libcom_err) und als Entwurf für den psycopg-Eintrag im Entscheidungsprotokoll im Kurzbericht liefern. Findet sich dabei GPL, AGPL oder eine Nutzungsbeschränkung: Status „wartet auf a7" mit Optionen.
+
 **Nachtrag der Leitstelle (21.11.2026, aus der Prüfung von Auftrag 002):** Der Dienst `web-dev` liegt im Profil `dev`. Deshalb gilt abweichend vom Wortlaut dieses Auftrags: Bauen mit `build web-dev` oder `--profile dev build`; Abräumen mit `--profile dev down -v` (bei Playwright zusätzlich `--profile e2e`); den Dienst immer über `run --rm web-dev` ansprechen – ein bloßes `build`, `up` oder `down -v` ohne Profil tut nichts und meldet trotzdem Erfolg. `git check-ignore -q` nimmt nur einen Pfad je Aufruf. Zugelassene Lizenzen bei reinen Entwicklungs- und Build-Paketen zusätzlich: BlueOak-1.0.0, CC-BY-3.0, CC-BY-4.0, CC0-1.0 (E-25).
 
 - **Voraussetzung:** Die Aufträge 001 und 002 sind zusammengeführt.

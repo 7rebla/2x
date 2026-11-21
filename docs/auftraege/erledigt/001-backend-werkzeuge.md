@@ -1,6 +1,6 @@
 # Auftrag 001 – Backend: Werkzeuge und Container
 
-Meilenstein: M0 · Freigabestufe: C · Status: wartet auf a7 (Frage 5: Lizenz PSF-2.0 von typing_extensions; alle Akzeptanzkriterien sind erfüllt)
+Meilenstein: M0 · Freigabestufe: C · Status: erledigt (Frage 5: PSF-2.0 ist durch E-23 gedeckt)
 
 ## Ziel
 

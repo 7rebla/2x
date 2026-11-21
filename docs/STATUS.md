@@ -11,12 +11,12 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 | Nr. | Auftrag | Stufe | Welle | Hängt ab von | Status |
 | --- | --- | --- | --- | --- | --- |
-| 001 | Backend: Werkzeuge und Container | C | 1 | – | zur Prüfung |
+| 001 | Backend: Werkzeuge und Container | C | 1 | – | erledigt |
 | 002 | Oberfläche als Grundgerüst | C | 1 | – | erledigt |
 | 003 | Suche nach Geheimnissen | C | 1 | – | erledigt (CI grün) |
 | 004 | Messung Dateizugriff | B | 2 | 001, 002 | offen |
-| 005 | API-Grundlage | C | 3 | 001 | offen |
-| 006 | Lizenzprüfung | C | 3 | 001, 002 | offen |
+| 005 | API-Grundlage | C | 3 | 001 | in Arbeit |
+| 006 | Lizenzprüfung | C | 3 | 001, 002 | in Arbeit |
 | 007 | Prüfung der Erreichbarkeit von Ollama | B | 3 | 001 | offen |
 | 008 | Celery-Worker mit Valkey | C | 4 | 005 | offen |
 | 009 | docling-serve als Container | C | 5 | 008 | offen |
@@ -48,7 +48,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 ## In Arbeit
 
-- 001, 002, 101 als Subagenten; 102, 103 als eigene Sitzungen (gestartet am 21.11.2026).
+- 005, 006, 101 als Subagenten; 102, 103 als eigene Sitzungen (gestartet am 21.11.2026).
 
 ## Wartet auf a7
 

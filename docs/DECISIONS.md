@@ -135,3 +135,12 @@ Jede neue Abhängigkeit bekommt hier einen Eintrag (Leitplanke 7). Bevorzugt: MI
 | license-checker-rseidelsohn 5.0.1 | BSD-3-Clause | Lizenzliste der npm-Pakete (Entwicklung) | 002 | nach E-23 |
 | Mitgezogene Entwicklungspakete der Oberfläche (über jsdom, @tailwindcss/node, license-checker, ESLint): ISC, 0BSD, BlueOak-1.0.0, CC-BY-3.0, CC-BY-4.0, CC0-1.0 | wie genannt | nur Entwicklung und Build, nicht im ausgelieferten Code | 002 | E-23 und E-25 |
 | Image `node:24-slim` (nur per Tag festgelegt) | Node.js: MIT; Lizenzen des Debian-Grundsystems im Image ungeprüft | Build- und Testumgebung der Oberfläche, nicht im Betrieb | 002 | nach E-23 |
+| Python 3.14 (Image `python:3.14.10-slim`, per Tag festgelegt) | PSF-2.0; Lizenzen des Debian-Grundsystems im Image ungeprüft | Laufzeit und Basis-Image des Backends | 001 | nach E-23 |
+| Django 6.1.3 (mit asgiref, sqlparse) | BSD-3-Clause | Web-Framework | 001 | nach E-23 |
+| psycopg 3.3.9, psycopg-binary 3.3.9 | LGPL-3.0-only; Lizenzen der gebündelten Bibliotheken noch nicht belegt (Auftrag 006) | PostgreSQL-Treiber, unverändert eingebunden | 001 | benannte Ausnahme nach Leitplanke 7 und E-23 |
+| uv 0.13.9 (Image `ghcr.io/astral-sh/uv`) | MIT OR Apache-2.0 | Paket- und Umgebungsverwaltung | 001 | nach E-23 |
+| ruff 0.17.6, mypy 2.4.1, django-stubs 6.1.2, pytest 9.2.0, pip-licenses 5.5.5 | MIT | Lint, Typprüfung, Tests, Lizenzliste (Entwicklung) | 001 | nach E-23 |
+| pytest-django 4.14.0 | BSD-3-Clause | Django-Anbindung für pytest (Entwicklung) | 001 | nach E-23 |
+| pathspec 1.1.1 (mitgezogen von mypy) | MPL-2.0 | nur Entwicklung | 001 | benannte Ausnahme nach E-23 |
+| typing_extensions 4.16.0 (mitgezogen von mypy und django-stubs) | PSF-2.0 | nur Entwicklung | 001 | nach E-23 |
+| Image `pgvector/pgvector:0.8.7-pg18` (PostgreSQL 18.7 mit pgvector 0.8.7) | PostgreSQL-Lizenz | Datenbank | 001 | nach E-23 |
