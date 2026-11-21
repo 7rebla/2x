@@ -29,7 +29,7 @@ import (work order 031) uses it as well.
 """
 
 import json
-from collections.abc import Awaitable, Callable, MutableMapping
+from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
 
 from django.conf import settings
@@ -47,8 +47,9 @@ from rest_framework.views import APIView
 #: with the file limit.
 MULTIPART_OVERHEAD_BYTES = 64 * 1024
 
-type Scope = MutableMapping[str, Any]
-type Message = MutableMapping[str, Any]
+# As Django's ASGI handler declares them (django-stubs).
+type Scope = dict[str, Any]
+type Message = Mapping[str, Any]
 type Receive = Callable[[], Awaitable[Message]]
 type Send = Callable[[Message], Awaitable[None]]
 type ASGIApp = Callable[[Scope, Receive, Send], Awaitable[None]]
@@ -82,7 +83,7 @@ class UploadTooLarge(APIException):
         super().__init__(detail=too_large_message(), code=self.default_code)
 
 
-def declared_content_length(meta: MutableMapping[str, Any]) -> int | None:
+def declared_content_length(meta: Mapping[str, Any]) -> int | None:
     """The ``CONTENT_LENGTH`` of a request as a number; ``None`` if absent or invalid."""
     raw = meta.get("CONTENT_LENGTH")
     if not raw:
