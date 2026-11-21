@@ -1,6 +1,6 @@
 # Auftrag 026 – API und Admin für Standorte, Bereiche, Anlagen, Geräte
 
-Meilenstein: M1 · Freigabestufe: C · Status: offen
+Meilenstein: M1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -83,7 +83,55 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
    - Empfehlung: (a). Die Startunterlage verlangt „anlegen, bearbeiten“; Löschen mit Protokoll und Rückfrage kann ein eigener Auftrag werden.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Was wurde gebaut?**
+
+- `twox/assets/serializers.py`:
+  - `SiteSerializer`, `AreaSerializer` (`site` als id), `PlantSerializer` (`area` als id).
+  - Geräte mit zwei Serializern: `DeviceWriteSerializer` für `POST`/`PUT`/`PATCH` (`plant` als id) und `DeviceSerializer` für jede Antwort, mit `plant` (`id`, `key`, `name`), `area` (`id`, `name`) und `site` (`id`, `name`). Im Schema heißen sie `DeviceWrite`, `PatchedDeviceWrite` und `Device`.
+  - Eindeutigkeit mit eigenen, per `gettext_lazy` markierten Meldungen am Feld: Standortname, Anlagen- und Gerätekennung (`UniqueValidator`). Bereichsname je Standort über `validate()` als Fehler am Feld `name`, nicht als allgemeiner `non_field_errors`-Fehler; gilt auch beim Umbenennen und Verschieben.
+  - Kennungsformat über `validate_key` aus 019. Die IP-Adresse wird geprüft (IPv4 und IPv6); `""` und `null` werden als „keine Adresse“ (`null`) gespeichert.
+- `twox/assets/views.py`: `StructureViewSet` (List, Retrieve, Create, Update; kein Destroy), Rechte `CanManageOrReadOnly`.
+  - Filter in `get_queryset` nur bei der Liste: `areas?site=`, `plants?area=`, `devices?plant=`, `devices?site=` (über `plant__area__site`); die Filter für Geräte lassen sich kombinieren.
+  - Ungültige Werte (`abc`, leer, `0`, negativ, über bigint) ergeben 400 mit Fehler am Parameter. Eine unbekannte id ergibt eine leere Liste.
+  - Geräteliste mit `select_related("plant__area__site")`. Nach einem Schreibzugriff wird das Gerät mit derselben Abfrage neu geladen und als `Device` beantwortet.
+  - Die Filter stehen mit `extend_schema` im Schema; die `operation_id`s erzeugt drf-spectacular (`sites_list` … `devices_partial_update`), ein Test hält sie fest.
+- `twox/assets/urls.py`: `SimpleRouter` (keine API-Wurzel, keine Format-Endungen) mit `sites`, `areas`, `plants`, `devices`.
+- `twox/assets/admin.py`: vier `ModelAdmin` mit Liste, Suche (Name, Kennung; beim Gerät auch die IP; beim Bereich auch der Standortname), Filtern nach den Eltern, `list_select_related`, Zeitstempel nur lesbar. Zugang nur für Superuser über die Admin-Seite aus 016. Löschen geht nur dort, `PROTECT` hält Eltern mit Kindern.
+- Tests in `backend/tests/assets/` (`conftest.py` mit kleiner Struktur aus zwei Standorten und den Clients je Rolle; IP-Adressen aus den Dokumentationsbereichen 192.0.2.0/24 und 2001:db8::/32):
+  - `test_api_permissions.py`: anonym und ohne Rolle 403 beim Lesen und Schreiben; `read` liest, `POST`/`PUT`/`PATCH` ergeben 403 und ändern nichts; `manage` und Superuser schreiben (201/200); `DELETE` ergibt 405 (für `read` 403) und löscht nichts; `OPTIONS` nennt kein `DELETE`.
+  - `test_api.py`: Antworten und Kette; Schreiben und Verschieben; Schreiben läuft über `save()` (`post_save` je Objekt, für 028); alle Filter und ungültige Filterwerte; Eindeutigkeit, Kennungsformat, Länge, IP, unbekannte Eltern, Pflichtfelder; Abfragezahl der Geräteliste mit 34 Geräten höchstens 4 (`django_assert_max_num_queries`); Schema mit `operation_id`s, Typen, Filtern, `DeviceWrite`/`Device` und ohne `delete`.
+  - `test_admin.py`: Registrierung; Liste, Anlegen und Ändern für Superuser; `anonymous`, ohne Rolle, `read` und `manage` landen bei `/admin/login/`; Suche nach Name, Kennung, IPv4 und IPv6; Filter nach Eltern; Löschen geschützt bzw. möglich.
+- `tests/config/expected_paths/assets.py`: die acht neuen Pfade. `tests/config/test_api.py` bleibt unverändert und ohne neue Ausnahme grün.
+- `web/openapi/schema.yml` und `web/src/api/generated/**` neu erzeugt.
+
+**Wie wurde getestet?** `D` = `docker compose -p twox-026`, `W` = `docker compose -p twox-026-web -f deploy/compose/compose.web.yaml`; `.env` aus `.env.example` mit `TWOX_API_PORT=18026`. Docker Engine 29.9.3, Compose v5.7.0.
+
+| AK | Ergebnis |
+| --- | --- |
+| 0 | erfüllt: `docker version` und `docker compose version` Exit 0 |
+| 1 | erfüllt: Bau Exit 0, `up -d --wait` Exit 0 (db, valkey, api, worker healthy); nach dem letzten Code-Stand neu gebaut und gestartet |
+| 2 | erfüllt: `All checks passed!`; `103 files already formatted`, Exit 0; `Success: no issues found in 103 source files` |
+| 3 | erfüllt: `705 passed, 4 deselected`, 0 fehlgeschlagen, 0 übersprungen; `pytest -m worker`: `4 passed` |
+| 4 | erfüllt: `No changes detected` (keine Migration) |
+| 5 | erfüllt: `spectacular` ohne Ausgabe, Exit 0; das Schema enthält `/api/v1/sites/`, `/api/v1/areas/`, `/api/v1/plants/`, `/api/v1/devices/` (dazu je `{id}/`); nach dem Commit erneut erzeugt, `git diff --exit-code -- web/openapi` ohne Unterschied |
+| 6 | erfüllt: Bau, `npm ci`, `api:generate` Exit 0, danach kein Unterschied in `web/openapi web/src/api` und keine neue Datei; `typecheck` und `lint` Exit 0 |
+| 7 | erfüllt: `D --profile dev --profile e2e down -v` und `W --profile dev down -v` Exit 0; danach keine Container und Volumes von `twox-026` |
+
+Zusätzlich wie in der CI: Lizenzprüfung Python `License check passed.` (58 Pakete); web-Job komplett: `test` 73 passed, `build` und `licenses` (`License check passed.`) Exit 0; e2e (`--profile e2e run --rm e2e`) `5 passed`. Am laufenden Dienst: `GET /api/v1/devices/` anonym 403, `/admin/assets/device/` anonym 302.
+
+Gegenprobe Abfragezahl: Mit `Device.objects.all()` statt `select_related` scheitert der Test („Expected to perform 4 queries or less but 106 were done“); danach zurückgesetzt.
+
+**Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-a7c37676d964be992`, Arbeitsverzeichnis `.claude/worktrees/agent-a7c37676d964be992`. Kein Push, nichts zusammengeführt.
+
+**Abweichungen und Hinweise**
+
+1. Geräte haben zwei Schema-Komponenten: Schreiben mit `DeviceWrite` (`plant` als id), Lesen mit `Device` (`plant`, `area`, `site` als Objekte). Ein Serializer für beides ginge nur mit `COMPONENT_SPLIT_REQUEST` in `settings.py`, das hier nicht geändert werden darf. Bereiche und Anlagen nennen ihre Eltern als id, wie im Auftrag verlangt.
+2. `admin.ModelAdmin[...]` ist zur Laufzeit nicht indizierbar (dafür bräuchte das Laufzeit-Image django-stubs-ext). Die Basisklassen werden daher unter `TYPE_CHECKING` typisiert.
+3. Fehler bei Filterwerten nutzen die Meldungen von DRF (bereits übersetzt). Eigene Meldungen gibt es nur bei der Eindeutigkeit; sie sind mit `gettext_lazy` markiert. Die Meldung zum Kennungsformat stammt aus dem Modell (019).
+4. Grenze: Legen zwei Anfragen gleichzeitig dieselbe Kennung an, greift erst die Datenbank-Constraint; die zweite Anfrage endet dann mit 500 statt 400. Bei einer Verwaltung durch wenige Personen ist das unwahrscheinlich; vorgemerkt für 038 (Doku) oder einen späteren Auftrag.
+5. Anlagen- und Gerätekennungen sind je Art eindeutig (Modell aus 019): Ein Gerät darf so heißen wie eine Anlage. Ein Test hält das fest.
+6. Für 027: Schema und Client sind neu erzeugt; 027 erzeugt beides nach dem Zusammenführen auf dem neuen `main` neu.
+7. Für 032: `""` und `null` als IP-Adresse speichern beide „keine Adresse“; die Antwort enthält dann `null`.
+
+Keine neue Abhängigkeit. `settings.py`, `tests/config/test_api.py`, `docs/DECISIONS.md` und `docs/STATUS.md` nicht geändert. Keine offenen Fragen an a7.
