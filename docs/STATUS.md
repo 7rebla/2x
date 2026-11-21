@@ -54,7 +54,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 Nichts davon hält die laufende Arbeit auf.
 
-1. **Freigabe für den ersten Push** nach `https://github.com/7rebla/2x` (öffentlich, E-19). Empfehlung: nach Welle 1, sobald die Geheimnissuche (003) zusammengeführt ist und der Verlauf sauber geprüft wurde. Erst nach einem Push lässt sich „CI ist grün" prüfen (003 Kriterium 8, 011 Kriterien 8 und 9, 014 Kriterium 12, 114 letztes Kriterium).
+1. ~~Freigabe für den Push~~ – entschieden mit E-26: `main` wird nach jedem geprüften Zusammenführen gepusht.
 2. **Durchsicht der Entscheidungen nach E-23** in `docs/DECISIONS.md`, vor allem die Lizenz-Ausnahmen (psycopg LGPL, pathspec und lightningcss MPL-2.0, pandoc GPL als Einmalwerkzeug) und das Zusammenführen von Stufe-C-Aufträgen ohne Einzelfreigabe.
 3. **Lizenzlage fischertechnik (Auftrag 102, Frage 1):** Beide Repositories haben keine Lizenz, die Zentralsteuerung ist ausdrücklich „UNLICENSED". Soll a7 beim Hersteller anfragen? Den Entwurf der Anfrage liefert Auftrag 102. Bis dahin gilt: laden ja, weitergeben nein.
 4. **URSim (Auftrag 103, Frage 3):** Die Nutzungsbedingungen erlauben nur eigene interne Nutzung. Anfrage bei Universal Robots vor T2? Arbeitsstand bis dahin: nur selbst erzeugte Dateien einchecken.
