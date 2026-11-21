@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
+from kombu import Exchange, Queue
 
 _TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
 _FALSE_VALUES = frozenset({"0", "false", "no", "off"})
@@ -103,6 +104,28 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "0.0.0",
     "SCHEMA_PATH_PREFIX": "/api/v1",
 }
+
+# Celery. Valkey speaks the Redis protocol; Celery has no valkey:// scheme, so
+# the addresses use redis://. Importing this module opens no connection.
+CELERY_BROKER_URL = env_str("TWOX_CELERY_BROKER_URL", "redis://valkey:6379/0")
+CELERY_RESULT_BACKEND = env_str("TWOX_CELERY_RESULT_BACKEND", "redis://valkey:6379/1")
+# JSON only: nothing that arrives through the broker is ever unpickled.
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_RESULT_ACCEPT_CONTENT = ["json"]
+# One queue per kind of work, so that each can be scaled on its own.
+# Each queue has its own exchange and routing key; a message for one queue
+# never reaches another.
+CELERY_TASK_QUEUES = tuple(
+    Queue(name, Exchange(name, type="direct"), routing_key=name)
+    for name in ("ingest", "embed", "default")
+)
+CELERY_TASK_DEFAULT_QUEUE = "default"
+# A misspelled queue name is an error, not a new queue that nobody consumes.
+CELERY_TASK_CREATE_MISSING_QUEUES = False
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_TIMEZONE = "UTC"
 
 LANGUAGE_CODE = "en"
 TIME_ZONE = "UTC"
