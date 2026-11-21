@@ -86,6 +86,12 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+    # Sign-in with local accounts through the headless API of django-allauth
+    # (E-38). OpenID Connect (allauth.socialaccount) and two-factor sign-in
+    # (allauth.mfa) follow after milestone M1.
+    "allauth",
+    "allauth.account",
+    "allauth.headless",
     "twox.assets",
     "twox.files",
     "twox.ingest",
@@ -108,6 +114,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Required by django-allauth; after the authentication middleware.
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "twox.config.urls"
@@ -144,6 +152,37 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Set before the first migration; changing it later is costly.
 AUTH_USER_MODEL = "accounts.User"
+
+# Django's own backend (the admin form until work order 030) and the one of
+# django-allauth.
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+# django-allauth (E-38). The web UI builds its own sign-in page and talks to
+# the headless API below /_allauth/browser/v1/ at the same origin: Django
+# session cookie and CSRF token, no token in the browser. allauth renders no
+# pages of its own.
+HEADLESS_ONLY = True
+HEADLESS_CLIENTS = ("browser",)
+# No HEADLESS_FRONTEND_URLS: allauth needs them only for links in emails
+# (verification, password reset, signup), and this installation sends none.
+ACCOUNT_LOGIN_METHODS = {"username"}
+# No self-registration and no email (see twox/accounts/adapter.py).
+ACCOUNT_ADAPTER = "twox.accounts.adapter.AccountAdapter"
+ACCOUNT_EMAIL_VERIFICATION = "none"
+# No "unknown account" email after a password reset request either (with
+# HEADLESS_ONLY it would also need a signup page of the web UI).
+ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS = False
+# The defaults of allauth 65.22.1, set explicitly (E-38): failed sign-ins 10
+# per minute per IP address and 5 per 5 minutes per account, sign-in attempts
+# 30 per minute per IP address. allauth counts in the default cache, that is
+# in Valkey, shared by all API processes.
+ACCOUNT_RATE_LIMITS = {
+    "login_failed": "10/m/ip,5/300s/key",
+    "login": "30/m/ip",
+}
 
 # Django's four standard validators; at least 12 characters, as there is no
 # second factor in milestone M1 (E-38).
@@ -271,6 +310,15 @@ TWOX_MEDIA_ROOT = env_absolute_path("TWOX_MEDIA_ROOT", "/data/media")
 # Upper limit for one upload in bytes; 200 MB (decimal, 200,000,000 bytes) by
 # default (E-42).
 TWOX_UPLOAD_MAX_BYTES = env_positive_int("TWOX_UPLOAD_MAX_BYTES", 200 * 1000 * 1000)
+
+# Messages of the project's own code (for example failed sign-ins) go to the
+# server log on stderr; Django's own logging stays as it is.
+LOGGING: dict[str, Any] = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "loggers": {"twox": {"handlers": ["console"], "level": "INFO"}},
+}
 
 # Defined here, used by later milestones.
 TWOX_LLM_BASE_URL = env_str("TWOX_LLM_BASE_URL", "http://host.docker.internal:11434/v1")

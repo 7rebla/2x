@@ -187,10 +187,28 @@ def test_settings_reject_relative_media_root(value: str) -> None:
         "django.contrib.sessions",
         "django.contrib.messages",
         "django.contrib.staticfiles",
+        "allauth",
+        "allauth.account",
+        "allauth.headless",
     ],
 )
 def test_django_app_is_installed(app_name: str) -> None:
     assert apps.is_installed(app_name)
+
+
+@pytest.mark.parametrize(
+    "app_name",
+    [
+        # OpenID Connect and two-factor sign-in follow after milestone M1.
+        "allauth.socialaccount",
+        "allauth.mfa",
+        "allauth.usersessions",
+        # Not needed by django-allauth 65.22.1.
+        "django.contrib.sites",
+    ],
+)
+def test_app_is_not_installed(app_name: str) -> None:
+    assert not apps.is_installed(app_name)
 
 
 def test_admin_uses_the_project_app_config() -> None:
@@ -208,6 +226,7 @@ def test_middleware_order_follows_the_django_documentation() -> None:
         "django.contrib.auth.middleware.AuthenticationMiddleware",
         "django.contrib.messages.middleware.MessageMiddleware",
         "django.middleware.clickjacking.XFrameOptionsMiddleware",
+        "allauth.account.middleware.AccountMiddleware",
     ]
 
 

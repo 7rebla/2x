@@ -1,6 +1,9 @@
 """Root URL configuration."""
 
+from typing import NoReturn
+
 from django.contrib import admin
+from django.http import Http404, HttpRequest
 from django.urls import URLPattern, URLResolver, include, path, re_path
 
 from twox.config.health import HealthView
@@ -17,8 +20,29 @@ RESERVED_PREFIXES = ("api", "static", "admin", "_allauth", "accounts")
 _RESERVED_ALTERNATIVES = "|".join(RESERVED_PREFIXES)
 WEB_UI_PATH = rf"^(?!(?:{_RESERVED_ALTERNATIVES})(?:/|$)).+$"
 
+# Endpoints of the allauth headless API (65.22.1) that milestone M1 does not
+# offer (E-38): changing one's own password, resetting it by email and
+# managing email addresses. They are matched before allauth and answer 404,
+# for both headless clients.
+CLOSED_ALLAUTH_PATH = (
+    r"^_allauth/(?:browser|app)/v1/"
+    r"(?:account/password/change|account/email|auth/password/request|auth/password/reset)$"
+)
+
+
+def closed_allauth_endpoint(request: HttpRequest) -> NoReturn:
+    """Answer 404 for an allauth endpoint that this installation does not offer."""
+    raise Http404
+
+
 urlpatterns: list[URLPattern | URLResolver] = [
     path("admin/", admin.site.urls),
+    re_path(CLOSED_ALLAUTH_PATH, closed_allauth_endpoint),
+    # django-allauth: the headless API for the web UI (sign-in, sign-out,
+    # session). accounts/ is where allauth expects its own URLs; with
+    # HEADLESS_ONLY and without OpenID Connect it registers none yet.
+    path("_allauth/", include("allauth.headless.urls")),
+    path("accounts/", include("allauth.urls")),
     path("api/v1/health/", HealthView.as_view(), name="health"),
     path("api/v1/selftest/", SelftestView.as_view(), name="selftest"),
     # One urls.py per app; each app adds its endpoints there.

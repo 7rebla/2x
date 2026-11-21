@@ -38,6 +38,9 @@ allow | 0BSD
 allow | PSF-2.0
 allow | Python-2.0
 
+# E-45: MIT without the attribution clause (cffi, pulled in by cryptography).
+allow | MIT-0
+
 # Named exceptions.
 except | psycopg | LGPL-3.0-only | PostgreSQL driver, used as an unmodified library | guardrail 7, E-23, table "Abhängigkeiten" (psycopg)
 except | psycopg-binary | LGPL-3.0-only | binary build of the PostgreSQL driver, used as an unmodified library | guardrail 7, E-23, table "Abhängigkeiten" (psycopg)
