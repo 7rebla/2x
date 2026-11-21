@@ -19,6 +19,7 @@ import tarfile
 import tempfile
 import threading
 import unittest
+import urllib.request
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any, cast
@@ -392,15 +393,95 @@ class FileTest(FetchTestCase):
         self.assertEqual({row[0] for row in self.rows(stdout).values()}, {"ok"})
         self.assertEqual(self.manifest_path.read_bytes(), before)
 
-    def test_record_refuses_a_size_that_contradicts_the_manifest(self) -> None:
-        url = self.serve("manual.bin", b"short")
-        self.write_manifest(file_entry("manual", url, None, size_bytes=1000))
-        before = self.manifest_path.read_bytes()
+    def test_record_replaces_an_advance_size_and_reports_the_difference(self) -> None:
+        """Before the first fetch, size_bytes is a figure from research."""
+        smaller = b"short"
+        larger = b"0123456789" * 50
+        by_hand = b"fetched by hand"
+        self.write_manifest(
+            file_entry("smaller", self.serve("smaller.bin", smaller), None, size_bytes=1000),
+            # Larger than announced: the advance figure must not cut the download.
+            file_entry("larger", self.serve("larger.bin", larger), None, size_bytes=10),
+            file_entry("exact", self.serve("exact.bin", smaller), None, size_bytes=len(smaller)),
+            file_entry("form", None, None, fetch="manual", size_bytes=3),
+        )
+        target = self.root / "vendor" / "form.bin"
+        target.parent.mkdir(parents=True)
+        target.write_bytes(by_hand)
         code, stdout, _ = self.run_fetch(Options(record=True))
-        self.assertEqual(code, 1)
-        self.assertEqual(self.rows(stdout)["manual"][0], "mismatch")
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            self.rows(stdout),
+            {
+                "smaller": ("recorded", "-", str(len(smaller))),
+                "larger": ("recorded", "-", str(len(larger))),
+                "exact": ("recorded", "-", str(len(smaller))),
+                "form": ("recorded", "-", str(len(by_hand))),
+            },
+        )
+        self.assertIn(
+            "smaller: recorded: SIZE DIFFERS: measured 5 bytes, the manifest said 1000", stdout
+        )
+        self.assertIn(
+            "larger: recorded: SIZE DIFFERS: measured 500 bytes, the manifest said 10", stdout
+        )
+        self.assertIn("form: recorded: SIZE DIFFERS: measured 15 bytes", stdout)
+        self.assertNotIn("exact: recorded:", stdout)
+        for entry_id, content in (("smaller", smaller), ("larger", larger), ("form", by_hand)):
+            self.assertEqual(self.entry(entry_id).size_bytes, len(content))
+            self.assertEqual(self.entry(entry_id).sha256, sha256_hex(content))
+        self.assertEqual((self.root / "vendor" / "larger.bin").read_bytes(), larger)
+        # Recorded values are binding from now on.
+        code, stdout, _ = self.run_fetch(Options(verify=True))
+        self.assertEqual(code, 0)
+        self.assertEqual({row[0] for row in self.rows(stdout).values()}, {"ok"})
+
+    def test_size_that_contradicts_a_recorded_checksum_is_an_error(self) -> None:
+        content = b"content"
+        self.write_manifest(
+            file_entry("auto", self.serve("auto.bin", content), content, size_bytes=99),
+            file_entry("form", None, content, fetch="manual", size_bytes=99),
+        )
+        vendor = self.root / "vendor"
+        vendor.mkdir(parents=True)
+        (vendor / "auto.bin").write_bytes(content)
+        (vendor / "form.bin").write_bytes(content)
+        before = self.manifest_path.read_bytes()
+        for options in (Options(verify=True), Options(), Options(record=True)):
+            with self.subTest(options=options):
+                code, stdout, _ = self.run_fetch(options)
+                self.assertEqual(code, 1)
+                self.assertEqual({row[0] for row in self.rows(stdout).values()}, {"mismatch"})
+                self.assertIn("manifest says 99", stdout)
         self.assertEqual(self.manifest_path.read_bytes(), before)
-        self.assertFalse((self.root / "vendor" / "manual.bin").exists())
+        self.assertEqual(self.server.requests, [])
+
+    def test_proxy_settings_of_the_environment_are_ignored(self) -> None:
+        content = b"content"
+        self.write_manifest(file_entry("manual", self.serve("manual.bin", content), content))
+        # Nothing listens on port 1: any use of the proxy would fail.
+        dead = "http://127.0.0.1:1"
+        names = ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy")
+        with mock.patch.dict(os.environ, {name: dead for name in names}):
+            os.environ.pop("NO_PROXY", None)
+            os.environ.pop("no_proxy", None)
+            # The standard library itself would use these settings ...
+            self.assertEqual(urllib.request.getproxies().get("http"), dead)
+            self.assertEqual(urllib.request.getproxies().get("https"), dead)
+            with self.assertRaises(OSError):
+                urllib.request.urlopen(f"{self.base}/manual.bin", timeout=5)
+            # ... the fetch script does not.
+            code, stdout, _ = self.run_fetch()
+            # Not in the type stubs, hence getattr.
+            handlers: list[object] = getattr(fetch._build_opener(), "handlers")
+        self.assertGreater(len(handlers), 0)
+        self.assertEqual(code, 0)
+        self.assertEqual(self.rows(stdout)["manual"][0], "loaded")
+        # Asked directly: a request through a proxy would carry the full address.
+        self.assertEqual(self.paths(), ["/manual.bin"])
+        self.assertFalse(
+            any(isinstance(handler, urllib.request.ProxyHandler) for handler in handlers)
+        )
 
     def test_verify_loads_nothing(self) -> None:
         good = b"good"
@@ -813,6 +894,29 @@ class ArchiveTest(FetchTestCase):
             "second top-level directory": [*good, member("other/evil.txt", b"evil")],
             "file beside the top-level directory": [*good, member("evil.txt", b"evil")],
             "backslash": [*good, member(f"{TOP}/..\\..\\evil.txt", b"evil")],
+            # On Windows a drive letter would lead out of the target.
+            "drive letter in a file name": [*good, member(f"{TOP}/C:/twox-test-evil.txt", b"evil")],
+            "drive-relative file name": [*good, member(f"{TOP}/C:twox-test-evil.txt", b"evil")],
+            "drive letter in a directory name": [
+                *good,
+                member(f"{TOP}/C:", kind=tarfile.DIRTYPE),
+            ],
+            "drive letter in a link name": [
+                *good,
+                member(f"{TOP}/C:/twox-test-evil.txt", kind=tarfile.SYMTYPE, linkname="evil"),
+            ],
+            "drive-relative link name": [
+                *good,
+                member(f"{TOP}/C:twox-test-evil.txt", kind=tarfile.SYMTYPE, linkname="evil"),
+            ],
+            "link name with parent directory": [
+                *good,
+                member(f"{TOP}/../../evil.txt", kind=tarfile.SYMTYPE, linkname="evil"),
+            ],
+            "absolute link name": [
+                *good,
+                member("/tmp/twox-test-evil.txt", kind=tarfile.SYMTYPE, linkname="evil"),
+            ],
             "hard link": [
                 *good,
                 member(f"{TOP}/link", kind=tarfile.LNKTYPE, linkname=f"{TOP}/README.md"),
@@ -847,6 +951,37 @@ class ArchiveTest(FetchTestCase):
                 self.assertEqual(sorted(path.name for path in self.tmp.iterdir()), ["served", "work"])
                 self.assertFalse(Path("/tmp/twox-test-evil.txt").exists())
                 self.assertEqual([path for path in self.root.rglob("*") if path.is_file()], [])
+
+    def test_member_names_follow_the_rule_for_targets(self) -> None:
+        for name in ("top/C:/x", "top/C:x", "C:/x", "top/a\\b", "top/../x", "/top/x", "top//x"):
+            with self.subTest(name=name):
+                self.assertIsNotNone(manifest_tools.relative_path_problem(name))
+                with self.assertRaises(fetch.FetchError):
+                    fetch._member_segments(name)
+        self.assertEqual(fetch._member_segments("top/docs/a b.txt"), ["top", "docs", "a b.txt"])
+
+    def test_member_path_must_resolve_below_the_destination(self) -> None:
+        """The second check, independent of the check of the names."""
+        destination = self.tmp / "tree"
+        (destination / "docs").mkdir(parents=True)
+        outside = self.tmp / "outside"
+        outside.mkdir()
+        self.assertEqual(
+            fetch._member_path(destination, ["docs", "a.txt"]), destination / "docs" / "a.txt"
+        )
+        # An absolute segment replaces everything before it, as a drive
+        # letter does on Windows.
+        escapes: list[list[str]] = [[str(outside / "x")], ["docs", str(outside / "x")], ["..", "x"], []]
+        try:
+            os.symlink(outside, destination / "way-out", target_is_directory=True)
+            escapes.append(["way-out", "x"])
+        except OSError:
+            pass
+        for segments in escapes:
+            with self.subTest(segments=segments):
+                with self.assertRaises(fetch.FetchError):
+                    fetch._member_path(destination, segments)
+        self.assertEqual(list(outside.iterdir()), [])
 
     def test_symbolic_link_becomes_a_small_file(self) -> None:
         members = [

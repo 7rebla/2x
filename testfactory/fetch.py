@@ -320,13 +320,31 @@ def archive_url(repository: str, commit: str) -> str:
 
 
 def _member_segments(name: str) -> list[str]:
-    """Split the name of an archive member; refuse anything but a clean relative path."""
-    if "\\" in name or any(ord(char) < 0x20 or ord(char) == 0x7F for char in name):
-        raise FetchError(f"archive member '{_clean(name)}': name is not allowed")
-    segments = name.split("/")
-    if any(segment in ("", ".", "..") for segment in segments):
-        raise FetchError(f"archive member '{_clean(name)}': path is not a clean relative path")
-    return segments
+    """Split the name of an archive member; refuse anything but a clean relative path.
+
+    The rule is the one for targets in the manifest: no backslash, no colon
+    (drive letters), no control characters, not absolute, no empty, ``.`` or
+    ``..`` segment.
+    """
+    problem = manifest_tools.relative_path_problem(name)
+    if problem is not None:
+        raise FetchError(f"archive member '{_clean(name)}': {problem}")
+    return name.split("/")
+
+
+def _member_path(destination: Path, segments: Sequence[str]) -> Path:
+    """Return the path of a member below ``destination``; refuse anything outside.
+
+    Second line of defence behind ``_member_segments``: the resolved path must
+    lie below the resolved ``destination``, whatever the platform makes of the
+    segments.
+    """
+    path = destination.joinpath(*segments)
+    resolved_destination = destination.resolve()
+    resolved = path.resolve()
+    if resolved == resolved_destination or not resolved.is_relative_to(resolved_destination):
+        raise FetchError(f"archive member '{_clean('/'.join(segments))}' leaves the target")
+    return path
 
 
 def extract_archive(
@@ -385,8 +403,12 @@ def extract_archive(
                     total += len(content)
                     if total > max_bytes:
                         raise FetchError(f"archive content exceeds {max_bytes} bytes")
-                    path = destination.joinpath(*segments[1:])
+                    # Checked before anything is created and again afterwards.
+                    path = _member_path(destination, segments[1:])
                     path.parent.mkdir(parents=True, exist_ok=True)
+                    path = _member_path(destination, segments[1:])
+                    if path.is_symlink():
+                        raise FetchError(f"archive member '{_clean(name)}' would replace a link")
                     path.write_bytes(content)
                 else:
                     raise FetchError(
@@ -495,9 +517,14 @@ def _load(
                 url,
                 staged,
                 settings=settings,
-                expected_size=entry.size_bytes,
+                # Without a checksum the size in the manifest is only an
+                # advance figure from research and must not cut the download.
+                expected_size=None if expected is None else entry.size_bytes,
                 allow_insecure_loopback=allow_insecure_loopback,
             )
+        if expected is None:
+            _install(staged, root, target_text, is_tree)
+            return _recorded(entry, measured, today)
         if entry.size_bytes is not None and measured.size_bytes != entry.size_bytes:
             return Outcome(
                 entry.id,
@@ -505,14 +532,6 @@ def _load(
                 size_bytes=measured.size_bytes,
                 detail=f"size is {measured.size_bytes} bytes, manifest says {entry.size_bytes}; "
                 "discarded",
-            )
-        if expected is None:
-            _install(staged, root, target_text, is_tree)
-            return Outcome(
-                entry.id,
-                RESULT_RECORDED,
-                size_bytes=measured.size_bytes,
-                updated_entry=_with_checksum(entry, measured, today),
             )
         if measured.sha256 != expected:
             return Outcome(
@@ -546,6 +565,28 @@ def _with_checksum(entry: Entry, measured: Download, today: str) -> Entry:
     )
 
 
+def _recorded(entry: Entry, measured: Download, today: str) -> Outcome:
+    """Outcome of --record: the measured values go into the manifest.
+
+    A size that was in the manifest before the first fetch is an advance
+    figure. If the measured size differs, the measured one is recorded and
+    the difference is reported, so that it can be looked into.
+    """
+    detail = ""
+    if entry.size_bytes is not None and entry.size_bytes != measured.size_bytes:
+        detail = (
+            f"SIZE DIFFERS: measured {measured.size_bytes} bytes, the manifest said "
+            f"{entry.size_bytes}; the measured size was recorded"
+        )
+    return Outcome(
+        entry.id,
+        RESULT_RECORDED,
+        size_bytes=measured.size_bytes,
+        detail=detail,
+        updated_entry=_with_checksum(entry, measured, today),
+    )
+
+
 def _mismatch(entry: Entry, present: Download, expected: str) -> Outcome:
     return Outcome(
         entry.id,
@@ -553,6 +594,21 @@ def _mismatch(entry: Entry, present: Download, expected: str) -> Outcome:
         size_bytes=present.size_bytes,
         detail=f"checksum is {present.sha256}, manifest says {expected}",
     )
+
+
+def _compare(entry: Entry, present: Download, expected: str) -> Outcome:
+    """Compare what is there with the manifest: checksum first, then size."""
+    if present.sha256 != expected:
+        return _mismatch(entry, present, expected)
+    if entry.size_bytes is not None and present.size_bytes != entry.size_bytes:
+        return Outcome(
+            entry.id,
+            RESULT_MISMATCH,
+            size_bytes=present.size_bytes,
+            detail=f"checksum matches, but size is {present.size_bytes} bytes and the "
+            f"manifest says {entry.size_bytes}",
+        )
+    return Outcome(entry.id, RESULT_OK, size_bytes=present.size_bytes)
 
 
 def _process(
@@ -580,9 +636,9 @@ def _process(
     if entry.kind == manifest_tools.KIND_LOCAL:
         if present is None:
             return Outcome(entry.id, RESULT_MISSING, detail=f"{target.as_posix()} does not exist")
-        if expected is None or present.sha256 != expected:
-            return _mismatch(entry, present, str(expected))
-        return Outcome(entry.id, RESULT_OK, size_bytes=present.size_bytes)
+        if expected is None:
+            return _mismatch(entry, present, "nothing")
+        return _compare(entry, present, expected)
 
     if entry.fetch == manifest_tools.FETCH_MANUAL:
         if present is None:
@@ -602,19 +658,13 @@ def _process(
                 )
             if options.dry_run:
                 return Outcome(entry.id, RESULT_WOULD_RECORD, size_bytes=present.size_bytes)
-            return Outcome(
-                entry.id,
-                RESULT_RECORDED,
-                size_bytes=present.size_bytes,
-                updated_entry=_with_checksum(entry, present, today),
-            )
-        if present.sha256 != expected:
-            return _mismatch(entry, present, expected)
-        return Outcome(entry.id, RESULT_OK, size_bytes=present.size_bytes)
+            return _recorded(entry, present, today)
+        return _compare(entry, present, expected)
 
     # fetch: auto
     if expected is not None and present is not None and present.sha256 == expected:
-        return Outcome(entry.id, RESULT_OK, size_bytes=present.size_bytes)
+        # Right content: ok, or a size in the manifest that contradicts it.
+        return _compare(entry, present, expected)
     if options.verify:
         if present is None:
             return Outcome(entry.id, RESULT_MISSING, detail=f"{target.as_posix()} does not exist")

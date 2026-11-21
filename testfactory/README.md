@@ -145,7 +145,7 @@ TF run --rm fetch python -m testfactory.fetch --record
 | (none) | Load every `auto` entry and verify it. A file or directory that is already there and has the right checksum is not loaded again, so a second run needs no network. |
 | `--only ID [ID ...]` | Handle only these entries. An unknown ID ends the run with exit code 2. |
 | `--verify` | Load nothing. Check what is there against the manifest. |
-| `--record` | For entries without checksum: load, compute `sha256` or `tree_sha256`, `size_bytes` and `retrieved_on`, and write them into the manifest. The same is done for material fetched by hand that is present. A checksum that is already in the manifest is never changed. Review the diff of the manifest before committing it: the recorded checksum is what the source delivered at that moment. Not together with `--verify`. |
+| `--record` | For entries without checksum: load, compute `sha256` or `tree_sha256`, `size_bytes` and `retrieved_on`, and write them into the manifest. The same is done for material fetched by hand that is present. A checksum that is already in the manifest is never changed. A `size_bytes` that an entry without checksum already has is an advance figure from research: the measured size replaces it, and a difference is reported as `SIZE DIFFERS` below the table (the material is kept; look into the difference). Review the diff of the manifest before committing it: the recorded checksum is what the source delivered at that moment. Not together with `--verify`. |
 | `--dry-run` | Only show what would be done. Loads nothing, writes nothing, exit code 0. |
 | `--strict` | Missing material that has to be fetched by hand leads to exit code 1. |
 | `--manifest PATH` | Manifest file. Default `testfactory/manifest.yaml`. |
@@ -179,7 +179,7 @@ every entry that needs one.
 | `would-load`, `would-record` | `--dry-run`: what a real run would do. | 0 |
 | `no-checksum` | `fetch: auto` without checksum. Nothing is loaded, because it could not be verified; use `--record` once. | 1 |
 | `missing` | `--verify`: not there. Also: a `local` file that does not exist. | 1 |
-| `mismatch` | The checksum (or the size) differs from the manifest. A download is discarded; a file that is already in place is left as it is. | 1 |
+| `mismatch` | The checksum differs from the manifest, or the checksum matches and `size_bytes` does not. A download is discarded; a file that is already in place is left as it is. | 1 |
 | `failed` | Could not be loaded or extracted: server error (with HTTP status), unreachable server, size limit, refused address, unsafe archive, unsafe target. | 1 |
 
 Exit code 0 means: every requested `auto` entry is present and its checksum
@@ -209,8 +209,11 @@ narrow:
   (`manifest_tools.checked_target_path`): no symbolic link in the chain, no
   way out of the root.
 - Archives: member names must be clean relative paths below the one
-  top-level directory; regular files and directories additionally pass the
-  `data` filter of the standard library. No link is ever created: a symbolic
+  top-level directory, by the same rule as `target` (no `..`, no backslash,
+  no `:` and therefore no drive letter). Regular files and directories
+  additionally pass the `data` filter of the standard library; the small
+  files that stand for links are checked against the resolved target
+  directory before they are written. No link is ever created: a symbolic
   link in a repository is stored as a small file containing the link target,
   which is exactly how `tree_sha256` counts links. Hard links, devices and
   pipes make the archive fail, as do too many members or too much content.
