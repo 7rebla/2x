@@ -14,6 +14,7 @@ export const texts = {
     apiUnreachable: "The API did not respond. Is the server running?",
     apiHttpError: (status: number): string =>
       `The API answered with HTTP status ${String(status)}.`,
+    apiInvalidAnswer: "The API sent an answer this page cannot read.",
     database: {
       heading: "Database",
       serverVersion: "Server version",

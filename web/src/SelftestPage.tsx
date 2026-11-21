@@ -61,6 +61,8 @@ function SelftestBody({ state }: { state: PageState }): ReactElement {
       return <ApiError message={texts.selftest.apiUnreachable} />;
     case "http-error":
       return <ApiError message={texts.selftest.apiHttpError(state.status)} />;
+    case "invalid-answer":
+      return <ApiError message={texts.selftest.apiInvalidAnswer} />;
     case "answered":
       return (
         <div className="space-y-4">

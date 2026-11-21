@@ -117,6 +117,29 @@ describe("self-test page", () => {
     );
   });
 
+  it("shows an error when the answer is not the expected JSON", async () => {
+    stubApi(
+      () =>
+        Promise.resolve(
+          new Response("<!doctype html><title>x</title>", {
+            status: 200,
+            headers: { "Content-Type": "text/html" },
+          }),
+        ),
+      () => Promise.resolve(jsonResponse({ detail: "unexpected" })),
+    );
+    render(<App />);
+
+    expect((await screen.findByTestId("selftest-error")).textContent).toBe(
+      texts.selftest.apiInvalidAnswer,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: texts.selftest.recheck }));
+
+    expect(await screen.findByRole("button", { name: texts.selftest.recheck })).toBeDefined();
+    expect(screen.getByTestId("selftest-error").textContent).toBe(texts.selftest.apiInvalidAnswer);
+  });
+
   it("fetches again when the user clicks the recheck button", async () => {
     const fetchMock = stubApi(
       () => Promise.reject(new TypeError("Failed to fetch")),

@@ -7,23 +7,44 @@ export const SELFTEST_TIMEOUT_MS = 15_000;
 export type SelftestOutcome =
   | { kind: "answered"; selftest: Selftest }
   | { kind: "unreachable" }
-  | { kind: "http-error"; status: number };
+  | { kind: "http-error"; status: number }
+  | { kind: "invalid-answer" };
 
 /**
  * Calls the self-test endpoint through the generated client.
  *
  * The URL is relative (`/api/v1/selftest/`): UI and API share one origin.
- * Network errors and timeouts become "unreachable"; any non-2xx answer becomes "http-error".
+ * Network errors and timeouts become "unreachable", any non-2xx answer becomes "http-error",
+ * and a 2xx answer that is not the expected JSON object becomes "invalid-answer"
+ * (for example an HTML page from a proxy or a dev server).
  */
 export async function loadSelftest(signal: AbortSignal): Promise<SelftestOutcome> {
   const result = await selftestRetrieve({
+    parseAs: "json",
     signal: AbortSignal.any([signal, AbortSignal.timeout(SELFTEST_TIMEOUT_MS)]),
   });
   if (result.response === undefined) {
     return { kind: "unreachable" };
   }
-  if (result.data === undefined || !result.response.ok) {
+  if (!result.response.ok) {
     return { kind: "http-error", status: result.response.status };
   }
+  if (!hasBothChecks(result.data)) {
+    return { kind: "invalid-answer" };
+  }
   return { kind: "answered", selftest: result.data };
+}
+
+/** Guards the page against answers that do not have the shape of the generated type. */
+function hasBothChecks(data: Selftest | undefined): data is Selftest {
+  const value: unknown = data;
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  return isObject(record.database) && isObject(record.worker);
+}
+
+function isObject(value: unknown): boolean {
+  return typeof value === "object" && value !== null;
 }
