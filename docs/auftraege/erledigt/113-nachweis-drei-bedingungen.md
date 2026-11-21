@@ -1,6 +1,6 @@
 # Auftrag 113 – Nachweis der drei Bedingungen je Anlage und Gerät
 
-Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: T1 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 

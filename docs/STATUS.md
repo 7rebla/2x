@@ -43,12 +43,12 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 110 | Stände und Nutzungsvermerke nachtragen | C | 5 | 109 | erledigt |
 | 111 | Prüffragen der Fertigungslinie mit Fundstelle | C | 5 | 109 | erledigt |
 | 112 | Prüffragen des Roboters (Fragen 9 und 10) | C | 6 | 110, 111 | erledigt |
-| 113 | Nachweis der drei Bedingungen je Anlage und Gerät | C | 6 | 106, 110 | in Arbeit |
+| 113 | Nachweis der drei Bedingungen je Anlage und Gerät | C | 6 | 106, 110 | erledigt |
 | 114 | Testfabrik-Prüfungen in CI und Werkzeugkette | B | 7 | 101, 112, 113, 011 | offen |
 
 ## In Arbeit
 
-- 004, 011 und 113 als Subagenten.
+- 004 und 011 als Subagenten.
 
 ## Wartet auf a7
 
@@ -89,3 +89,4 @@ Nichts davon hält die laufende Arbeit auf.
 - Siemens-Systemhandbuch V4.6 lädt a7 bei Gelegenheit selbst (E-27): Quelle und Ablage stehen im Kurzbericht von 109; danach `fetch --record --only siemens-s7-1200-system-manual-v4-6-de`.
 - Für M2 vorgemerkt (aus 009): Jede Anfrage an Docling muss `ocr_preset: "rapidocr"` mitschicken, sonst antwortet der Dienst mit 422 (E-31). Docling lädt seine Modelle erst bei der ersten Umwandlung; `healthy` heißt nur „Server läuft". `backend-dev` erreicht Docling absichtlich nicht.
 - Für M1 vorgemerkt (aus 013): Mit dem Django-Admin muss `AppDirectoriesFinder` wieder in `STATICFILES_FINDERS`.
+- Für die Abnahme T1 vorgemerkt (aus 113, `testfactory/layout/evidence.md`): 69 Nachweise, davon 37 erfüllt, 24 offen, 8 „folgt in T2". Zentral offen ist O-1: Keine fischertechnik-Unterlage nennt einen APS-Softwarestand, damit ist Bedingung 2 für die ganze Fertigungslinie offen. Auslegung des Bearbeiters: Bedingung 1 gilt über den Release-Stand APS 1.3.0 als erfüllt. Beides entscheidet a7 bei der Abnahme.
