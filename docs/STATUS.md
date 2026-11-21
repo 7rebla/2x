@@ -48,7 +48,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 ## In Arbeit
 
-- 009, 010 als Subagenten; 104 in Prüfung.
+- 009, 010 als Subagenten; 104 in Nacharbeit nach Sicherheitsprüfung (Symlink-Name mit Laufwerksbuchstabe).
 
 ## Wartet auf a7
 
