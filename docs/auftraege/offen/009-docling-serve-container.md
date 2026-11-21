@@ -1,6 +1,6 @@
 # Auftrag 009 – docling-serve als Container
 
-Meilenstein: M0 · Freigabestufe: C · Status: wartet auf a7
+Meilenstein: M0 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -74,7 +74,7 @@ Keine zum Start. Befunde aus der Prüfung „ohne Internet“, zur Telemetrie un
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
 
-**Status: wartet auf a7.** Alle Akzeptanzkriterien 0 bis 10 sind erfüllt (Läufe am 21.11.2026 im Container, letzter Durchlauf von leerem Zustand auf dem endgültigen Stand). Offen sind drei Fragen (siehe unten): zwei Modell-Lizenzen im Image und die Bestätigung der Maßnahme gegen die gefundene Telemetrie von ONNX Runtime.
+**Status: zur Prüfung.** Die drei Fragen hat a7 entschieden (E-30 bis E-32); die Nacharbeit steht im letzten Abschnitt „Nacharbeit nach Entscheidung“. Der Bericht bis dorthin beschreibt den Stand vor der Entscheidung. Geändert hat sich seither: Kriterium 2 und 3 laufen jetzt in `api`/`worker` statt in `backend-dev`, weil `backend-dev` nicht mehr am Netz von Docling hängt; außerdem gelten die OCR-Beschränkung und `DOCLING_SERVE_LOAD_MODELS_AT_BOOT=false`.
 
 ### Was wurde gebaut?
 
@@ -158,6 +158,13 @@ Keine Modelllizenz mit Nutzungsbeschränkung (nicht-kommerziell o. ä.) gefunden
 
 ### Fragen an a7
 
+**Entschieden am 21.11.2026 (Leitstelle):**
+- Frage 1: Option (a), E-30.
+- Frage 2: Option (a), E-31; die Regel ist im Dienst selbst durchgesetzt.
+- Frage 3: beide Maßnahmen, also Schalter und internes Netz, E-32.
+
+Die Umsetzung steht unter „Nacharbeit nach Entscheidung“.
+
 **Frage 1 – TableFormer unter CDLA-Permissive-2.0.**
 - (a) Als benannte Ausnahme zulassen, nur für das unverändert eingesetzte Image (wie ein Basis-Image). *Empfehlung:* Die Lizenz ist freizügig und ohne Einsatzbeschränkung, und ohne TableFormer gibt es keine Tabellenstruktur; Gerätelisten und Netzpläne sind oft Tabellen.
 - (b) Nicht zulassen. Dann bräuchte es ein eigenes Image ohne das Modell, und Tabellenstruktur fiele weg.
@@ -187,3 +194,44 @@ Keine Modelllizenz mit Nutzungsbeschränkung (nicht-kommerziell o. ä.) gefunden
 - Die Tests prüfen den Befehl nur gegen den Ersatzserver. Gegen den echten Dienst liefen die Kriterien 2, 3 und 5.
 - Lokal liegen noch: das Image `quay.io/docling-project/docling-serve-cpu` (7.57 GB) und die Images `twox-009-backend-dev`, `-api`, `-worker`, `-migrate`. Die lokale `.env` (ignoriert) hat `TWOX_API_PORT=18009`.
 - `docs/DECISIONS.md` und `docs/STATUS.md` sind nicht angefasst. Einträge fürs Entscheidungsprotokoll nach den Antworten auf die Fragen: Image docling-serve-cpu 1.38.2 (MIT, Tag und Digest wie oben), die Modell-Lizenzen aus der Tabelle, die Telemetrie-Schalter.
+
+### Nacharbeit nach Entscheidung (E-30 bis E-32)
+
+**Umgesetzt** (Commit „Isolate docling in an internal network and allow only RapidOCR (E-31, E-32)“), nur `deploy/compose/compose.yaml`:
+
+- **E-32, Netz.**
+  - Neues Netz `docling-internal` mit `internal: true`.
+  - `docling` hängt nur daran. `api` und `worker` hängen an `default` und an `docling-internal`.
+  - `db`, `valkey`, `migrate` und `backend-dev` bleiben nur an `default`.
+  - `ORT_DISABLE_TELEMETRY=1` bleibt.
+- **E-31, OCR.** Durchgesetzt im Dienst selbst, mit seinen eigenen Schaltern, ohne neue Abhängigkeit und ohne eigenen Code:
+  - `DOCLING_SERVE_ALLOWED_OCR_PRESETS=rapidocr` und `DOCLING_SERVE_ALLOWED_OCR_KINDS=rapidocr`
+  - `DOCLING_SERVE_DEFAULT_OCR_PRESET=rapidocr` und `DOCLING_SERVE_DEFAULT_OCR_KIND=rapidocr`
+
+  Jede andere Einstellung lehnt docling-serve mit HTTP 422 ab, auch `auto`. `auto` fällt laut Quelltext (`docling/models/stages/ocr/auto_ocr_model.py`) auf EasyOCR zurück, wenn RapidOCR eine Sprache ablehnt; deshalb ist auch `auto` gesperrt.
+  - **Folge für M2:** Jede Umwandlungsanfrage des Backends muss `ocr_preset: "rapidocr"` mitschicken. Ohne OCR-Angabe setzt docling-serve selbst `auto` ein, und die Anfrage scheitert mit 422. Eine Konstante im Backend habe ich nicht angelegt: Die Stelle, die Anfragen an Docling baut, gibt es noch nicht (M2). Der Vermerk steht in `compose.yaml`.
+- **Nebenwirkung: `DOCLING_SERVE_LOAD_MODELS_AT_BOOT=false`.**
+  - Das Vorwärmen beim Start wandelt mit der eingebauten Vorgabe `auto` um. Ist `auto` nicht erlaubt, bricht der Start ab (`ValueError: Unknown OCR preset: auto`, Neustart-Schleife, beobachtet).
+  - Ohne Vorwärmen laden die Modelle mit der ersten Umwandlung. `/ready` und damit `healthy` bedeutet jetzt „Server und Warteschlange laufen“, nicht mehr „Modelle geladen“.
+  - Die Wahl stand zwischen (a) `auto` erlauben und mit Vorwärmen starten, wobei der EasyOCR-Rückfall möglich bliebe, und (b) `auto` sperren und ohne Vorwärmen starten. Gewählt ist (b), weil E-31 „nie benutzt“ verlangt.
+- **`backend-dev` erreicht Docling nicht mehr.** Das ist gewollt: Nur `api` und `worker` hängen am Netz. `check_docling` deshalb so aufrufen: `D exec api python manage.py check_docling`. Die Tests von `check_docling` brauchen Docling nicht und laufen weiter in `backend-dev`.
+
+**Nachweise** (21.11.2026, `D` = `docker compose -p twox-009`, von leerem Zustand, Images neu gebaut):
+
+| Prüfung | Ergebnis | Tatsächliche Ausgabe (gekürzt) |
+| --- | --- | --- |
+| Netze | erfüllt | docling nur am Netz twox-009_docling-internal (internal=true); api und worker an twox-009_default und twox-009_docling-internal; db und valkey nur an twox-009_default |
+| (a) kein Weg nach außen aus `docling` | erfüllt | Python im Container: `resolve example.org / huggingface.co / mobile.events.data.microsoft.com -> FAILED gaierror [Errno -2] Name or service not known`; `connect 1.1.1.1 / 140.82.121.4 / 52.182.143.212 443 -> FAILED OSError [Errno 101] Network is unreachable`; `curl: (6) Could not resolve host: example.org`. Gegenprobe aus `api`: alle drei Namen lösen auf, alle drei Verbindungen `CONNECTED` |
+| (b) `api` und `worker` erreichen Docling | erfüllt | `D exec api python manage.py check_docling` und dasselbe in `worker`: `OK: docling-serve 1.38.2 at http://docling:5001`, Exit 0. Aus `backend-dev`: `FAILED: cannot resolve host 'docling' …`, Exit 1 (so gewollt) |
+| (c) `api` und `worker` erreichen Ollama | erfüllt | `check_llm` in beiden: `OK: http://host.docker.internal:11434/v1/models is reachable, 0 model(s) reported`, Exit 0 |
+| (d) `D up -d --build --wait --wait-timeout 900` | erfüllt | Exit 0 nach 20 s; `api`, `db`, `docling`, `valkey`, `worker` `(healthy)` |
+| (d) `pytest` | erfüllt | `78 passed, 3 deselected`, Exit 0 |
+| (d) `pytest -m worker` | erfüllt | `3 passed, 78 deselected`, Exit 0 |
+| (d) ruff, mypy | erfüllt | `All checks passed!`; `47 files already formatted`; `Success: no issues found in 47 source files` |
+| (d) Lizenzprüfung (`sh scripts/check-licenses.sh`) | erfüllt | `License check passed.`, Exit 0 |
+| (e) Healthcheck im internen Netz | erfüllt | `docling` `healthy` (die erste Probe in der Anlaufzeit scheiterte, danach bestanden) |
+| Kein Host-Port, festes Image | erfüllt | `PublishedPort 0` für 5001 und 8080; `…docling-serve-cpu:v1.38.2@sha256:7a480a16…dfb0` |
+| E-31 (Anfragen aus `api` an `http://docling:5001/v1/convert/source`, Test-PDF) | erfüllt | ohne OCR-Angabe: `HTTP 422 … ocr_preset 'auto' is not allowed. Allowed values: ['rapidocr']`; `ocr_preset=rapidocr` und `ocr_engine=rapidocr` (veraltete Schreibweise): `HTTP 200 success`; `ocr_engine=easyocr`, `ocr_preset=easyocr`, `auto`, `default`, `tesserocr`: jeweils `HTTP 422`; `ocr_preset=rapidocr` mit `ocr_lang=["ja"]`: Auftrag scheitert mit `RapidOCR … has no model for the OCR language 'ja'`, kein Rückfall auf EasyOCR |
+| Abräumen | erfüllt | `D down -v` und `D --profile dev down -v` Exit 0; keine Container, Volumes oder Netze des Projekts mehr. Das Projekt `2x` lief durchgehend weiter |
+
+**Zusammenführen:** `git merge-tree --write-tree main HEAD` endet konfliktfrei (Exit 0). Seit dem Abzweig hat `main` `compose.yaml` nicht geändert; die Änderungen aus 010 (`backend/twox/config/taskqueue.py`, `selftest.py`, `urls.py`) berühren keine Datei dieses Zweigs. Die Tests liefen auf diesem Zweig, nicht auf dem zusammengeführten Stand. `selftest.py` auf `main` erwähnt Docling nicht (gesucht nach „docling“); spätere Prüfungen von Docling müssen in `api` oder `worker` laufen.
