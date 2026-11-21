@@ -10,6 +10,8 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
+from unittest import mock
 
 from testfactory import manifest_tools
 from testfactory.manifest_tools import ManifestError
@@ -231,6 +233,7 @@ class InvalidManifestTest(ManifestTestCase):
         cases: list[tuple[dict[str, object], tuple[str | None, str]]] = [
             (without(file_entry(), "title"), ("vendor-manual-en", "title")),
             (without(file_entry(), "url"), ("vendor-manual-en", "url")),
+            (without(file_entry(), "fetch"), ("vendor-manual-en", "fetch")),
             (without(file_entry(), "target"), ("vendor-manual-en", "target")),
             (without(file_entry(), "terms"), ("vendor-manual-en", "terms")),
             (without(file_entry(), "kind"), ("vendor-manual-en", "kind")),
@@ -699,6 +702,228 @@ class TreeChecksumTest(ManifestTestCase):
         path = self.tmp / "file.bin"
         path.write_bytes(b"first\n")
         self.assertEqual(manifest_tools.file_sha256(path), sha256_hex(b"first\n"))
+
+
+class CheckedTargetPathTest(ManifestTestCase):
+    """Follow-up 1: the resolved target must stay below the resolved root."""
+
+    def symlink(self, target: Path | str, link: Path) -> None:
+        try:
+            os.symlink(target, link, target_is_directory=True)
+        except OSError as error:
+            self.skipTest(f"symbolic links are not available here: {error}")
+
+    def test_plain_target_is_returned(self) -> None:
+        root = self.tmp / "extern"
+        (root / "vendor").mkdir(parents=True)
+        self.assertEqual(
+            manifest_tools.checked_target_path(root, "vendor/manual.pdf"),
+            root / "vendor" / "manual.pdf",
+        )
+        # Nothing of the chain has to exist yet.
+        self.assertEqual(
+            manifest_tools.checked_target_path(self.tmp / "missing", "a/b/c.pdf"),
+            self.tmp / "missing" / "a" / "b" / "c.pdf",
+        )
+
+    def test_unclean_target_is_rejected(self) -> None:
+        for bad in ("../outside.pdf", "/etc/passwd", "a/../../b", "a\\b", ".", ""):
+            with self.subTest(target=bad):
+                with self.assertRaises(manifest_tools.UnsafePathError):
+                    manifest_tools.checked_target_path(self.tmp, bad)
+
+    def test_link_in_the_chain_is_rejected(self) -> None:
+        root = self.tmp / "extern"
+        root.mkdir()
+        outside = self.tmp / "outside"
+        outside.mkdir()
+        (root / "inside").mkdir()
+        self.symlink(outside, root / "escape")
+        # A link is rejected even if it points to a place below the root.
+        self.symlink(root / "inside", root / "alias")
+        for target in ("escape/manual.pdf", "escape", "alias/manual.pdf", "inside/../escape/x"):
+            with self.subTest(target=target):
+                with self.assertRaises(manifest_tools.UnsafePathError):
+                    manifest_tools.checked_target_path(root, target)
+        self.assertEqual(list(outside.iterdir()), [])
+
+    def test_link_as_target_is_rejected(self) -> None:
+        root = self.tmp / "extern"
+        root.mkdir()
+        (self.tmp / "secret.txt").write_bytes(b"secret")
+        try:
+            os.symlink(self.tmp / "secret.txt", root / "manual.pdf")
+            os.symlink(root / "nowhere", root / "dangling.pdf")
+        except OSError as error:
+            self.skipTest(f"symbolic links are not available here: {error}")
+        for target in ("manual.pdf", "dangling.pdf"):
+            with self.subTest(target=target):
+                with self.assertRaises(manifest_tools.UnsafePathError):
+                    manifest_tools.checked_target_path(root, target)
+
+    def test_root_itself_may_be_reached_through_a_link(self) -> None:
+        real = self.tmp / "real"
+        real.mkdir()
+        self.symlink(real, self.tmp / "extern")
+        self.assertEqual(
+            manifest_tools.checked_target_path(self.tmp / "extern", "manual.pdf"),
+            self.tmp / "extern" / "manual.pdf",
+        )
+
+    def test_root_path(self) -> None:
+        manifest = manifest_tools.parse_manifest(manifest_text(file_entry()))
+        self.assertEqual(
+            manifest_tools.root_path(Path("testfactory") / "manifest.yaml", manifest),
+            Path("testfactory") / "extern",
+        )
+
+
+class FollowUpValidationTest(ManifestTestCase):
+    def test_target_inside_another_target_is_rejected(self) -> None:
+        """Follow-up 2, in both orders of the entries."""
+        inner = file_entry(target="vendor/repository/docs/manual.pdf")
+        outer = git_archive_entry(target="vendor/repository")
+        for entries in ((inner, outer), (outer, inner)):
+            with self.subTest(first=entries[0]["id"]):
+                self.assertEqual(
+                    self.problems(manifest_text(*entries)), {("vendor-manual-en", "target")}
+                )
+
+    def test_targets_are_compared_by_segments(self) -> None:
+        manifest = manifest_tools.parse_manifest(
+            manifest_text(
+                git_archive_entry(target="vendor/repository"),
+                file_entry(target="vendor/repository-2/manual.pdf"),
+                file_entry(id="second-manual", target="vendor/repository.pdf"),
+                file_entry(id="third-manual", target="vendor/manual.pdf"),
+            )
+        )
+        self.assertEqual(len(manifest.entries), 4)
+
+    def test_schema_version_must_be_an_integer(self) -> None:
+        """Follow-up 4."""
+        for bad in ("1.0", '"1"', "true", "1e0", "[1]"):
+            with self.subTest(schema_version=bad):
+                text = '{"schema_version": %s, "root": "extern", "entries": []}' % bad
+                self.assertEqual(self.problems(text), {(None, "schema_version")})
+        text = '{"schema_version": 1, "root": "extern", "entries": []}'
+        self.assertEqual(manifest_tools.parse_manifest(text).schema_version, 1)
+
+    def test_reference_may_have_size_bytes(self) -> None:
+        """Follow-up 5."""
+        manifest = manifest_tools.parse_manifest(manifest_text(reference_entry(size_bytes=4096)))
+        self.assertEqual(manifest.entries[0].size_bytes, 4096)
+        self.assertEqual(
+            manifest_tools.parse_manifest(manifest_tools.dump_manifest(manifest)), manifest
+        )
+        self.assertEqual(
+            self.problems(manifest_text(container_image_entry(size_bytes=4096))),
+            {("vendor-simulator", "size_bytes")},
+        )
+
+    def test_manual_file_needs_landing_page_instead_of_url(self) -> None:
+        """Follow-up 6."""
+        manifest = manifest_tools.parse_manifest(
+            manifest_text(file_entry(fetch="manual", url=None, sha256=None))
+        )
+        self.assertIsNone(manifest.entries[0].url)
+        self.assertEqual(
+            self.problems(manifest_text(file_entry(fetch="manual", landing_page=None))),
+            {("vendor-manual-en", "landing_page")},
+        )
+        self.assertEqual(
+            self.problems(manifest_text(file_entry(fetch="manual", url=None, landing_page=None))),
+            {("vendor-manual-en", "landing_page")},
+        )
+        # Fetched automatically: the address stays required, the page optional.
+        self.assertEqual(
+            self.problems(manifest_text(file_entry(url=None))), {("vendor-manual-en", "url")}
+        )
+        manifest_tools.parse_manifest(manifest_text(file_entry(landing_page=None)))
+
+
+class UnreadableDirectoryTest(ManifestTestCase):
+    def test_unreadable_subdirectory_is_an_error(self) -> None:
+        """Follow-up 3. Simulated, because root in a container may read everything."""
+        base = self.tmp / "tree"
+        (base / "open").mkdir(parents=True)
+        (base / "locked").mkdir()
+        (base / "open" / "a.txt").write_bytes(b"first\n")
+        (base / "locked" / "b.txt").write_bytes(b"second\n")
+        complete = manifest_tools.tree_sha256(base)
+        real_scandir = os.scandir
+
+        def scandir(path: Any) -> Any:
+            if Path(os.fspath(path)).name == "locked":
+                raise PermissionError(13, "Permission denied", os.fspath(path))
+            return real_scandir(path)
+
+        with mock.patch.object(os, "scandir", scandir):
+            with self.assertRaises(PermissionError):
+                manifest_tools.tree_sha256(base)
+        self.assertEqual(manifest_tools.tree_sha256(base), complete)
+
+    def test_really_unreadable_subdirectory_is_an_error(self) -> None:
+        base = self.tmp / "tree"
+        (base / "locked").mkdir(parents=True)
+        (base / "locked" / "b.txt").write_bytes(b"second\n")
+        os.chmod(base / "locked", 0)
+        self.addCleanup(os.chmod, base / "locked", 0o700)
+        if os.access(base / "locked", os.R_OK):
+            self.skipTest("this user may read every directory")
+        with self.assertRaises(PermissionError):
+            manifest_tools.tree_sha256(base)
+
+
+class FormatCommandTest(ManifestTestCase):
+    """Follow-up 7."""
+
+    def test_format_rewrites_in_canonical_form(self) -> None:
+        text = manifest_text(file_entry(), reference_entry()).replace("\n", "\r\n")
+        path = self.write(text)
+        before = manifest_tools.load_manifest(path)
+        code, stdout, stderr = self.run_cli("format", str(path))
+        self.assertEqual((code, stderr), (0, ""))
+        self.assertIn("rewritten in canonical form", stdout)
+        self.assertEqual(manifest_tools.load_manifest(path), before)
+        canonical = path.read_bytes()
+        self.assertEqual(canonical, manifest_tools.dump_manifest(before).encode("utf-8"))
+        code, stdout, _ = self.run_cli("format", str(path))
+        self.assertEqual(code, 0)
+        self.assertIn("already in canonical form", stdout)
+        self.assertEqual(path.read_bytes(), canonical)
+
+    def test_format_check_does_not_write(self) -> None:
+        path = self.write(manifest_text(file_entry()))
+        original = path.read_bytes()
+        code, stdout, stderr = self.run_cli("format", "--check", str(path))
+        self.assertEqual((code, stdout), (1, ""))
+        self.assertIn("NOT in canonical form", stderr)
+        self.assertEqual(path.read_bytes(), original)
+        self.run_cli("format", str(path))
+        code, _, _ = self.run_cli("format", "--check", str(path))
+        self.assertEqual(code, 0)
+
+    def test_format_leaves_invalid_file_untouched(self) -> None:
+        for entry in (git_archive_entry(commit="1234"), file_entry(url="http://127.0.0.1/a.pdf")):
+            with self.subTest(entry=entry["id"]):
+                path = self.write(manifest_text(entry))
+                original = path.read_bytes()
+                code, stdout, stderr = self.run_cli("format", str(path))
+                self.assertEqual((code, stdout), (1, ""))
+                self.assertIn("INVALID", stderr)
+                self.assertEqual(path.read_bytes(), original)
+        code, _, stderr = self.run_cli("format", str(self.tmp / "missing.yaml"))
+        self.assertEqual(code, 1)
+        self.assertIn("field 'file'", stderr)
+
+    def test_format_default_path_is_the_test_factory_manifest(self) -> None:
+        previous = Path.cwd()
+        os.chdir(REPOSITORY_ROOT)
+        self.addCleanup(os.chdir, previous)
+        code, stdout, _ = self.run_cli("format", "--check")
+        self.assertEqual(code, 0)
+        self.assertIn("testfactory/manifest.yaml: already in canonical form", stdout)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 # Auftrag 104 – Lade-Skript fetch.py
 
-Meilenstein: T1 · Freigabestufe: B · Status: offen
+Meilenstein: T1 · Freigabestufe: B · Status: zur Prüfung
 
 ## Ziel
 
@@ -76,7 +76,109 @@ In den Befehlen steht `TF` für `docker compose -f deploy/compose/testfactory.ya
 Keine.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Keine offene Frage an a7. Alle Akzeptanzkriterien sind erfüllt bis auf eine erwartete Abweichung beim Diff-Umfang (siehe „Abweichungen“, Punkt 1).
+
+### Was wurde gebaut?
+
+- `testfactory/fetch.py` (nur Standardbibliothek, vollständig typisiert), Aufruf `python -m testfactory.fetch`. Schalter: `--only`, `--verify`, `--record`, `--dry-run`, `--strict`, `--manifest`, `--dest`, zusätzlich `--max-size MIB`.
+  - `file`: Abruf in eine Zwischendatei unter `<root>/.fetch-partial/`, Prüfsumme beim Schreiben, erst bei Übereinstimmung an den Zielort. Bei Abweichung wird der Abruf verworfen; eine schon vorhandene ältere Datei bleibt liegen.
+  - `git-archive`: Archiv des Commits nach dem Muster `https://github.com/OWNER/REPO/archive/COMMIT.tar.gz` (am 21.11.2026 an der GitHub-Dokumentation „Downloading source code archives“ geprüft: Beispiel mit Commit-ID, „.zip oder .tar.gz“), Entpacken ohne den obersten Ordner, `tree_sha256` prüfen, erst dann an den Zielort. Nur `github.com`.
+  - `manual`, `local`, `container-image`, `reference` wie im Auftrag.
+  - Sicherheit: jede Adresse und jedes Weiterleitungsziel läuft durch `manifest_tools.address_problem` (höchstens fünf Weiterleitungen, vom Skript selbst verfolgt); Zertifikatsprüfung; keine Proxy-Einstellungen aus der Umgebung, keine Cookies, keine Anmeldedaten; fester `User-Agent` `twox-testfactory-fetch/1.0`; 60 s ohne Daten bzw. eine Stunde je Versuch; drei Versuche mit Pause bei Netzfehlern und 408/425/429/5xx; Größenbegrenzung je Abruf (Standard 2048 MiB bzw. `size_bytes` des Eintrags), entpackt höchstens das Vierfache und höchstens 200 000 Archiveinträge; Abrufe nacheinander; nichts Geladenes wird ausgeführt.
+  - Zusammenfassung als Tabelle (ID, Ergebnis, HTTP-Status, Größe), darunter je Eintrag eine erklärende Zeile. Exit 0/1/2.
+- `testfactory/tests/test_fetch.py`: 51 Tests, alle zehn im Auftrag genannten Fälle, dazu Weiterleitungen, Größenbegrenzung, abgeschnittene Antwort, Wiederholung, symbolische Links, kaputte Archive.
+- `testfactory/README.md`: Abschnitt „Fetching“ (Befehle, Schalter, Verhalten je Eintrag, Bedeutung der Ergebnisse, Sicherheit, Hinweis „Vendor documents never go into the repository“), dazu `format`, der Vermerk zum Dienst `fetch` als root und die geänderten Feldbeschreibungen.
+- Nachtrag der Leitstelle in `testfactory/manifest_tools.py`, je mit Test in `test_manifest_tools.py` (17 neue Tests):
+  1. `checked_target_path(root_dir, target)` und `root_path(...)`: kein symbolischer Link in der Kette unterhalb von `root`, aufgelöster Pfad muss unter dem aufgelösten `root` liegen, sonst `UnsafePathError`. `fetch.py` ruft das vor jedem Lesen und Schreiben eines Ziels auf.
+  2. Ein Ziel darf nicht im Ziel eines anderen Eintrags liegen (Vergleich nach Pfadsegmenten, unabhängig von der Reihenfolge).
+  3. `tree_sha256` reicht nicht lesbare Unterverzeichnisse als `OSError` weiter.
+  4. `schema_version` nur als Ganzzahl (`1.0`, `"1"`, `true` werden abgelehnt).
+  5. `size_bytes` ist bei `kind: reference` erlaubt; README-Tabelle angepasst.
+  6. `kind: file` mit `fetch: manual`: `url` optional, `landing_page` Pflicht; mit `fetch: auto` bleibt `url` Pflicht.
+  7. Unterbefehl `format [--check] [PFAD]` bringt eine Manifest-Datei in die kanonische Form; Aufruf in der README.
+
+### Wie wurde getestet?
+
+Docker Engine 29.9.3, Compose v5.7.0. Aufrufe mit `-p twox-104`, am Ende `down -v`. `TF` wie im Auftrag.
+
+| Akzeptanzkriterium | Ergebnis |
+| --- | --- |
+| `docker version`, `docker compose version` | erfüllt, Exit 0 |
+| `TF run --rm fetch python -m testfactory.fetch --help` | erfüllt, Exit 0; zeigt `--only`, `--verify`, `--record`, `--dry-run`, `--strict`, `--manifest`, `--dest` (und `--max-size`); `pip list` im Image zeigt nur `pip` |
+| `TF run --rm fetch python -m testfactory.fetch --dry-run` | erfüllt, Exit 0: leere Tabelle, `0 entries`, `Dry run: nothing was loaded or written.` |
+| Tests in `check` | erfüllt: `Ran 121 tests`, `OK (skipped=1)`; 51 davon aus `test_fetch` |
+| Tests in `check-offline` | erfüllt: `Ran 121 tests`, `OK (skipped=1)` |
+| mypy in `check` | erfüllt: `Success: no issues found in 6 source files` |
+| `git grep -n "allow_insecure_loopback" -- testfactory/fetch.py` | erfüllt: 16 Treffer, nur Signaturen, Weitergaben und zwei Docstrings; `main()` nennt den Parameter nicht |
+| `git check-ignore testfactory/extern/probe.pdf`; `git status --porcelain` | erfüllt: Pfad wird ausgegeben; nach den Tests keine Dateien unter `testfactory/extern/` |
+| `git diff --stat main...HEAD` | **abweichend**: fünf Dateien plus diese Auftragsdatei, siehe Abweichung 1 |
+
+Zusätzlich gelaufen:
+
+- Der eine übersprungene Test (wirklich unlesbares Verzeichnis per `chmod 0`) wird übersprungen, weil der Container als root alles lesen darf. Mit `--user 1000:1000` in `check-offline`: `Ran 121 tests`, `OK`, keiner übersprungen. Als root deckt ein zweiter Test denselben Fall mit einem simulierten Lesefehler ab.
+- Alle Tests einmal im Dienst `fetch` mit den Zwischendateien auf dem eingebundenen Repository-Laufwerk (unter dem ignorierten `testfactory/extern/`, danach gelöscht): `Ran 121 tests`, `OK (skipped=1)`. Verschieben, Ersetzen und Entpacken funktionieren also auch auf dem echten Ziel-Dateisystem.
+- `TF run --rm fetch python -m testfactory.manifest_tools format --check`: `already in canonical form`, Exit 0.
+
+**Nicht getestet:** ein echter Abruf über HTTPS. Die Tests laufen gegen `http://127.0.0.1`; fremde Quellen sollten in diesem Auftrag nicht geladen werden. Geprüft ist nur, dass das Image einen Zertifikatsspeicher hat (148 Stammzertifikate). Der erste echte Abruf in Auftrag 109 ist damit auch der erste Test von TLS, der Weiterleitung von `github.com` auf den Archiv-Server und der Annahme, dass GitHub-Archive genau einen obersten Ordner haben (ungeprüft).
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig `worktree-agent-a7c4adf558f0c7cc6`
+- Arbeitsverzeichnis `.claude/worktrees/agent-a7c4adf558f0c7cc6` (relativ zum Projektordner)
+
+### Festlegungen über den Auftragstext hinaus (bitte prüfen)
+
+- **Symbolische Links in Archiven** werden nicht abgelehnt, sondern als kleine Datei mit dem Linkziel als Inhalt abgelegt. Es wird nie ein Link angelegt. Grund: Auftrag 101 definiert `tree_sha256` genau so, und ein Repository mit einem harmlosen Link wäre sonst nicht ladbar. Harte Links, Gerätedateien und Pipes lassen das ganze Archiv scheitern. Soll auch ein symbolischer Link zum Abbruch führen, ist das eine Zeile.
+- **`auto`-Eintrag ohne Prüfsumme, ohne `--record`:** Es wird nichts geladen, Ergebnis `no-checksum`, Exit 1. So liegt nie etwas Ungeprüftes am Zielort.
+- **`--record` bei Handabrufen:** Liegt die von Hand geholte Datei vor und fehlt die Prüfsumme, trägt `--record` sie ein. Ohne `--record` heißt das Ergebnis `unverified` (Exit 0).
+- **Exit 1** auch bei falscher Prüfsumme eines `manual`- oder `local`-Eintrags und bei fehlender `local`-Datei, nicht nur bei `auto`. **Exit 2** bei ungültigem Manifest, unbekannter ID oder falschen Schaltern. `--dry-run` endet immer mit 0.
+- `--verify` und `--record` schließen sich aus.
+- ~~Bei `--record` wird ein Abruf verworfen, dessen Größe einem schon eingetragenen `size_bytes` widerspricht.~~ Geändert, siehe „Nacharbeit nach Prüfung“, Punkt 2.
+- `write_manifest` schreibt bei `--record` die ganze Datei in kanonischer Form zurück, auch nach einem Abbruch (bis dahin berechnete Werte bleiben erhalten).
+- Proxy-Einstellungen aus der Umgebung werden bewusst ignoriert. Braucht a7 einen Proxy, wäre das eine eigene Entscheidung.
+- Bei (1) des Nachtrags darf `root` selbst über einen Link erreichbar sein (es wird aufgelöst); geprüft wird die Kette unterhalb von `root`.
+
+### Abweichungen
+
+1. **Diff-Umfang:** `git diff --stat main...HEAD` zeigt neben den drei genannten Dateien und dieser Auftragsdatei auch `testfactory/manifest_tools.py` und `testfactory/tests/test_manifest_tools.py`. Das folgt aus dem Nachtrag der Leitstelle; „Betroffene Bereiche“ und das Kriterium wurden dort nicht nachgezogen.
+2. **README:** Außer dem Abschnitt „Fetching“ sind die vom Nachtrag verlangten Stellen geändert (Feldtabellen, `format`, Vermerk zu root, Hinweis zu `checked_target_path`).
+3. **Zusätzlicher Schalter `--max-size MIB`** für die Größenbegrenzung (Standard 2048). Ohne ihn müsste für ein größeres Repository der Code geändert werden.
+4. **Umfang:** rund 2500 neue Zeilen, davon etwa 1350 Tests. Das ist mehr, als sich in 15 Minuten prüfen lässt.
+5. Der Kommentarkopf von `deploy/compose/testfactory.yaml` nennt `fetch.py` noch als „später“; die Datei liegt außerhalb des Auftragsbereichs und ist unverändert.
+
+### Nacharbeit nach Prüfung (21.11.2026)
+
+Die Zahlen in der Tabelle oben stammen vom ersten Durchlauf; die aktuellen stehen hier.
+
+1. **Lücke beim Entpacken geschlossen (Laufwerksbuchstabe im Namen eines Archiveintrags).** Der Befund der Leitstelle stimmt: `_member_segments` ließ `:` zu, und der Zweig für symbolische Links schrieb ohne weitere Prüfung. Unter Linux (im Container) blieb `top/C:/x` im Zielordner, unter Windows hätte es hinausgeführt.
+   - `_member_segments` benutzt jetzt `manifest_tools.relative_path_problem`, also dieselbe Regel wie für `target`: kein `:`, kein `\`, kein `..`, nicht absolut, keine Steuerzeichen. Das gilt für alle Eintragsarten.
+   - Zweite, unabhängige Prüfung im Link-Zweig (`_member_path`): Der aufgelöste Pfad muss unter dem aufgelösten Zielordner liegen – geprüft vor dem Anlegen der Elternordner und noch einmal vor dem Schreiben; ein vorhandener Link an der Stelle wird nicht überschrieben.
+   - Tests: sieben neue Fälle in `test_archive_that_leaves_the_target_is_refused` (Laufwerksbuchstabe mit und ohne Schrägstrich, jeweils als normale Datei, als Verzeichnis und als symbolischer Link; dazu Link-Name mit `..` und absoluter Link-Name) – Archiv wird abgelehnt, nichts liegt außerhalb. Dazu `test_member_names_follow_the_rule_for_targets` und `test_member_path_must_resolve_below_the_destination`. Der zweite prüft `_member_path` für sich, mit einem absoluten Segment (verhält sich unter Linux wie ein Laufwerksbuchstabe unter Windows: es ersetzt alles davor), mit `..`, mit leerer Liste und über einen Link.
+   - Folge: Ein Repository mit einem Doppelpunkt in einem Dateinamen lässt sich nicht mehr laden (Ergebnis `failed` mit Namen des Eintrags). Das ist gewollt streng; ob es die Repositories der Fertigungslinie betrifft, zeigt Auftrag 109 (ungeprüft).
+   - **Nicht unter Windows ausgeführt** (Regel „alles in Containern“). Die Windows-Wirkung ist über die Namensregel und die Auflösungsprüfung abgedeckt, aber nicht auf einem Windows-Python nachgestellt.
+2. **`--record` und `size_bytes`.** Auftrag 109 verlangt nach Punkt 1, dass nach `--record` `size_bytes` im Manifest steht, und nach Punkt 3, dass Abweichungen von der Größe aus der Recherche im Kurzbericht genannt werden; außerdem darf 109 `fetch.py` nicht ändern. Deshalb:
+   - Hat ein Eintrag **keine Prüfsumme**, gilt ein vorhandenes `size_bytes` als Vorab-Angabe. `--record` begrenzt den Abruf damit nicht, trägt die gemessene Größe ein und meldet die Abweichung unter der Tabelle: `ID: recorded: SIZE DIFFERS: measured N bytes, the manifest said M; the measured size was recorded`. Ergebnis bleibt `recorded`, Exit 0. Das gilt auch für vorhandene Handabrufe. So bekommt 109 die Liste der Abweichungen direkt aus der Ausgabe, und der Abruf geht nicht verloren (kein wiederholtes Laden).
+   - Hat ein Eintrag **eine Prüfsumme**, ist `size_bytes` verbindlich: Passt die Prüfsumme und die Größe nicht, ist das `mismatch` und Exit 1 – bei `--verify`, im normalen Lauf und bei `--record`, für `auto`, `manual` und `local`. Vorher wurde die Größe bei vorhandenen Dateien gar nicht verglichen.
+   - Tests: `test_record_replaces_an_advance_size_and_reports_the_difference` (kleiner, größer, gleich, Handabruf; danach `--verify` ohne Fehler) und `test_size_that_contradicts_a_recorded_checksum_is_an_error`.
+3. **Proxy-Umgebungsvariablen:** `test_proxy_settings_of_the_environment_are_ignored` setzt `HTTPS_PROXY`, `https_proxy`, `HTTP_PROXY`, `http_proxy`, `ALL_PROXY`, `all_proxy` auf einen toten Port. Gegenprobe im selben Test: `urllib.request.urlopen` scheitert damit; `fetch` lädt trotzdem direkt (Anfragepfad `/manual.bin`), und der Opener enthält keinen `ProxyHandler`.
+
+README an den drei Stellen nachgezogen (`--record`, Ergebnis `mismatch`, Sicherheit/Archive).
+
+Erneut gelaufen (Projektname `-p twox-104`, danach `down -v`):
+
+| Prüfung | Ergebnis |
+| --- | --- |
+| `fetch --help` | Exit 0, alle Schalter |
+| `fetch --dry-run` | Exit 0, `0 entries`, `Dry run: nothing was loaded or written.` |
+| Tests in `check` | `Ran 125 tests`, `OK (skipped=1)`; 55 aus `test_fetch` |
+| Tests in `check-offline` | `Ran 125 tests`, `OK (skipped=1)` |
+| Tests in `check-offline` mit `--user 1000:1000` | `Ran 125 tests`, `OK`, keiner übersprungen |
+| mypy in `check` | `Success: no issues found in 6 source files` |
+| `git grep allow_insecure_loopback -- testfactory/fetch.py` | unverändert nur Signaturen, Weitergaben, Docstrings |
+| `git check-ignore`, `git status --porcelain` | Pfad wird ausgegeben; nichts unter `testfactory/extern/` |
+| `git diff --stat main...HEAD` | wie zuvor fünf Dateien plus Auftragsdatei (Abweichung 1) |
+
+Weiter offen wie oben: kein echter HTTPS-Abruf getestet; Kopfdaten-Größe im Archiv nicht begrenzt.
+
+Bekannte Grenze: Das Entpacken begrenzt Anzahl und Gesamtgröße der Dateien, nicht aber die Größe einzelner Kopfdaten im Archiv; ein eigens präpariertes Archiv könnte dort Arbeitsspeicher belegen. Für Archive eines festen Commits von GitHub halte ich das für vertretbar.
