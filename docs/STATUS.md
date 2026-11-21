@@ -114,7 +114,7 @@ Nichts davon hält die laufende Arbeit auf.
 | 029 | Datei-API | C | 5 | erledigt |
 | 030 | Anmeldung in der Oberfläche | C | 5 | erledigt |
 | 031 | CSV-Import (Backend) | C | 6 | in Arbeit |
-| 032 | Oberfläche: Struktur und Geräte | B | 6 | in Arbeit |
+| 032 | Oberfläche: Struktur und Geräte | B | 6 | erledigt |
 | 033 | Oberfläche: Protokoll | B | 6 | in Arbeit |
 | 034 | Backend-Übersetzung (gettext) | C | 7 | offen |
 | 035 | Oberfläche: CSV-Import | B | 7 | offen |
@@ -137,3 +137,4 @@ Hinweise aus Welle 1:
 - 030: `/admin/login/` vergibt keine Sitzung mehr, sondern leitet auf `/login?next=/admin/…` um. Browser-Tests melden sich einmal je Worker an (storageState nur im Speicher). Offene Weiterleitung über `next` (Punkt-Segmente) in der Prüfung gefunden und behoben, auch im Admin-Redirect.
 - 028: auditlog übernimmt keine Werte aus Kopfzeilen (eigene Middleware, `AUDITLOG_CID_HEADER = None`); in der Prüfung gefunden: manipulierte Kopfzeilen konnten das Schreiben des Eintrags verhindern, die Änderung blieb aber gespeichert. Für 038: `auditlogflush` nicht gesperrt; `groups.clear()` protokolliert alle Gruppen; Gruppenänderung von der Gruppenseite landet am Gruppenobjekt; gelöschter Benutzer → Akteur NULL; `actor_email` wird gespeichert (bei unseren Konten leer).
 - 029: Eine eigene ASGI-Hülle (`asgi.py`) weist zu große Uploads mit 413 ab, bevor Django sie zwischenspeichert. Liegengebliebene `.part`-Dateien entfernt `python manage.py remove_stale_uploads` (nur von Hand). Für 038: Restdatei in `/tmp` des api-Containers nach hartem Abbruch möglich; fehlt ein Blob, ergibt der Download 500.
+- 032: In der Prüfung gefunden und behoben: Nach einer 400-Antwort sprang die Auswahl des übergeordneten Eintrags still auf den alten Wert zurück. Für 036: `web/e2e/navigation.spec.ts` prüft den Direktaufruf über den Platzhalter `/documents/7` und muss angepasst werden. Feldfehler liest `pages/structure/save.ts` über eine eigene fetch-Hülle; brauchen 035/036 Feldfehler, ist ein Feld `body` in `ApiError` (`api/errors.ts`) die einfachere Lösung.
