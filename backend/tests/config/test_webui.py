@@ -167,8 +167,13 @@ def test_collectstatic_copies_the_build_without_database(tmp_path: Path) -> None
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout) == {"dirs": [str(dist)], "url": "/static/"}
     assert (static_root / "index.html").read_text(encoding="utf-8") == INDEX_HTML
-    assert (static_root / "assets" / "index-abc123.js").is_file()
-    assert (static_root / "assets" / "index-def456.css").is_file()
+    # Exactly the build: nothing from the app folders (e.g. DRF's own assets).
+    collected = sorted(
+        path.relative_to(static_root).as_posix()
+        for path in static_root.rglob("*")
+        if path.is_file()
+    )
+    assert collected == ["assets/index-abc123.js", "assets/index-def456.css", "index.html"]
 
 
 def test_missing_build_adds_no_static_folder(tmp_path: Path) -> None:

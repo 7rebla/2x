@@ -55,8 +55,11 @@ services:
   # start script in the API container, so that several API instances never
   # migrate at the same time.
   migrate:
+    # Context is the repository root: the runtime image also builds the web
+    # UI from web/. The .dockerignore in the root admits backend/ and web/ only.
     build: &backend-runtime-build
-      context: ../../backend
+      context: ../..
+      dockerfile: backend/Dockerfile
       target: runtime
     command: ["python", "manage.py", "migrate", "--noinput"]
     environment: *backend-environment
@@ -209,8 +212,11 @@ services:
   # worker. `pytest -m worker` expects both to be running already.
   backend-dev:
     profiles: ["dev"]
+    # Same Dockerfile and context as the runtime image; the target dev does
+    # not build the web UI.
     build:
-      context: ../../backend
+      context: ../..
+      dockerfile: backend/Dockerfile
       target: dev
     environment: *backend-environment
     volumes:

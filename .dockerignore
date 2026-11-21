@@ -1,0 +1,33 @@
+# Build context of the backend image is the repository root. Positive list:
+# everything is excluded, only backend/ and web/ are admitted. This keeps .git,
+# .claude/ (worktrees of other work orders), testfactory/, testdata/, docs/
+# and local files such as .env and STARTUNTERLAGE.md out of the context.
+*
+!backend/
+!web/
+
+# Local environments, caches and secrets inside the admitted folders.
+**/.env
+**/.env.*
+**/__pycache__/
+**/*.py[cod]
+backend/.venv/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+backend/*.egg-info/
+backend/staticfiles/
+# Build files themselves: a change to them must not invalidate the COPY layers.
+backend/Dockerfile
+web/Dockerfile
+web/.dockerignore
+
+# Installed packages and build output: the image installs and builds itself.
+web/node_modules/
+web/dist/
+web/playwright-report/
+web/test-results/
+web/*.tsbuildinfo
+web/.vite/

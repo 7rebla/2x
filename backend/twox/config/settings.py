@@ -140,6 +140,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 WEB_DIST_DIR = Path(env_str("TWOX_WEB_DIST_DIR", str(BASE_DIR.parent / "web" / "dist")))
 # Only if a build exists: backend-dev and the tests run without one.
 STATICFILES_DIRS = [WEB_DIST_DIR] if WEB_DIST_DIR.is_dir() else []
+# Only the web UI build. The app folders are not searched: the assets of the
+# DRF browsable API (switched off, JSON only) would otherwise be shipped too.
+# The admin arrives with milestone M1 and has to be added here then.
+STATICFILES_FINDERS = ["django.contrib.staticfiles.finders.FileSystemFinder"]
 # Plain storage: Vite already puts a content hash into every asset name, and
 # no compressed copies are made (nothing between server and browser should
 # compress or buffer, see the answer stream in milestone M3).
