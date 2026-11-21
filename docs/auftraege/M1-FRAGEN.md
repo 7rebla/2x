@@ -2,6 +2,8 @@
 
 Stand: 21.11.2026 · gesammelt aus den Aufträgen 016–038 · Empfehlung jeweils als Option (a), sofern nicht anders genannt
 
+**Antwort a7, 21.11.2026:** Alle Empfehlungen übernommen (E-37 bis E-46 in `docs/DECISIONS.md`).
+
 | Nr. | Auftrag | Frage | Optionen | Empfehlung | Blockiert Start |
 | --- | --- | --- | --- | --- | --- |
 | F-1 | 016 | Wie meldet sich die Oberfläche bei der API an? | (a) Django-Sitzung mit Cookie und CSRF-Schutz am selben Ursprung<br>(b) Token im Browser (JWT oder X-Session-Token) | (a): Oberfläche und API am selben Ursprung, kein Token im Browser, Abmelden wirkt sofort; Tokens erst für Nicht-Browser-Clients (M10) | ja |

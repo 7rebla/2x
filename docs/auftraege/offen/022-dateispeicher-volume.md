@@ -95,6 +95,8 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 21.11.2026:** Alle Empfehlungen übernommen (E-37). Jede Frage unten ist nach ihrer Empfehlung entschieden.
+
 1. **Ablage der Dateien**
    - (a) Inhaltsadressiert: Der Pfad wird aus der SHA-256 gebildet, gleicher Inhalt liegt nur einmal im Speicher, Versionen verweisen darauf.
    - (b) Je Version eine eigene Datei unter Gerät, Dokument und Versionsnummer.

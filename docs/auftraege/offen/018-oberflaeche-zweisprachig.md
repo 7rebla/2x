@@ -85,6 +85,8 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 21.11.2026:** Alle Empfehlungen übernommen (E-37). Jede Frage unten ist nach ihrer Empfehlung entschieden.
+
 1. **Übersetzungsmechanismus der Oberfläche (neue Abhängigkeit, Stufe C)**
    - (a) `i18next` und `react-i18next` (MIT, eine mitgezogene Abhängigkeit, kein Übersetzungsschritt im Build, JSON-Kataloge).
    - (b) Eigener kleiner Mechanismus ohne Abhängigkeit (typisierte Objekte, React-Kontext, `Intl`). Plural und Platzhalter müssen selbst gebaut werden.

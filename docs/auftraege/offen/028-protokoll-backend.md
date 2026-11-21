@@ -90,6 +90,8 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 21.11.2026:** Alle Empfehlungen übernommen (E-37). Jede Frage unten ist nach ihrer Empfehlung entschieden.
+
 1. **Protokoll-Mechanismus (neue Abhängigkeit)**
    - (a) django-auditlog 3.4.2: MIT, eine Tabelle mit Feldänderungen und Akteur, erklärt für Django 6.1 und Python 3.14.
    - (b) django-simple-history 3.13.0: BSD-3-Clause laut README, eine Schattentabelle je Modell; Django 6.1 nur im Changelog genannt.

@@ -73,6 +73,8 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 21.11.2026:** Alle Empfehlungen übernommen (E-37). Jede Frage unten ist nach ihrer Empfehlung entschieden.
+
 Keine.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)

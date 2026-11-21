@@ -97,6 +97,8 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 21.11.2026:** Alle Empfehlungen übernommen (E-37). Jede Frage unten ist nach ihrer Empfehlung entschieden.
+
 1. **GNU gettext (GPL) für die Backend-Übersetzung zulassen?** Das ist eine neue Lizenzausnahme nach Leitplanke 7.
    - (a) gettext dauerhaft im Dev-Image und in einer Bau-Stufe, nicht im Laufzeit-Image, nicht eingebunden. `.mo` entstehen beim Bau und in den Tests außerhalb des Quelltexts und werden nicht committet.
    - (b) `.mo`-Dateien committen (Binärdateien im Repository); gettext nur im Dev-Image.

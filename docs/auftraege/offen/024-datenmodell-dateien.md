@@ -96,6 +96,8 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 21.11.2026:** Alle Empfehlungen übernommen (E-37). Jede Frage unten ist nach ihrer Empfehlung entschieden.
+
 1. **Felder von Datei und Version**
    - (a) Wie im Umfang, mit `kind` (Dokument oder Konfiguration). Startunterlage 4 und 5.6 unterscheiden beide, und das Einlesen in M2 und M5 wählt daran seinen Weg.
    - (b) Ohne `kind`; die Art wird erst beim Einlesen bestimmt.

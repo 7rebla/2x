@@ -92,6 +92,32 @@ Nichts davon hält die laufende Arbeit auf.
 - Für die Abnahme T1 vorgemerkt (aus 113, `testfactory/layout/evidence.md`): 69 Nachweise, davon 37 erfüllt, 24 offen, 8 „folgt in T2". Zentral offen ist O-1: Keine fischertechnik-Unterlage nennt einen APS-Softwarestand, damit ist Bedingung 2 für die ganze Fertigungslinie offen. Auslegung des Bearbeiters: Bedingung 1 gilt über den Release-Stand APS 1.3.0 als erfüllt. Beides entscheidet a7 bei der Abnahme.
 - Für M6 vorgemerkt (aus 015): Eine eigene `.env`-Vorlage für Tester ohne Debug und ohne Entwicklungs-Kennwörter; `.env.example` ist eine reine Entwicklungsvorlage. Der Schema-Befehl in `web/openapi/README.md` braucht unter Git Bash `MSYS_NO_PATHCONV=1`.
 
-## M1 – Geräte und Dateien (entworfen 21.11.2026)
+## M1 – Geräte und Dateien (freigegeben 21.11.2026)
 
-23 Aufträge 016–038 in 8 Wellen liegen unter `docs/auftraege/offen/`. 33 Fragen an a7 mit Optionen und Empfehlung: `docs/auftraege/M1-FRAGEN.md`. Kein M1-Auftrag startet vor der Antwort (Stufe C: Anmeldung, Rechte, Datenmodell, neue Abhängigkeiten).
+23 Aufträge 016–038 in 8 Wellen unter `docs/auftraege/offen/`. Alle 33 Fragen (`docs/auftraege/M1-FRAGEN.md`) hat a7 nach Empfehlung entschieden (E-37 bis E-46); damit sind die Aufträge freigegeben. Eine Welle startet, wenn die vorige nach `main` zusammengeführt ist; höchstens fünf Bearbeiter gleichzeitig (E-24).
+
+| Nr. | Auftrag | Stufe | Welle | Status |
+| --- | --- | --- | --- | --- |
+| 016 | Backend-Grundlage: Sitzungen, Admin, CSRF, Sprachen, Zwischenspeicher | C | 1 | in Arbeit |
+| 017 | Selbsttest: Zeitlimit Ergebnisspeicher | B | 1 | in Arbeit |
+| 018 | Oberfläche zweisprachig | C | 1 | in Arbeit |
+| 019 | Datenmodell Standort, Bereich, Anlage, Gerät | C | 1 | in Arbeit |
+| 020 | Anmeldung mit django-allauth, Ratenbegrenzung | C | 2 | offen |
+| 021 | Rollen, Konto-Endpunkt, Befehl create_account | C | 2 | offen |
+| 022 | Dateispeicher nach Prüfsumme | C | 2 | offen |
+| 023 | Oberfläche: Routing, Rahmen, Datenabruf | C | 3 | offen |
+| 024 | Datenmodell Dateien und Versionen | C | 3 | offen |
+| 025 | API-Rechte: Standard nur mit Rolle | C | 3 | offen |
+| 026 | API und Admin für die Struktur | C | 4 | offen |
+| 027 | Testkonto in CI, Selbsttest nur für Angemeldete | C | 4 | offen |
+| 028 | Protokoll (Backend) | C | 5 | offen |
+| 029 | Datei-API | C | 5 | offen |
+| 030 | Anmeldung in der Oberfläche | C | 5 | offen |
+| 031 | CSV-Import (Backend) | C | 6 | offen |
+| 032 | Oberfläche: Struktur und Geräte | B | 6 | offen |
+| 033 | Oberfläche: Protokoll | B | 6 | offen |
+| 034 | Backend-Übersetzung (gettext) | C | 7 | offen |
+| 035 | Oberfläche: CSV-Import | B | 7 | offen |
+| 036 | Oberfläche: Dateien | B | 7 | offen |
+| 037 | Nachweis der M1-Abnahme | B | 8 | offen |
+| 038 | README und ARCHITECTURE für M1 | B | 8 | offen |

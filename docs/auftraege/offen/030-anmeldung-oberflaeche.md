@@ -97,6 +97,8 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 21.11.2026:** Alle Empfehlungen übernommen (E-37). Jede Frage unten ist nach ihrer Empfehlung entschieden.
+
 1. **Eigenes Kennwort in M1 ändern können?**
    - (a) Nicht in M1: Superuser setzen Kennwörter im Admin oder mit `create_account --update`. Vorgemerkt für M6, bevor erste Tester Zugang haben.
    - (b) In M1 als eigener kleiner Auftrag nach diesem (Endpunkt der allauth-Browser-Schnittstelle zum Kennwortwechsel und eine Seite in der Oberfläche).

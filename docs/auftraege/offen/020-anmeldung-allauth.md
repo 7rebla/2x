@@ -95,6 +95,8 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 21.11.2026:** Alle Empfehlungen übernommen (E-37). Jede Frage unten ist nach ihrer Empfehlung entschieden.
+
 1. **Anmeldeverfahren**
    - (a) django-allauth im Headless-Modus, Client „browser“ (Sitzung und CSRF am selben Ursprung); die Oberfläche baut ihre eigene Anmeldeseite.
    - (b) django-allauth mit seinen serverseitig erzeugten Seiten (`/accounts/login/`). Keine Headless-Schnittstelle, kein pyjwt und kein cryptography, aber Seiten außerhalb der React-Oberfläche.

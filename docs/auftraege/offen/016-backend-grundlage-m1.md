@@ -134,6 +134,8 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 21.11.2026:** Alle Empfehlungen übernommen (E-37). Jede Frage unten ist nach ihrer Empfehlung entschieden.
+
 1. **Wie authentifiziert sich die Oberfläche bei der API?**
    - (a) Django-Sitzung mit Cookie und CSRF-Schutz am selben Ursprung (DRF `SessionAuthentication`).
    - (b) Token im Browser (JWT oder `X-Session-Token`).

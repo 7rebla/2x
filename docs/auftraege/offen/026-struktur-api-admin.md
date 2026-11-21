@@ -75,6 +75,8 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 21.11.2026:** Alle Empfehlungen übernommen (E-37). Jede Frage unten ist nach ihrer Empfehlung entschieden.
+
 1. **Löschen von Standorten, Bereichen, Anlagen und Geräten in M1?** („Daten löschen“ ist Stufe C.)
    - (a) Kein Löschen über API und Oberfläche; Superuser können im Admin löschen, soweit `PROTECT` es erlaubt.
    - (b) „Verwalten“ darf leere Objekte (ohne Kinder, ohne Dateien) über die API löschen.
