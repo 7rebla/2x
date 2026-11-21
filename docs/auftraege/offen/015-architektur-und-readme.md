@@ -55,6 +55,8 @@ Vorher `.env.example` nach `.env` kopieren (falls nicht vorhanden) und darin `TW
 
 ## Vorgaben und Hinweise
 
+**Nachtrag der Leitstelle (21.11.2026):** `.env.example` setzt `TWOX_DEBUG=true` für die Entwicklung; im Browser zeigt Django deshalb bei 404 die URL-Liste. Die README muss sagen, dass `TWOX_DEBUG` für jeden Betrieb außerhalb der Entwicklung leer bzw. `false` bleibt (Vorgabe in `settings.py` ist aus). Für M6 (Installation in 10 Minuten) braucht es eine eigene Vorlage ohne Debug – als Hinweis für den M6-Auftrag in den Kurzbericht.
+
 - **Voraussetzung:** Die Aufträge 006, 007, 009, 013 und 014 sind zusammengeführt (damit alle M0-Aufträge außer der Messung 004, die für die Doku nicht gebraucht wird).
 - **Keine neue Abhängigkeit**, kein Werkzeug zur Doku-Erzeugung. Schaubilder als Text oder als Mermaid-Block im Markdown (wird von GitHub dargestellt; nichts wird installiert). Stufe B gilt nur, solange das so bleibt.
 - Sprache nach Abschnitt 7: README und Entwicklerdoku Englisch.
