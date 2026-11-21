@@ -117,7 +117,7 @@ Nichts davon hält die laufende Arbeit auf.
 | 032 | Oberfläche: Struktur und Geräte | B | 6 | erledigt |
 | 033 | Oberfläche: Protokoll | B | 6 | erledigt |
 | 034 | Backend-Übersetzung (gettext) | C | 7 | in Arbeit |
-| 035 | Oberfläche: CSV-Import | B | 7 | in Arbeit |
+| 035 | Oberfläche: CSV-Import | B | 7 | erledigt |
 | 036 | Oberfläche: Dateien | B | 7 | erledigt |
 | 037 | Nachweis der M1-Abnahme | B | 8 | offen |
 | 038 | README und ARCHITECTURE für M1 | B | 8 | offen |
