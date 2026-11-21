@@ -1,1 +1,64 @@
-{}
+{
+  "heading": "Files",
+  "listLabel": "Files of the device",
+  "empty": "This device has no files yet.",
+  "columns": {
+    "title": "Title",
+    "kind": "Kind",
+    "version": "Version",
+    "date": "Uploaded",
+    "size": "Size",
+    "user": "User",
+    "filename": "File name",
+    "checksum": "Checksum (SHA-256)",
+    "download": "Download"
+  },
+  "kind": {
+    "document": "Document",
+    "configuration": "Configuration"
+  },
+  "versionNumber": "Version {{number}}",
+  "system": "System",
+  "noVersion": "No version",
+  "checksum": {
+    "show": "Show the full checksum"
+  },
+  "download": {
+    "link": "Download",
+    "version": "Download version {{number}}"
+  },
+  "document": {
+    "heading": "File",
+    "detailsLabel": "Details of the file",
+    "device": "Device",
+    "deviceFallback": "Device {{id}}",
+    "created": "Created",
+    "createdBy": "Created by",
+    "versions": "Versions",
+    "versionsLabel": "All versions, newest first",
+    "history": "Change log of the file"
+  },
+  "upload": {
+    "newDocument": "Upload a new file",
+    "newVersion": "Upload a new version",
+    "file": "File",
+    "title": "Title",
+    "titleHint": "Optional; without a title the file name is used.",
+    "kind": "Kind",
+    "configurationLocked": "Configuration (not yet possible)",
+    "configurationHint": "Configuration files are not accepted yet: they may contain credentials, and these are only redacted from milestone M5 on. Please do not upload configurations as documents either.",
+    "submit": "Upload",
+    "submitting": "Uploading…",
+    "noFile": "Please choose a file.",
+    "uploaded": "Uploaded as version {{number}}.",
+    "duplicates": "The same content is already stored elsewhere:",
+    "duplicateEntry": "version {{number}}",
+    "sameAsLatest": "The content equals version {{number}}. No new version was created.",
+    "sameAsLatestFrom": "Version {{number}} was uploaded on {{date}}.",
+    "tooLarge": "The file is larger than the limit of {{limit}}.",
+    "tooLargeUnknown": "The file is larger than the upload limit.",
+    "invalid": "The file was not uploaded. Please check the marked fields.",
+    "configurationRejected": "Configuration files are not accepted yet (redaction of credentials follows in milestone M5).",
+    "otherErrors": "Messages from the API"
+  }
+}

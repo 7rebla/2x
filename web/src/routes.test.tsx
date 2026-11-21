@@ -5,6 +5,7 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createQueryClient } from "./api/queryClient.ts";
+import { fakeFilesApi } from "./components/files/testData.ts";
 import { Layout } from "./components/Layout.tsx";
 import { RouteError } from "./components/RouteError.tsx";
 import { changeLanguage } from "./i18n.ts";
@@ -115,10 +116,7 @@ describe("addresses", () => {
     expect(await screen.findByTestId("structure-tree")).toBeDefined();
   });
 
-  it.each([
-    ["/import", "Import"],
-    ["/documents/42", "File"],
-  ])("%s shows the page %s", async (path, heading) => {
+  it.each([["/import", "Import"]])("%s shows the page %s", async (path, heading) => {
     fakeApi(manager);
     renderApp(path);
 
@@ -149,8 +147,9 @@ describe("addresses", () => {
     expect(await screen.findByRole("heading", { level: 2, name: "Test panel" })).toBeDefined();
     cleanup();
 
+    fakeApi(manager, fakeFilesApi(fakeStructureApi().handler).handler);
     renderApp("/documents/7");
-    expect((await screen.findByTestId("document-id")).textContent).toBe("7");
+    expect(await screen.findByRole("heading", { level: 2, name: "Test manual" })).toBeDefined();
   });
 
   it.each(["/no-such-page", "/devices", "/devices/plc-1", "/documents/1/extra", "/selftest/x"])(

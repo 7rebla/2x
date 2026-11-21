@@ -6,6 +6,9 @@ import { expect, test } from "./fixtures";
 // the navigation, deep links and the page for unknown addresses.
 test.use({ locale: "en-US" });
 
+/** Id of a file that no test creates (largest id of the database column). */
+const MISSING_ID = "2147483647";
+
 function collectConsoleErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on("console", (message) => {
@@ -45,15 +48,24 @@ test("a click in the navigation leads from / to the self-test page", async ({ pa
 
 test("an address with a parameter opens directly", async ({ page }) => {
   const consoleErrors = collectConsoleErrors(page);
+  // The file page asks the API for the file; the browser logs its 404.
+  const fileRequest = page.waitForResponse((answer) => answer.url().endsWith(`/api/v1/documents/${MISSING_ID}/`));
 
-  // The device page opens directly as well (assets.spec.ts, with a device of its own).
-  const response = await page.goto("/documents/7");
+  // Device and file pages with real data open directly in assets.spec.ts and
+  // files.spec.ts. Here the file does not exist: the page itself (not
+  // Django) answers with NotFound after asking the API.
+  const response = await page.goto(`/documents/${MISSING_ID}`);
   expect(response?.status()).toBe(200);
 
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("File");
-  await expect(page.getByTestId("document-id")).toHaveText("7");
+  expect((await fileRequest).status()).toBe(404);
+  await expect(page.getByTestId("not-found")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Page not found");
+  await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
 
-  expect(consoleErrors, "errors in the browser console").toEqual([]);
+  expect(
+    consoleErrors.filter((message) => !message.includes("status of 404")),
+    "errors in the browser console",
+  ).toEqual([]);
 });
 
 test("an unknown address shows NotFound inside the frame", async ({ page }) => {
