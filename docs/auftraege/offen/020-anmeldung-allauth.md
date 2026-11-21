@@ -204,3 +204,41 @@ Zusätzlich im laufenden Stack (Testkonto `test-probe` mit Testkennwort, per `ma
 7. Nicht geprüft: Lauf in der GitHub-CI (kein Push), Räder für arm64 oder musl, libffi-Version im cffi-Rad, Binärinhalt der Rust-Crates mit Sonderlizenz.
 
 Keine offenen Fragen, die diesen Auftrag aufhalten. `docs/DECISIONS.md` und `docs/STATUS.md` nicht geändert.
+
+### Nacharbeit (nach Prüfung der Leitstelle)
+
+**Geschlossene Pfade.** `backend/twox/config/urls.py` hat jetzt ein Muster `CLOSED_ALLAUTH_PATH`. Es steht vor der Einbindung von `allauth.headless.urls` und antwortet über `closed_allauth_endpoint` mit 404, für die Clients `browser` und `app`. Die Pfade habe ich an `allauth/headless/account/urls.py` (65.22.1) im Container abgelesen:
+
+- `/_allauth/{browser,app}/v1/account/password/change`
+- `/_allauth/{browser,app}/v1/account/email`
+- `/_allauth/{browser,app}/v1/auth/password/request`
+- `/_allauth/{browser,app}/v1/auth/password/reset`
+
+Das Muster trifft nur genau diese Pfade. Der Client `app` ist ohnehin nicht freigegeben (`HEADLESS_CLIENTS`), sein Pfad wäre also auch ohne das Muster 404. Der Adapter, der keine E-Mail versendet, bleibt als zweite Sicherung. Seine Tests in `test_login.py` laufen weiter gegen eine eigene Test-URL-Konfiguration ohne das Muster.
+
+Damit sind die Abweichungen 1 und 2 oben erledigt, soweit sie Kennwort ändern, Zurücksetzen und E-Mail-Verwaltung betreffen.
+
+**Tests:** neu `backend/tests/accounts/test_closed_endpoints.py`, 21 Fälle:
+- Jeder der vier Pfade existiert in allauth selbst. Der Test gegen eine URL-Konfiguration nur mit allauth schlägt fehl, wenn allauth einen Pfad später umbenennt und das Muster ihn deshalb verfehlt.
+- Je Pfad, Client und Zustand (anonym oder angemeldet) liefern GET und POST 404.
+- Gegen die Projekt-URL-Konfiguration funktionieren weiter: `config` 200, `session` anonym 401, Anmeldung mit CSRF 200, `session` 200, Abmelden per `DELETE` 401, danach `session` 401.
+- Im laufenden Stack zusätzlich geprüft: die vier Pfade 404, `auth/session` 401, `config` 200.
+
+**Zusammenführen mit `main`:** `git merge main` (Merge-Commit `b22aa6f`) ohne Konflikte. `main` enthielt 017, 021, 022, 023 und 024. Danach liefen alle Prüfungen erneut, mit `docker compose -p twox-020` und `TWOX_API_PORT=18020`:
+
+| Prüfung | Ergebnis |
+| --- | --- |
+| Bau `migrate api worker backend-dev web-dev`, `up --wait` | Exit 0 |
+| config-Endpunkt im API-Container | 200 |
+| `ruff check` | `All checks passed!` |
+| `ruff format --check` | 96 Dateien formatiert, Exit 0 |
+| `mypy` | `Success: no issues found in 96 source files` |
+| `pytest` | `472 passed, 4 deselected`, nichts übersprungen |
+| `pytest -m worker` | `4 passed` |
+| `makemigrations --check --dry-run` | `No changes detected` |
+| Lizenzprüfung | `License check passed.` (58 Pakete) |
+| OpenAPI-Schema | unverändert, keine neuen Dateien; web-Job daher nicht nötig |
+| e2e (`pull`, `npm ci` mit 425 Paketen, `up`, `run e2e`) | `5 passed` |
+| `--profile dev --profile e2e down -v` | Exit 0; kein Container und kein Volume von twox-020 übrig |
+
+**Commits der Nacharbeit:** `b22aa6f` (Merge von main), `9ae5f52` (Pfade schließen und Tests), dazu der Commit dieses Abschnitts.
