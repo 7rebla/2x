@@ -24,6 +24,9 @@ __pycache__/
 .coverage
 htmlcov/
 *.egg-info/
+# Compiled translation catalogues: built in the image and in the tests only,
+# never committed (E-46)
+*.mo
 
 # Web
 node_modules/
