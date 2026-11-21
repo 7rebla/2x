@@ -1,4 +1,4 @@
-﻿# Status
+# Status
 
 Stand: 21.11.2026 · gepflegt von der Leitstelle
 
