@@ -40,6 +40,13 @@ interface FormState {
   readonly invalid: boolean;
   /** Any other failure (no permission, no answer …). */
   readonly failure: { readonly error: unknown } | null;
+  /**
+   * Counts the submissions. The fields are mounted afresh for each one, so
+   * that all of them show `values`: React resets uncontrolled fields after a
+   * form action, and a <select> would otherwise fall back to the option of
+   * its first render (a changed parent would be lost after a 400).
+   */
+  readonly attempt: number;
 }
 
 function readValues(formData: FormData, fields: readonly FieldName[]): FormValues {
@@ -69,21 +76,22 @@ function useSaveAction(
 ): [FormState, (formData: FormData) => void, boolean] {
   const queryClient = useQueryClient();
   return useActionState<FormState, FormData>(
-    async (_previous, formData) => {
+    async (previous, formData) => {
       const values = readValues(formData, fields);
+      const attempt = previous.attempt + 1;
       const outcome = await save((fetchFn) => send(values, fetchFn));
       switch (outcome.kind) {
         case "saved":
           await reloadAfterSave(queryClient);
           onSaved();
-          return { values, fieldErrors: {}, invalid: false, failure: null };
+          return { values, fieldErrors: {}, invalid: false, failure: null, attempt };
         case "invalid":
-          return { values, fieldErrors: outcome.fieldErrors, invalid: true, failure: null };
+          return { values, fieldErrors: outcome.fieldErrors, invalid: true, failure: null, attempt };
         case "failed":
-          return { values, fieldErrors: {}, invalid: false, failure: { error: outcome.error } };
+          return { values, fieldErrors: {}, invalid: false, failure: { error: outcome.error }, attempt };
       }
     },
-    { values: initialValues, fieldErrors: {}, invalid: false, failure: null },
+    { values: initialValues, fieldErrors: {}, invalid: false, failure: null, attempt: 0 },
   );
 }
 
@@ -249,7 +257,10 @@ function FormShell({
         </div>
       ) : null}
       {state.failure === null ? null : <ErrorMessage error={state.failure.error} />}
-      {children}
+      {/* Fresh fields per submission, see FormState.attempt. */}
+      <div key={state.attempt} className="space-y-3">
+        {children}
+      </div>
       <div className="flex gap-2">
         <button type="submit" disabled={pending} className="rounded bg-slate-800 px-4 py-2 text-white disabled:opacity-50">
           {pending ? t("actions.saving") : t("actions.save")}

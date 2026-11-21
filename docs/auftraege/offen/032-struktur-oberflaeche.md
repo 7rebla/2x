@@ -121,3 +121,23 @@ Zweig `worktree-agent-ab470f35db19e5455`, Arbeitsverzeichnis `.claude/worktrees/
 4. **Bearbeiten sendet `PUT`** mit allen Feldern des Formulars; Löschen gibt es nicht (Nicht-Ziel).
 5. **Testdaten:** Vitest nutzt erkennbare Testnamen („Test site A“, „test-plc-1“) und IPs aus 192.0.2.0/24; Playwright nur `testName()`/`testIp()`.
 6. Der Auftrag nennt `uniqueSuffix()`; verwendet ist `testName()`, das intern `uniqueSuffix()` nutzt und das Muster `e2e-<art>-<suffix>` liefert (Vorgabe der Leitstelle).
+
+### Nacharbeit (nach Prüfung der Leitstelle)
+
+**Befund bestätigt:** Die Felder der Formulare sind ungesteuert (`defaultValue`) unter `<form action>` mit `useActionState`. React 19 setzt sie nach jeder Formularaktion zurück. Ein `<select>` sprang dabei auf die Option des ersten Renderns zurück. Wer die übergeordnete Auswahl änderte und eine 400 auf einem anderen Feld bekam, sah danach still den alten Wert, und beim erneuten Speichern ging der alte Elternteil raus.
+
+**Test zuerst:** `StructurePage.test.tsx`, drei neue Fälle (Bereich: Standort ändern; Anlage: Bereich ändern; Gerät: Anlage ändern), je mit einer 400 auf einem anderen Feld. Danach wird der Select-Wert geprüft, dann ein zweites Mal gespeichert und der Elternteil beider Anfragen geprüft. **Vor der Behebung schlugen alle drei fehl** (erwartet `2`/`11`/`100`, erhalten `1`/`10`/`101`).
+
+**Behebung** (`web/src/pages/structure/forms.tsx`): `FormState` zählt die Absendungen (`attempt`). Die Felder stehen in einem Block mit `key={state.attempt}` und werden je Absendung neu aufgebaut. So zeigen alle Felder, auch die Auswahlfelder, die zuletzt gesendeten Werte (`state.values`).
+
+**Prüfungen** (`-p twox-032` / `twox-032-web`):
+
+| Prüfung | Ergebnis |
+| --- | --- |
+| `lint`, `typecheck` | Exit 0, ohne Meldung |
+| `test` | 13 Dateien, 238 Fälle bestanden |
+| `build` | Exit 0, `index-….js 468.56 kB` (gzip 144.51 kB) |
+| `licenses` | „License check passed.“ |
+| `api:generate` | Exit 0; danach kein Unterschied in `web/openapi` und `web/src/api` |
+| e2e | Bau, `pull`, `npm ci`, `up --wait`, „Create test account“, `run e2e`: „14 passed“, Exit 0 |
+| Abräumen | `down -v` beider Projekte mit Exit 0; kein Container und kein Volume mit `twox-032` |

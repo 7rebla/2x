@@ -304,6 +304,45 @@ describe("forms", () => {
     });
   });
 
+  it.each([
+    ["Edit area Test area A1", "Edit area", "Site", "2", { name: ["Name taken."] }, "/api/v1/areas/10/"],
+    ["Edit plant Test plant one", "Edit plant", "Area", "11", { key: ["Key taken."] }, "/api/v1/plants/100/"],
+    ["New device in Test plant two", "New device", "Plant", "100", { key: ["Key taken."] }, "/api/v1/devices/"],
+  ] as const)(
+    "after a 400 on another field, the changed parent choice stays (%s)",
+    async (button, formName, parentLabel, newParent, errors, path) => {
+      const structureApi = fakeStructureApi();
+      const api = fakeApi(manager, structureApi.handler);
+      renderApp("/");
+      await openTree();
+
+      fireEvent.click(screen.getByRole("button", { name: button }));
+      const current = form(formName);
+      if (formName === "New device") {
+        type(current, "Key", "test-new-3");
+        type(current, "Name", "Test device three");
+      }
+      fireEvent.change(within(current).getByLabelText(parentLabel), { target: { value: newParent } });
+      structureApi.rejectNextWrite(400, errors);
+      fireEvent.click(within(current).getByRole("button", { name: "Save" }));
+
+      expect(await within(form(formName)).findByTestId("form-invalid")).toBeDefined();
+      expect(within(form(formName)).getByLabelText<HTMLSelectElement>(parentLabel).value).toBe(newParent);
+
+      // Saving again sends the changed parent, not the old one.
+      fireEvent.click(within(form(formName)).getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(screen.queryByRole("form", { name: formName })).toBeNull();
+      });
+      const writes = api.requestsTo(path).filter((request) => request.method !== "GET");
+      expect(writes).toHaveLength(2);
+      const parentField = parentLabel.toLowerCase();
+      for (const write of writes) {
+        expect(((await write.clone().json()) as Record<string, unknown>)[parentField]).toBe(Number(newParent));
+      }
+    },
+  );
+
   it("shows errors that belong to no field above the fields", async () => {
     const structureApi = fakeStructureApi();
     fakeApi(manager, structureApi.handler);
