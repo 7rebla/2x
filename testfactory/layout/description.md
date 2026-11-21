@@ -81,4 +81,5 @@ Was die Quellen nicht hergeben, bleibt leer oder „offen“:
 
 - Manifest der Unterlagen: `testfactory/manifest.yaml` (Quelle, Softwarestand, Prüfsumme, Nutzungshinweis, zugeordnetes Gerät; die Zuordnung verwendet die Kennungen der Geräteliste).
 - Quellen und Lizenzlage der Fertigungslinie: `docs/testfabrik/quellen-fertigungslinie.md`.
+- Ob jede Anlage und jedes Gerät die drei Bedingungen aus Abschnitt 10.1 der Startunterlage erfüllt, belegt `evidence.md` je Kennung und Bedingung mit Fundstelle; Lücken stehen dort als „offen“ oder „folgt in T2“.
 - Die Spalten von `devices.csv` sind ein Vorschlag aus Sicht der Testfabrik. Sie legen kein Datenmodell der Anwendung fest.
