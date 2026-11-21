@@ -8,11 +8,18 @@ Error messages of this module are marked for translation (work order 034).
 
 from typing import Any
 
-from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
+from twox.assets.csv_import import Counts, ImportReport, RowError
+from twox.assets.integrity import (
+    AREA_NAME_TAKEN,
+    DEVICE_KEY_TAKEN,
+    PLANT_KEY_TAKEN,
+    SITE_NAME_TAKEN,
+)
 from twox.assets.models import Area, Device, Plant, Site, validate_key
+from twox.files.serializers import UploadFileField
 
 
 class SiteSerializer(serializers.ModelSerializer[Site]):
@@ -27,7 +34,7 @@ class SiteSerializer(serializers.ModelSerializer[Site]):
                 "validators": [
                     UniqueValidator(
                         queryset=Site.objects.all(),
-                        message=_("A site with this name exists already."),
+                        message=SITE_NAME_TAKEN,
                     )
                 ]
             },
@@ -52,9 +59,7 @@ class AreaSerializer(serializers.ModelSerializer[Area]):
         if self.instance is not None:
             clashes = clashes.exclude(pk=self.instance.pk)
         if clashes.exists():
-            raise serializers.ValidationError(
-                {"name": [_("This site has an area with this name already.")]}
-            )
+            raise serializers.ValidationError({"name": [AREA_NAME_TAKEN]})
         return attrs
 
 
@@ -71,7 +76,7 @@ class PlantSerializer(serializers.ModelSerializer[Plant]):
                     validate_key,
                     UniqueValidator(
                         queryset=Plant.objects.all(),
-                        message=_("A plant with this key exists already."),
+                        message=PLANT_KEY_TAKEN,
                     ),
                 ]
             },
@@ -107,7 +112,7 @@ class DeviceWriteSerializer(serializers.ModelSerializer[Device]):
                     validate_key,
                     UniqueValidator(
                         queryset=Device.objects.all(),
-                        message=_("A device with this key exists already."),
+                        message=DEVICE_KEY_TAKEN,
                     ),
                 ]
             },
@@ -157,3 +162,76 @@ class DeviceSerializer(serializers.ModelSerializer[Device]):
         model = Device
         fields = ("id", "plant", "area", "site", *DEVICE_FIELDS, "created_at", "updated_at")
         read_only_fields = fields
+
+
+# --- CSV import of the device list (twox.assets.csv_import) ------------------
+
+
+class FormBooleanField(serializers.BooleanField):
+    """A boolean form field whose default applies when the form leaves it out.
+
+    DRF reads a missing boolean of an HTML form as ``False`` (an unticked
+    checkbox), whatever the default. For ``dry_run`` that would turn a form
+    without the field into a real import.
+    """
+
+    default_empty_html = serializers.empty
+
+
+class DeviceImportFormSerializer(serializers.Serializer[Any]):
+    """Form of a device list import (``multipart/form-data``)."""
+
+    file = UploadFileField(
+        help_text=(
+            "The device list as CSV: UTF-8, comma, the 13 columns of format version 1;"
+            " at most TWOX_UPLOAD_MAX_BYTES bytes."
+        )
+    )
+    dry_run = FormBooleanField(
+        default=True,
+        help_text="Check and count only, save nothing (default). Send false to save.",
+    )
+
+
+class ImportCountsSerializer(serializers.Serializer[Counts]):
+    """What an import did, or would do in a dry run, at one level of the structure."""
+
+    created = serializers.IntegerField()
+    updated = serializers.IntegerField()
+    unchanged = serializers.IntegerField()
+
+
+class ImportRowErrorSerializer(serializers.Serializer[RowError]):
+    """An error in the imported file."""
+
+    line = serializers.IntegerField(
+        allow_null=True,
+        help_text="Line where the row starts (the header is line 1); null for the whole file.",
+    )
+    column = serializers.CharField(
+        allow_null=True, help_text="Column of the file; null for the whole row or file."
+    )
+    message = serializers.CharField()
+
+
+class ImportReportSerializer(serializers.Serializer[ImportReport]):
+    """Result of a device list import.
+
+    ``saved`` is true only if the changes were saved. With errors nothing is
+    saved and all counts are zero.
+    """
+
+    dry_run = serializers.BooleanField()
+    saved = serializers.BooleanField()
+    rows = serializers.IntegerField(help_text="Number of data rows read.")
+    sites = ImportCountsSerializer()
+    areas = ImportCountsSerializer()
+    plants = ImportCountsSerializer()
+    devices = ImportCountsSerializer()
+
+    def get_fields(self) -> dict[str, serializers.Field[Any, Any, Any, Any]]:
+        # "errors" names a property of every serializer, so the field cannot
+        # be declared in the class body.
+        fields = super().get_fields()
+        fields["errors"] = ImportRowErrorSerializer(many=True)
+        return fields

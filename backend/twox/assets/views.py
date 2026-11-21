@@ -7,24 +7,46 @@ Lists are not paginated; the structure of one operation is small.
 The operation ids come from drf-spectacular (``sites_list``, ``sites_create``,
 ``sites_retrieve``, ``sites_update``, ``sites_partial_update`` and so on);
 tests/assets/test_api.py pins them, because the web client is named after them.
+
+Writes run in a savepoint: a unique constraint that a request running at the
+same time hit first gives 400 at the field, not 500 (:func:`save_checked`).
+
+The CSV import of the device list (:class:`DeviceImportView`) needs the role
+``manage``.
 """
 
+from typing import cast
+
+from django.db import IntegrityError, transaction
 from django.db.models import Model, QuerySet
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+)
 from rest_framework import mixins, serializers, status, viewsets
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from twox.accounts.permissions import CanManageOrReadOnly
+from twox.accounts.models import User
+from twox.accounts.permissions import CanManage, CanManageOrReadOnly
+from twox.assets.csv_import import apply, parse
+from twox.assets.integrity import unique_violation
 from twox.assets.models import Area, Device, Plant, Site
 from twox.assets.serializers import (
     AreaSerializer,
+    DeviceImportFormSerializer,
     DeviceSerializer,
     DeviceWriteSerializer,
+    ImportReportSerializer,
     PlantSerializer,
     SiteSerializer,
 )
+from twox.files.serializers import ErrorDetailSerializer
+from twox.files.uploads import LimitedUploadView
 
 # Largest value of a bigint column; larger ids cannot exist.
 MAX_ID = 2**63 - 1
@@ -51,6 +73,25 @@ def query_id(request: Request, name: str) -> int | None:
     return value
 
 
+def save_checked[M: Model](serializer: serializers.ModelSerializer[M]) -> M:
+    """Save a validated serializer; a unique constraint hit at the same time gives 400.
+
+    The serializer checked uniqueness already, but a request running at the
+    same time can save the same name or key in between. The database
+    constraint then refuses the write. The savepoint keeps the rest of the
+    request usable, and the error is reported at the field, with the message
+    of the serializer's own check. Any other integrity error stays a 500.
+    """
+    try:
+        with transaction.atomic():
+            return serializer.save()
+    except IntegrityError as error:
+        violation = unique_violation(error)
+        if violation is None:
+            raise
+        raise serializers.ValidationError({violation.field: [str(violation.message)]}) from error
+
+
 class StructureViewSet[M: Model](
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -61,6 +102,12 @@ class StructureViewSet[M: Model](
     """List, read, create and change; no delete."""
 
     permission_classes = (CanManageOrReadOnly,)
+
+    def perform_create(self, serializer: serializers.BaseSerializer[M]) -> None:
+        save_checked(cast("serializers.ModelSerializer[M]", serializer))
+
+    def perform_update(self, serializer: serializers.BaseSerializer[M]) -> None:
+        save_checked(cast("serializers.ModelSerializer[M]", serializer))
 
 
 class SiteViewSet(StructureViewSet[Site]):
@@ -153,7 +200,7 @@ class DeviceViewSet(StructureViewSet[Device]):
     def create(self, request: Request, *args: object, **kwargs: object) -> Response:
         serializer = DeviceWriteSerializer(data=request.data, context=self.get_serializer_context())
         serializer.is_valid(raise_exception=True)
-        return self.answer(serializer.save(), status.HTTP_201_CREATED)
+        return self.answer(save_checked(serializer), status.HTTP_201_CREATED)
 
     def update(self, request: Request, *args: object, **kwargs: object) -> Response:
         # partial_update() of the mixin calls this with partial=True.
@@ -164,4 +211,40 @@ class DeviceViewSet(StructureViewSet[Device]):
             context=self.get_serializer_context(),
         )
         serializer.is_valid(raise_exception=True)
-        return self.answer(serializer.save())
+        return self.answer(save_checked(serializer))
+
+
+class DeviceImportView(LimitedUploadView):
+    """Import of a device list as CSV (E-44); see ``twox.assets.csv_import``."""
+
+    permission_classes = (CanManage,)
+
+    @extend_schema(
+        operation_id="devices_import",
+        request={"multipart/form-data": DeviceImportFormSerializer},
+        responses={
+            200: ImportReportSerializer,
+            400: OpenApiResponse(description="Invalid form: no file, or dry_run no boolean."),
+            403: OpenApiResponse(ErrorDetailSerializer, description="Not the role manage."),
+            413: OpenApiResponse(
+                ErrorDetailSerializer, description="Larger than TWOX_UPLOAD_MAX_BYTES."
+            ),
+        },
+    )
+    def post(self, request: Request) -> Response:
+        """Check a device list and, without dry run, save it.
+
+        A dry run (the default) checks the file and counts what an import
+        would create, update or leave unchanged, and saves nothing. Without
+        dry run everything is saved in one transaction, or nothing if any row
+        has an error. Errors in the file come back in ``errors`` with line and
+        column, with status 200; ``saved`` tells whether anything was saved.
+        """
+        form = DeviceImportFormSerializer(data=self.upload_data(request))
+        form.is_valid(raise_exception=True)
+        user = request.user
+        if not isinstance(user, User):  # CanManage lets only accounts through
+            raise PermissionDenied
+        parsed = parse(form.validated_data["file"])
+        report = apply(parsed, user, dry_run=form.validated_data["dry_run"])
+        return Response(ImportReportSerializer(report).data)
