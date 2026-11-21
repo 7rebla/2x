@@ -34,6 +34,7 @@ Quelle der Einträge E-01 bis E-13: `STARTUNTERLAGE.md`, Entwurf 2 vom 21.11.202
 | E-24 | Höchstens fünf Aufträge gleichzeitig statt drei (ändert Abschnitt 8.5). Einzelne Aufträge dürfen als eigene Sitzungen laufen, damit a7 hineinsehen kann | ✔ | 21.11.2026 |
 | E-25 | BlueOak-1.0.0, CC-BY-3.0, CC-BY-4.0 und CC0-1.0 sind bei reinen Entwicklungs- und Build-Paketen zugelassen (nicht im ausgelieferten Code). Anlass: mitgezogene Pakete in Auftrag 002 | ✔ | 21.11.2026 |
 | E-26 | Die Leitstelle pusht `main` nach jedem geprüften Zusammenführen ohne Einzelrückfrage; vorher laufen Geheimnissuche und Namensprüfung über den Verlauf. Auftragszweige werden weiterhin nicht gepusht (ergänzt E-14) | ✔ | 21.11.2026 |
+| E-27 | Siemens-Unterlagen (S7-1200-Systemhandbuch) werden nur von a7 selbst im Browser geladen (Lade-Art `manual`) und nur lokal eingelesen; nichts davon wird veröffentlicht, kein automatischer Abruf von Siemens-Adressen. Das Restrisiko der Klausel gegen Text- und Data-Mining (Siemens-Nutzungsbedingungen A.6.2) wird in Kauf genommen und im Manifest vermerkt. Maßgeblich V4.6 (11/2022), V4.7 (12/2024) als Verweis | ✔ | 21.11.2026 |
 
 ## Begründungen
 
