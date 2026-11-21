@@ -1,0 +1,42 @@
+import type { ReactElement } from "react";
+import { useTranslation } from "react-i18next";
+
+import { ApiError } from "../api/errors.ts";
+
+/**
+ * Error state of a page or a part of it. For an API error it shows the HTTP
+ * status and, if the API sent one, its error text (shown as sent: it is data).
+ */
+export function ErrorMessage({ error }: { error: unknown }): ReactElement {
+  const { t } = useTranslation("common");
+
+  let summary: string;
+  let detail: string | null = null;
+  if (error instanceof ApiError) {
+    detail = error.detail;
+    if (error.kind === "http" && error.status !== null) {
+      summary = t("error.http", { status: error.status });
+    } else if (error.kind === "network") {
+      summary = t("error.network");
+    } else {
+      summary = t("error.invalidAnswer");
+    }
+  } else {
+    summary = t("error.unexpected");
+  }
+
+  return (
+    <div
+      role="alert"
+      data-testid="error-message"
+      className="space-y-1 rounded border border-red-300 bg-red-50 p-4 text-red-800"
+    >
+      <p data-testid="error-summary">{summary}</p>
+      {detail === null ? null : (
+        <p className="text-sm">
+          {t("error.detailLabel")}: <span data-testid="error-detail">{detail}</span>
+        </p>
+      )}
+    </div>
+  );
+}

@@ -1,18 +1,21 @@
+import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { useTranslation } from "react-i18next";
+import { RouterProvider } from "react-router/dom";
 
-import { LanguageSwitch } from "./LanguageSwitch.tsx";
-import { SelftestPage } from "./SelftestPage.tsx";
+/** The router type of react-router's data mode (browser router in the app, memory router in tests). */
+export type AppRouter = Parameters<typeof RouterProvider>[0]["router"];
 
-export function App(): ReactElement {
-  const { t } = useTranslation("common");
+/** Root of the user interface: data fetching (TanStack Query) around the router. */
+export function App({
+  router,
+  queryClient,
+}: {
+  router: AppRouter;
+  queryClient: QueryClient;
+}): ReactElement {
   return (
-    <main className="flex min-h-screen flex-col items-center gap-8 bg-slate-50 p-8 text-slate-900">
-      <header className="flex w-full max-w-xl items-center justify-between gap-4">
-        <h1 className="text-5xl font-semibold tracking-tight">{t("appTitle")}</h1>
-        <LanguageSwitch />
-      </header>
-      <SelftestPage />
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   );
 }

@@ -1,11 +1,11 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { loadSelftest } from "./api/selftest.ts";
+import { loadSelftest } from "../api/selftest.ts";
+import { changeLanguage } from "../i18n.ts";
 import { SelftestPage } from "./SelftestPage.tsx";
-import { changeLanguage } from "./i18n.ts";
 
-vi.mock("./api/selftest.ts", () => ({ loadSelftest: vi.fn() }));
+vi.mock("../api/selftest.ts", () => ({ loadSelftest: vi.fn() }));
 
 const loadSelftestMock = vi.mocked(loadSelftest);
 
