@@ -110,12 +110,12 @@ Nichts davon hält die laufende Arbeit auf.
 | 025 | API-Rechte: Standard nur mit Rolle | C | 3 | erledigt |
 | 026 | API und Admin für die Struktur | C | 4 | erledigt |
 | 027 | Testkonto in CI, Selbsttest nur für Angemeldete | C | 4 | erledigt |
-| 028 | Protokoll (Backend) | C | 5 | in Arbeit |
-| 029 | Datei-API | C | 5 | in Arbeit |
+| 028 | Protokoll (Backend) | C | 5 | erledigt |
+| 029 | Datei-API | C | 5 | erledigt |
 | 030 | Anmeldung in der Oberfläche | C | 5 | erledigt |
-| 031 | CSV-Import (Backend) | C | 6 | offen |
+| 031 | CSV-Import (Backend) | C | 6 | in Arbeit |
 | 032 | Oberfläche: Struktur und Geräte | B | 6 | in Arbeit |
-| 033 | Oberfläche: Protokoll | B | 6 | offen |
+| 033 | Oberfläche: Protokoll | B | 6 | in Arbeit |
 | 034 | Backend-Übersetzung (gettext) | C | 7 | offen |
 | 035 | Oberfläche: CSV-Import | B | 7 | offen |
 | 036 | Oberfläche: Dateien | B | 7 | offen |
@@ -135,3 +135,5 @@ Hinweise aus Welle 1:
 - 026: Legen zwei Anfragen gleichzeitig dieselbe Kennung bzw. denselben Namen an, endet die zweite mit 500 statt 400 (Datenbank-Constraint hält). Für 031 vorgemerkt: `save()` in den Struktur-Views in `transaction.atomic()` kapseln und `IntegrityError` je Constraint als Feldfehler (400) melden, mit Test.
 - 027: Testkonto `e2e-manager` mit dem öffentlichen Entwicklungskennwort aus `.env.example`; es entsteht nur durch den Schritt „Create test account" (CI-Job e2e oder README), nie automatisch in der Testumgebung.
 - 030: `/admin/login/` vergibt keine Sitzung mehr, sondern leitet auf `/login?next=/admin/…` um. Browser-Tests melden sich einmal je Worker an (storageState nur im Speicher). Offene Weiterleitung über `next` (Punkt-Segmente) in der Prüfung gefunden und behoben, auch im Admin-Redirect.
+- 028: auditlog übernimmt keine Werte aus Kopfzeilen (eigene Middleware, `AUDITLOG_CID_HEADER = None`); in der Prüfung gefunden: manipulierte Kopfzeilen konnten das Schreiben des Eintrags verhindern, die Änderung blieb aber gespeichert. Für 038: `auditlogflush` nicht gesperrt; `groups.clear()` protokolliert alle Gruppen; Gruppenänderung von der Gruppenseite landet am Gruppenobjekt; gelöschter Benutzer → Akteur NULL; `actor_email` wird gespeichert (bei unseren Konten leer).
+- 029: Eine eigene ASGI-Hülle (`asgi.py`) weist zu große Uploads mit 413 ab, bevor Django sie zwischenspeichert. Liegengebliebene `.part`-Dateien entfernt `python manage.py remove_stale_uploads` (nur von Hand). Für 038: Restdatei in `/tmp` des api-Containers nach hartem Abbruch möglich; fehlt ein Blob, ergibt der Download 500.
