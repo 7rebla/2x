@@ -30,9 +30,9 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "No license: no license file in the tree and no license statement in the README. Download yes, redistribution no, never commit files or longer excerpts.",
+        "note": "No license: no license file, license field or license header in the tree at the pinned commit, no license statement in the README, and no license-like member name in the .zap18 and .ft archives (work order 110). Download yes, redistribution no, never commit files or longer excerpts.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "dps-plc",
@@ -47,7 +47,7 @@
         "ccu-rpi"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "28 files; size_bytes is the sum of the blob sizes found in work order 102. Contains seven TIA Portal V18 project archives (.zap18: AIQS, DPS, DRILL, HBW, MILL, the add-on OVEN and one exercise solution), five TXT 4.0 programs (.ft), Node-RED/flows.json and twelve images. The add-on module OVEN is not part of the test factory (question 3 of work order 102). Assignment of the programs to devices follows the file names only; the content of the archives is unverified. terms.verified is false: work order 102 checked the file tree and read the three Markdown files, but the license field of the GitHub API and license texts embedded in the .zap18 and .ft archives are unchecked (work order 110). The rights holder is taken from the owner of the GitHub account; the repository carries no rights notice. The README names default access data of the delivery state; they are never copied into this repository."
+      "notes": "28 files; size_bytes is the sum of the blob sizes found in work order 102. Contains seven TIA Portal V18 project archives (.zap18: AIQS, DPS, DRILL, HBW, MILL, the add-on OVEN and one exercise solution), five TXT 4.0 programs (.ft), Node-RED/flows.json and twelve images. The add-on module OVEN is not part of the test factory (question 3 of work order 102). Assignment of the programs to devices follows the file names only; the content of the archives is unverified. Work order 110 searched the tree at the pinned commit for LICENSE, COPYING, NOTICE and copyright files and for license or copyright statements in the text files (none), and listed the members of the .zap18 and .ft files without extracting them: all twelve are ZIP archives (TIA project folders, ROBO Pro Coding projects), and no member name points to a license, notice or copyright file. Still unchecked: the license field of the GitHub API and the content of the archive members (for example the README.md inside the DRILL archive). The rights holder is taken from the owner of the GitHub account; the repository carries no rights notice. The README names default access data of the delivery state; they are never copied into this repository."
     },
     {
       "id": "aps-repository-dev",
@@ -86,7 +86,7 @@
         "ccu-rpi"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "540 files; size_bytes is the sum of the file sizes found in work order 102. Contains the source code of the central control, the frontend, Node-RED flows, the Mosquitto configuration, a systemd unit for the Raspberry Pi, two Compose files and the MQTT protocol description (docs/). nodeRed/flows.json is byte-identical to Node-RED/flows.json of the entry aps-repository. The Apache-2.0 statement in nodeRed/package.json comes from the node-red-docker template and does not cover the vendor's flows. Unverified: license field of the GitHub API, the split of rights between the vendor and the service provider named as author of the central control, and the second branch docs. The test factory only reads these files; the central control is not started in T1 and T2. The Mosquitto configuration includes a file with a hashed broker secret; it is never copied into this repository and is material for the redaction check."
+      "notes": "540 files; size_bytes is the sum of the file sizes found in work order 102. Contains the source code of the central control, the frontend, Node-RED flows, the Mosquitto configuration, a systemd unit for the Raspberry Pi, two Compose files and the MQTT protocol description (docs/). nodeRed/flows.json is byte-identical to Node-RED/flows.json of the entry aps-repository. The Apache-2.0 statement in nodeRed/package.json comes from the node-red-docker template and does not cover the vendor's flows. Work order 110 searched the tree at the pinned commit again: no LICENSE, COPYING or NOTICE file (the README section License points to a LICENSE file that is missing); license fields only in central-control/package.json (UNLICENSED) and nodeRed/package.json (Apache-2.0); the lock files name the licenses of third-party packages only; no copyright header found. Unverified: license field of the GitHub API, the split of rights between the vendor and the service provider named as author of the central control, and the second branch docs. The test factory only reads these files; the central control is not started in T1 and T2. The Mosquitto configuration includes a file with a hashed broker secret; it is never copied into this repository and is material for the redaction check."
     },
     {
       "id": "aps-quick-start-de",
@@ -105,8 +105,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "APS 1.3.0",
-      "document_version": null,
-      "version_source": "document_version: unverified (no date in the file name); software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "document_version": "Version 1, Model revision 1.x, 11/2023",
+      "version_source": "document_version: title page (PDF page 1), read in work order 110; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); the title page names no APS software version, so whether the document matches 1.3.0 is unverified",
       "sha256": "15e423cbc448656e61a1290370a5fca123eea3bf8955acc7ab8f3f5eca19688c",
       "tree_sha256": null,
       "size_bytes": 640769,
@@ -116,9 +116,9 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no copyright or license notice in the file (work order 110). Download yes, redistribution no, never commit.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "aps-dps",
@@ -131,7 +131,7 @@
         "aps-core"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Concerns the whole line, therefore assigned to all eight plants. No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. terms.verified is false: work order 102 checked the vendor's pages and imprint on 2026-11-21 but did not open this file, so copyright or license notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "Concerns the whole line, therefore assigned to all eight plants. Version unverified because the title page names no APS software version. No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. Work order 110 read the title page and searched the text layer of all 8 pages for copyright, license, reproduction and trademark notices: none found; notices that exist only as images would not be found this way. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-documentation-de",
@@ -150,8 +150,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "APS 1.3.0",
-      "document_version": "Version 4, 02/2025",
-      "version_source": "document_version: title page as read in work order 102 (Version 4, Model revision 1.x, 02/2025, 38 pages); software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "document_version": "Version 4, Model revision 1.x, 02/2025",
+      "version_source": "document_version: title page (PDF page 1), read in work order 102 and confirmed at the loaded file in work order 110; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); the title page names no APS software version, so whether the document matches 1.3.0 is unverified",
       "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
       "tree_sha256": null,
       "size_bytes": 2531482,
@@ -161,7 +161,7 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no copyright or license notice in the file (work order 110). Download yes, redistribution no, never commit.",
         "checked_on": "2026-11-21",
         "verified": true
       },
@@ -176,7 +176,7 @@
         "aps-core"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Concerns the whole line, therefore assigned to all eight plants. The server sends neither Last-Modified nor ETag; only the checksum of the first fetch (work order 109) pins the file. Work order 102 loaded this file outside the project and searched its text: no copyright or license notice. SHA-256 observed there on 2026-11-21, as a comparison value for the first fetch: 662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55. The document contains a table with default access data of the delivery state (PDF page 38); they are never copied into this repository. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "Concerns the whole line, therefore assigned to all eight plants. Version unverified because the title page names no APS software version. The server sends neither Last-Modified nor ETag; only the checksum of the first fetch (work order 109) pins the file. Work order 102 loaded this file outside the project and searched its text: no copyright or license notice. SHA-256 observed there on 2026-11-21, as a comparison value for the first fetch: 662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55. Work order 110 read the title page and searched the text layer of all 38 pages for copyright, license, reproduction and trademark notices: none found; notices that exist only as images would not be found this way. The document contains a table with default access data of the delivery state (PDF page 38); they are never copied into this repository. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-assignment-plans-de",
@@ -195,8 +195,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "APS 1.3.0",
-      "document_version": "09/2024",
-      "version_source": "document_version: file name; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "document_version": "Version 09-2024",
+      "version_source": "document_version: statement on PDF page 1 below the table of contents, read in work order 110, and file name; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); the title page names no APS software version, so whether the document matches 1.3.0 is unverified",
       "sha256": "9ef76a98f7137c66efef31ca98c24202c1727246be04bf405194b7b5f6afc45c",
       "tree_sha256": null,
       "size_bytes": 1175306,
@@ -206,9 +206,9 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no copyright or license notice in the file (work order 110). Download yes, redistribution no, never commit.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "aps-dps",
@@ -221,7 +221,7 @@
         "aps-core"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Assigned to all eight plants by title only; the content was not opened (assignment unverified). The server sends neither Last-Modified nor ETag; only the checksum of the first fetch (work order 109) pins the file. terms.verified is false: work order 102 checked the vendor's pages and imprint on 2026-11-21 but did not open this file, so copyright or license notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "Assigned to all eight plants by title; assigned_to is unchanged by work order 110. The table of contents on PDF page 1 lists the modules of the line, the AGV, the power and LAN boards and the add-on oven. Version unverified because the title page names no APS software version. The server sends neither Last-Modified nor ETag; only the checksum of the first fetch (work order 109) pins the file. Work order 110 read the title page and searched the text layer of all 27 pages for copyright, license, reproduction and trademark notices: none found; notices that exist only as images would not be found this way. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-calibration-de",
@@ -240,8 +240,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "APS 1.3.0",
-      "document_version": null,
-      "version_source": "document_version: unverified (no date in the file name); software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "document_version": "2024-02-27 (member dates)",
+      "version_source": "document_version: modification date of all three members in the ZIP listing (work order 110); the archive has no edition statement of its own and the PDF inside was not opened, so the edition of the calibration guide is unverified; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the content matches 1.3.0 is unverified",
       "sha256": "d7a37d1c144f0f777218ce69bc99d727c5e717e911018464fa986e0dce2f14da",
       "tree_sha256": null,
       "size_bytes": 13329798,
@@ -251,7 +251,7 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no license or notice file in the archive (work order 110). Download yes, redistribution no, never commit, never unpack into the repository.",
         "checked_on": "2026-11-21",
         "verified": false
       },
@@ -266,7 +266,7 @@
         "aps-core"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "ZIP archive; it is stored as loaded and not unpacked by this entry. Assigned to all eight plants by title only; the content was not opened (assignment unverified). No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. terms.verified is false: work order 102 checked the vendor's pages and imprint on 2026-11-21 but did not open this file, so copyright or license notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "ZIP archive; it is stored as loaded and not unpacked by this entry. Work order 110 listed its members only: folder Kalibrierung-DE/ with two videos (DPS, HBW) and Kalibrierung_DE.pdf, all dated 27.02.2024. Assigned to all eight plants by title; assigned_to is unchanged by work order 110. Version unverified because the PDF inside the archive was not opened and the archive states no edition. No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. terms.verified is false: no member name points to a license or notice file, but the PDF and the videos inside were not opened, so notices inside them are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-troubleshooting-de",
@@ -286,7 +286,7 @@
       "generated_by": null,
       "software_version": "APS 1.3.0",
       "document_version": "2025-02-03",
-      "version_source": "document_version: file name; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "version_source": "document_version: file name and date on PDF page 1 (03.02.2025), read in work order 110; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); the title page names no APS software version, so whether the document matches 1.3.0 is unverified",
       "sha256": "cf43299fd17d8b51ea3bbfdbad169fee42222274ea97eaf4afe2e875f292f7a0",
       "tree_sha256": null,
       "size_bytes": 168049,
@@ -296,9 +296,9 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no copyright or license notice in the file (work order 110). Download yes, redistribution no, never commit.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "aps-dps",
@@ -311,7 +311,7 @@
         "aps-core"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Assigned to all eight plants by title only; the content was not opened (assignment unverified). The server sends neither Last-Modified nor ETag; only the checksum of the first fetch (work order 109) pins the file. terms.verified is false: work order 102 checked the vendor's pages and imprint on 2026-11-21 but did not open this file, so copyright or license notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "Assigned to all eight plants by title; assigned_to is unchanged by work order 110. Version unverified because the title page names no APS software version. The server sends neither Last-Modified nor ETag; only the checksum of the first fetch (work order 109) pins the file. Work order 110 read the title page and searched the text layer of all 3 pages for copyright, license, reproduction and trademark notices: none found; notices that exist only as images would not be found this way. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-change-ip-address-de",
@@ -330,8 +330,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "APS 1.3.0",
-      "document_version": null,
-      "version_source": "document_version: unverified (no date in the file name); software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "document_version": "Version 1, 09/2024",
+      "version_source": "document_version: title page (PDF page 1), read in work order 110; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); the title page names no APS software version, so whether the document matches 1.3.0 is unverified",
       "sha256": "146646f4f1633c23fa0d99f7018c6c01674f75c2f1f22fa9ec81f0209ff91856",
       "tree_sha256": null,
       "size_bytes": 10089795,
@@ -341,9 +341,9 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no copyright or license notice in the file (work order 110). Download yes, redistribution no, never commit.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "dps-plc",
@@ -353,7 +353,7 @@
         "aiqs-plc"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Assigned to the five PLCs of the base line by title only (TIA Portal is the engineering tool of the S7-1200); the content was not opened (assignment unverified). No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. terms.verified is false: work order 102 checked the vendor's pages and imprint on 2026-11-21 but did not open this file, so copyright or license notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "Assigned to the five PLCs of the base line by title (TIA Portal is the engineering tool of the S7-1200); page 2 names TIA Portal V18 as prerequisite. assigned_to is unchanged by work order 110. Version unverified because the title page names no APS software version. No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. Work order 110 read the title page and searched the text layer of all 16 pages for copyright, license, reproduction and trademark notices: none found; notices that exist only as images would not be found this way. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-software-versions-de",
@@ -372,8 +372,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "APS 1.3.0",
-      "document_version": null,
-      "version_source": "document_version: unverified (no date in the file name); software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "document_version": "2024-05-27 (PDF creation date)",
+      "version_source": "document_version: no edition or date on the title page or in the text of all 3 pages, searched in work order 110 (the only date is that of an example update-blog entry on PDF page 1, 2024/02/20 for APS-24V v1.0.0); the value is the creation date in the PDF metadata; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); the title page names no APS software version, so whether the document matches 1.3.0 is unverified",
       "sha256": "ef5fcc52cf8b87a3f4d7793c1d42b19e6905894308101f98828d4f10ec79df51",
       "tree_sha256": null,
       "size_bytes": 249791,
@@ -383,9 +383,9 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no copyright or license notice in the file (work order 110). Download yes, redistribution no, never commit.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "aps-dps",
@@ -398,7 +398,7 @@
         "aps-core"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Offered on the vendor's update blog, not on the documents page. Assigned to all eight plants by title only; the content was not opened (assignment unverified). No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. terms.verified is false: work order 102 checked the vendor's pages and imprint on 2026-11-21 but did not open this file, so copyright or license notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "Offered on the vendor's update blog, not on the documents page. Assigned to all eight plants by title; assigned_to is unchanged by work order 110. Version unverified because the title page names no APS software version. No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. Work order 110 read the title page and searched the text layer of all 3 pages for copyright, license, reproduction and trademark notices: none found; notices that exist only as images would not be found this way. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-software-update-de",
@@ -417,8 +417,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "APS 1.3.0",
-      "document_version": null,
-      "version_source": "document_version: unverified (no date in the file name); software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "document_version": "2024-05-27 (PDF creation date)",
+      "version_source": "document_version: no edition or date on the title page or in the text of all 16 pages, searched in work order 110; the value is the creation date in the PDF metadata; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); the title page names no APS software version, so whether the document matches 1.3.0 is unverified",
       "sha256": "bb08d8c6a7acfdb0e03c658bb5d86cf03ea80eb28282caca80712d9c86bcd6e3",
       "tree_sha256": null,
       "size_bytes": 3344210,
@@ -428,9 +428,9 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no copyright or license notice in the file (work order 110). Download yes, redistribution no, never commit.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "aps-dps",
@@ -443,7 +443,7 @@
         "aps-core"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Offered on the vendor's update blog, not on the documents page. Assigned to all eight plants by title only; the content was not opened (assignment unverified). No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. terms.verified is false: work order 102 checked the vendor's pages and imprint on 2026-11-21 but did not open this file, so copyright or license notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "Offered on the vendor's update blog, not on the documents page. Assigned to all eight plants by title; assigned_to is unchanged by work order 110. Version unverified because the title page names no APS software version. No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. Work order 110 read the title page and searched the text layer of all 16 pages for copyright, license, reproduction and trademark notices: none found; notices that exist only as images would not be found this way. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-quick-start-en",
@@ -462,8 +462,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "APS 1.3.0",
-      "document_version": null,
-      "version_source": "document_version: unverified (no date in the file name); software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "document_version": "Version 1, Model revision 1.x, 11/2023",
+      "version_source": "document_version: title page (PDF page 1), read in work order 110; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); the title page names no APS software version, so whether the document matches 1.3.0 is unverified",
       "sha256": "67689968d1a98aff39969883d8638ba13e2a9ed4f8c2f0ed0a9b810391281dc2",
       "tree_sha256": null,
       "size_bytes": 639540,
@@ -473,9 +473,9 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no copyright or license notice in the file (work order 110). Download yes, redistribution no, never commit.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "aps-dps",
@@ -488,7 +488,7 @@
         "aps-core"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Concerns the whole line, therefore assigned to all eight plants. No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. terms.verified is false: work order 102 checked the vendor's pages and imprint on 2026-11-21 but did not open this file, so copyright or license notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "Concerns the whole line, therefore assigned to all eight plants. Version unverified because the title page names no APS software version. No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. Work order 110 read the title page and searched the text layer of all 8 pages for copyright, license, reproduction and trademark notices: none found; notices that exist only as images would not be found this way. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-documentation-en",
@@ -507,8 +507,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "APS 1.3.0",
-      "document_version": "02/2025",
-      "version_source": "document_version: file name (38 pages per work order 102; the title page statement is recorded for the German edition only); software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "document_version": "Version 4, Model revision 1.x, 02/2025",
+      "version_source": "document_version: title page (PDF page 1), confirmed at the loaded file in work order 110; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); the title page names no APS software version, so whether the document matches 1.3.0 is unverified",
       "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
       "tree_sha256": null,
       "size_bytes": 2650705,
@@ -518,7 +518,7 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no copyright or license notice in the file (work order 110). Download yes, redistribution no, never commit.",
         "checked_on": "2026-11-21",
         "verified": true
       },
@@ -533,7 +533,7 @@
         "aps-core"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Concerns the whole line, therefore assigned to all eight plants. The server sends neither Last-Modified nor ETag; only the checksum of the first fetch (work order 109) pins the file. Work order 102 loaded this file outside the project and searched its text: no copyright or license notice. SHA-256 observed there on 2026-11-21, as a comparison value for the first fetch: f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2. The document contains a table with default access data of the delivery state (PDF page 38); they are never copied into this repository. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "Concerns the whole line, therefore assigned to all eight plants. Version unverified because the title page names no APS software version. The server sends neither Last-Modified nor ETag; only the checksum of the first fetch (work order 109) pins the file. Work order 102 loaded this file outside the project and searched its text: no copyright or license notice. SHA-256 observed there on 2026-11-21, as a comparison value for the first fetch: f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2. Work order 110 read the title page and searched the text layer of all 38 pages for copyright, license, reproduction and trademark notices: none found; notices that exist only as images would not be found this way. The document contains a table with default access data of the delivery state (PDF page 38); they are never copied into this repository. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-assignment-plans-en",
@@ -552,8 +552,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "APS 1.3.0",
-      "document_version": "09/2024",
-      "version_source": "document_version: file name; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "document_version": "Version 09-2024",
+      "version_source": "document_version: statement on PDF page 1 below the table of contents, read in work order 110, and file name; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); the title page names no APS software version, so whether the document matches 1.3.0 is unverified",
       "sha256": "22d75cd6bde3daca95612cd4b1863f319a111828fabd86fede815e7ef47f4edb",
       "tree_sha256": null,
       "size_bytes": 1178112,
@@ -563,9 +563,9 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no copyright or license notice in the file (work order 110). Download yes, redistribution no, never commit.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "aps-dps",
@@ -578,7 +578,7 @@
         "aps-core"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Assigned to all eight plants by title only; the content was not opened (assignment unverified). The server sends neither Last-Modified nor ETag; only the checksum of the first fetch (work order 109) pins the file. terms.verified is false: work order 102 checked the vendor's pages and imprint on 2026-11-21 but did not open this file, so copyright or license notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "Assigned to all eight plants by title; assigned_to is unchanged by work order 110. The table of contents on PDF page 1 lists the modules of the line, the AGV, the power and LAN boards and the add-on oven. Version unverified because the title page names no APS software version. The server sends neither Last-Modified nor ETag; only the checksum of the first fetch (work order 109) pins the file. Work order 110 read the title page and searched the text layer of all 27 pages for copyright, license, reproduction and trademark notices: none found; notices that exist only as images would not be found this way. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-calibration-en",
@@ -597,8 +597,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "APS 1.3.0",
-      "document_version": null,
-      "version_source": "document_version: unverified (no date in the file name); software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "document_version": "2024-02-27 (member dates)",
+      "version_source": "document_version: modification date of all three members in the ZIP listing (work order 110); the archive has no edition statement of its own and the PDF inside was not opened, so the edition of the calibration guide is unverified; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the content matches 1.3.0 is unverified",
       "sha256": "e5926df12ed458b182efe37f6050c71bbfb2e0af09f1fae2bc937b9566f53642",
       "tree_sha256": null,
       "size_bytes": 23223044,
@@ -608,7 +608,7 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no license or notice file in the archive (work order 110). Download yes, redistribution no, never commit, never unpack into the repository.",
         "checked_on": "2026-11-21",
         "verified": false
       },
@@ -623,7 +623,7 @@
         "aps-core"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "ZIP archive; it is stored as loaded and not unpacked by this entry. Assigned to all eight plants by title only; the content was not opened (assignment unverified). No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. terms.verified is false: work order 102 checked the vendor's pages and imprint on 2026-11-21 but did not open this file, so copyright or license notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "ZIP archive; it is stored as loaded and not unpacked by this entry. Work order 110 listed its members only: folder Calibration-EN/ with two videos (DPS, HBW) and Calibration_APS_EN.pdf, all dated 27.02.2024. Assigned to all eight plants by title; assigned_to is unchanged by work order 110. Version unverified because the PDF inside the archive was not opened and the archive states no edition. No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. terms.verified is false: no member name points to a license or notice file, but the PDF and the videos inside were not opened, so notices inside them are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-troubleshooting-en",
@@ -643,7 +643,7 @@
       "generated_by": null,
       "software_version": "APS 1.3.0",
       "document_version": "2025-02-03",
-      "version_source": "document_version: file name; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "version_source": "document_version: file name and date on PDF page 1 (03.02.2025), read in work order 110; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); the title page names no APS software version, so whether the document matches 1.3.0 is unverified",
       "sha256": "14a0a8dfc5f75dadba3f6e838a6cb7e021713fd925cd55a87712139f469d9535",
       "tree_sha256": null,
       "size_bytes": 121035,
@@ -653,9 +653,9 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no copyright or license notice in the file (work order 110). Download yes, redistribution no, never commit.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "aps-dps",
@@ -668,7 +668,7 @@
         "aps-core"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Assigned to all eight plants by title only; the content was not opened (assignment unverified). The server sends neither Last-Modified nor ETag; only the checksum of the first fetch (work order 109) pins the file. terms.verified is false: work order 102 checked the vendor's pages and imprint on 2026-11-21 but did not open this file, so copyright or license notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "Assigned to all eight plants by title; assigned_to is unchanged by work order 110. Version unverified because the title page names no APS software version. The server sends neither Last-Modified nor ETag; only the checksum of the first fetch (work order 109) pins the file. Work order 110 read the title page and searched the text layer of all 2 pages for copyright, license, reproduction and trademark notices: none found; notices that exist only as images would not be found this way. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-change-ip-address-en",
@@ -687,8 +687,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "APS 1.3.0",
-      "document_version": null,
-      "version_source": "document_version: unverified (no date in the file name); software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "document_version": "Version 1, 09/2024",
+      "version_source": "document_version: title page (PDF page 1), read in work order 110; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); the title page names no APS software version, so whether the document matches 1.3.0 is unverified",
       "sha256": "8d9aae964a39012b14f1f69e3be1817c469ec5d4a458803a74f811ebda4a9829",
       "tree_sha256": null,
       "size_bytes": 2222861,
@@ -698,9 +698,9 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no copyright or license notice in the file (work order 110). Download yes, redistribution no, never commit.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "dps-plc",
@@ -710,7 +710,7 @@
         "aiqs-plc"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Assigned to the five PLCs of the base line by title only (TIA Portal is the engineering tool of the S7-1200); the content was not opened (assignment unverified). No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. terms.verified is false: work order 102 checked the vendor's pages and imprint on 2026-11-21 but did not open this file, so copyright or license notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "Assigned to the five PLCs of the base line by title (TIA Portal is the engineering tool of the S7-1200); page 2 names TIA Portal V18 as prerequisite. assigned_to is unchanged by work order 110. Version unverified because the title page names no APS software version. No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. Work order 110 read the title page and searched the text layer of all 16 pages for copyright, license, reproduction and trademark notices: none found; notices that exist only as images would not be found this way. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-software-versions-en",
@@ -729,8 +729,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "APS 1.3.0",
-      "document_version": null,
-      "version_source": "document_version: unverified (no date in the file name); software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "document_version": "2024-05-27 (PDF creation date)",
+      "version_source": "document_version: no edition or date on the title page or in the text of all 3 pages, searched in work order 110 (the only date is that of an example update-blog entry on PDF page 1, 2024/02/20 for APS-24V v1.0.0); the value is the creation date in the PDF metadata; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); the title page names no APS software version, so whether the document matches 1.3.0 is unverified",
       "sha256": "44ca827f521ca6db76b926cb0870e9090731d5fc4fcf771437ae11d9292cbd42",
       "tree_sha256": null,
       "size_bytes": 212679,
@@ -740,9 +740,9 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no copyright or license notice in the file (work order 110). Download yes, redistribution no, never commit.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "aps-dps",
@@ -755,7 +755,7 @@
         "aps-core"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Offered on the vendor's update blog, not on the documents page. Assigned to all eight plants by title only; the content was not opened (assignment unverified). No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. terms.verified is false: work order 102 checked the vendor's pages and imprint on 2026-11-21 but did not open this file, so copyright or license notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "Offered on the vendor's update blog, not on the documents page. Assigned to all eight plants by title; assigned_to is unchanged by work order 110. Version unverified because the title page names no APS software version. No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. Work order 110 read the title page and searched the text layer of all 3 pages for copyright, license, reproduction and trademark notices: none found; notices that exist only as images would not be found this way. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-software-update-en",
@@ -774,8 +774,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "APS 1.3.0",
-      "document_version": null,
-      "version_source": "document_version: unverified (no date in the file name); software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); whether the document matches this software version is unverified (title pages are read in work order 110)",
+      "document_version": "2024-05-27 (PDF creation date)",
+      "version_source": "document_version: no edition or date on the title page or in the text of all 16 pages, searched in work order 110; the value is the creation date in the PDF metadata; software_version: current software named on the vendor's update blog (APS-24V v1.3.0, entry of 09.01.2025); the title page names no APS software version, so whether the document matches 1.3.0 is unverified",
       "sha256": "a7ac1f1b32888b3bfbbbfa6e853a3120ed9316eef589a2f3cf5191646f6009c9",
       "tree_sha256": null,
       "size_bytes": 3319480,
@@ -785,9 +785,9 @@
         "license": "none-stated",
         "redistribution": false,
         "terms_url": null,
-        "note": "Freely downloadable from the vendor without login; no terms of use for downloads and no license notice found. Download yes, redistribution no, never commit.",
+        "note": "Freely downloadable from the vendor without login; no terms of use for downloads, and no copyright or license notice in the file (work order 110). Download yes, redistribution no, never commit.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "aps-dps",
@@ -800,7 +800,7 @@
         "aps-core"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Offered on the vendor's update blog, not on the documents page. Assigned to all eight plants by title only; the content was not opened (assignment unverified). No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. terms.verified is false: work order 102 checked the vendor's pages and imprint on 2026-11-21 but did not open this file, so copyright or license notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "Offered on the vendor's update blog, not on the documents page. Assigned to all eight plants by title; assigned_to is unchanged by work order 110. Version unverified because the title page names no APS software version. No date in the file name, and the server sends neither Last-Modified nor ETag: the file can change silently; only the checksum of the first fetch (work order 109) pins it. Work order 110 read the title page and searched the text layer of all 16 pages for copyright, license, reproduction and trademark notices: none found; notices that exist only as images would not be found this way. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
     },
     {
       "id": "aps-rpi-image",
@@ -838,7 +838,7 @@
         "ccu-rpi"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Reference only (question 4 of work order 102, answer A; named exception to section 10.3 of the project brief). The short address is given in the README of the entry aps-repository (line 29) and redirects (HTTP 301) to https://omm-apc-releases.s3-eu-central-1.ionoscloud.com/20240925.dd on the storage of a service provider, not of the vendor. Size: 8869171712 bytes (HEAD request on 2026-11-21); kept here because the format does not yet allow size_bytes for kind reference (work order 104). No checksum published by the vendor; the ETag of the host comes from a multipart upload and is not a checksum of the content. Software version, content, licenses and rights holder of the image are unverified; the file was never loaded. According to the README the image contains default access data; they are never copied into this repository."
+      "notes": "Reference only (question 4 of work order 102, answer A; named exception to section 10.3 of the project brief). The short address is given in the README of the entry aps-repository (line 29) and redirects (HTTP 301) to https://omm-apc-releases.s3-eu-central-1.ionoscloud.com/20240925.dd on the storage of a service provider, not of the vendor. Size: 8869171712 bytes (HEAD request on 2026-11-21); kept here because the format does not yet allow size_bytes for kind reference (work order 104). No checksum published by the vendor; the ETag of the host comes from a multipart upload and is not a checksum of the content. Software version, content, licenses and rights holder of the image are unverified; the file was never loaded. According to the README the image contains default access data; they are never copied into this repository. Version unverified because the image is a reference only and was never loaded (question 4 of work order 102)."
     },
     {
       "id": "siemens-s7-1200-system-manual-v4-6-de",
@@ -880,7 +880,7 @@
         "aiqs-plc"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Authoritative edition of the S7-1200 system manual (E-27). Fetch mode manual: a7 loads the file in the browser, the tools only verify the checksum. The address also answers without a browser (HTTP 200 on 2026-11-21), but E-27 rules out any automatic download from Siemens addresses. Residual risk accepted by a7 (E-27): clause A.6.2 of the Siemens terms of use forbids text and data mining, explicitly also automated extraction for analysis and for AI systems; whether it covers reading a manually loaded copy locally is unverified (U-04, legal question). The article page notes that a newer edition exists (entry siemens-s7-1200-system-manual-v4-7-de). The edition 04/2012 is dropped (E-27); the edition 11/2019 is an older edition and not listed. Whether this edition matches the PLCs of the line stays open until CPU and firmware of the project archives are known (U-01, U-02). The manual of the line names the S7-1200 and in one place a CPU 1512SP, which does not belong to the S7-1200 series and is not covered by this manual; the contradiction is test material and is not resolved here. terms.verified is false: work order 103 read section A of the Siemens terms of use at the original on 2026-11-21 but did not open this file, so notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21."
+      "notes": "Authoritative edition of the S7-1200 system manual (E-27). Fetch mode manual: a7 loads the file in the browser, the tools only verify the checksum. The address also answers without a browser (HTTP 200 on 2026-11-21), but E-27 rules out any automatic download from Siemens addresses. Residual risk accepted by a7 (E-27): clause A.6.2 of the Siemens terms of use forbids text and data mining, explicitly also automated extraction for analysis and for AI systems; whether it covers reading a manually loaded copy locally is unverified (U-04, legal question). The article page notes that a newer edition exists (entry siemens-s7-1200-system-manual-v4-7-de). The edition 04/2012 is dropped (E-27); the edition 11/2019 is an older edition and not listed. Whether this edition matches the PLCs of the line stays open until CPU and firmware of the project archives are known (U-01, U-02). The manual of the line names the S7-1200 and in one place a CPU 1512SP, which does not belong to the S7-1200 series and is not covered by this manual; the contradiction is test material and is not resolved here. terms.verified is false: work order 103 read section A of the Siemens terms of use at the original on 2026-11-21 but did not open this file, so notices inside it are unchecked. size_bytes is the Content-Length of a HEAD request on 2026-11-21. Version unverified because the file is fetched by hand only and was not present in work order 110 (E-27), so its title page and notices could not be read."
     },
     {
       "id": "siemens-s7-1200-system-manual-v4-7-de",
@@ -922,7 +922,7 @@
         "aiqs-plc"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Reference only (E-27: V4.6 is authoritative, the current edition V4.7 is kept as a pointer). No automatic download from Siemens addresses (E-27); without login the file can only be loaded in a browser, because the link resolves to an address under support.industry.siemens.com that answers HTTP 403 without a browser. Size according to the article page: 32,770 KB; kept here because the format does not yet allow size_bytes for kind reference (work order 104). Siemens publishes a SHA-256 for this file (link next to the download): 51c1ec7508182ce4de6a1a715514702239fd5e1e21c8734f23202676d19a3ba2; kept here as a comparison value because kind reference has no checksum field. The same residual risk of clause A.6.2 of the Siemens terms of use applies as for V4.6 and is accepted by a7 (E-27, U-04). terms.verified is false: work order 103 read section A of the Siemens terms of use at the original on 2026-11-21 but did not open this file, so notices inside it are unchecked."
+      "notes": "Reference only (E-27: V4.6 is authoritative, the current edition V4.7 is kept as a pointer). No automatic download from Siemens addresses (E-27); without login the file can only be loaded in a browser, because the link resolves to an address under support.industry.siemens.com that answers HTTP 403 without a browser. Size according to the article page: 32,770 KB; kept here because the format does not yet allow size_bytes for kind reference (work order 104). Siemens publishes a SHA-256 for this file (link next to the download): 51c1ec7508182ce4de6a1a715514702239fd5e1e21c8734f23202676d19a3ba2; kept here as a comparison value because kind reference has no checksum field. The same residual risk of clause A.6.2 of the Siemens terms of use applies as for V4.6 and is accepted by a7 (E-27, U-04). terms.verified is false: work order 103 read section A of the Siemens terms of use at the original on 2026-11-21 but did not open this file, so notices inside it are unchecked. Version unverified because the entry is a reference only and the file is never loaded (E-27), so its title page could not be read."
     },
     {
       "id": "rpi4b-datasheet-en",
@@ -942,7 +942,7 @@
       "generated_by": null,
       "software_version": null,
       "document_version": "Release 1.1, March 2024",
-      "version_source": "document_version: title page as read in work order 103. software_version: not set, the datasheet describes the hardware and is not bound to a software version; the software of the central control comes from the image of the line (work order 102)",
+      "version_source": "document_version: title page (PDF page 1; release history on PDF page 2), read in work order 103 and confirmed at the loaded file in work order 110. software_version: not set, the datasheet describes the hardware and is not bound to a software version; the software of the central control comes from the image of the line (work order 102)",
       "sha256": "8febd042d004c7a2897a60fe6e1b2c007a941c3c4119f4fb791dc0afb669a860",
       "tree_sha256": null,
       "size_bytes": 413147,
@@ -960,7 +960,7 @@
         "ccu-rpi"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Treated like vendor material (E-27 and question 4 of work order 103). The CC BY-SA 4.0 license of the online documentation does not apply to this file. The address redirects twice (HTTP 301 to pip.raspberrypi.com, then HTTP 302 to pip-assets.raspberrypi.com); the fetch script must follow redirects. The file name at the target carries a running number, so the content behind the fixed address can change; only the checksum of the first fetch (work order 109) pins it. Work order 103 opened the file temporarily outside the project to read the notice and deleted it afterwards. Last-Modified 06.10.2025; size_bytes is the Content-Length on 2026-11-21."
+      "notes": "Treated like vendor material (E-27 and question 4 of work order 103). The CC BY-SA 4.0 license of the online documentation does not apply to this file. The address redirects twice (HTTP 301 to pip.raspberrypi.com, then HTTP 302 to pip-assets.raspberrypi.com); the fetch script must follow redirects. The file name at the target carries a running number, so the content behind the fixed address can change; only the checksum of the first fetch (work order 109) pins it. Work order 103 opened the file temporarily outside the project to read the notice and deleted it afterwards. Last-Modified 06.10.2025; size_bytes is the Content-Length on 2026-11-21. Work order 110 confirmed the copyright notice on PDF page 1 of the loaded file."
     },
     {
       "id": "rpi4b-product-brief-en",
@@ -979,8 +979,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": null,
-      "document_version": null,
-      "version_source": "document_version: unverified (no edition stated in the source file; Last-Modified of the host 01.10.2026). software_version: not set, the product brief describes the hardware and is not bound to a software version",
+      "document_version": "Published October 2026",
+      "version_source": "document_version: title page (PDF page 1), read in work order 110; Last-Modified of the host 01.10.2026. software_version: not set, the product brief describes the hardware and is not bound to a software version",
       "sha256": "7e18898418a47cdbab2f6184ae93fbe6e4943c45475cecbe1db8eb11d32f4328",
       "tree_sha256": null,
       "size_bytes": 21375446,
@@ -998,7 +998,7 @@
         "ccu-rpi"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Treated like vendor material (E-27 and question 4 of work order 103). The CC BY-SA 4.0 license of the online documentation does not apply to this file. The address redirects twice (HTTP 301 to pip.raspberrypi.com, then HTTP 302 to pip-assets.raspberrypi.com); the fetch script must follow redirects. The file name at the target carries a running number, so the content behind the fixed address can change; only the checksum of the first fetch (work order 109) pins it. Work order 103 opened the file temporarily outside the project to read the notices and deleted it afterwards. size_bytes is the Content-Length on 2026-11-21."
+      "notes": "Treated like vendor material (E-27 and question 4 of work order 103). The CC BY-SA 4.0 license of the online documentation does not apply to this file. The address redirects twice (HTTP 301 to pip.raspberrypi.com, then HTTP 302 to pip-assets.raspberrypi.com); the fetch script must follow redirects. The file name at the target carries a running number, so the content behind the fixed address can change; only the checksum of the first fetch (work order 109) pins it. Work order 103 opened the file temporarily outside the project to read the notices and deleted it afterwards. size_bytes is the Content-Length on 2026-11-21. Work order 110 read the loaded file: the title page names the edition; the only rights notice in the text layer is the trademark notice on the last page (PDF page 7)."
     },
     {
       "id": "rpi-documentation",
@@ -1056,17 +1056,17 @@
       "generated_by": null,
       "software_version": null,
       "document_version": "REV3.0.0",
-      "version_source": "document_version: file name (REV3.0.0, Last-Modified 24.06.2019); the revision note inside the file is unverified (U-07, work order 110). software_version: not set, the firmware of the installed router is unknown; the guide belongs to hardware version V3. language: taken from the English support pages of the vendor, the file was not opened",
+      "version_source": "document_version: title page (PDF page 1: REV3.0.0 with document number 1910012191) and file name, read in work order 110 (U-07); Last-Modified 24.06.2019. software_version: not set, the firmware of the installed router is unknown; the guide belongs to hardware version V3. language: English, confirmed at the title page",
       "sha256": "7105180fb2b2ba2cd07d3e7c146a0d200e1360cc7fc5d60bac968532ed80ca0b",
       "tree_sha256": null,
       "size_bytes": 8504388,
       "target": "tp-link/tl-wr902ac/documents/en/1910012191_TL-WR902AC_3.0_UG_REV3.0.0.pdf",
       "terms": {
-        "holder": "TP-Link (TP-Link Systems Inc. and affiliates)",
+        "holder": "TP-Link Technologies Co., Ltd. (copyright notice in the file); website terms of use: TP-Link Systems Inc. and affiliates",
         "license": "proprietary",
         "redistribution": false,
         "terms_url": "https://privacy.tp-link.com/web/official/terms-of-use",
-        "note": "Website terms of use: limited, non-transferable license to download and use on one's own device for personal use; no public or commercial use, no copying into another work and no redistribution without prior written consent. Download yes (own use), redistribution no, never commit.",
+        "note": "Notice in the file: copyright 2019 TP-Link Technologies Co., Ltd., all rights reserved, no reproduction of the specifications without permission. Website terms of use: limited, non-transferable license to download and use on one's own device for personal use; no public or commercial use, no copying into another work and no redistribution without prior written consent. Download yes (own use), redistribution no, never commit.",
         "checked_on": "2026-11-21",
         "verified": false
       },
@@ -1074,7 +1074,7 @@
         "aps-router"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "The installed hardware version is only indirectly established: the manual of the line refers to the user guide of hardware version V3 (U-05). The vendor lists the hardware versions V4.60, V4.46, V4.40, V4, V3.80, V3.60, V3 and V1. An HTML version of the V3 guide exists on the vendor's site (reference only, not listed here). terms.verified is false: date and edition of the terms of use and whether they also apply to files under static.tp-link.com are unverified (U-06), and the file was not opened, so revision and copyright notices inside it are unchecked (U-07). size_bytes is the Content-Length on 2026-11-21."
+      "notes": "The installed hardware version is only indirectly established: the manual of the line refers to the user guide of hardware version V3 (U-05). The vendor lists the hardware versions V4.60, V4.46, V4.40, V4, V3.80, V3.60, V3 and V1. An HTML version of the V3 guide exists on the vendor's site (reference only, not listed here). Work order 110 read the title page and the section Copyright & Trademarks (PDF page 215 of 222): the notice names TP-Link Technologies Co., Ltd., not the company named in the website terms of use (U-07 resolved). terms.verified is false: date and edition of the website terms of use and whether they also apply to files under static.tp-link.com are unverified (U-06). size_bytes is the Content-Length on 2026-11-21."
     },
     {
       "id": "ur5e-user-manual-de",
@@ -1093,8 +1093,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "PolyScope 5.25.1",
-      "document_version": "710-966-00 (SW5_25_1)",
-      "version_source": "software_version: folder SW5_25_1 in the address (question 1 of work order 103, answer A; E-23); document_version: document number in the file name and folder name, Last-Modified 30.09.2026; the software version named on the title page is unverified (U-08, work order 110)",
+      "document_version": "710-966-00, document version 20.15.84",
+      "version_source": "software_version: imprint on PDF page 266 (software name PolyScope 5, software version 5.25.1, document version 20.15.84), read in work order 110; the title page (PDF page 1) names only PolyScope 5; matches the folder SW5_25_1 in the address and the tag 5.25.1 of the simulator (U-08 resolved; question 1 of work order 103, answer A; E-23). document_version: document number and document version on PDF page 266 and document number in the file name; Last-Modified 30.09.2026",
       "sha256": "70940ab1cd824a2af60e75d1f2437f45fe479f2394057e267fecfe8448266102",
       "tree_sha256": null,
       "size_bytes": 21703593,
@@ -1104,15 +1104,15 @@
         "license": "proprietary",
         "redistribution": false,
         "terms_url": null,
-        "note": "Vendor material without free license; reproduction only with prior written approval of Universal Robots. Download yes (own use), redistribution no, never commit; test questions cite locations and at most short quotes.",
+        "note": "Notice in the file (PDF pages 2 and 3): copyright 2009-2025 Universal Robots A/S, all rights reserved; reproduction in whole or in part only with prior written approval of Universal Robots A/S. Download yes (own use), redistribution no, never commit; test questions cite locations and at most short quotes.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "ur5e"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Same software version as the simulator entry ursim-e-series. Newest German edition on 2026-11-21: the vendor's permanent address for the newest German UR5e manual leads to this file (that address moves and is therefore not used here); a German PDF for 5.26 does not exist yet (HTTP 404). Not the LTS version (5.26). The address is the one under SW5_25_1; the English PDF overview of 5.25.1 links the older folder SW5_25 instead. terms.verified is false: the file was not opened, so the copyright notice inside it is unchecked (U-08); the reproduction clause was read in the script directory of the same version. The website links no current terms of use for downloads; a document Terms of Use of September 2015 exists but was not read (U-09). size_bytes is the Content-Length on 2026-11-21."
+      "notes": "Same software version as the simulator entry ursim-e-series. Newest German edition on 2026-11-21: the vendor's permanent address for the newest German UR5e manual leads to this file (that address moves and is therefore not used here); a German PDF for 5.26 does not exist yet (HTTP 404). Not the LTS version (5.26). The address is the one under SW5_25_1; the English PDF overview of 5.25.1 links the older folder SW5_25 instead. Work order 110 read the title page, the notice on PDF pages 2 and 3 and the imprint on PDF page 266 of the loaded file (U-08 resolved). The website links no current terms of use for downloads; a document Terms of Use of September 2015 exists but was not read (U-09, unverified). size_bytes is the Content-Length on 2026-11-21."
     },
     {
       "id": "ur5e-software-handbook-en",
@@ -1131,8 +1131,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "PolyScope 5.25.1",
-      "document_version": "SW5_25_1",
-      "version_source": "folder SW5_25_1 in the address, Last-Modified 30.09.2026 (work order 103); the title page is unverified",
+      "document_version": "SW 5.25.1, document version 10.16.304",
+      "version_source": "title page (PDF page 1: SW 5.25.1) and imprint on PDF page 255 (software version 5.25.1, document version 10.16.304), read in work order 110; folder SW5_25_1 in the address, Last-Modified 30.09.2026 (work order 103)",
       "sha256": "06488da8a8bc2be51e796d2e62e2f90ad4b00412acbac016c232780b1d0ee3ba",
       "tree_sha256": null,
       "size_bytes": 11470539,
@@ -1142,15 +1142,15 @@
         "license": "proprietary",
         "redistribution": false,
         "terms_url": null,
-        "note": "Vendor material without free license; reproduction only with prior written approval of Universal Robots. Download yes (own use), redistribution no, never commit; test questions cite locations and at most short quotes.",
+        "note": "Notice in the file (PDF page 2): property of Universal Robots A/S, not to be reproduced in whole or in part without prior written approval, copyright 2009-2025, all rights reserved. Download yes (own use), redistribution no, never commit; test questions cite locations and at most short quotes.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "ur5e"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Only English as PDF: the German PDF of 5.25.1 does not exist (two plausible addresses answer HTTP 404); in German the software handbook exists only as HTML (not listed here). Relevant for the test question on the protective stop (work order 112). terms.verified is false: the file was not opened, so the copyright notice inside it is unchecked; the reproduction clause was read in the script directory of the same version. size_bytes is the Content-Length on 2026-11-21."
+      "notes": "Only English as PDF: the German PDF of 5.25.1 does not exist (two plausible addresses answer HTTP 404); in German the software handbook exists only as HTML (not listed here). Relevant for the test question on the protective stop (work order 112). Work order 110 read the title page, the notice on PDF page 2 and the imprint on PDF page 255 of the loaded file. size_bytes is the Content-Length on 2026-11-21."
     },
     {
       "id": "ur5e-script-directory-en",
@@ -1169,8 +1169,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "PolyScope 5.25.1",
-      "document_version": "5.25.1",
-      "version_source": "title page names 5.25.1 (read in work order 103); folder SW5_25_1 in the address, Last-Modified 30.09.2026",
+      "document_version": "5.25.1, document version 10.16.304",
+      "version_source": "title page names 5.25.1 (read in work order 103, confirmed at PDF page 1 of the loaded file in work order 110); imprint on PDF page 178: software version 5.25.1, document version 10.16.304 (work order 110); folder SW5_25_1 in the address, Last-Modified 30.09.2026",
       "sha256": "8e730b42b82a4ce3100cd06a9c35fb87bafaded4058942e43526ea4a53d6f9fa",
       "tree_sha256": null,
       "size_bytes": 2089986,
@@ -1188,7 +1188,7 @@
         "ur5e"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "Work order 103 opened the file temporarily outside the project to read the title page and the notice on the page after it, and deleted it afterwards. size_bytes is the Content-Length on 2026-11-21."
+      "notes": "Work order 103 opened the file temporarily outside the project to read the title page and the notice on the page after it, and deleted it afterwards. size_bytes is the Content-Length on 2026-11-21. Work order 110 confirmed the title page, the notice on PDF page 2 and the imprint on PDF page 178 at the loaded file."
     },
     {
       "id": "ur5e-service-manual-en",
@@ -1207,8 +1207,8 @@
       "derived_from": null,
       "generated_by": null,
       "software_version": "PolyScope 5.25.1",
-      "document_version": "SW5_25_1",
-      "version_source": "folder SW5_25_1 in the address, Last-Modified 30.09.2026 (work order 103); which of the three editions belongs to 5.25.1 by content is unverified (U-10)",
+      "document_version": "SW 5.25.1, document version 10.16.304",
+      "version_source": "title page (PDF page 1: SW 5.25.1) and imprint on PDF page 124 (software version 5.25.1, document version 10.16.304), read in work order 110; folder SW5_25_1 in the address, Last-Modified 30.09.2026 (work order 103)",
       "sha256": "c969dbbfb621e8f7cae705645ab628328e2168fc23082ccdb9fbb8f30570c26d",
       "tree_sha256": null,
       "size_bytes": 23785655,
@@ -1218,15 +1218,15 @@
         "license": "proprietary",
         "redistribution": false,
         "terms_url": null,
-        "note": "Vendor material without free license; reproduction only with prior written approval of Universal Robots. Download yes (own use), redistribution no, never commit; test questions cite locations and at most short quotes.",
+        "note": "Notice in the file (PDF page 2 and section Copyright, Warranty and Disclaimers on PDF page 8): copyright 2009-2025 Universal Robots A/S, all rights reserved; not to be reproduced in whole or in part without prior written approval. Download yes (own use), redistribution no, never commit; test questions cite locations and at most short quotes.",
         "checked_on": "2026-11-21",
-        "verified": false
+        "verified": true
       },
       "assigned_to": [
         "ur5e"
       ],
       "retrieved_on": "2026-11-21",
-      "notes": "The service manual exists in three editions of different size: Shared (22,830,834 bytes, 29.09.2026), SW5_25_1 (this entry) and SW5_25 (23,243,459 bytes, 11.09.2026); it is therefore not simply independent of the software version. The edition under SW5_25_1 is used for 5.25.1; only size and date were compared (U-10). terms.verified is false: the file was not opened, so the copyright notice inside it is unchecked; the reproduction clause was read in the script directory of the same version. size_bytes is the Content-Length on 2026-11-21."
+      "notes": "The service manual exists in three editions of different size: Shared (22,830,834 bytes, 29.09.2026), SW5_25_1 (this entry) and SW5_25 (23,243,459 bytes, 11.09.2026); it is therefore not simply independent of the software version. Work order 110 read the loaded edition under SW5_25_1: its title page and imprint name software version 5.25.1, so it belongs to 5.25.1 (U-10 resolved for this edition; the editions Shared and SW5_25 were not loaded or compared by content). Work order 110 also read the notice on PDF pages 2 and 8. size_bytes is the Content-Length on 2026-11-21."
     },
     {
       "id": "ursim-e-series",
