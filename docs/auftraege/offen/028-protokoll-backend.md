@@ -1,6 +1,6 @@
 # Auftrag 028 – Protokoll: wer hat was wann geändert (Backend)
 
-Meilenstein: M1 · Freigabestufe: C · Status: offen
+Meilenstein: M1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -116,7 +116,114 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
    - Empfehlung: (a) für M1; (b) vor Version 0.1 erneut prüfen.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Alle Akzeptanzkriterien erfüllt; Läufe am 21.11.2026 im Container auf dem committeten Stand. Keine offene Frage, die den Auftrag aufhält.
+
+### Was wurde gebaut?
+
+- `backend/pyproject.toml`, `backend/uv.lock`: `django-auditlog>=3.4.2,<3.5`. `uv lock` im Builder-Image (wie in 020) hat genau ein Paket ergänzt. mypy-Override `follow_untyped_imports` für `auditlog.*` (kein `py.typed`), wie für allauth.
+- `backend/twox/config/settings.py`:
+  - `auditlog` in `INSTALLED_APPS`, vor den Projekt-Apps (damit `accounts/admin.py` die Admin-Ansicht von auditlog ersetzen kann).
+  - `auditlog.middleware.AuditlogMiddleware` direkt nach `AuthenticationMiddleware`.
+  - `AUDITLOG_DISABLE_REMOTE_ADDR = True` (Frage 2).
+  - `AUDITLOG_STORE_JSON_CHANGES = True` (siehe Abweichung 2).
+  - `SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"]`: die Aktionen heißen im Schema `AuditActionEnum` statt des allgemeinen `ActionEnum`.
+- `backend/twox/accounts/audit.py` (neu), aufgerufen in `AccountsConfig.ready()`:
+  - `register_models()` registriert `Site`, `Area`, `Plant`, `Device`, `Document`, `DocumentVersion` und `accounts.User` (`exclude_fields` `password`, `last_login`; `m2m_fields={"groups"}`). `AUDITED_MODELS` nennt alle.
+  - Jede Registrierung mit `include_fields` = eigene Spalten des Modells (siehe Abweichung 3).
+  - `acting_as(user)`: Kontextmanager auf Grundlage von `auditlog.context.set_actor`; stellt danach den Akteur von außen (z. B. der Middleware) wieder her (siehe Abweichung 4).
+- `backend/twox/accounts/admin.py`: Die Admin-Ansicht von auditlog wird abgemeldet und durch `AuditLogEntryAdmin` ersetzt: `has_add_permission`, `has_change_permission`, `has_delete_permission` immer `False`; Liste mit Zeit, Aktion, Typ, Objekt, Akteur; Filter, Suche; Detail zeigt nur Zeit, Akteur, Aktion, Typ, Objekt-ID, Objekt und Änderungen (nicht `remote_addr`, `remote_port`, `cid`, `actor_email`).
+- `backend/twox/accounts/serializers.py`, `views.py`, `urls.py`: `GET /api/v1/audit-log/` (`AuditLogView`, `operation_id` `audit_log_list`):
+  - Rechte `CanManage` (Frage 3). Nur GET; POST, PUT, PATCH, DELETE ergeben 405.
+  - `PageNumberPagination` mit fester Seitengröße 50 (`?page_size` wird ignoriert), neueste zuerst (`-timestamp`, `-pk`), Antwort `count`, `next`, `previous`, `results`.
+  - Felder `id`, `timestamp`, `actor` (Benutzername oder `null`), `action` (`create`, `update`, `delete`), `object_type` (`app_label.model`, z. B. `assets.device`), `object_id` (Zahl), `object_repr`, `changes`.
+  - `changes`: Feld → `[alt, neu]`; beim Anlegen alt `null`, beim Löschen neu `null`. Gruppen eines Benutzers (Rolle) im Format von auditlog: `{"type": "m2m", "operation": "add"|"delete", "objects": [Gruppennamen]}`. Beides steht als `oneOf` im Schema, der erzeugte Client hat dafür einen Union-Typ.
+  - Filter `object_type` (Muster `^[a-z0-9_]+\.[a-z0-9_]+$`), `object_id` (1 bis 2^63−1), `actor` (1 bis 150 Zeichen). Ungültige Werte ergeben 400 mit Fehler am Parameter, unbekannte eine leere Liste. Einträge der Art „access“ blendet die API aus (nichts im Projekt erzeugt sie).
+  - Eine Seite braucht höchstens 6 Abfragen (getestet mit 55 Einträgen).
+- `backend/twox/accounts/management/commands/create_account.py`: entfernt nur Rollengruppen, die das Konto wirklich hat (siehe Abweichung 1).
+- Tests:
+  - neu `backend/tests/accounts/test_audit.py` (68 Fälle).
+  - `backend/tests/config/test_settings.py`: `auditlog` installiert, Middleware-Liste, `AUDITLOG_DISABLE_REMOTE_ADDR` und `AUDITLOG_STORE_JSON_CHANGES`, Middleware nach Authentication.
+  - `backend/tests/config/expected_paths/accounts.py`: `/api/v1/audit-log/`.
+  - `tests/config/test_api.py` bleibt unverändert und ohne neue Ausnahme grün.
+- `web/openapi/schema.yml` und `web/src/api/generated/**` neu erzeugt (`AuditLogEntry`, `AuditActionEnum`, `PaginatedAuditLogEntryList`, `auditLogList`).
+
+**Inhalt von `test_audit.py`:**
+- Registriert sind genau die sieben Modelle; Benutzer ohne `password` und `last_login`, mit `groups`.
+- Parametrisiert über alle Modelle: Anlegen in `acting_as` ergibt genau einen Eintrag mit Akteur, `object_id`, `object_repr` und Feldwerten, nur eigene Spalten. Ändern (alle außer `DocumentVersion`) ergibt genau einen Eintrag mit Akteur und `{feld: [alt, neu]}`. Ein Test prüft, dass die Fälle alle registrierten Modelle abdecken.
+- Version: Ändern scheitert mit `VersionImmutableError`, kein Änderungseintrag. Löschen ergibt einen Eintrag mit alten Werten. Speichern ohne Änderung ergibt keinen Eintrag. Leerer Wert ist `null`, nicht der Text „None“.
+- Ohne Anfrage und ohne `acting_as` kein Akteur. `acting_as` verschachtelt: danach gilt wieder der äußere Akteur.
+- API (026): Gerät anlegen und ändern mit Sitzung ergibt zwei Einträge mit dem angemeldeten Benutzer.
+- Dienst (024): `create_document` und `add_version` in `acting_as` ergeben Einträge mit Akteur, Version 2 mit `number [null, 2]`.
+- `create_account --update` von `read` auf `manage` ergibt die Einträge „Gruppe read entfernt“ und „Gruppe manage hinzugefügt“. `--update` mit gleicher Rolle (nur neues Kennwort) ergibt keinen Eintrag.
+- Kein Kennwort-Hash: Nach Anlegen, Rollenwechsel, `set_password`, Änderung von `is_staff` und einer Anmeldung (setzt `last_login`) kommt in keiner Spalte eines Eintrags ein Hash oder ein Testkennwort vor. Kein Eintrag hat `password` oder `last_login` in `changes`; `serialized_data` und `additional_data` sind immer leer.
+- Keine IP-Adresse: Anfrage mit `REMOTE_ADDR` und `X-Forwarded-For` speichert `remote_addr = NULL`, keine der Adressen steht irgendwo im Eintrag, auch nicht der Sitzungsschlüssel.
+- Admin: die eigene Ansicht ist registriert; alle drei Rechte `False`, keine Massenlöschung. Superuser sieht Liste und Detail (ohne Änderungsrecht). Hinzufügen, Ändern, Löschen (einzeln und als Massenaktion) ergeben 403 bzw. ändern nichts. Rollen ohne Superuser-Recht landen bei `/admin/login/`.
+- Endpunkt: anonym, ohne Rolle und `read` 403, `manage` und Superuser 200; Schreibmethoden 405, nichts geändert; Felder der Antwort; Aktionen und fehlender Akteur; Rollenwechsel mit Gruppennamen; neueste zuerst; alle Filter, unbekannte Werte leere Liste, 11 ungültige Werte 400; Seiten zu 50 mit `next`/`previous`, Seite 3 ergibt 404; höchstens 6 Abfragen je Seite; Schema mit `operation_id`, Parametern, Feldern, `AuditActionEnum` und ohne Fehler von drf-spectacular auf stderr.
+
+**Neue Pakete im Lock**
+
+| Paket | Version | Lizenz | mitgezogen von |
+| --- | --- | --- | --- |
+| django-auditlog | 3.4.2 | MIT (Metadaten „License: MIT“, Klassifikator „MIT License“, `LICENSE` im Rad); `check-licenses.sh` liest „MIT License“ | direkt |
+
+Sonst nichts: Django und python-dateutil (2.9.0.post0) standen schon im Lock. Lizenzprüfung: 59 Pakete (vorher 58).
+
+**Prüfung des Pakets** (Quelltext 3.4.2 im Container gelesen):
+- Keine Netzzugriffe, keine Telemetrie: kein `urllib.request`, `requests`, `http.client`, `socket` (nur `urllib.parse.unquote` in `mixins.py`). Das Rad enthält nur Python-Code, Vorlagen und Übersetzungen (de, ja, ko), keine statischen Dateien.
+- `LogEntry` hat die Spalten `remote_addr`, `remote_port`, `cid`, `actor_email`, `serialized_data`, `additional_data`. Mit `AUDITLOG_DISABLE_REMOTE_ADDR` schreibt die Middleware keine IP-Adresse, auch nicht aus `X-Forwarded-For` (getestet). `serialized_data` bleibt leer (`serialize_data` nicht gesetzt), `additional_data` ebenso (kein Modell hat `get_additional_data`). Sitzungsdaten speichert auditlog nicht. Was die übrigen Spalten trotzdem speichern, steht unter „Hinweise“.
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-028`, `W` = `docker compose -p twox-028-web -f deploy/compose/compose.web.yaml`; `.env` aus `.env.example` mit `TWOX_API_PORT=18028`. Docker Engine 29.9.3, Compose v5.7.0.
+
+| AK | Ergebnis |
+| --- | --- |
+| 0 | erfüllt: `docker version` und `docker compose version` Exit 0 |
+| 1 | erfüllt: Bau Exit 0, `up -d --wait` Exit 0; nach `down -v` und neuem Start zeigt `D logs migrate` 17 Migrationen `auditlog.0001_initial` bis `auditlog.0017_add_actor_email ... OK` |
+| 2 | erfüllt: `All checks passed!`; `105 files already formatted`, Exit 0; `Success: no issues found in 105 source files` |
+| 3 | erfüllt: `781 passed, 4 deselected`, 0 fehlgeschlagen, 0 übersprungen (`-rs` ohne Eintrag); `pytest -m worker`: `4 passed` |
+| 4 | erfüllt: `No changes detected` |
+| 5 | erfüllt: `License check passed.` (59 Pakete); neues Paket siehe Tabelle |
+| 6 | erfüllt: `spectacular` ohne Ausgabe, Exit 0; Schema enthält `/api/v1/audit-log/`; nach dem Commit erneut erzeugt, `git diff --exit-code -- web/openapi` Exit 0, keine neue Datei |
+| 7 | erfüllt: Bau, `npm ci`, `api:generate` Exit 0, danach `git diff --exit-code -- web/openapi web/src/api` Exit 0, keine neue Datei; `typecheck` Exit 0 |
+| 8 | erfüllt: `D --profile dev --profile e2e down -v` und `W --profile dev down -v` Exit 0 |
+
+Zusätzlich wie in der CI: web-Job komplett (`lint`, `typecheck`, `test` 73 passed, `build`, `licenses` mit `License check passed.`, `api:generate` ohne Unterschied). e2e: Bau mit `web-dev`, `pull e2e`, `npm ci`, `up`, Schritt „Create test account“ wie in `ci.yml` (Kennwort nur als Variablenname), `run e2e`: `8 passed`. Am laufenden Dienst: `GET /api/v1/audit-log/` anonym 403, `/admin/auditlog/logentry/` anonym 302; Anmeldungen der Browsertests (setzen `last_login`) erzeugten keinen Eintrag.
+
+Gegenproben während der Arbeit: Ohne `include_fields` enthielt der Eintrag beim Anlegen auch Rückwärtsbeziehungen als Text (z. B. `documents: [null, "files.Document.None"]`); mit `extend_schema` an der Klasse meldete drf-spectacular einen Fehler auf stderr, den der erste Schematest nicht sah (jetzt prüft der Test auch `sys.stderr`).
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-a61d7bda9bf7cda53`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-a61d7bda9bf7cda53` (relativ zum Projektordner)
+- Nicht gepusht, nichts zusammengeführt.
+
+### Abweichungen
+
+1. **Rollenwechsel ergibt zwei Einträge, nicht einen.** auditlog schreibt je Gruppenoperation einen Eintrag: „read entfernt“ und „manage hinzugefügt“. Außerdem protokolliert auditlog bei `remove()` jede übergebene Gruppe, auch eine, die das Konto gar nicht hatte. `create_account` entfernte bisher immer beide Rollengruppen; jedes `--update` (z. B. in jedem e2e-Lauf) hätte „manage und read entfernt, manage hinzugefügt“ geschrieben. Deshalb entfernt der Befehl jetzt nur Rollengruppen, die das Konto hat (drei Zeilen in `create_account.py`, nicht ausdrücklich im Umfang, aber in `twox/accounts/`). Ergebnis: Rollenwechsel = zwei zutreffende Einträge, gleiche Rolle = kein Eintrag. Ein einziger Eintrag je Rollenwechsel ginge nur mit eigenem Protokollcode neben auditlog.
+2. **`AUDITLOG_STORE_JSON_CHANGES = True`** (nicht im Umfang genannt). Ohne die Einstellung speichert auditlog alle Werte als Text: `null` wäre `"None"`, `true` wäre `"True"`, ein Gerät namens „None“ wäre von einem leeren Wert nicht zu unterscheiden. Mit ihr stehen `null`, Wahrheitswerte und Zahlen als JSON-Werte in `changes`; Zeiten bleiben Text (UTC ohne Zonenangabe, z. B. `2026-11-21 22:09:19.347373`), Fremdschlüssel sind die id.
+3. **`include_fields` je Modell** (eigene Spalten aus `_meta.concrete_fields`) zusätzlich zur Vorgabe. Grund siehe Gegenprobe oben. Neue Spalten eines Modells kommen dadurch automatisch ins Protokoll.
+4. **`acting_as` stellt den äußeren Akteur wieder her.** `set_actor` von auditlog setzt eine Kontextvariable und setzt sie nach dem Block nicht zurück. Ohne Gegenmaßnahme verlören Änderungen nach einem `acting_as`-Block innerhalb einer Anfrage ihren Akteur. Getestet.
+5. **`object_id` ist eine Zahl** (`LogEntry.object_id`, im Schema `nullable`, weil auditlog es nur bei ganzzahligen Schlüsseln füllt; alle registrierten Modelle haben solche).
+6. **`DocumentVersion` kennt nur „Anlegen“**: Versionen sind unveränderlich (024), der parametrisierte Änderungstest läuft deshalb über sechs Modelle; für Versionen prüft ein eigener Test, dass Ändern scheitert und keinen Eintrag erzeugt.
+7. **Schema-Name `AuditActionEnum`** über `ENUM_NAME_OVERRIDES` in `settings.py`, damit spätere Felder namens `action` (z. B. 029, 031) nicht mit diesem Enum kollidieren.
+
+### Hinweise (für Leitstelle, 033 und 038)
+
+- **`auditlogflush`** (auditlog 3.4.2, `auditlog/management/commands/auditlogflush.py`) löscht Protokolleinträge und ist nicht gesperrt (Frage 5). Ebenso `auditlogmigratejson`. Für die Doku in 038.
+- **Was auditlog außer den Änderungen speichert:**
+  - `actor_email`: die E-Mail-Adresse des Akteurs zum Zeitpunkt der Änderung (bei unseren Konten leer, `create_account` setzt keine).
+  - `remote_port`: die Zahl aus dem Kopf `X-Forwarded-Port`, falls ein Client ihn mitschickt. `AUDITLOG_DISABLE_REMOTE_ADDR` schaltet das nicht ab. Keine IP-Adresse, aber vom Client gesetzt.
+  - `cid`: der Wert des Kopfs `X-Correlation-ID`, falls mitgeschickt (bis 255 Zeichen).
+  - Keine dieser Spalten erscheint in API oder Admin. Abschalten ginge für `cid` über `AUDITLOG_CID_HEADER = None`, für `remote_port` und `actor_email` nur mit eigener Middleware. Nicht umgesetzt, weil nicht verlangt; bitte entscheiden, ob das nötig ist.
+- **Grenzen von auditlog** (für 038):
+  - `bulk_create` und `QuerySet.update` schreiben nichts (Nicht-Ziel des Auftrags).
+  - `groups.clear()` protokolliert als „entfernt“ alle Gruppen des Systems, nicht nur die des Kontos (auditlog nimmt bei `post_clear` alle Gruppen).
+  - Eine Änderung von der Gruppenseite aus (`group.user_set.add(user)`) erzeugt einen Eintrag am Gruppenobjekt (nicht registriert), nicht am Benutzer.
+  - Wird ein Benutzer gelöscht, setzt auditlog `actor` auf `NULL`; der Name des Akteurs geht dann verloren.
+- **Für 029:** Nach dem Zusammenführen dieses Zweigs Schema und Client neu erzeugen. Neue Datei-Endpunkte erzeugen über die Dienste aus 024 automatisch Einträge mit dem angemeldeten Benutzer (Middleware).
+- **Für 031:** Der Import speichert einzeln und läuft, falls außerhalb einer Anfrage (Worker), in `acting_as(user)`.
+- **Für 033:** `changes` hat zwei Formen (siehe Schema, `oneOf`); Zeiten in `changes` sind Text in UTC ohne Zonenangabe.
+
+Keine weitere neue Abhängigkeit. `docs/DECISIONS.md` und `docs/STATUS.md` nicht geändert. Kein Push.
