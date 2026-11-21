@@ -93,3 +93,19 @@ if (query.isError) return <ErrorMessage error={query.error} />;
   The entry stays in the form.
 - After saving, every cached answer except the sign-in state is fetched again (`reloadAfterSave`), then the form closes.
 - Tests fake the structure API with `structure/testData.ts` (names `Test …`, addresses from 192.0.2.0/24).
+
+## Device list import
+
+- `ImportPage.tsx` (`/import`, role `manage`) uploads the device list as CSV through the generated
+  `devicesImportMutation` (`multipart/form-data`, CSRF header from `../api/client.ts`). The page describes the
+  13 columns (`deviceListColumns`, the order of E-44).
+- Step 1 sends the file with `dry_run=true`. The answer is always a report (200, `../components/ImportReportView.tsx`):
+  counts per level (created, changed, unchanged) or, if the file has errors, every error with line, column and
+  the message of the API. Values from the file and messages are shown as text.
+- Only a dry run without errors offers "Apply": the same file again with `dry_run=false`. After saving, the cached
+  answers are fetched again (`reloadAfterSave`) and the page links to the structure. Choosing another file drops
+  the report.
+- 400 (form not accepted) shows the messages of the API (`structure/save.ts`), 413 the API's message with the upload
+  limit, everything else `ErrorMessage`.
+- Under jsdom, Node's fetch sends a jsdom `File` without its content; `ImportPage.test.tsx` therefore checks the
+  file handed to `FormData.append` and reads the other fields from the multipart body.
