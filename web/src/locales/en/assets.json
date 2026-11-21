@@ -1,1 +1,75 @@
-{}
+{
+  "structure": {
+    "intro": "Sites, areas, plants and devices with the number of devices.",
+    "treeLabel": "Sites, areas, plants and devices",
+    "empty": "There are no sites yet.",
+    "noMatch": "Nothing matches the search.",
+    "deviceCount_one": "{{count}} device",
+    "deviceCount_other": "{{count}} devices"
+  },
+  "search": {
+    "label": "Search",
+    "placeholder": "Name, key or IP address"
+  },
+  "kind": {
+    "site": "Site",
+    "area": "Area",
+    "plant": "Plant",
+    "device": "Device"
+  },
+  "actions": {
+    "newSite": "New site",
+    "newArea": "New area",
+    "newPlant": "New plant",
+    "newDevice": "New device",
+    "newAreaIn": "New area in {{name}}",
+    "newPlantIn": "New plant in {{name}}",
+    "newDeviceIn": "New device in {{name}}",
+    "edit": "Edit",
+    "editSite": "Edit site {{name}}",
+    "editArea": "Edit area {{name}}",
+    "editPlant": "Edit plant {{name}}",
+    "editDevice": "Edit device {{name}}",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel"
+  },
+  "form": {
+    "createSite": "New site",
+    "editSite": "Edit site",
+    "createArea": "New area",
+    "editArea": "Edit area",
+    "createPlant": "New plant",
+    "editPlant": "Edit plant",
+    "createDevice": "New device",
+    "editDevice": "Edit device",
+    "choose": "Please choose",
+    "invalid": "The entry was not saved. Please check the marked fields.",
+    "otherErrors": "Messages from the API"
+  },
+  "fields": {
+    "site": "Site",
+    "area": "Area",
+    "plant": "Plant",
+    "name": "Name",
+    "key": "Key",
+    "notes": "Notes",
+    "manufacturer": "Manufacturer",
+    "model": "Model",
+    "software_version": "Software version",
+    "ip_address": "IP address",
+    "address_source": "Source of the address",
+    "protocols": "Protocols",
+    "created_at": "Created",
+    "updated_at": "Last changed"
+  },
+  "device": {
+    "breadcrumb": "Location of the device",
+    "fieldsLabel": "Details of the device",
+    "notSet": "–"
+  },
+  "files": {
+    "heading": "Files",
+    "placeholder": "Files of this device follow in a later version."
+  }
+}

@@ -10,6 +10,7 @@ import { RouteError } from "./components/RouteError.tsx";
 import { changeLanguage } from "./i18n.ts";
 import enNav from "./locales/en/nav.json";
 import { navigation } from "./navigation.ts";
+import { fakeStructureApi } from "./pages/structure/testData.ts";
 import { fakeApi, manager } from "./test/fakeApi.ts";
 import { renderApp } from "./test/renderApp.tsx";
 
@@ -106,11 +107,17 @@ describe("navigation", () => {
 });
 
 describe("addresses", () => {
+  it("/ shows the structure page", async () => {
+    fakeApi(manager, fakeStructureApi().handler);
+    renderApp("/");
+
+    expect((await pageHeading()).textContent).toBe("Structure");
+    expect(await screen.findByTestId("structure-tree")).toBeDefined();
+  });
+
   it.each([
-    ["/", "Structure"],
     ["/import", "Import"],
     ["/audit", "Change log"],
-    ["/devices/plc-1", "Device"],
     ["/documents/42", "File"],
   ])("%s shows the page %s", async (path, heading) => {
     fakeApi(manager);
@@ -138,16 +145,16 @@ describe("addresses", () => {
   });
 
   it("passes the address parameters to the device and file pages", async () => {
-    fakeApi(manager);
-    renderApp("/devices/conveyor%20belt");
-    expect((await screen.findByTestId("device-id")).textContent).toBe("conveyor belt");
+    fakeApi(manager, fakeStructureApi().handler);
+    renderApp("/devices/1001");
+    expect(await screen.findByRole("heading", { level: 2, name: "Test panel" })).toBeDefined();
     cleanup();
 
     renderApp("/documents/7");
     expect((await screen.findByTestId("document-id")).textContent).toBe("7");
   });
 
-  it.each(["/no-such-page", "/devices", "/documents/1/extra", "/selftest/x"])(
+  it.each(["/no-such-page", "/devices", "/devices/plc-1", "/documents/1/extra", "/selftest/x"])(
     "the unknown address %s shows NotFound inside the frame",
     async (path) => {
       fakeApi(manager);
