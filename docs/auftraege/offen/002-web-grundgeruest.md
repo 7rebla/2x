@@ -1,6 +1,6 @@
 # Auftrag 002 – Oberfläche als Grundgerüst
 
-Meilenstein: M0 · Freigabestufe: C · Status: offen
+Meilenstein: M0 · Freigabestufe: C · Status: wartet auf a7 (Frage 3)
 
 ## Ziel
 
@@ -83,8 +83,92 @@ Alle Befehle im Wurzelverzeichnis des Arbeitsverzeichnisses. `W` steht für `doc
    - (b) Node 26 (Active LTS seit 28.10.2026, Ende April 2029).
    - Empfehlung: (a) Node 24 als vorsichtige Wahl; alle Werkzeuge laufen auf beiden, ein Wechsel ist eine Zeile.
 
+3. **Neu vom Auftragsbearbeiter (21.11.2026): weitere Lizenzen bei mitgezogenen Entwicklungswerkzeugen.** Die Lizenzprüfung zeigt neben den bekannten Fällen (ISC, 0BSD, lightningcss MPL-2.0) Lizenzen, die der Auftrag nicht nennt. Keine davon ist GPL/AGPL, keine hat eine Nutzungsbeschränkung, keine ist unbekannt. Alle betreffen nur Entwicklungswerkzeuge; im gebauten `dist` stecken nur react, react-dom und scheduler (MIT).
+   - BlueOak-1.0.0 (freizügig, 14 Pakete: glob, minimatch, minipass, lru-cache, tar, graceful-fs, path-scurry, chownr, isexe, yallist u. a.) – fast alle über license-checker-rseidelsohn (npm-Bibliotheken), graceful-fs auch über @tailwindcss/node.
+   - CC-BY-4.0: caniuse-lite (Datenbestand; über eslint-plugin-react-hooks → @babel/core → browserslist).
+   - CC-BY-3.0, CC0-1.0, (MIT AND CC-BY-3.0): spdx-exceptions, spdx-license-ids, spdx-ranges (Lizenzlisten als Daten; über license-checker-rseidelsohn).
+   - Optionen: (a) als gleichwertig freizügig bzw. als reine Datenbestände in Entwicklungswerkzeugen zulassen und im Entscheidungsprotokoll benennen; (b) license-checker-rseidelsohn und/oder eslint-plugin-react-hooks wieder entfernen (dann fehlt das Werkzeug für Auftrag 006 bzw. die Hooks-Regeln); (c) Entscheidung in Auftrag 006 treffen und den Zweig bis dahin stehen lassen.
+   - Empfehlung: (a). Die Pakete kommen zwingend mit den von a7 genehmigten direkten Abhängigkeiten, werden unverändert genutzt und nicht ausgeliefert.
+
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: wartet auf a7** (Frage 3, Lizenzen mitgezogener Entwicklungswerkzeuge). Technisch ist der Auftrag fertig; alle Prüfungen liefen am 21.11.2026 im Container.
+
+### Was wurde gebaut?
+
+- `web/`: `package.json` und `package-lock.json` (npm, alle Versionen exakt, `.npmrc` mit `save-exact`), `tsconfig.json` (strict), `vite.config.ts` (`base: "/static/"`, React- und Tailwind-Plugin, Vitest mit jsdom), `eslint.config.js` (typescript-eslint `strictTypeChecked`, React-Hooks-Regeln), `index.html`, `src/main.tsx`, `src/App.tsx` (Überschrift „2x“ und Hinweistext, kein API-Zugriff), `src/index.css` (`@import "tailwindcss"`), `src/App.test.tsx` (2 Tests).
+- `web/Dockerfile` (Stufe `dev`, `node:24-slim`) und `web/.dockerignore`.
+- `deploy/compose/compose.web.yaml`: Dienst `web-dev` (Profil `dev`), bindet `web/` ein, `node_modules` im Volume `web_node_modules`, kein Host-Port, allein gültig.
+
+### Wie wurde getestet?
+
+`W` = `docker compose -p twox-002 -f deploy/compose/compose.web.yaml`, Docker Engine 29.9.3, Compose v5.7.0.
+
+| Nr. | Ergebnis | Tatsächliche Ausgabe (gekürzt) |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` und `docker compose version`: Exit 0 |
+| 1 | erfüllt, mit Hinweis | `W build`: Exit 0, meldet aber „No services to build“, weil der Dienst im Profil `dev` liegt. Tatsächlich gebaut mit `W build web-dev` (Exit 0, „Image twox-002-web-dev Built“). `W config`: Exit 0 |
+| 2 | erfüllt | `v24.22.3` (npm 11.19.1) |
+| 3 | erfüllt | `npm ci`: „added 371 packages“, Exit 0, kein `ERESOLVE` |
+| 4 | erfüllt | `eslint . --max-warnings 0`: keine Meldung, Exit 0. Gegenprobe: `--print-config` enthält die Regeln der Typprüfung und der React-Hooks |
+| 5 | erfüllt | `tsc --noEmit`: Exit 0 |
+| 6 | erfüllt | Vitest 5.1.1: „Test Files 1 passed (1), Tests 2 passed (2)“, Exit 0 |
+| 7 | erfüllt | `dist/index.html` erzeugt; eingebunden: `/static/assets/index-….js` und `/static/assets/index-….css` |
+| 8 | erfüllt | `kein-nachladen-css`, `kein-nachladen-html`, `kein-cdn` |
+| 9 | teilweise | Der Befehl aus dem Auftrag scheitert wörtlich: `git check-ignore -q web/dist web/node_modules` → „fatal: --quiet is only valid with a single pathname“, Exit 128. Einzeln je Ordner: Exit 0; ohne `-q` mit beiden: Exit 0. `git status --short` zeigt beide Ordner nicht. Die `.gitignore` ist in Ordnung |
+| 10 | erfüllt | läuft durch, Zusammenfassung unten |
+| 11 | erfüllt, mit Hinweis | `W down -v`: Exit 0, räumt aber nichts ab („No resource found to remove“), das Volume bleibt stehen (Profil). Tatsächlich abgeräumt mit `W --profile dev down -v` (Volume und Netz entfernt, geprüft mit `docker volume ls`). Das lokale Image `twox-002-web-dev` bleibt liegen |
+
+Lizenz-Zusammenfassung (`license-checker-rseidelsohn --summary`, 348 Pakete einschließlich Entwicklungswerkzeuge): MIT 220 · ISC 65 · Apache-2.0 27 · BlueOak-1.0.0 14 · BSD-2-Clause 10 · BSD-3-Clause 4 · MPL-2.0 2 · CC-BY-4.0 1 · CC-BY-3.0 1 · CC0-1.0 1 · (MIT AND CC-BY-3.0) 1 · 0BSD 1 · UNLICENSED 1. Nur Laufzeit (`--production`): MIT 3 und UNLICENSED 1.
+
+Alles außerhalb MIT, Apache-2.0, BSD:
+
+- **ISC (65):** vor allem npm-Bibliotheken unter license-checker-rseidelsohn (`@npmcli/*`, pacote, cacache, semver, nopt, which, ssri u. a.), dazu picocolors, electron-to-chromium, flatted, glob-parent, saxes, signal-exit, lru-cache 5, yallist 3/4.
+- **BlueOak-1.0.0 (14):** @isaacs/nonrecursive-glob-match, chownr, common-ancestor-path, glob 13, graceful-fs, isexe 4, lru-cache 11, minimatch 10 und 11, minipass 7, minipass-flush, path-scurry, tar, yallist 5.
+- **MPL-2.0 (2):** lightningcss 1.33.0 und lightningcss-linux-x64-gnu 1.33.0 (über Vite und Tailwind; in E-23 benannt).
+- **0BSD (1):** tslib 2.8.1.
+- **CC-BY-4.0 (1):** caniuse-lite. **CC-BY-3.0 (1):** spdx-exceptions. **CC0-1.0 (1):** spdx-license-ids. **(MIT AND CC-BY-3.0) (1):** spdx-ranges.
+- **UNLICENSED (1):** das eigene Paket `twox-web`. Das Werkzeug meldet jedes Paket mit `"private": true` so; in `package.json` steht `Apache-2.0`. Kein Fremdpaket ohne Lizenz.
+
+### Abhängigkeiten fürs Entscheidungsprotokoll
+
+Quelle für Version, Lizenz und Peer-Angaben: npm-Registry (`npm view`, Abruf 21.11.2026 im Container).
+
+| Name | Version | Lizenz | Art |
+| --- | --- | --- | --- |
+| react | 19.3.1 | MIT | Laufzeit |
+| react-dom | 19.3.1 | MIT | Laufzeit |
+| typescript | 6.0.3 | Apache-2.0 | Entwicklung |
+| vite | 8.3.8 | MIT | Entwicklung |
+| @vitejs/plugin-react | 6.3.0 | MIT | Entwicklung |
+| tailwindcss | 4.3.5 | MIT | Entwicklung |
+| @tailwindcss/vite | 4.3.5 | MIT | Entwicklung |
+| vitest | 5.1.1 | MIT | Entwicklung |
+| @testing-library/react | 16.3.3 | MIT | Entwicklung |
+| @testing-library/dom | 10.4.2 | MIT | Entwicklung |
+| jsdom | 31.0.1 | MIT | Entwicklung |
+| @types/react | 19.3.0 | MIT | Entwicklung |
+| @types/react-dom | 19.3.0 | MIT | Entwicklung |
+| eslint | 10.15.0 | MIT | Entwicklung |
+| typescript-eslint | 8.73.0 | MIT | Entwicklung |
+| eslint-plugin-react-hooks | 7.1.1 | MIT | Entwicklung |
+| license-checker-rseidelsohn | 5.0.1 | BSD-3-Clause | Entwicklung |
+| Image `node:24-slim` | Node v24.22.3, npm 11.19.1 | Node.js: MIT; das Image enthält ein Debian-Grundsystem mit eigenen Lizenzen (auch GPL) | nur Build und Tests |
+
+Die im Auftrag als ungeprüft genannten Punkte: @types/react und @types/react-dom sind 19.3.0, MIT. typescript-eslint 8.73.0 lässt ESLint 10 zu (Peer `^8.57.0 || ^9.0.0 || ^10.0.0`) und TypeScript `>=4.8.4 <6.1.0`. Die Lizenz des Node-Images wurde in dieser Sitzung nicht an einer Quelle nachgeschlagen; die Angabe oben ist ungeprüft.
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-a1667f7e4fc0d0e28`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-a1667f7e4fc0d0e28`
+
+### Abweichungen und Hinweise
+
+- **Profil `dev` und die Befehle `W build` / `W down -v`:** Beide enden mit Exit 0, wirken aber ohne `--profile dev` bzw. ohne Dienstnamen nicht (siehe Nr. 1 und 11). Für CI und Aufräumen: `W build web-dev` und `W --profile dev down -v`. Vorschlag: Akzeptanzkriterien oder spätere Aufträge (011) entsprechend fassen.
+- **Kriterium 9** ist im Wortlaut nicht ausführbar (`-q` nur mit einem Pfad); inhaltlich erfüllt.
+- **Image nur per Tag festgelegt** (`node:24-slim`), nicht per Digest; die Nebenversion kann sich bei einem Neuaufbau ändern.
+- **Kein `@eslint/js`:** Die üblichen ESLint-Grundregeln (`js.configs.recommended`) brauchen dieses Paket als direkte Abhängigkeit; es ist nicht genehmigt. Verwendet werden die Regeln von typescript-eslint und eslint-plugin-react-hooks. `eslint.config.js` selbst wird ohne Regeln geprüft.
+- **Kein `@types/node`** (nicht genehmigt): `vite.config.ts` verwendet keine Node-Schnittstellen; `skipLibCheck` ist an.
+- **Zusätzliche Dateien in `web/`**, im Umfang nicht einzeln genannt: `.npmrc`, `.dockerignore`, `index.html`, `src/index.css`. Zusätzliches npm-Skript `dev` (Vite-Entwicklungsserver; ohne Host-Port von außen nicht erreichbar).
+- **Hinweistext auf Englisch** („This page is a placeholder …“), weil Übersetzungen ein Nicht-Ziel sind und Code auf Englisch steht.
+- Nicht geprüft: Anzeige im Browser (kein Host-Port, Auslieferung kommt mit Auftrag 013).
