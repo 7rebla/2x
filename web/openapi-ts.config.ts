@@ -1,0 +1,10 @@
+// Configuration of the API client generator (@hey-api/openapi-ts).
+// Regenerate the client with `npm run api:generate` (see web/openapi/README.md).
+import { defineConfig } from "@hey-api/openapi-ts";
+
+export default defineConfig({
+  // Leading "./" is required: a bare "a/b" is read as a Hey API registry shorthand.
+  input: "./openapi/schema.yml",
+  output: "./src/api/generated",
+  plugins: ["@hey-api/client-fetch", "@hey-api/typescript", "@hey-api/sdk"],
+});

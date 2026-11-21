@@ -3,7 +3,8 @@ import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 export default defineConfig([
-  globalIgnores(["dist", "node_modules"]),
+  // src/api/generated is written by `npm run api:generate` and never edited by hand.
+  globalIgnores(["dist", "node_modules", "src/api/generated"]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [

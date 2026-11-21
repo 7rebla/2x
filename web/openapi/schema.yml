@@ -1,0 +1,97 @@
+openapi: 3.0.3
+info:
+  title: 2x API
+  version: 0.0.0
+  description: Asset records with sourced answers.
+paths:
+  /api/v1/health/:
+    get:
+      operationId: health_retrieve
+      description: 'Open to everyone on purpose: container health checks carry no
+        credentials.'
+      tags:
+      - health
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+          description: ''
+  /api/v1/selftest/:
+    get:
+      operationId: selftest_retrieve
+      description: |-
+        Read-only self-test.
+
+        Open to everyone in milestone M0 on purpose (decided by a7): there is no
+        login yet, and the answer holds only the database version and ``pong``.
+        Every call queues a task, so M1 restricts this to signed-in users.
+      tags:
+      - selftest
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Selftest'
+          description: ''
+components:
+  schemas:
+    DatabaseCheck:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        server_version:
+          type: string
+        error:
+          type: string
+      required:
+      - error
+      - ok
+      - server_version
+    Health:
+      type: object
+      description: Shape of the health response, used for the OpenAPI schema.
+      properties:
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+      required:
+      - status
+    Selftest:
+      type: object
+      properties:
+        database:
+          $ref: '#/components/schemas/DatabaseCheck'
+        worker:
+          $ref: '#/components/schemas/WorkerCheck'
+      required:
+      - database
+      - worker
+    StatusEnum:
+      enum:
+      - ok
+      type: string
+      description: '* `ok` - ok'
+    WorkerCheck:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        result:
+          type: string
+        duration_ms:
+          type: integer
+          minimum: 0
+        error:
+          type: string
+      required:
+      - duration_ms
+      - error
+      - ok
+      - result
