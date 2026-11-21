@@ -4,6 +4,267 @@ info:
   version: 0.0.0
   description: Asset records with sourced answers.
 paths:
+  /api/v1/areas/:
+    get:
+      operationId: areas_list
+      description: Areas of the sites.
+      parameters:
+      - in: query
+        name: site
+        schema:
+          type: integer
+        description: Only areas of the site with this id.
+      tags:
+      - areas
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Area'
+          description: ''
+    post:
+      operationId: areas_create
+      description: Areas of the sites.
+      tags:
+      - areas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Area'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Area'
+          description: ''
+  /api/v1/areas/{id}/:
+    get:
+      operationId: areas_retrieve
+      description: Areas of the sites.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this area.
+        required: true
+      tags:
+      - areas
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Area'
+          description: ''
+    put:
+      operationId: areas_update
+      description: Areas of the sites.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this area.
+        required: true
+      tags:
+      - areas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Area'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Area'
+          description: ''
+    patch:
+      operationId: areas_partial_update
+      description: Areas of the sites.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this area.
+        required: true
+      tags:
+      - areas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedArea'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Area'
+          description: ''
+  /api/v1/devices/:
+    get:
+      operationId: devices_list
+      description: |-
+        Devices of the plants, each with its chain plant > area > site.
+
+        Writes take the plant as an id (``DeviceWrite``); every answer shows the
+        device as it is read (``Device``).
+      parameters:
+      - in: query
+        name: plant
+        schema:
+          type: integer
+        description: Only devices of the plant with this id.
+      - in: query
+        name: site
+        schema:
+          type: integer
+        description: Only devices of the site with this id (through area and plant).
+      tags:
+      - devices
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+          description: ''
+    post:
+      operationId: devices_create
+      description: |-
+        Devices of the plants, each with its chain plant > area > site.
+
+        Writes take the plant as an id (``DeviceWrite``); every answer shows the
+        device as it is read (``Device``).
+      tags:
+      - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceWrite'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+          description: ''
+  /api/v1/devices/{id}/:
+    get:
+      operationId: devices_retrieve
+      description: |-
+        Devices of the plants, each with its chain plant > area > site.
+
+        Writes take the plant as an id (``DeviceWrite``); every answer shows the
+        device as it is read (``Device``).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this device.
+        required: true
+      tags:
+      - devices
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+          description: ''
+    put:
+      operationId: devices_update
+      description: |-
+        Devices of the plants, each with its chain plant > area > site.
+
+        Writes take the plant as an id (``DeviceWrite``); every answer shows the
+        device as it is read (``Device``).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this device.
+        required: true
+      tags:
+      - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceWrite'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+          description: ''
+    patch:
+      operationId: devices_partial_update
+      description: |-
+        Devices of the plants, each with its chain plant > area > site.
+
+        Writes take the plant as an id (``DeviceWrite``); every answer shows the
+        device as it is read (``Device``).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this device.
+        required: true
+      tags:
+      - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDeviceWrite'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+          description: ''
   /api/v1/health/:
     get:
       operationId: health_retrieve
@@ -39,6 +300,124 @@ paths:
               schema:
                 $ref: '#/components/schemas/Me'
           description: ''
+  /api/v1/plants/:
+    get:
+      operationId: plants_list
+      description: Plants of the areas.
+      parameters:
+      - in: query
+        name: area
+        schema:
+          type: integer
+        description: Only plants of the area with this id.
+      tags:
+      - plants
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Plant'
+          description: ''
+    post:
+      operationId: plants_create
+      description: Plants of the areas.
+      tags:
+      - plants
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Plant'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plant'
+          description: ''
+  /api/v1/plants/{id}/:
+    get:
+      operationId: plants_retrieve
+      description: Plants of the areas.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this plant.
+        required: true
+      tags:
+      - plants
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plant'
+          description: ''
+    put:
+      operationId: plants_update
+      description: Plants of the areas.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this plant.
+        required: true
+      tags:
+      - plants
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Plant'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plant'
+          description: ''
+    patch:
+      operationId: plants_partial_update
+      description: Plants of the areas.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this plant.
+        required: true
+      tags:
+      - plants
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPlant'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plant'
+          description: ''
   /api/v1/selftest/:
     get:
       operationId: selftest_retrieve
@@ -59,8 +438,159 @@ paths:
               schema:
                 $ref: '#/components/schemas/Selftest'
           description: ''
+  /api/v1/sites/:
+    get:
+      operationId: sites_list
+      description: Sites of the operation.
+      tags:
+      - sites
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Site'
+          description: ''
+    post:
+      operationId: sites_create
+      description: Sites of the operation.
+      tags:
+      - sites
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Site'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+          description: ''
+  /api/v1/sites/{id}/:
+    get:
+      operationId: sites_retrieve
+      description: Sites of the operation.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this site.
+        required: true
+      tags:
+      - sites
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+          description: ''
+    put:
+      operationId: sites_update
+      description: Sites of the operation.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this site.
+        required: true
+      tags:
+      - sites
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Site'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+          description: ''
+    patch:
+      operationId: sites_partial_update
+      description: Sites of the operation.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this site.
+        required: true
+      tags:
+      - sites
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSite'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+          description: ''
 components:
   schemas:
+    Area:
+      type: object
+      description: An area of a site. ``site`` is the id of the site.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        site:
+          type: integer
+        name:
+          type: string
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+      - site
+      - updated_at
+    AreaRef:
+      type: object
+      description: The area of a device, for reading.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - name
     DatabaseCheck:
       type: object
       properties:
@@ -74,6 +604,112 @@ components:
       - error
       - ok
       - server_version
+    Device:
+      type: object
+      description: A device with its chain plant > area > site, for reading.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        plant:
+          allOf:
+          - $ref: '#/components/schemas/PlantRef'
+          readOnly: true
+        area:
+          allOf:
+          - $ref: '#/components/schemas/AreaRef'
+          readOnly: true
+        site:
+          allOf:
+          - $ref: '#/components/schemas/SiteRef'
+          readOnly: true
+        key:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        manufacturer:
+          type: string
+          readOnly: true
+        model:
+          type: string
+          readOnly: true
+        software_version:
+          type: string
+          readOnly: true
+        ip_address:
+          type: string
+          readOnly: true
+          nullable: true
+        address_source:
+          type: string
+          readOnly: true
+        protocols:
+          type: string
+          readOnly: true
+        notes:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - address_source
+      - area
+      - created_at
+      - id
+      - ip_address
+      - key
+      - manufacturer
+      - model
+      - name
+      - notes
+      - plant
+      - protocols
+      - site
+      - software_version
+      - updated_at
+    DeviceWrite:
+      type: object
+      description: |-
+        Input for creating and changing a device. ``plant`` is the id of the plant.
+
+        An empty IP address is stored as no address (``null``).
+      properties:
+        plant:
+          type: integer
+        key:
+          type: string
+          pattern: ^[a-z0-9-]+$
+          maxLength: 64
+        name:
+          type: string
+          maxLength: 200
+        manufacturer:
+          type: string
+        model:
+          type: string
+        software_version:
+          type: string
+        ip_address:
+          type: string
+          nullable: true
+        address_source:
+          type: string
+        protocols:
+          type: string
+        notes:
+          type: string
+      required:
+      - key
+      - name
+      - plant
     Health:
       type: object
       description: Shape of the health response, used for the OpenAPI schema.
@@ -102,6 +738,151 @@ components:
     NullEnum:
       enum:
       - null
+    PatchedArea:
+      type: object
+      description: An area of a site. ``site`` is the id of the site.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        site:
+          type: integer
+        name:
+          type: string
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedDeviceWrite:
+      type: object
+      description: |-
+        Input for creating and changing a device. ``plant`` is the id of the plant.
+
+        An empty IP address is stored as no address (``null``).
+      properties:
+        plant:
+          type: integer
+        key:
+          type: string
+          pattern: ^[a-z0-9-]+$
+          maxLength: 64
+        name:
+          type: string
+          maxLength: 200
+        manufacturer:
+          type: string
+        model:
+          type: string
+        software_version:
+          type: string
+        ip_address:
+          type: string
+          nullable: true
+        address_source:
+          type: string
+        protocols:
+          type: string
+        notes:
+          type: string
+    PatchedPlant:
+      type: object
+      description: A plant of an area. ``area`` is the id of the area.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        area:
+          type: integer
+        key:
+          type: string
+          pattern: ^[a-z0-9-]+$
+          maxLength: 64
+        name:
+          type: string
+          maxLength: 200
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedSite:
+      type: object
+      description: A site of the operation.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    Plant:
+      type: object
+      description: A plant of an area. ``area`` is the id of the area.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        area:
+          type: integer
+        key:
+          type: string
+          pattern: ^[a-z0-9-]+$
+          maxLength: 64
+        name:
+          type: string
+          maxLength: 200
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - area
+      - created_at
+      - id
+      - key
+      - name
+      - updated_at
+    PlantRef:
+      type: object
+      description: The plant of a device, for reading.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        key:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - key
+      - name
     RoleEnum:
       enum:
       - manage
@@ -120,6 +901,42 @@ components:
       required:
       - database
       - worker
+    Site:
+      type: object
+      description: A site of the operation.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+      - updated_at
+    SiteRef:
+      type: object
+      description: The site of a device, for reading.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - name
     StatusEnum:
       enum:
       - ok
