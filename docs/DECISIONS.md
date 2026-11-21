@@ -121,4 +121,5 @@ Jede neue Abhängigkeit bekommt hier einen Eintrag (Leitplanke 7). Bevorzugt: MI
 
 | Name | Lizenz | Zweck | Eingeführt mit Auftrag | Genehmigt von a7 |
 | --- | --- | --- | --- | --- |
-| – | – | noch keine | – | – |
+| gitleaks (Kommandozeile, Image `ghcr.io/gitleaks/gitleaks:v8.30.1`, per Digest festgelegt) | MIT | Suche nach Geheimnissen, lokal und in der CI | 003 | nach E-23 |
+| actions/checkout v7.0.1 (per Commit festgelegt) | MIT | Auschecken in GitHub Actions | 003 | nach E-23 |

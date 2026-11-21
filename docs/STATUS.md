@@ -13,7 +13,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | --- | --- | --- | --- | --- | --- |
 | 001 | Backend: Werkzeuge und Container | C | 1 | – | in Arbeit |
 | 002 | Oberfläche als Grundgerüst | C | 1 | – | in Arbeit |
-| 003 | Suche nach Geheimnissen | C | 1 | – | in Arbeit |
+| 003 | Suche nach Geheimnissen | C | 1 | – | zusammengeführt; CI-Lauf wartet auf Push |
 | 004 | Messung Dateizugriff | B | 2 | 001, 002 | offen |
 | 005 | API-Grundlage | C | 3 | 001 | offen |
 | 006 | Lizenzprüfung | C | 3 | 001, 002 | offen |
@@ -31,7 +31,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 | Nr. | Auftrag | Stufe | Welle | Hängt ab von | Status |
 | --- | --- | --- | --- | --- | --- |
-| 101 | Manifest-Format und Werkzeug-Container | C | 1 | – (Python-Version aus 001 eintragen) | offen |
+| 101 | Manifest-Format und Werkzeug-Container | C | 1 | – (Python-Version aus 001 eintragen) | in Arbeit |
 | 102 | Quellen und Lizenzlage der Fertigungslinie | C | 1 | – | in Arbeit (eigene Sitzung) |
 | 103 | Quellen und Nutzungsbedingungen: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 1 | – | in Arbeit (eigene Sitzung) |
 | 104 | Lade-Skript `fetch.py` | B | 2 | 101 | offen |
@@ -48,7 +48,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 ## In Arbeit
 
-- 001, 002, 003 als Subagenten; 102, 103 als eigene Sitzungen (gestartet am 21.11.2026).
+- 001, 002, 101 als Subagenten; 102, 103 als eigene Sitzungen (gestartet am 21.11.2026).
 
 ## Wartet auf a7
 
