@@ -1,6 +1,6 @@
 # Auftrag 107 – Manifest-Einträge: Standardgeräte, UR5e, URSim, OPNsense-Dokumentation
 
-Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: T1 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 
