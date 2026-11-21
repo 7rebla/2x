@@ -1,6 +1,6 @@
 # Auftrag 017 – Selbsttest: Zeitlimit, wenn der Ergebnisspeicher nicht antwortet
 
-Meilenstein: M1 · Freigabestufe: B · Status: offen
+Meilenstein: M1 · Freigabestufe: B · Status: zur Prüfung
 
 ## Ziel
 
@@ -70,7 +70,62 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 Keine.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Alle Akzeptanzkriterien sind erfüllt; die Läufe fanden am 21.11.2026 im Container statt. Keine neue Abhängigkeit, `settings.py` und `selftest.py` sind nicht berührt.
+
+### Was wurde gebaut?
+
+- `backend/twox/config/taskqueue.py`:
+  - `ping_worker` baut je Aufruf eine eigene Celery-App (`bounded_app`). Sie liest dieselbe Quelle wie `twox.config.celery` (Django-Einstellungen, Präfix `CELERY_`) und bekommt zusätzlich `result_store_settings(t)`: `redis_socket_timeout` und `redis_socket_connect_timeout` = t, `redis_retry_on_timeout` aus, `result_backend_always_retry` aus, `retry_policy` mit `max_retries: 0`. Damit hat sie eine eigene Instanz des Ergebnisspeichers. Die App des Workers bleibt unverändert.
+  - Warum eine eigene App und nicht nur ein eigenes Backend-Objekt: Celery abonniert den Ergebniskanal in `send_task` immer über das Backend der sendenden App; ein anderes Backend lässt sich dort nicht übergeben. `ignore_result=True` würde das Abonnement zwar überspringen, aber der Worker speichert dann auch kein Ergebnis.
+  - Ablauf: Broker verbinden (wie bisher, ein Versuch, Socket-Zeitlimits) → `watch_result`: `PING` an den Ergebnisspeicher und Abonnement des Ergebniskanals → erst dann Senden mit `send_task` (findet den Kanal schon abonniert, spricht den Ergebnisspeicher nicht mehr an) → `result.get()` → `result.forget()`. Alle drei Stellen aus 010 laufen über die begrenzte Instanz.
+  - Die Prüfung vor dem Senden ist nötig, weil (1) Celery Fehler des Abonnements in `send_task` als Broker-Fehler (`OperationalError`) meldet und (2) beim Abonnement mit Wiederverbindung zwei Verbindungsversuche stattfinden (gemessen: 2 × Zeitlimit). Ein ausgefallener Ergebnisspeicher verhindert so auch, dass ein Ping in der Warteschlange liegen bleibt.
+  - Neue Unterklasse `ResultStoreUnavailableError(TaskQueueError)` mit dem Text `result store not reachable` (ohne Adresse oder Kennwort). Bisher kam dieser Text als `BrokerUnavailableError`.
+  - Nach einem Ausfall des Ergebnisspeichers wird `forget()` nicht mehr versucht (keine zweite Wartezeit). Am Ende schließt `close_result_store` die Verbindungen der App (auch die des Ergebniskanals) und `app.close()`.
+- `backend/tests/config/test_selftest.py`: Die Einheitstests von `ping_worker` laufen jetzt über die echte begrenzte App mit gefälschter Broker-Verbindung (Hilfsklasse `FakeQueue`). Neu:
+  - `test_result_store_timeouts_reach_the_api_instance_but_not_the_app_settings`: Die Instanz der API trägt Socket-Zeitlimits 5, `retry_on_timeout` aus, `max_retries` 0, `always_retry` aus. Die App des Workers und ihr Backend enthalten das nicht. Broker, Ergebnisspeicher, Serialisierung und Standard-Warteschlange stimmen in beiden Apps überein.
+  - `test_ping_worker_turns_result_store_error_into_safe_error`: Fehler des Ergebnisspeichers (mit Adresse und Kennwort im Text) ergeben `ResultStoreUnavailableError`, keine Interna, kein `forget()`.
+  - `test_silent_result_store_is_a_partial_failure_within_the_limit`: echter, nicht antwortender Ergebnisspeicher. Ein lauschender Socket auf 127.0.0.1 nimmt nie an; der Kern schließt den TCP-Aufbau ab, es kommt aber kein Byte zurück. `check_worker(1.0)` liefert `ok: false` mit `result store not reachable` in unter 2 s (gemessen 1,01 s), und nichts wurde gesendet.
+  - Der Test „Broker nicht erreichbar“ setzt die Broker-Adresse jetzt in den Django-Einstellungen statt in `ping.app.conf`, weil die begrenzte App dort liest.
+- `docs/ARCHITECTURE.md` (eigener Commit): Abschnitt 4 des Selbsttest-Ablaufs beschreibt die eigene Instanz; die alte Zeile „Known limit …“ ist durch den neuen Stand ersetzt.
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-017` im Wurzelverzeichnis des Arbeitsverzeichnisses, `.env` aus `.env.example` mit `TWOX_API_PORT=18017`, Docker Engine 29.9.3, Compose v5.7.0, Celery 5.7.0, redis-py 8.1.0.
+
+| Nr. | Ergebnis | Tatsächliche Ausgabe (gekürzt) |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` (29.9.3) und `docker compose version` (v5.7.0), Exit-Code 0 |
+| 1 | erfüllt | Build Exit-Code 0; `up -d --wait …` Exit-Code 0, `db`, `valkey`, `api`, `worker` Healthy (nach dem letzten Code-Stand neu gebaut) |
+| 2 | erfüllt | Befehl wie im Auftrag mit `redis://10.255.255.1:6379/1`: `{'ok': False, 'result': '', 'duration_ms': 5035, 'error': 'result store not reachable'} 5.0`. Die Adresse wurde nicht sofort abgewiesen. Einzelheiten (`Timeout connecting to server`) nur im Protokoll. Gegenprobe mit dem alten `taskqueue.py`: keine Antwort innerhalb von 120 s, mit `timeout 120` abgebrochen (Exit-Code 124) |
+| 3 | erfüllt | `{"database":{"ok":true,…},"worker":{"ok":true,"result":"pong","duration_ms":33,"error":""}}` |
+| 4 | erfüllt | `All checks passed!`; `52 files already formatted` (Exit-Code 0); `Success: no issues found in 52 source files` |
+| 5 | erfüllt | `113 passed, 4 deselected`, Exit-Code 0, nichts übersprungen; `pytest -m worker`: `4 passed, 113 deselected`, Exit-Code 0 |
+| 6 | erfüllt | `No changes detected` |
+| 7 | erfüllt | `spectacular --file /out/schema.yml` Exit-Code 0, `git diff --exit-code -- web/openapi` Exit-Code 0, keine unversionierten Dateien |
+| 8 | erfüllt | `D --profile dev --profile e2e down -v` Exit-Code 0; keine Container und Volumes von `twox-017` mehr. Projekt `2x` nicht angefasst |
+
+Zusätzlich geprüft, bei laufender API mit neuem Code:
+
+- Drei Aufrufe nacheinander: `ok: true`, 12–14 ms.
+- Worker gestoppt: `no result from a worker within 5 seconds`, 5,04 s.
+- Valkey pausiert: `message broker not reachable`, 5,04 s.
+- Nach `unpause`: sofort wieder `pong`.
+- 20 Aufrufe hintereinander: Zahl der Clients in Valkey vorher und nachher 13, also keine liegen gebliebenen Verbindungen.
+- Lizenzprüfung (`sh scripts/check-licenses.sh`): `License check passed.`
+- Alle Prüfungen der Tabelle liefen auf dem committeten Stand. Die Typprüfung braucht kein neues `type: ignore`.
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-a4a8d885bf666e14f`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-a4a8d885bf666e14f` (relativ zum Projektordner)
+- Commits: `Bound the self-test when the result store does not answer`, `Describe the bounded result store in the architecture notes`, dazu dieser Kurzbericht
+
+### Abweichungen und Hinweise
+
+- Vorschlag (a) aus 010 trägt; (b) (Hilfsthread) wurde nicht gebraucht. Statt einer bloßen Backend-Instanz ist es eine eigene Celery-App je Aufruf (Begründung oben). Sie registriert keine Aufgaben, wird nicht zur aktuellen App und installiert keine Django-Erweiterung (`fixups=[]`).
+- Die Konfigurationsquelle (`django.conf:settings`, Präfix `CELERY`) steht als Konstante in `taskqueue.py` und damit ein zweites Mal neben `celery.py`. Ein Test prüft, dass beide Apps dieselben Werte für Broker, Ergebnisspeicher, Serialisierung und Standard-Warteschlange haben. `celery.py` habe ich nicht geändert, weil es nicht im Auftrag steht.
+- `docs/ARCHITECTURE.md` liegt außerhalb der genannten Dateien. Geändert wurden nur zwei Sätze, damit die Doku nicht veraltet ist, in einem eigenen Commit. Die Leitstelle kann ihn weglassen.
+- Bekannte Grenze: Hört der Ergebnisspeicher mitten im Aufruf auf zu antworten (nach erfolgreicher Prüfung), endet das Warten nach 5 s als `no result from a worker …`, und `forget()` kann bis zu ein weiteres Socket-Zeitlimit (5 s) dauern. Höchstens etwa 10 s statt bisher unbegrenzt. Nicht nachgestellt.
+- `selftest.py` brauchte keine Änderung: Der neue Fehler ist ein `TaskQueueError`, sein Text wird wie bisher angezeigt.
+- Keine offenen Fragen an a7.
