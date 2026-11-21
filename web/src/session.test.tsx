@@ -274,6 +274,59 @@ describe("addresses after signing in", () => {
     expect(safeNextPath(raw)).toBe(expected);
   });
 
+  // Dot segments and backslashes that only become "//host" after the URL
+  // parser has normalised the path (open redirect, review of work order 030).
+  it.each([
+    "/.//evil.test/",
+    "/%2e//evil.test/",
+    "/%2E//evil.test/",
+    "/x/..//evil.test/",
+    "/x/%2e%2e//evil.test/",
+    "/admin/..//evil.test/",
+    "/selftest/../..//evil.test/",
+    "/.\\/evil.test/",
+    "/.\\\\evil.test/",
+    "/x/..\\/evil.test/",
+    "/x/..\\\\evil.test/",
+    "/admin/..\\\\evil.test/",
+    "/\t\\/evil.test/",
+    "/\n/evil.test/",
+  ])("safeNextPath(%j) does not leave the application", (raw) => {
+    expect(safeNextPath(raw)).toBe("/");
+  });
+
+  it.each([
+    ["/%5c/evil.test/", "/%5c/evil.test/"],
+    ["/%5C%5Cevil.test/", "/%5C%5Cevil.test/"],
+    ["/.%5c/evil.test/", "/.%5c/evil.test/"],
+    ["/x/..%5c/evil.test/", "/x/..%5c/evil.test/"],
+    ["/x/..%5c%5cevil.test/", "/x/..%5c%5cevil.test/"],
+    ["/selftest?next=//evil.test/", "/selftest?next=//evil.test/"],
+    ["/selftest?x=%5c", "/selftest?x=%5c"],
+  ])("safeNextPath(%j) keeps an encoded backslash as a path of this application: %j", (raw, expected) => {
+    const result = safeNextPath(raw);
+
+    expect(result).toBe(expected);
+    expect(result.startsWith("//")).toBe(false);
+    expect(result).not.toContain("\\");
+    expect(new URL(result, "http://app.test").origin).toBe("http://app.test");
+  });
+
+  it("a malicious ?next= leads to / after signing in, never to another host", async () => {
+    const api = fakeApi(null, () => {
+      api.setMe(manager);
+      return jsonResponse({ status: 200 });
+    });
+    const { router } = renderApp(`/login?next=${encodeURIComponent("/x/..//evil.test/")}`);
+
+    fireEvent.change(await screen.findByLabelText("Username"), { target: { value: "test-manager" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "test-only-password" } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+
+    expect(await screen.findByRole("heading", { level: 2, name: "Structure" })).toBeDefined();
+    expect(router.state.location.pathname).toBe("/");
+  });
+
   it("loginPathFor keeps the address for later", () => {
     expect(loginPathFor("/")).toBe("/login");
     expect(loginPathFor("/selftest?x=1")).toBe("/login?next=%2Fselftest%3Fx%3D1");

@@ -12,7 +12,7 @@ way to get a session.
 """
 
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import unquote, urlencode, urlsplit
 
 from django.contrib.admin import AdminSite
 from django.contrib.admin.apps import AdminConfig
@@ -73,9 +73,21 @@ class TwoxAdminSite(AdminSite):
         safe = url_has_allowed_host_and_scheme(
             candidate, allowed_hosts={request.get_host()}, require_https=request.is_secure()
         )
-        if safe and candidate.startswith(index):
+        if safe and candidate.startswith(index) and is_plain_path(candidate):
             return candidate
         return index
+
+
+def is_plain_path(url: str) -> bool:
+    """Return True if the path of ``url`` stays as written when a browser resolves it.
+
+    Dot segments ("..", "%2e%2e"), backslashes and empty segments ("//") are
+    refused: "/admin/..//host/" starts with "/admin/" but resolves to "//host/".
+    """
+    path = unquote(urlsplit(url).path)
+    if "\\" in path or "//" in path:
+        return False
+    return all(segment not in {".", ".."} for segment in path.split("/"))
 
 
 class TwoxAdminConfig(AdminConfig):

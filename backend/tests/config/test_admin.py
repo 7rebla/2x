@@ -117,6 +117,13 @@ def test_anonymous_admin_request_ends_at_the_web_ui_sign_in() -> None:
         "/login",
         "javascript:alert(1)",
         "",
+        # Start with /admin/, but leave it once dot segments are resolved.
+        "/admin/..//example.test/",
+        "/admin/%2e%2e//example.test/",
+        "/admin/./../api/v1/me/",
+        "/admin/..\\example.test/",
+        "/admin/%5c%5cexample.test/",
+        "/admin//example.test/",
     ],
 )
 def test_admin_login_passes_only_admin_paths_on(next_value: str) -> None:
@@ -177,6 +184,15 @@ def test_signed_in_superuser_at_admin_login_goes_on_to_the_admin() -> None:
 
     assert response.status_code == 302
     assert response["Location"] == "/admin/accounts/user/"
+
+
+def test_signed_in_superuser_is_never_sent_out_of_the_admin() -> None:
+    user = User.objects.create_superuser(username="root", password=TEST_PASSWORD)
+
+    response = signed_in_client(user).get("/admin/login/", {"next": "/admin/..//example.test/"})
+
+    assert response.status_code == 302
+    assert response["Location"] == "/admin/"
 
 
 @pytest.mark.parametrize("is_staff", [True, False], ids=["staff", "plain"])

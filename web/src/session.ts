@@ -138,13 +138,27 @@ function firstSegment(pathname: string): string {
   return pathname.split("/")[1] ?? "";
 }
 
+function hasControlCharacter(text: string): boolean {
+  for (const character of text) {
+    const code = character.charCodeAt(0);
+    if (code < 0x20 || code === 0x7f) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * The address to continue to after signing in: a path of this application
  * from ?next=, otherwise "/". Foreign addresses ("https://…", "//host"),
  * API paths and the sign-in page itself are never accepted.
+ *
+ * Every check runs on the normalised result (dot segments resolved,
+ * backslashes turned into slashes), because that is what the browser is sent
+ * to: "/x/..//host" must not become "//host".
  */
 export function safeNextPath(raw: string | null): string {
-  if (raw === null || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) {
+  if (raw === null || !raw.startsWith("/")) {
     return "/";
   }
   let url: URL;
@@ -156,10 +170,18 @@ export function safeNextPath(raw: string | null): string {
   if (url.origin !== PARSE_BASE) {
     return "/";
   }
-  if (NON_UI_SEGMENTS.has(firstSegment(url.pathname)) || url.pathname === LOGIN_PAGE_PATH) {
+  const path = `${url.pathname}${url.search}${url.hash}`;
+  if (
+    !path.startsWith("/") ||
+    path.startsWith("//") ||
+    path.includes("\\") ||
+    hasControlCharacter(path) ||
+    NON_UI_SEGMENTS.has(firstSegment(url.pathname)) ||
+    url.pathname === LOGIN_PAGE_PATH
+  ) {
     return "/";
   }
-  return `${url.pathname}${url.search}${url.hash}`;
+  return path;
 }
 
 /** True for a path that Django serves itself (the admin), not the web UI. */
