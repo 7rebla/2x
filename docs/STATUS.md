@@ -102,7 +102,7 @@ Nichts davon hält die laufende Arbeit auf.
 | 017 | Selbsttest: Zeitlimit Ergebnisspeicher | B | 1 | erledigt |
 | 018 | Oberfläche zweisprachig | C | 1 | erledigt |
 | 019 | Datenmodell Standort, Bereich, Anlage, Gerät | C | 1 | erledigt |
-| 020 | Anmeldung mit django-allauth, Ratenbegrenzung | C | 2 | in Arbeit |
+| 020 | Anmeldung mit django-allauth, Ratenbegrenzung | C | 2 | erledigt |
 | 021 | Rollen, Konto-Endpunkt, Befehl create_account | C | 2 | erledigt |
 | 022 | Dateispeicher nach Prüfsumme | C | 2 | erledigt |
 | 023 | Oberfläche: Routing, Rahmen, Datenabruf | C | 3 | erledigt |
@@ -130,3 +130,4 @@ Hinweise aus Welle 1:
 - 021: Für 027 vorgemerkt: Das Testkennwort für `create_account` nur als Variablenname durchreichen (`-e TWOX_ACCOUNT_PASSWORD`), nicht als Wert in den Argumenten von `docker compose`.
 - 023: Die Selbsttest-Seite liegt jetzt unter `/selftest`, `/` zeigt die Strukturseite. Für 038: `docs/ARCHITECTURE.md` nennt noch die Testseite unter `/` und „no runtime dependency" für den erzeugten Client.
 - 024: Grenzen für 038: Scheitert eine Transaktion nach dem Speichern, bleibt der Inhalt ohne Version im Speicher; Unveränderlichkeit der Versionen nur über `save()`, nicht in der Datenbank; als Dokument hochgeladene Konfigurationen werden nicht erkannt (Restrisiko zu Leitplanke 5, E-42).
+- 020: allauth-Pfade für Kennwort ändern, Kennwort zurücksetzen und E-Mail-Verwaltung liefern 404 (E-38). Eine Sperre nach Fehlversuchen meldet allauth mit 400 und `too_many_login_attempts`, nicht mit 429 (für 030). Hinter einem Reverse-Proxy (M6) `ALLAUTH_TRUSTED_PROXY_COUNT` setzen, sonst zählen alle Fehlversuche auf die Proxy-Adresse.
