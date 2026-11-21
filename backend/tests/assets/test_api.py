@@ -518,8 +518,9 @@ def test_device_answer_after_a_write_loads_the_chain_at_once(
     django_assert_max_num_queries: DjangoAssertNumQueries,
 ) -> None:
     # Session, user, role groups, the device, the plant, the uniqueness of
-    # the key, the update and one query for the answer with its chain.
-    with django_assert_max_num_queries(8):
+    # the key, the update and one query for the answer with its chain; the
+    # savepoint around the write (031) adds SAVEPOINT and RELEASE SAVEPOINT.
+    with django_assert_max_num_queries(10):
         response = manager.patch(
             f"/api/v1/devices/{structure.press_plc.pk}/", {"name": "Renamed"}, format="json"
         )

@@ -1,6 +1,6 @@
 # Auftrag 031 – CSV-Import der Geräteliste (Backend, App assets)
 
-Meilenstein: M1 · Freigabestufe: C · Status: offen
+Meilenstein: M1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -122,7 +122,70 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
    - Empfehlung: (a).
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Alle Akzeptanzkriterien erfüllt, Läufe am 22.11.2026 im Container auf dem committeten Stand. Keine offene Frage an a7.
+
+### Was wurde gebaut?
+
+- `backend/twox/assets/csv_import.py`:
+  - `parse(stream) -> ParsedFile`: liest zeilenweise Bytes (`readline`), dekodiert jede Zeile streng als UTF-8 (BOM am Anfang toleriert), `csv.reader` mit Dialekt `excel` und `strict=True`. Fehler als `RowError(line, column, message)`; `line` ist die Zeile, in der der Datensatz beginnt (Zeilenumbrüche in Anführungszeichen zählen mit), `None` für die ganze Datei.
+    - Datei- bzw. Abbruchfehler: falscher Kopf (Zeile 1, mit „Missing“/„Not expected“, Hinweis bei Semikolon), kein UTF-8 (Zeile und Byte), leere Datei, Feld über `csv.field_size_limit()` (Zeilenfehler, danach Abbruch), sonst kaputtes CSV, Zeile über 8 MiB, mehr als 10 000 Zeilen, mehr als 1000 Fehler.
+    - Zeilenprüfung mit `DeviceListRowSerializer` (DRF): Längen wie im Modell, Kennungsformat `validate_key`, IP (`IPAddressField`, IPv6 normalisiert, leer → `None`), NUL-Zeichen; Leerzeichen am Rand werden entfernt. Zeile mit `device_id` braucht `device_name`; Zeile ohne `device_id` darf nur `notes` haben (→ `Plant.notes`).
+    - Widersprüche: gleiche `plant_id` mit anderem `site`, `area` oder `plant_name` (Fehler an der Spalte, Verweis auf die erste Zeile), doppelte `device_id`, zwei Zeilen ohne Gerät mit verschiedenen Notizen für dieselbe Anlage.
+  - `apply(parsed, user, dry_run) -> ImportReport`: bei Fehlern aus `parse` kein Datenbankzugriff. Sonst alles in `acting_as(user)` und einer `transaction.atomic()`; Probelauf mit `set_rollback(True)`. Abgleich: Standort über Namen, Bereich über (Standort, Name), Anlage und Gerät über die Kennung (`in_bulk`). Angelegt und geändert wird einzeln mit `save()`, nur wenn sich ein Wert unterscheidet; nie gelöscht. Gerät wechselt die Anlage, Anlage den Bereich. Zähler `created`/`updated`/`unchanged` je Ebene. Ein `IntegrityError` (gleichzeitige Änderung) rollt alles zurück und wird als Fehler an der gerade geschriebenen Zeile gemeldet (Spalte nach Constraint), Zähler dann 0.
+  - Meldungen mit `gettext`.
+- `backend/twox/assets/integrity.py` (neu): Zuordnung der vier Unique-Constraints zu Feld und Meldung (`unique_violation`, Name aus `__cause__.diag.constraint_name` von psycopg). Die Meldungen sind dieselben Konstanten, die die Serializer nutzen.
+- Nachtrag der Leitstelle: `save_checked()` in `views.py` kapselt `serializer.save()` in `transaction.atomic()`; ein `IntegrityError` einer der vier Constraints wird zu 400 mit Feldfehler (`{"name": [...]}` bzw. `{"key": [...]}`), andere `IntegrityError` bleiben 500. Gilt für Anlegen und Ändern aller vier Ressourcen (`perform_create`/`perform_update`, bei Geräten in `create`/`update`).
+- `serializers.py`: `DeviceImportFormSerializer` (`file`, `dry_run` mit Standard `true`), `ImportReportSerializer`, `ImportCountsSerializer`, `ImportRowErrorSerializer`.
+- `views.py`/`urls.py`: `POST /api/v1/imports/devices/` (`DeviceImportView`, Unterklasse von `LimitedUploadView` aus 029, `CanManage`, `operation_id` `devices_import`). Antwort 200 mit `ImportReport` (`dry_run`, `saved`, `rows`, `sites`/`areas`/`plants`/`devices`, `errors`), auch wenn die Datei Fehler hat; 400 nur bei ungültigem Formular; 413 über die Upload-Grenze.
+- `management/commands/import_devices.py`: `import_devices <pfad> --user <name> [--commit]`; Konto muss aktiv sein und die Rolle `manage` haben. Ausgabe je Ebene, Fehler auf stderr (`line 3, ip_address: …`), dann Exit-Code 1.
+- `deploy/compose/compose.yaml`: nur `backend-dev`, Volume `../../testfactory/layout:/testfactory/layout:ro`.
+- `tests/config/expected_paths/assets.py`: `/api/v1/imports/devices/`. Schema und Client neu erzeugt.
+- Tests (140 neu): `tests/assets/test_csv_import.py` (82), `test_import_api.py` (30), `test_import_command.py` (12), `test_integrity.py` (16), Hilfen in `csv_files.py`.
+  - Abnahmefall mit der echten Datei: 1 Standort, 3 Bereiche (Fertigungslinie, Roboterzelle, Netzübergang), 10 Anlagen, 13 Geräte; `aps-charging` ohne Gerät mit Notiz; 6 Geräte ohne IP; jeder Wert jeder Zeile gleich der Datei (Umlaute unverändert). Zweiter Import: 0 angelegt, 0 geändert, keine neuen Protokolleinträge. Ein geänderter `software_version`: genau 1 geändertes Gerät, ein Eintrag mit Akteur und `[alt, neu]`. Probelauf ändert nichts und schreibt keine Einträge.
+  - Fehler mit Zeilennummer: falscher Kopf (5 Varianten), ungültige IP (4), doppelte `device_id`, widersprüchliche Anlage (Name, Bereich, Standort), Latin-1, Feld über der Grenze (und genau an der Grenze angenommen), dazu Zeilenzählung über Zeilenumbrüche in Anführungszeichen, kaputtes Quoting, Feldanzahl, Pflichtspalten, Kennungen, NUL, Grenzen für Zeilen, Zeilenlänge und Fehlerzahl.
+  - API: Rechte (anonym, ohne Rolle, `read` 403; `manage`, Superuser 200), ohne Feld `dry_run` Probelauf, `false`/`0` speichert, Fehlerbericht, beliebige Bytes ergeben Bericht statt 500, 400/415, 413 knapp über und 200 genau an der Grenze, CSRF ohne Token 403 und mit Token 200, Schema.
+  - Wettlauf: alle vier Constraints beim Anlegen und Ändern mit ausgeschalteten Serializer-Prüfungen (400 am Feld, nichts gespeichert, Verbindung danach nutzbar); dazu ein echter Wettlauf mit zwei Threads und zwei Anfragen (`transaction=True`, Barriere in `pre_save`): Ergebnis 201 und 400 mit Feldfehler, ein Standort.
+- `tests/assets/test_api.py`: Abfragegrenze beim Gerät-Ändern von 8 auf 10 (SAVEPOINT und RELEASE SAVEPOINT des Nachtrags).
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-031`, `W` = `docker compose -p twox-031-web -f deploy/compose/compose.web.yaml`, `.env` aus `.env.example` mit `TWOX_API_PORT=18031`. Docker Engine 29.9.3, Compose v5.7.0.
+
+| AK | Ergebnis |
+| --- | --- |
+| 0 | erfüllt: `docker version`, `docker compose version` Exit 0 |
+| 1 | erfüllt: Bau Exit 0, `up -d --wait` Exit 0 (db, valkey, api, worker healthy) |
+| 2 | erfüllt: `create_account importer1 --role manage --update` (Kennwort nur über `-e TWOX_ACCOUNT_PASSWORD`) Exit 0; erster `import_devices … --commit`: `sites: 1 created`, `areas: 3 created`, `plants: 10 created`, `devices: 13 created`, `Saved.`; zweiter: alle `0 created, 0 updated` (1/3/10/13 unchanged) |
+| 3 | erfüllt: `All checks passed!`; `131 files already formatted`; `Success: no issues found in 131 source files` |
+| 4 | erfüllt: `1067 passed, 4 deselected`, `-rs` ohne Eintrag (0 übersprungen), Abnahmefall läuft mit; `pytest -m worker`: `4 passed` |
+| 5 | erfüllt: `No changes detected` |
+| 6 | erfüllt: `spectacular` ohne Ausgabe, Exit 0; danach `git diff --exit-code -- web/openapi` Exit 0, keine unversionierte Datei |
+| 7 | erfüllt: Bau, `npm ci`, `api:generate` Exit 0, danach kein Unterschied in `web/openapi web/src/api`; `typecheck` Exit 0 |
+| 8 | erfüllt: `build check` Exit 0; `unittest` 215 Tests `OK (skipped=1)`, Exit 0 (der Skip ist vorhanden und nicht von diesem Auftrag) |
+| 9 | erfüllt: siehe unten |
+
+Zusätzlich wie in der CI: Lizenzprüfung Python `License check passed.` (59 Pakete); web-Job komplett (`lint`, `typecheck`, `test` 173 passed, `build`, `licenses` `License check passed.`, `api:generate` ohne Unterschied); testfactory-Job komplett (ruff, format, mypy, unittest, Manifest-Prüfungen, kein `testfactory/extern`), mit `-p twox-031-tf`; e2e (Bau mit `web-dev`, `pull e2e`, `npm ci`, `up`, Schritt „Create test account“ wie in `ci.yml`, `run e2e`): `12 passed`.
+
+Am laufenden Dienst (uvicorn, Laufzeit-Image, Sitzung von `importer1`): Datei ohne Feld `dry_run` → 200, Probelauf; `dry_run=false` → 200, gespeichert; ohne CSRF-Token → 403; Latin-1 mit falscher IP → 200 mit Fehler in Zeile 2 (Abbruch beim ersten Nicht-UTF-8-Byte); `Content-Length: 300000000` → 413.
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-a6728618563308860`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-a6728618563308860`
+- Nicht gepusht, nichts zusammengeführt.
+
+### Abweichungen und Hinweise
+
+1. **Zusätzliche Datei `twox/assets/integrity.py`** (im genannten Ordner): gemeinsame Zuordnung Constraint → Feld/Meldung für Views und Import. Die Meldungen der Serializer kommen jetzt von dort (Text unverändert).
+2. **Fehler in der Datei ergeben 200, nicht 400.** Die Antwort ist immer ein `ImportReport`; ob gespeichert wurde, sagt `saved`, die Fehler stehen in `errors`. 400 gibt es nur für ein ungültiges Formular. Für 035 ist so ein einziger Antworttyp im Client nötig.
+3. **Eigene Grenzen** über das Verlangte hinaus: höchstens 10 000 Zeilen, 8 MiB je physischer Zeile, 1000 gelistete Fehler (Konstanten in `csv_import.py`). Sie begrenzen Speicher, Laufzeit und Antwortgröße auch beim Befehl, der keine Upload-Grenze hat.
+4. **Nach einem Lesefehler** (kein UTF-8, Feld über der Grenze, kaputtes Quoting, Zeile zu lang) bricht das Lesen ab; spätere Zeilen werden nicht geprüft (die Meldung sagt das). Grund: Nach einem Fehler mitten in einem mehrzeiligen Feld wären die Folgefehler irreführend. Bei Feldern über der Grenze ist die Spalte unbekannt (`column = null`).
+5. **`dry_run` im Formular:** DRF liest ein fehlendes Boolean-Feld in Formularen als `false`. `FormBooleanField` setzt deshalb `default_empty_html = empty`, sonst würde ein Formular ohne `dry_run` speichern. Getestet.
+6. **Leerzeichen am Rand** jedes Werts werden entfernt (DRF-Standard), sonst bleibt der Text unverändert. Werte, die mit `=`, `+`, `-` oder `@` beginnen, werden unverändert gespeichert; ein späterer CSV-Export muss sie gegen Formel-Injektion entschärfen (im Modul-Docstring vermerkt).
+7. **Standorte und Bereiche** werden über den Namen gefunden und nie umbenannt; `updated` ist dort immer 0. Notizen einer Anlage ändern sich nur über eine Zeile ohne `device_id`.
+8. **Der Befehl verlangt die Rolle `manage`** für `--user` (sonst stünde ein „Lesen“-Konto als Akteur im Protokoll).
+9. Der Import ist synchron in der Anfrage (kein Celery). Bei 10 000 Zeilen sind das einige zehntausend Abfragen; für die Testfabrik unerheblich.
+10. Der Thread-Test nutzt `transaction=True` und legt die Gruppe `manage` bei Bedarf selbst an, weil ein früherer transaktionaler Test die Daten der Datenmigration leeren kann.
+
+Keine neue Abhängigkeit. `settings.py`, `.env.example`, `testfactory/`, `twox/importers/`, `web/` außer Schema und erzeugtem Client, `docs/DECISIONS.md` und `docs/STATUS.md` nicht geändert. Kein Push.

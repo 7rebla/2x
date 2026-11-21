@@ -230,6 +230,9 @@ services:
     environment: *backend-environment
     volumes:
       - ../../backend:/app
+      # The device list of the test factory, read-only: the acceptance test of
+      # the CSV import reads it (tests/assets/test_csv_import.py).
+      - ../../testfactory/layout:/testfactory/layout:ro
     depends_on:
       db:
         condition: service_healthy
