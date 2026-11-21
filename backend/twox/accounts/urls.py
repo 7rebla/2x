@@ -2,8 +2,9 @@
 
 from django.urls import URLPattern, URLResolver, path
 
-from twox.accounts.views import MeView
+from twox.accounts.views import AuditLogView, MeView
 
 urlpatterns: list[URLPattern | URLResolver] = [
     path("me/", MeView.as_view(), name="me"),
+    path("audit-log/", AuditLogView.as_view(), name="audit-log"),
 ]

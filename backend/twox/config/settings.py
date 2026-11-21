@@ -92,6 +92,10 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.headless",
+    # Change log: who changed what and when (E-43). The models are registered
+    # in twox/accounts/audit.py. Listed before the project apps, so that
+    # twox/accounts/admin.py can replace the admin view of auditlog.
+    "auditlog",
     "twox.assets",
     "twox.files",
     "twox.ingest",
@@ -112,6 +116,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Attributes every change during a request to the signed-in user; needs
+    # request.user, hence after the authentication middleware.
+    "auditlog.middleware.AuditlogMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Required by django-allauth; after the authentication middleware.
@@ -184,6 +191,14 @@ ACCOUNT_RATE_LIMITS = {
     "login": "30/m/ip",
 }
 
+# Change log (django-auditlog, E-43). No IP address in the log: the
+# middleware stores none, also not from X-Forwarded-For.
+AUDITLOG_DISABLE_REMOTE_ADDR = True
+# Changes are stored as JSON values ([old, new] with null, true, false and
+# numbers as such) instead of text, so that an empty value and the text
+# "None" stay apart in the API.
+AUDITLOG_STORE_JSON_CHANGES = True
+
 # Django's four standard validators; at least 12 characters, as there is no
 # second factor in milestone M1 (E-38).
 AUTH_PASSWORD_VALIDATORS: list[dict[str, Any]] = [
@@ -232,6 +247,10 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Asset records with sourced answers.",
     "VERSION": "0.0.0",
     "SCHEMA_PATH_PREFIX": "/api/v1",
+    # A distinct name for the actions of the change log (generated: ActionEnum).
+    "ENUM_NAME_OVERRIDES": {
+        "AuditActionEnum": "twox.accounts.serializers.AUDIT_ACTION_CHOICES",
+    },
 }
 
 # Celery. Valkey speaks the Redis protocol; Celery has no valkey:// scheme, so

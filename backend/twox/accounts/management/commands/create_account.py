@@ -120,8 +120,11 @@ class Command(BaseCommand):
                 user.set_password(password)
                 user.save()
                 role_groups = [Group.objects.get_or_create(name=name)[0] for name in ROLES]
-                user.groups.remove(*role_groups)
-                user.groups.add(next(group for group in role_groups if group.name == role))
+                target = next(group for group in role_groups if group.name == role)
+                # Remove only role groups the account really has: the change
+                # log records every group passed to remove() (E-43).
+                user.groups.remove(*user.groups.filter(name__in=ROLES).exclude(pk=target.pk))
+                user.groups.add(target)
         except IntegrityError:
             raise CommandError(
                 f"The account {username!r} could not be saved; it may have been created"
