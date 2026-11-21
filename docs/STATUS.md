@@ -115,10 +115,10 @@ Nichts davon hält die laufende Arbeit auf.
 | 030 | Anmeldung in der Oberfläche | C | 5 | erledigt |
 | 031 | CSV-Import (Backend) | C | 6 | in Arbeit |
 | 032 | Oberfläche: Struktur und Geräte | B | 6 | erledigt |
-| 033 | Oberfläche: Protokoll | B | 6 | in Arbeit |
+| 033 | Oberfläche: Protokoll | B | 6 | erledigt |
 | 034 | Backend-Übersetzung (gettext) | C | 7 | offen |
 | 035 | Oberfläche: CSV-Import | B | 7 | offen |
-| 036 | Oberfläche: Dateien | B | 7 | offen |
+| 036 | Oberfläche: Dateien | B | 7 | in Arbeit |
 | 037 | Nachweis der M1-Abnahme | B | 8 | offen |
 | 038 | README und ARCHITECTURE für M1 | B | 8 | offen |
 
@@ -138,3 +138,4 @@ Hinweise aus Welle 1:
 - 028: auditlog übernimmt keine Werte aus Kopfzeilen (eigene Middleware, `AUDITLOG_CID_HEADER = None`); in der Prüfung gefunden: manipulierte Kopfzeilen konnten das Schreiben des Eintrags verhindern, die Änderung blieb aber gespeichert. Für 038: `auditlogflush` nicht gesperrt; `groups.clear()` protokolliert alle Gruppen; Gruppenänderung von der Gruppenseite landet am Gruppenobjekt; gelöschter Benutzer → Akteur NULL; `actor_email` wird gespeichert (bei unseren Konten leer).
 - 029: Eine eigene ASGI-Hülle (`asgi.py`) weist zu große Uploads mit 413 ab, bevor Django sie zwischenspeichert. Liegengebliebene `.part`-Dateien entfernt `python manage.py remove_stale_uploads` (nur von Hand). Für 038: Restdatei in `/tmp` des api-Containers nach hartem Abbruch möglich; fehlt ein Blob, ergibt der Download 500.
 - 032: In der Prüfung gefunden und behoben: Nach einer 400-Antwort sprang die Auswahl des übergeordneten Eintrags still auf den alten Wert zurück. Für 036: `web/e2e/navigation.spec.ts` prüft den Direktaufruf über den Platzhalter `/documents/7` und muss angepasst werden. Feldfehler liest `pages/structure/save.ts` über eine eigene fetch-Hülle; brauchen 035/036 Feldfehler, ist ein Feld `body` in `ApiError` (`api/errors.ts`) die einfachere Lösung.
+- 033: Protokollseite `/audit` mit Filtern (Objektart, Benutzer) und Komponente `AuditTrail` (für 036). Feldnamen erscheinen unübersetzt (z. B. `ip_address`); Filter stehen nicht in der Adresse.
