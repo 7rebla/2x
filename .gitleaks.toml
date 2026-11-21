@@ -1,0 +1,23 @@
+# Secret scanning configuration for gitleaks (see deploy/compose/compose.tools.yaml).
+# The same file is used locally and in CI (.github/workflows/secrets.yml).
+
+title = "twox gitleaks configuration"
+
+# Use the rules that ship with the pinned gitleaks version.
+[extend]
+useDefault = true
+
+# Path exceptions. Add further exceptions only for a proven false positive,
+# and then as narrow as possible (one file and one rule via `targetRules`).
+#
+# Paths are anchored at the repository root. The optional `/repo/` prefix is
+# the mount point used by the compose services: the directory scan reports
+# absolute paths, the history scan reports paths relative to the repository.
+
+[[allowlists]]
+description = "Downloaded vendor material of the test factory; never committed (.gitignore)"
+paths = ['''^(/repo/)?testfactory/extern/''']
+
+[[allowlists]]
+description = "Working directories of other work orders; each one is scanned on its own"
+paths = ['''^(/repo/)?\.claude/worktrees/''']

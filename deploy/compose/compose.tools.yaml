@@ -1,0 +1,52 @@
+# Developer tools that run in containers. Nothing is installed on the host.
+#
+# Usage (from the repository root):
+#   docker compose -f deploy/compose/compose.tools.yaml run --rm gitleaks-dir
+#   docker compose -f deploy/compose/compose.tools.yaml run --rm gitleaks-git
+#
+# Paths are relative to this file; the repository root is two levels up.
+
+x-gitleaks: &gitleaks
+  # gitleaks CLI, MIT license. Version and digest are pinned together.
+  image: ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+  working_dir: /repo
+  volumes:
+    - ../..:/repo:ro
+  # The scan needs no network access.
+  network_mode: none
+
+services:
+  # Scans the files of the mounted working directory, without Git history.
+  # This is the run for a work order inside its worktree, where `.git` is only
+  # a pointer file and the history is not reachable from the container.
+  gitleaks-dir:
+    <<: *gitleaks
+    command:
+      - dir
+      - --config=/repo/.gitleaks.toml
+      - --no-banner
+      - --redact
+      - --verbose
+      - /repo
+
+  # Scans the complete Git history. This is the run in the main checkout and
+  # in CI, where `.git` is a real directory.
+  gitleaks-git:
+    <<: *gitleaks
+    environment:
+      # The mounted repository belongs to a different user than the one in
+      # the container; without this Git refuses to read it.
+      GIT_CONFIG_COUNT: "1"
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: /repo
+    # gitleaks reports "no leaks found" with exit code 0 when Git cannot read
+    # the repository (0 commits scanned). The check in front turns that case
+    # into a failure, so that a broken mount never looks like a clean scan.
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        if ! git -C /repo rev-parse --verify --quiet HEAD >/dev/null; then
+          echo "gitleaks-git: /repo is not a readable Git repository with commits" >&2
+          exit 2
+        fi
+        exec gitleaks git --config=/repo/.gitleaks.toml --no-banner --redact --verbose /repo
