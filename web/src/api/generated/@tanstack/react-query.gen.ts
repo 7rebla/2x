@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { areasCreate, areasList, areasPartialUpdate, areasRetrieve, areasUpdate, auditLogList, devicesCreate, devicesList, devicesPartialUpdate, devicesRetrieve, devicesUpdate, healthRetrieve, meRetrieve, type Options, plantsCreate, plantsList, plantsPartialUpdate, plantsRetrieve, plantsUpdate, selftestRetrieve, sitesCreate, sitesList, sitesPartialUpdate, sitesRetrieve, sitesUpdate } from '../sdk.gen';
-import type { AreasCreateData, AreasCreateResponse, AreasListData, AreasListResponse, AreasPartialUpdateData, AreasPartialUpdateResponse, AreasRetrieveData, AreasRetrieveResponse, AreasUpdateData, AreasUpdateResponse, AuditLogListData, AuditLogListResponse, DevicesCreateData, DevicesCreateResponse, DevicesListData, DevicesListResponse, DevicesPartialUpdateData, DevicesPartialUpdateResponse, DevicesRetrieveData, DevicesRetrieveResponse, DevicesUpdateData, DevicesUpdateResponse, HealthRetrieveData, HealthRetrieveResponse, MeRetrieveData, MeRetrieveResponse, PlantsCreateData, PlantsCreateResponse, PlantsListData, PlantsListResponse, PlantsPartialUpdateData, PlantsPartialUpdateResponse, PlantsRetrieveData, PlantsRetrieveResponse, PlantsUpdateData, PlantsUpdateResponse, SelftestRetrieveData, SelftestRetrieveResponse, SitesCreateData, SitesCreateResponse, SitesListData, SitesListResponse, SitesPartialUpdateData, SitesPartialUpdateResponse, SitesRetrieveData, SitesRetrieveResponse, SitesUpdateData, SitesUpdateResponse } from '../types.gen';
+import { areasCreate, areasList, areasPartialUpdate, areasRetrieve, areasUpdate, auditLogList, deviceDocumentsCreate, deviceDocumentsList, devicesCreate, devicesList, devicesPartialUpdate, devicesRetrieve, devicesUpdate, documentRetrieve, documentVersionCreate, documentVersionDownload, healthRetrieve, meRetrieve, type Options, plantsCreate, plantsList, plantsPartialUpdate, plantsRetrieve, plantsUpdate, selftestRetrieve, sitesCreate, sitesList, sitesPartialUpdate, sitesRetrieve, sitesUpdate } from '../sdk.gen';
+import type { AreasCreateData, AreasCreateResponse, AreasListData, AreasListResponse, AreasPartialUpdateData, AreasPartialUpdateResponse, AreasRetrieveData, AreasRetrieveResponse, AreasUpdateData, AreasUpdateResponse, AuditLogListData, AuditLogListResponse, DeviceDocumentsCreateData, DeviceDocumentsCreateError, DeviceDocumentsCreateResponse, DeviceDocumentsListData, DeviceDocumentsListError, DeviceDocumentsListResponse, DevicesCreateData, DevicesCreateResponse, DevicesListData, DevicesListResponse, DevicesPartialUpdateData, DevicesPartialUpdateResponse, DevicesRetrieveData, DevicesRetrieveResponse, DevicesUpdateData, DevicesUpdateResponse, DocumentRetrieveData, DocumentRetrieveError, DocumentRetrieveResponse, DocumentVersionCreateData, DocumentVersionCreateError, DocumentVersionCreateResponse, DocumentVersionDownloadData, DocumentVersionDownloadError, DocumentVersionDownloadResponse, HealthRetrieveData, HealthRetrieveResponse, MeRetrieveData, MeRetrieveResponse, PlantsCreateData, PlantsCreateResponse, PlantsListData, PlantsListResponse, PlantsPartialUpdateData, PlantsPartialUpdateResponse, PlantsRetrieveData, PlantsRetrieveResponse, PlantsUpdateData, PlantsUpdateResponse, SelftestRetrieveData, SelftestRetrieveResponse, SitesCreateData, SitesCreateResponse, SitesListData, SitesListResponse, SitesPartialUpdateData, SitesPartialUpdateResponse, SitesRetrieveData, SitesRetrieveResponse, SitesUpdateData, SitesUpdateResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -250,6 +250,44 @@ export const devicesCreateMutation = (options?: Partial<Options<DevicesCreateDat
     return mutationOptions;
 };
 
+export const deviceDocumentsListQueryKey = (options: Options<DeviceDocumentsListData>) => createQueryKey('deviceDocumentsList', options);
+
+/**
+ * The files of the device, each with its newest version, ordered by title.
+ */
+export const deviceDocumentsListOptions = (options: Options<DeviceDocumentsListData>) => queryOptions<DeviceDocumentsListResponse, DeviceDocumentsListError, DeviceDocumentsListResponse, ReturnType<typeof deviceDocumentsListQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await deviceDocumentsList({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: deviceDocumentsListQueryKey(options)
+});
+
+/**
+ * Upload a new file of the device as version 1.
+ *
+ * ``duplicates`` lists other places with the same content; the upload is
+ * accepted all the same.
+ */
+export const deviceDocumentsCreateMutation = (options?: Partial<Options<DeviceDocumentsCreateData>>): UseMutationOptions<DeviceDocumentsCreateResponse, DeviceDocumentsCreateError, Options<DeviceDocumentsCreateData>> => {
+    const mutationOptions: UseMutationOptions<DeviceDocumentsCreateResponse, DeviceDocumentsCreateError, Options<DeviceDocumentsCreateData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await deviceDocumentsCreate({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
 export const devicesRetrieveQueryKey = (options: Options<DevicesRetrieveData>) => createQueryKey('devicesRetrieve', options);
 
 /**
@@ -301,6 +339,63 @@ export const devicesUpdateMutation = (options?: Partial<Options<DevicesUpdateDat
     const mutationOptions: UseMutationOptions<DevicesUpdateResponse, DefaultError, Options<DevicesUpdateData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await devicesUpdate({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const documentVersionDownloadQueryKey = (options: Options<DocumentVersionDownloadData>) => createQueryKey('documentVersionDownload', options);
+
+/**
+ * Download the version: streamed from the storage, always as an attachment.
+ */
+export const documentVersionDownloadOptions = (options: Options<DocumentVersionDownloadData>) => queryOptions<DocumentVersionDownloadResponse, DocumentVersionDownloadError, DocumentVersionDownloadResponse, ReturnType<typeof documentVersionDownloadQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await documentVersionDownload({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: documentVersionDownloadQueryKey(options)
+});
+
+export const documentRetrieveQueryKey = (options: Options<DocumentRetrieveData>) => createQueryKey('documentRetrieve', options);
+
+/**
+ * The file with all versions, oldest first.
+ */
+export const documentRetrieveOptions = (options: Options<DocumentRetrieveData>) => queryOptions<DocumentRetrieveResponse, DocumentRetrieveError, DocumentRetrieveResponse, ReturnType<typeof documentRetrieveQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await documentRetrieve({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: documentRetrieveQueryKey(options)
+});
+
+/**
+ * Upload a new version of the file.
+ *
+ * 409 if the content equals the newest version; the answer names that
+ * version. The same content as an older version or another file is
+ * accepted and listed in ``duplicates``.
+ */
+export const documentVersionCreateMutation = (options?: Partial<Options<DocumentVersionCreateData>>): UseMutationOptions<DocumentVersionCreateResponse, DocumentVersionCreateError, Options<DocumentVersionCreateData>> => {
+    const mutationOptions: UseMutationOptions<DocumentVersionCreateResponse, DocumentVersionCreateError, Options<DocumentVersionCreateData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await documentVersionCreate({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

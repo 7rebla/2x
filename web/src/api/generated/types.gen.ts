@@ -111,11 +111,126 @@ export type DeviceWrite = {
 };
 
 /**
+ * A file of a device with its newest version.
+ */
+export type Document = {
+    readonly id: number;
+    readonly device: number;
+    readonly title: string;
+    kind: KindEnum;
+    readonly created_at: string;
+    /**
+     * User name of the creator; null for the system.
+     */
+    readonly created_by: string | null;
+    latest_version: DocumentVersion | null;
+};
+
+/**
+ * A file of a device with all its versions, oldest first.
+ */
+export type DocumentDetail = {
+    readonly id: number;
+    readonly device: number;
+    readonly title: string;
+    kind: KindEnum;
+    readonly created_at: string;
+    /**
+     * User name of the creator; null for the system.
+     */
+    readonly created_by: string | null;
+    latest_version: DocumentVersion | null;
+    readonly versions: Array<DocumentVersion>;
+};
+
+/**
+ * Form of a new file (``multipart/form-data``).
+ */
+export type DocumentUpload = {
+    /**
+     * The file; at most TWOX_UPLOAD_MAX_BYTES bytes.
+     */
+    file: Blob | File;
+    /**
+     * Title of the document; the file name if empty or missing.
+     */
+    title?: string;
+    /**
+     * Only 'document' is accepted for now; configurations follow with redaction.
+     *
+     * * `document` - document
+     * * `configuration` - configuration
+     */
+    kind?: KindEnum;
+};
+
+/**
+ * One immutable version of a document; its bytes come from the download endpoint.
+ */
+export type DocumentVersion = {
+    readonly id: number;
+    readonly number: number;
+    /**
+     * SHA-256
+     */
+    readonly sha256: string;
+    /**
+     * Size in bytes
+     */
+    readonly size: number;
+    readonly content_type: string;
+    /**
+     * Original file name
+     */
+    readonly original_filename: string;
+    /**
+     * User name of the uploader; null for the system.
+     */
+    readonly uploaded_by: string | null;
+    readonly created_at: string;
+};
+
+/**
+ * Another place where the same content is already stored.
+ */
+export type Duplicate = {
+    device: number;
+    device_key: string;
+    device_name: string;
+    document: number;
+    document_title: string;
+    version: number;
+    version_number: number;
+};
+
+/**
+ * 409: the upload equals the newest version of the document.
+ */
+export type DuplicateVersionError = {
+    detail: string;
+    code: string;
+    existing_version: DocumentVersion;
+};
+
+/**
+ * An error with a message, for example 404 or 413.
+ */
+export type ErrorDetail = {
+    detail: string;
+};
+
+/**
  * Shape of the health response, used for the OpenAPI schema.
  */
 export type Health = {
     status: StatusEnum;
 };
+
+/**
+ * * `document` - document
+ * * `configuration` - configuration
+ */
+export type KindEnum = 'document' | 'configuration';
 
 /**
  * The signed-in user as the web UI needs it.
@@ -243,6 +358,25 @@ export type SiteRef = {
  */
 export type StatusEnum = 'ok';
 
+/**
+ * Answer to an upload: the document, the new version and other places of its content.
+ */
+export type UploadResult = {
+    document: Document;
+    version: DocumentVersion;
+    duplicates: Array<Duplicate>;
+};
+
+/**
+ * Form of a new version of an existing file (``multipart/form-data``).
+ */
+export type VersionUpload = {
+    /**
+     * The file; at most TWOX_UPLOAD_MAX_BYTES bytes.
+     */
+    file: Blob | File;
+};
+
 export type WorkerCheck = {
     ok: boolean;
     result: string;
@@ -263,6 +397,14 @@ export type AreaWritable = {
  */
 export type AuditLogEntryWritable = {
     [key: string]: unknown;
+};
+
+/**
+ * 409: the upload equals the newest version of the document.
+ */
+export type DuplicateVersionErrorWritable = {
+    detail: string;
+    code: string;
 };
 
 export type PaginatedAuditLogEntryListWritable = {
@@ -312,6 +454,13 @@ export type PlantWritable = {
  */
 export type SiteWritable = {
     name: string;
+};
+
+/**
+ * Answer to an upload: the document, the new version and other places of its content.
+ */
+export type UploadResultWritable = {
+    duplicates: Array<Duplicate>;
 };
 
 export type AreasListData = {
@@ -464,6 +613,70 @@ export type DevicesCreateResponses = {
 
 export type DevicesCreateResponse = DevicesCreateResponses[keyof DevicesCreateResponses];
 
+export type DeviceDocumentsListData = {
+    body?: never;
+    path: {
+        device_id: number;
+    };
+    query?: never;
+    url: '/api/v1/devices/{device_id}/documents/';
+};
+
+export type DeviceDocumentsListErrors = {
+    /**
+     * No role, or not allowed.
+     */
+    403: ErrorDetail;
+    /**
+     * Not found.
+     */
+    404: ErrorDetail;
+};
+
+export type DeviceDocumentsListError = DeviceDocumentsListErrors[keyof DeviceDocumentsListErrors];
+
+export type DeviceDocumentsListResponses = {
+    200: Array<Document>;
+};
+
+export type DeviceDocumentsListResponse = DeviceDocumentsListResponses[keyof DeviceDocumentsListResponses];
+
+export type DeviceDocumentsCreateData = {
+    body: DocumentUpload;
+    path: {
+        device_id: number;
+    };
+    query?: never;
+    url: '/api/v1/devices/{device_id}/documents/';
+};
+
+export type DeviceDocumentsCreateErrors = {
+    /**
+     * Invalid form, or a configuration file.
+     */
+    400: unknown;
+    /**
+     * No role, or not allowed.
+     */
+    403: ErrorDetail;
+    /**
+     * Not found.
+     */
+    404: ErrorDetail;
+    /**
+     * Larger than TWOX_UPLOAD_MAX_BYTES.
+     */
+    413: ErrorDetail;
+};
+
+export type DeviceDocumentsCreateError = DeviceDocumentsCreateErrors[keyof DeviceDocumentsCreateErrors];
+
+export type DeviceDocumentsCreateResponses = {
+    201: UploadResult;
+};
+
+export type DeviceDocumentsCreateResponse = DeviceDocumentsCreateResponses[keyof DeviceDocumentsCreateResponses];
+
 export type DevicesRetrieveData = {
     body?: never;
     path: {
@@ -517,6 +730,102 @@ export type DevicesUpdateResponses = {
 };
 
 export type DevicesUpdateResponse = DevicesUpdateResponses[keyof DevicesUpdateResponses];
+
+export type DocumentVersionDownloadData = {
+    body?: never;
+    path: {
+        version_id: number;
+    };
+    query?: never;
+    url: '/api/v1/document-versions/{version_id}/download/';
+};
+
+export type DocumentVersionDownloadErrors = {
+    /**
+     * No role, or not allowed.
+     */
+    403: ErrorDetail;
+    /**
+     * Not found.
+     */
+    404: ErrorDetail;
+};
+
+export type DocumentVersionDownloadError = DocumentVersionDownloadErrors[keyof DocumentVersionDownloadErrors];
+
+export type DocumentVersionDownloadResponses = {
+    /**
+     * The file as an attachment. Content-Type is the stored type if it is a known document or image type, otherwise application/octet-stream.
+     */
+    200: Blob | File;
+};
+
+export type DocumentVersionDownloadResponse = DocumentVersionDownloadResponses[keyof DocumentVersionDownloadResponses];
+
+export type DocumentRetrieveData = {
+    body?: never;
+    path: {
+        document_id: number;
+    };
+    query?: never;
+    url: '/api/v1/documents/{document_id}/';
+};
+
+export type DocumentRetrieveErrors = {
+    /**
+     * No role, or not allowed.
+     */
+    403: ErrorDetail;
+    /**
+     * Not found.
+     */
+    404: ErrorDetail;
+};
+
+export type DocumentRetrieveError = DocumentRetrieveErrors[keyof DocumentRetrieveErrors];
+
+export type DocumentRetrieveResponses = {
+    200: DocumentDetail;
+};
+
+export type DocumentRetrieveResponse = DocumentRetrieveResponses[keyof DocumentRetrieveResponses];
+
+export type DocumentVersionCreateData = {
+    body: VersionUpload;
+    path: {
+        document_id: number;
+    };
+    query?: never;
+    url: '/api/v1/documents/{document_id}/versions/';
+};
+
+export type DocumentVersionCreateErrors = {
+    /**
+     * Invalid form, or a configuration file.
+     */
+    400: unknown;
+    /**
+     * No role, or not allowed.
+     */
+    403: ErrorDetail;
+    /**
+     * Not found.
+     */
+    404: ErrorDetail;
+    409: DuplicateVersionError;
+    /**
+     * Larger than TWOX_UPLOAD_MAX_BYTES.
+     */
+    413: ErrorDetail;
+};
+
+export type DocumentVersionCreateError = DocumentVersionCreateErrors[keyof DocumentVersionCreateErrors];
+
+export type DocumentVersionCreateResponses = {
+    201: UploadResult;
+};
+
+export type DocumentVersionCreateResponse = DocumentVersionCreateResponses[keyof DocumentVersionCreateResponses];
 
 export type HealthRetrieveData = {
     body?: never;
