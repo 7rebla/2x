@@ -3,8 +3,8 @@
 import { type DefaultError, queryOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { healthRetrieve, type Options, selftestRetrieve } from '../sdk.gen';
-import type { HealthRetrieveData, HealthRetrieveResponse, SelftestRetrieveData, SelftestRetrieveResponse } from '../types.gen';
+import { healthRetrieve, meRetrieve, type Options, selftestRetrieve } from '../sdk.gen';
+import type { HealthRetrieveData, HealthRetrieveResponse, MeRetrieveData, MeRetrieveResponse, SelftestRetrieveData, SelftestRetrieveResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -55,6 +55,27 @@ export const healthRetrieveOptions = (options?: Options<HealthRetrieveData>) => 
         return data;
     },
     queryKey: healthRetrieveQueryKey(options)
+});
+
+export const meRetrieveQueryKey = (options?: Options<MeRetrieveData>) => createQueryKey('meRetrieve', options);
+
+/**
+ * The signed-in user and their role.
+ *
+ * Open to every signed-in user, also without a role, so that the web UI can
+ * tell such a user why nothing else is available.
+ */
+export const meRetrieveOptions = (options?: Options<MeRetrieveData>) => queryOptions<MeRetrieveResponse, DefaultError, MeRetrieveResponse, ReturnType<typeof meRetrieveQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await meRetrieve({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: meRetrieveQueryKey(options)
 });
 
 export const selftestRetrieveQueryKey = (options?: Options<SelftestRetrieveData>) => createQueryKey('selftestRetrieve', options);
