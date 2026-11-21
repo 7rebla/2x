@@ -1,0 +1,53 @@
+# Tool containers of the test factory (work order 101). Nothing is installed
+# on the host and no host port is published.
+#
+# Usage (from the repository root), with
+#   TF = docker compose -f deploy/compose/testfactory.yaml
+#
+#   TF run --rm fetch python -m testfactory.manifest_tools check
+#   TF build check
+#   TF run --rm check python -m unittest discover -s testfactory/tests -t . -v
+#   TF run --rm check-offline python -m unittest discover -s testfactory/tests -t . -v
+#   TF run --rm check mypy --config-file testfactory/mypy.ini testfactory
+#
+# Paths are relative to this file; the repository root is two levels up.
+
+name: twox-testfactory
+
+x-python-env: &python-env
+  # Keep __pycache__ and the mypy cache out of the mounted repository.
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONUNBUFFERED: "1"
+  MYPY_CACHE_DIR: /tmp/mypy_cache
+
+x-check: &check
+  # The official Python image plus the type checker, see the Dockerfile.
+  image: twox-testfactory-check:local
+  build:
+    context: .
+    dockerfile: testfactory.Dockerfile
+  working_dir: /work
+  environment: *python-env
+  volumes:
+    # Tests and type checking never write into the repository.
+    - ../..:/work:ro
+
+services:
+  # Unmodified official Python image, version and digest pinned together.
+  # Proof that the manifest tools and the fetch script need nothing but the
+  # standard library. Writable mount: fetch.py fills testfactory/extern.
+  fetch:
+    image: python:3.14.10-slim-trixie@sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f
+    working_dir: /work
+    environment: *python-env
+    volumes:
+      - ../..:/work
+
+  # Tests and type checking.
+  check:
+    <<: *check
+
+  # Same as `check` without any network: proof that the tests need none.
+  check-offline:
+    <<: *check
+    network_mode: none

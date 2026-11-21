@@ -1,6 +1,6 @@
 # Auftrag 101 – Manifest-Format und Werkzeug-Container der Testfabrik
 
-Meilenstein: T1 · Freigabestufe: C · Status: offen
+Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -101,8 +101,108 @@ In den Befehlen steht `TF` für `docker compose -f deploy/compose/testfactory.ya
    - B: nicht zulässig – dann braucht T1 eine andere Laufzeit, Status „wartet auf a7“.
    - Empfehlung: A.
 
+5. **(neu, vom Auftragsbearbeiter, 21.11.2026) Zwei Pflicht-Abhängigkeiten von mypy liegen außerhalb der Lizenzliste des Auftrags.** Geprüft an den Lizenzdateien und Metadaten der von PyPI installierten Pakete (mypy 2.4.1 unter Python 3.14.10):
+
+   | Paket | Version | Lizenz | in der Liste (MIT, Apache-2.0, BSD, PostgreSQL)? |
+   | --- | --- | --- | --- |
+   | mypy | 2.4.1 | MIT (enthält typeshed unter Apache-2.0) | ja |
+   | mypy_extensions | 1.2.0 | MIT | ja |
+   | librt | 0.17.0 | MIT | ja |
+   | ast-serialize | 0.13.1 | MIT (enthält Ruff-Teile unter MIT) | ja |
+   | typing_extensions | 4.16.0 | PSF-2.0 | **nein** |
+   | pathspec | 1.1.1 | MPL-2.0 | **nein** |
+
+   Nach der Vorgabe dieses Auftrags („Lizenz außerhalb von MIT, Apache-2.0, BSD, PostgreSQL-Lizenz: nicht einbauen, Frage in den Auftrag“) ist mypy deshalb **nicht** ins Prüf-Image eingebaut. Ohne `pathspec` startet mypy nicht (ausprobiert: `ModuleNotFoundError: No module named 'pathspec'`); `typing_extensions` ist ebenfalls Pflicht.
+   Einordnung: PSF-2.0 ist die Lizenz von Python selbst (freizügig, kein Copyleft). MPL-2.0 erlaubt Leitplanke 7 „nur als unverändert eingebundene Bibliothek und mit Eintrag im Entscheidungsprotokoll“. Beide Pakete wären nur im Prüf-Image als unverändertes Werkzeug vorhanden, nicht im eigenen Code und nicht in einer Auslieferung.
+   - A: beide zulassen (pathspec als unveränderte MPL-Bibliothek nach Leitplanke 7, typing_extensions unter PSF-2.0 wie Python selbst), je mit Eintrag im Entscheidungsprotokoll. Dann wird im Dockerfile der unten stehende Block eingefügt; damit ist das letzte Akzeptanzkriterium erfüllt (mit genau diesem Block in einem nicht eingecheckten Probe-Image geprüft: `Success: no issues found in 4 source files`).
+   - **Entschieden nach E-23, Option A** (Mitteilung der Leitstelle vom 21.11.2026; Beleg: `docs/DECISIONS.md` auf `main`, E-23: PSF-2.0 gilt als gleichwertig freizügig, pathspec ist benannte Ausnahme, beide schon mit Auftrag 001 eingetragen). Der Block unten ist eingebaut.
+   - B: mypy nicht verwenden; ein anderes Typprüfwerkzeug wählen (ungeprüft, neue Abhängigkeit, die Aufrufform der T1-Aufträge ändert sich).
+   - C: Typprüfung der Testfabrik bis Auftrag 114 zurückstellen und dort mit der M0-Werkzeugkette lösen. Auftrag 001 verwendet nach Abschnitt 5.2 erwartbar ebenfalls mypy und hat dann dieselbe Frage (ungeprüft).
+   - Empfehlung: A.
+
+   Block für `deploy/compose/testfactory.Dockerfile` bei Option A (ersetzt den Platzhalter-Kommentar):
+
+   ```dockerfile
+   # mypy (MIT) with all dependencies pinned. pathspec is MPL-2.0 and
+   # typing_extensions is PSF-2.0; both are used unmodified as tools only.
+   RUN pip install --no-cache-dir --disable-pip-version-check --root-user-action=ignore \
+           mypy==2.4.1 \
+           typing_extensions==4.16.0 \
+           mypy_extensions==1.2.0 \
+           pathspec==1.1.1 \
+           librt==0.17.0 \
+           ast-serialize==0.13.1
+   ```
+
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Frage 5 ist nach E-23 mit Option A entschieden; mypy ist eingebaut, alle Akzeptanzkriterien sind erfüllt.
+
+### Was wurde gebaut?
+
+- `deploy/compose/testfactory.yaml`: Projekt `twox-testfactory`, Dienste `fetch`, `check`, `check-offline`, keine Ports. Repository als `/work`; bei `fetch` beschreibbar (für `extern/`), bei `check` und `check-offline` nur lesend. `__pycache__` und mypy-Cache landen nicht im Repository.
+- `deploy/compose/testfactory.Dockerfile`: dasselbe Python-Image wie `fetch` plus mypy 2.4.1 mit allen fünf mitgezogenen Paketen in fester Version.
+- `testfactory/__init__.py`, `testfactory/tests/__init__.py`, `testfactory/mypy.ini` (`strict`, `extern/` und `generated/` ausgeschlossen), `testfactory/manifest.yaml` (Grundgerüst, keine Einträge).
+- `testfactory/manifest_tools.py` (nur Standardbibliothek): `load_manifest`, `parse_manifest`, Datenklassen `Manifest`, `Entry`, `Terms`, `dump_manifest`/`write_manifest` (stabile Form), `find_incomplete`, `address_problem` (die eine Adressprüfung), `tree_sha256`, `file_sha256`, `target_path`, Befehl `check [--complete] [PFAD]`. Alle Befunde einer Datei werden gesammelt gemeldet, je mit Eintrags-ID und Feldname.
+- `testfactory/README.md` (Englisch): Ordner, Regeln aus 10.4, Aufrufe, jedes Feld aus den Punkten 6 und 7, Definition von `tree_sha256`.
+- `testfactory/tests/test_manifest_tools.py`: 53 Tests, alle zwölf im Auftrag genannten Fälle.
+
+### Wie wurde getestet?
+
+Docker Engine 29.9.3, Compose v5.7.0. Aufrufe mit `-p twox-101`; `TF` wie im Auftrag.
+
+| Akzeptanzkriterium | Ergebnis |
+| --- | --- |
+| `docker version`, `docker compose version` | erfüllt, Exit 0 |
+| `TF build check` | erfüllt, Exit 0 |
+| `TF run --rm fetch python -m testfactory.manifest_tools check` | erfüllt: `testfactory/manifest.yaml: OK (0 entries)`, Exit 0; `pip list` im Image zeigt nur `pip` |
+| Tests in `check` | erfüllt: `Ran 53 tests`, `OK` |
+| Tests in `check-offline` | erfüllt: `Ran 53 tests`, `OK`, keiner übersprungen |
+| mypy in `check` | erfüllt: `Success: no issues found in 4 source files`, Exit 0 |
+| `TF config --services`; kein `ports:` | erfüllt: `fetch`, `check`, `check-offline`; `git grep` findet nichts |
+| `git diff --stat main...HEAD` | erfüllt: nur die neun Dateien aus „Betroffene Bereiche“ und diese Auftragsdatei |
+| README beschreibt Felder und `tree_sha256` | erfüllt |
+
+Alle Kriterien wurden nach dem Einbau von mypy noch einmal vollständig ausgeführt. Im ersten Durchlauf (vor der Entscheidung zu Frage 5) fehlte mypy im Image; die Typprüfung lief damals nur in einem nicht eingecheckten Probe-Image, das wieder gelöscht ist. Aufgeräumt mit `down -v`.
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig `worktree-agent-ad0f9207ee1267aaf`
+- Arbeitsverzeichnis `.claude/worktrees/agent-ad0f9207ee1267aaf` (relativ zum Projektordner)
+
+### Festlegungen über den Auftragstext hinaus (bitte prüfen)
+
+Der Auftrag lässt einige Einzelheiten offen. So umgesetzt und in der README beschrieben:
+
+- Fehlendes Feld und `null` bedeuten dasselbe; leere Zeichenketten sind nicht erlaubt (Ausnahme `language`). Unbekannte Felder und doppelte Schlüssel sind Fehler.
+- `fetch` je `kind`: `file` und `git-archive` nur `auto` oder `manual`; `container-image`, `reference`, `local` nur `none`.
+- `url` ist bei `git-archive` und `container-image` nicht erlaubt (der Auftrag nennt es nur für `file`, `reference`, `local`). `landing_page` ist überall erlaubt. Braucht Auftrag 104 bei `git-archive` eine eigene Archiv-Adresse, ist das eine Zeile in `_KINDS_BY_FIELD`.
+- `reference` braucht mindestens eines von `url`, `landing_page`, `repository`. `branch` und `commit` verlangen `repository`.
+- `terms`: `holder`, `license`, `redistribution`, `note`, `verified` sind Pflicht; `checked_on` ist Pflicht, wenn `verified` true ist.
+- `target` ist innerhalb einer Datei eindeutig; kein `..`, kein absoluter Pfad, kein `\` oder `:`.
+- `derived_from`: geprüft wird nur die Form der ID, nicht ob der Eintrag existiert (er kann in der anderen Manifest-Datei stehen).
+- `size_bytes` ist auch bei `git-archive` erlaubt (Summe aller Dateien).
+- Adressen dürfen keinen Benutzernamen und kein Kennwort enthalten.
+- `tree_sha256`: Datensatz je Datei = Pfad (UTF-8), NUL-Byte, SHA-256 in Hex, LF; sortiert nach den Bytes des Pfads. Symbolische Links werden nie verfolgt; ein Link zählt als Datei mit dem Linkziel als Inhalt. So ist das Ergebnis gleich, egal ob ein Entpacker echte Links anlegt oder kleine Textdateien schreibt.
+- `check` prüft nur das Format. Ob die Datei eines `local`-Eintrags vorhanden ist und zur Prüfsumme passt, prüft der Befehl nicht (nicht Teil dieses Auftrags; passt zu 104/108/109).
+
+### Abweichungen
+
+- mypy wurde erst nach der Entscheidung zu Frage 5 eingebaut (eigener Commit).
+- Image-Tag: `python:3.14.10-slim-trixie` statt des im Auftrag genannten `3.14-slim`; es ist dasselbe Image (gleicher Digest), nur mit festem Patch-Stand und fester Debian-Ausgabe.
+- Die drei Dienste teilen sich über YAML-Anker dieselben Einstellungen; `check-offline` kann das Image selbst bauen, wenn es fehlt.
+
+### Vorschlag für das Entscheidungsprotokoll
+
+Abhängigkeiten (alle am 21.11.2026 am Original geprüft: Registry-Abfrage für das Image, Lizenzdateien im Image und in den installierten Paketen):
+
+| Name, Version | Lizenz | Zweck | Quelle |
+| --- | --- | --- | --- |
+| Docker-Image `python:3.14.10-slim-trixie`, Digest `sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f` (am Prüftag identisch mit `3.14-slim` und `3.14.10-slim`) | Python 3.14.10: PSF-2.0. Grundsystem Debian 13 „trixie“ mit 87 Paketen, darunter GPL-2, GPL-3, LGPL, BSD, MIT/Expat, ISC u. a. (laut `/usr/share/doc/*/copyright`). Mitgeliefert: pip 26.2.2 (MIT) | Laufzeit für Werkzeuge, Tests und Typprüfung der Testfabrik; unverändert benutzt, nicht Teil des eigenen Codes (Frage 4, Option A) | Docker Hub `library/python` |
+| mypy 2.4.1 | MIT; mitgezogen: mypy_extensions 1.2.0 (MIT), librt 0.17.0 (MIT), ast-serialize 0.13.1 (MIT), typing_extensions 4.16.0 (PSF-2.0), pathspec 1.1.1 (MPL-2.0) | Typprüfung, nur in `check` und `check-offline` | PyPI |
+
+Abweichungen von der Startunterlage:
+
+- Zu Frage 1 (Abschnitte 5.2 und 6): Die Testfabrik hat einen eigenen kleinen Rahmen – Compose-Datei `deploy/compose/testfactory.yaml`, Tests unter `testfactory/tests` mit `unittest`, mypy per pip im Prüf-Image – statt pytest, uv und Ruff unter `backend/tests`. Grund: T1 hängt nicht am Django-Gerüst, und die Werkzeuge laufen im unveränderten Python-Image. Auftrag 114 hängt die Prüfungen in CI und Ruff ein.
+- Zu Frage 2 (Abschnitt 10.3): `manifest.yaml` wird in JSON-Schreibweise geführt (gültiges YAML) und mit dem Modul `json` gelesen. Keine Abhängigkeit; keine Kommentare, dafür das Feld `notes`.
+- Zu Frage 3 (Abschnitt 6): Die Ordnerübersicht wächst um `deploy/compose/testfactory.yaml` und `.Dockerfile`, `testfactory/__init__.py`, `manifest_tools.py`, `mypy.ini`, `README.md`, `testfactory/tests/`.
