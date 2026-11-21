@@ -16,9 +16,9 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 003 | Suche nach Geheimnissen | C | 1 | – | erledigt (CI grün) |
 | 004 | Messung Dateizugriff | B | 2 | 001, 002 | offen |
 | 005 | API-Grundlage | C | 3 | 001 | erledigt |
-| 006 | Lizenzprüfung | C | 3 | 001, 002 | in Arbeit |
+| 006 | Lizenzprüfung | C | 3 | 001, 002 | erledigt |
 | 007 | Prüfung der Erreichbarkeit von Ollama | B | 3 | 001 | erledigt |
-| 008 | Celery-Worker mit Valkey | C | 4 | 005 | offen |
+| 008 | Celery-Worker mit Valkey | C | 4 | 005 | in Arbeit |
 | 009 | docling-serve als Container | C | 5 | 008 | offen |
 | 010 | Testseite, Teil API | C | 5 | 005, 008 | offen |
 | 011 | CI-Hauptworkflow | C | 5 | 002, 005, 006, 008 | offen |
@@ -48,7 +48,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 ## In Arbeit
 
-- 006, 104, 105, 106 als Subagenten; 103 als eigene Sitzungen (gestartet am 21.11.2026).
+- 008, 104, 105, 106 als Subagenten; 103 als eigene Sitzungen (gestartet am 21.11.2026).
 
 ## Wartet auf a7
 
@@ -61,6 +61,7 @@ Nichts davon hält die laufende Arbeit auf.
 5. **GitHub Secret Scanning mit Push Protection** am Repository einschalten (Auftrag 003, Frage 1) – Einstellung am Konto, nimmt a7 selbst vor.
 6. **Prüffragen in der CI (Auftrag 011, Frage 1):** Empfehlung: aufgezeichnete Antworten in der CI, dazu der echte Lauf lokal vor jedem Zusammenführen. Entscheidung spätestens zu M3.
 7. **Startunterlage berichtigen (Auftrag 102, Frage 5):** Laut Recherche haben fünf statt vier Module eine S7-1200 (zusätzlich DPS). Die Leitstelle ändert die Startunterlage nicht ohne a7.
+8. **Gebündelte Bibliotheken in psycopg-binary (Auftrag 006):** Zwei davon stehen unter LGPL (keyutils, libxcrypt), dazu OLDAP-2.8 und BSD-Varianten mit Nennungsklausel. Alle sind unverändert als eigene Dateien eingebunden – derselbe Fall wie psycopg selbst nach Leitplanke 7. Empfehlung: als Teil der benannten Ausnahme psycopg bestätigen. Die Lizenz von keyutils ist nur aus einer Zweitquelle belegt.
 
 ## Offene Abnahmebedingungen M0
 
