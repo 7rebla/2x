@@ -45,5 +45,8 @@ COPY --from=runtime-deps /opt/venv /opt/venv
 COPY manage.py ./
 COPY twox ./twox
 USER twox
-# Placeholder until the ASGI server arrives with the API service.
-CMD ["python", "manage.py", "check"]
+EXPOSE 8000
+# Django has no ASGI lifespan handler, so uvicorn does not need to probe for one.
+# Migrations are not run here: the compose service `migrate` applies them once
+# before any API instance starts.
+CMD ["uvicorn", "twox.config.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--lifespan", "off"]

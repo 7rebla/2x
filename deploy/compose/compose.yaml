@@ -34,6 +34,48 @@ services:
       start_period: 30s
       start_interval: 1s
 
+  # Applies the migrations once and exits. A separate service instead of a
+  # start script in the API container, so that several API instances never
+  # migrate at the same time.
+  migrate:
+    build: &backend-runtime-build
+      context: ../../backend
+      target: runtime
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    environment: *backend-environment
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: *backend-runtime-build
+    environment: *backend-environment
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      # Reachable from this machine only.
+      - "127.0.0.1:${TWOX_API_PORT:-8000}:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      # The runtime image has no curl; Python is always there. The request goes
+      # to localhost, which therefore has to stay in TWOX_ALLOWED_HOSTS.
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+      start_interval: 1s
+    restart: unless-stopped
+
   backend-dev:
     profiles: ["dev"]
     build:

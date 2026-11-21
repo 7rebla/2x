@@ -1,6 +1,6 @@
 # Auftrag 005 – API-Grundlage
 
-Meilenstein: M0 · Freigabestufe: C · Status: offen
+Meilenstein: M0 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -86,7 +86,88 @@ Alle Befehle im Wurzelverzeichnis. `D` steht für `docker compose -p twox-005`. 
    - Empfehlung: (a).
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+### Was wurde gebaut?
+
+- `backend/pyproject.toml`, `backend/uv.lock`: neue direkte Abhängigkeiten djangorestframework, drf-spectacular, uvicorn (Laufzeit) und `djangorestframework-stubs[compatible-mypy]` (Entwicklung). mypy lädt zusätzlich `mypy_drf_plugin.main`. Ruff: Ausnahme für erzeugte Migrationen (`E501`, `RUF012`).
+- `backend/twox/config/health.py`: `HealthView` (`AllowAny`, ohne Authentifizierung) mit `HealthSerializer` für das Schema. `backend/twox/config/urls.py`: `GET /api/v1/health/`.
+- `backend/twox/config/settings.py`: `django.contrib.auth`, `django.contrib.contenttypes`, `rest_framework`, `drf_spectacular` in `INSTALLED_APPS`; `AUTH_USER_MODEL = "accounts.User"`; `REST_FRAMEWORK` (Standard-Berechtigung `IsAuthenticated`, nur JSON, Schema-Klasse von drf-spectacular); `SPECTACULAR_SETTINGS`.
+- `backend/twox/accounts/models.py` und `migrations/0001_initial.py`: `User` als unveränderte Ableitung von `AbstractUser`.
+- `backend/Dockerfile`: Stufe `runtime` startet `uvicorn twox.config.asgi:application --host 0.0.0.0 --port 8000 --lifespan off`.
+- `deploy/compose/compose.yaml`: Dienste `migrate` (einmalig) und `api` (Healthcheck, Port nur auf `127.0.0.1:${TWOX_API_PORT:-8000}`, `extra_hosts`).
+- `.env.example`: `TWOX_API_PORT=8000`, Hinweis zu `TWOX_ALLOWED_HOSTS`.
+- Tests: `backend/tests/config/test_api.py` (8 Fälle), `backend/tests/accounts/test_user_model.py` (3 Fälle); `test_settings.py` angepasst (der Test „genau acht Apps“ zählt jetzt nur Apps mit Vorsatz `twox.`).
+
+**Migrationen: einmaliger Dienst `migrate`, kein Startskript.** Begründung: Nach Abschnitt 5.4 läuft die API später in vielen Instanzen; mit einem Startskript würden alle gleichzeitig migrieren. Der Dienst `api` wartet per `service_completed_successfully` auf `migrate`. Compose v5.7.0 wertet den erfolgreich beendeten Dienst bei `up -d --wait` als Erfolg (Kriterium 2 und 11 belegen das). Der Dienst `migrate` nutzt dieselbe Stufe `runtime`; Compose baut dafür ein zweites, inhaltsgleiches Image (`…-migrate`, gleiche Schichten).
+
+### Wie wurde getestet?
+
+Alle Befehle mit `docker compose -p twox-005` im Wurzelverzeichnis des Arbeitsverzeichnisses, `.env` mit `TWOX_API_PORT=18005`, Docker Engine 29.9.3, Compose v5.7.0. Die Läufe fanden nach der letzten Änderung statt.
+
+| Nr. | Ergebnis | Tatsächliche Ausgabe (gekürzt) |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` (29.9.3) und `docker compose version` (v5.7.0), beide Exit-Code 0 |
+| 1 | erfüllt | `Image twox-005-backend-dev Built`, `…-migrate Built`, `…-api Built`, Exit-Code 0 |
+| 2 | erfüllt | Exit-Code 0; `migrate-1 Exited`, `db-1 Healthy`, `api-1 Healthy`; `D ps`: `api … (healthy)`, `db … (healthy)` |
+| 3 | erfüllt | `{"status":"ok"}` |
+| 4 | erfüllt | `host_ip: 127.0.0.1`, `target: 8000`, `published: "18005"` |
+| 5 | erfüllt | `10001` |
+| 6 | erfüllt | `All checks passed!`; `33 files already formatted`, Exit-Code 0 |
+| 7 | erfüllt | `Success: no issues found in 33 source files` |
+| 8 | erfüllt | `27 passed in 7.08s`, Exit-Code 0, nichts übersprungen, keine Warnungen; die geforderten Fälle sind dabei |
+| 9 | erfüllt | `No changes detected` |
+| 10 | erfüllt | Exit-Code 0, keine Ausgabe (keine Warnungen). Zusätzlich `spectacular --validate`: Exit-Code 0 |
+| 11 | erfüllt | `down` Exit-Code 0; `up -d --wait` Exit-Code 0; Protokoll von `migrate`: `No migrations to apply.` |
+| 12 | erfüllt | `--profile dev down -v` Exit-Code 0; keine Container und kein Volume des Projekts `twox-005` mehr vorhanden |
+
+Zusätzlich: `python manage.py check` meldet `System check identified no issues (0 silenced).` Nach den Läufen zeigt `git status --short --ignored` nur die geänderten Dateien sowie `.env` und `STARTUNTERLAGE.md`.
+
+Zu prüfende Punkte aus den Hinweisen:
+
+- drf-spectacular 0.30.0 läuft mit Django 6.1.3 und DRF 3.18.3 fehlerfrei und ohne Warnung (Schema erzeugt und validiert).
+- `up -d --wait` mit einmaligem Dienst: funktioniert mit Compose v5.7.0 (siehe oben). Mit älteren Compose-Versionen nicht geprüft.
+- Neuere Fehlerkorrekturen: `uv lock` hat innerhalb der gesetzten Grenzen genau die im Auftrag genannten Versionen gewählt. PyPI habe ich darüber hinaus nicht gesondert abgefragt.
+
+### Festgeschriebene Versionen, Lizenzen, Quellen (für das Entscheidungsprotokoll)
+
+Lizenz laut Paket-Metadaten der installierten Version, ausgegeben von `pip-licenses --with-system` im Container (Quelle der Pakete: PyPI, https://pypi.org/project/NAME/). Die Projektseiten habe ich nicht zusätzlich abgerufen.
+
+| Name | Version | Lizenz | Rolle |
+| --- | --- | --- | --- |
+| djangorestframework | 3.18.3 | BSD-3-Clause | Laufzeit, direkt |
+| drf-spectacular | 0.30.0 | BSD-3-Clause | Laufzeit, direkt |
+| uvicorn | 0.54.0 | BSD-3-Clause | Laufzeit, direkt (ohne Extra `standard`) |
+| click | 8.5.1 | BSD-3-Clause | Laufzeit, über uvicorn |
+| h11 | 0.16.0 | MIT | Laufzeit, über uvicorn |
+| PyYAML | 6.0.4 | MIT | Laufzeit, über drf-spectacular |
+| uritemplate | 4.2.0 | BSD-3-Clause OR Apache-2.0 | Laufzeit, über drf-spectacular |
+| inflection | 0.5.1 | MIT | Laufzeit, über drf-spectacular |
+| jsonschema | 4.26.0 | MIT | Laufzeit, über drf-spectacular |
+| jsonschema-specifications | 2025.9.1 | MIT | Laufzeit, über jsonschema |
+| referencing | 0.37.0 | MIT | Laufzeit, über jsonschema |
+| rpds-py | 2026.9.1 | MIT | Laufzeit, über jsonschema und referencing |
+| attrs | 26.1.0 | MIT | Laufzeit, über jsonschema und referencing |
+| djangorestframework-stubs | 3.18.2 | MIT | Entwicklung, direkt |
+
+Alle neuen Pakete liegen innerhalb von MIT, Apache-2.0 und BSD. Keine neue Ausnahme. Die übrigen Pakete und ihre Versionen sind gegenüber Auftrag 001 unverändert. rpds-py und PyYAML enthalten übersetzten Code (Rust bzw. C) als fertige Wheels; die Lizenzen darin gebündelter Fremdbestandteile habe ich nicht geprüft (wie bei psycopg-binary ein Punkt für Auftrag 006).
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-a34a619951205c83d`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-a34a619951205c83d` (relativ zum Projektordner)
+
+### Abweichungen und Hinweise
+
+- **Authentifizierung ist ausdrücklich leer** (`DEFAULT_AUTHENTICATION_CLASSES: []`). DRF würde sonst Sitzung und HTTP-Basic einschalten; welche Anmeldung gilt, entscheidet M1 (Stufe C). Folge: Jede Ansicht ohne eigene Freigabe antwortet bis M1 mit 403 (nicht 401, weil es kein Anmeldeverfahren gibt). Getestet ist beides: anonym 403, mit angemeldetem Benutzer 200. Bitte in M1 bewusst setzen.
+- **Nur `django.contrib.auth` und `contenttypes`** sind dazugekommen (Voraussetzung für `AbstractUser`). Keine Sitzungen, kein Admin, keine Auth-Middleware, keine Passwort-Validatoren (`AUTH_PASSWORD_VALIDATORS` ist leer) – alles M1.
+- **Nur JSON:** Renderer und Parser sind auf JSON beschränkt; die durchklickbare DRF-Oberfläche ist aus (sie bräuchte Templates und statische Dateien).
+- **Health-Endpunkt prüft nur den Prozess**, nicht die Datenbank (so verlangt). Eine Prüfung der Bausteine ist Auftrag 010.
+- **Healthcheck braucht `localhost` in `TWOX_ALLOWED_HOSTS`.** Er ruft `http://localhost:8000/api/v1/health/` im Container auf (per Python, das Image hat kein curl). Steht `localhost` nicht in der Liste und ist `TWOX_DEBUG` aus, antwortet Django mit 400 und der Dienst wird nie `healthy`. In `.env.example` vermerkt. Ob das für den Betrieb so bleiben soll, ist nicht entschieden.
+- **Ruff-Ausnahme für Migrationen** (`E501`, `RUF012`) in `pyproject.toml`: Die von Django erzeugte Migration hält die Regeln nicht ein; sie von Hand umzuschreiben wäre fehleranfällig. Die Migration ist mit `ruff format` formatiert, sonst unverändert.
+- **uvicorn mit einem Prozess** und ohne Extra `standard` (kein uvloop, httptools). Anzahl der Prozesse und Proxy-Kopfzeilen sind nicht eingestellt.
+- **Schema:** Es gibt keinen Schema-Endpunkt, nur `manage.py spectacular`. Die Version im Schema ist fest `0.0.0`.
+- Der zweite Commit (Benutzermodell) ist für sich allein nicht lauffähig; `AUTH_USER_MODEL` folgt im dritten. Geprüft ist der Endstand.
+- `backend/pyproject.toml` und `backend/uv.lock` sind geändert (nur die genannten Abhängigkeiten, das mypy-Plugin und die Ruff-Ausnahme) – beim Zusammenführen mit 006 und 101 zu beachten. `uv.lock` danach im Container mit `uv lock` neu erzeugen statt von Hand zusammenzuführen.
+- Die Images `twox-005-backend-dev`, `twox-005-api` und `twox-005-migrate` liegen noch lokal vor; Container, Netz und Volume sind entfernt.
+- Nicht geprüft: Abruf über den Host-Port 18005 (laut Auftrag nur im Container), Bau unter Linux/CI, ältere Compose-Versionen.
+- Keine offenen Fragen an a7.
