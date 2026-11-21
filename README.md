@@ -129,7 +129,8 @@ docker compose run --rm -v "$PWD/web/openapi:/out" backend-dev \
 git diff --exit-code -- web/openapi
 ```
 
-The `$PWD` form is for a POSIX shell (Git Bash, Linux, macOS); `web/openapi/README.md` explains how schema and API client are regenerated.
+The `$PWD` form is for a POSIX shell (Linux, macOS, the CI). In Git Bash on Windows put `MSYS_NO_PATHCONV=1` in front of the `docker compose` command; otherwise Git Bash rewrites `/out/schema.yml` into a Windows path and the command fails with `FileNotFoundError`.
+`web/openapi/README.md` explains how schema and API client are regenerated.
 
 ### Web UI (service `web-dev`, profile `dev`)
 
