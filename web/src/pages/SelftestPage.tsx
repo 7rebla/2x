@@ -55,7 +55,7 @@ export function SelftestPage(): ReactElement {
 }
 
 function SelftestBody({ state }: { state: PageState }): ReactElement {
-  const { t } = useTranslation("selftest");
+  const { t } = useTranslation(["selftest", "auth"]);
   switch (state.kind) {
     case "loading":
       return (
@@ -66,7 +66,13 @@ function SelftestBody({ state }: { state: PageState }): ReactElement {
     case "unreachable":
       return <ApiError message={t("apiUnreachable")} />;
     case "http-error":
-      return <ApiError message={t("apiHttpError", { status: state.status })} />;
+      // 403 with a valid session: the role is missing (an expired session
+      // leads to the sign-in page instead, see session.ts).
+      return (
+        <ApiError
+          message={state.status === 403 ? t("auth:noPermission") : t("apiHttpError", { status: state.status })}
+        />
+      );
     case "invalid-answer":
       return <ApiError message={t("apiInvalidAnswer")} />;
     case "unexpected-error":

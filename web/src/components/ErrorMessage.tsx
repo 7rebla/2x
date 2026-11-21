@@ -8,13 +8,17 @@ import { ApiError } from "../api/errors.ts";
  * status and, if the API sent one, its error text (shown as sent: it is data).
  */
 export function ErrorMessage({ error }: { error: unknown }): ReactElement {
-  const { t } = useTranslation("common");
+  const { t } = useTranslation(["common", "auth"]);
 
   let summary: string;
   let detail: string | null = null;
   if (error instanceof ApiError) {
     detail = error.detail;
-    if (error.kind === "http" && error.status !== null) {
+    if (error.kind === "http" && error.status === 403) {
+      // A 403 with a valid session (an expired one leads to the sign-in page,
+      // see session.ts): the role does not allow this.
+      summary = t("auth:noPermission");
+    } else if (error.kind === "http" && error.status !== null) {
       summary = t("error.http", { status: error.status });
     } else if (error.kind === "network") {
       summary = t("error.network");

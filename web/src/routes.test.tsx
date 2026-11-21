@@ -1,22 +1,20 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createQueryClient } from "./api/queryClient.ts";
 import { Layout } from "./components/Layout.tsx";
 import { RouteError } from "./components/RouteError.tsx";
 import { changeLanguage } from "./i18n.ts";
 import enNav from "./locales/en/nav.json";
 import { navigation } from "./navigation.ts";
+import { fakeApi, manager } from "./test/fakeApi.ts";
 import { renderApp } from "./test/renderApp.tsx";
 
-/** Keeps the self-test page (one of the navigation targets) away from the network. */
-function stubFetch(): void {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))),
-  );
-}
+// Routing inside the frame for a signed-in manager (who may see every page).
+// Sign-in, redirects and roles: session.test.tsx.
 
 afterEach(async () => {
   cleanup();
@@ -30,28 +28,27 @@ function mainNavigation(): HTMLElement {
   return screen.getByRole("navigation", { name: enNav.label });
 }
 
-function pageHeading(): HTMLElement {
-  return screen.getByRole("heading", { level: 2 });
+async function pageHeading(): Promise<HTMLElement> {
+  return screen.findByRole("heading", { level: 2 });
 }
 
 describe("frame", () => {
-  it("shows the name, the navigation, the language switch and an empty user area", () => {
+  it("shows the name, the navigation, the language switch and the signed-in user", async () => {
+    fakeApi(manager);
     renderApp("/");
 
     expect(screen.getByRole("heading", { level: 1, name: "2x" })).toBeDefined();
+    expect((await screen.findByTestId("user-name")).textContent).toBe(manager.username);
     const links = within(mainNavigation()).getAllByRole("link");
-    expect(links.map((link) => link.textContent)).toEqual(
-      navigation.map((entry) => enNav[entry.textKey]),
-    );
-    expect(links.map((link) => link.getAttribute("href"))).toEqual(
-      navigation.map((entry) => entry.path),
-    );
+    expect(links.map((link) => link.textContent)).toEqual(navigation.map((entry) => enNav[entry.textKey]));
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(navigation.map((entry) => entry.path));
     expect(screen.getByTestId("language-switch")).toBeDefined();
-    expect(screen.getByTestId("user-area").childNodes.length).toBe(0);
   });
 
   it("translates the navigation when the language changes", async () => {
+    fakeApi(manager);
     renderApp("/");
+    await screen.findByTestId("user-name");
 
     fireEvent.change(screen.getByTestId("language-switch"), { target: { value: "de" } });
 
@@ -62,16 +59,17 @@ describe("frame", () => {
       "Änderungsprotokoll",
       "Selbsttest",
     ]);
-    expect(pageHeading().textContent).toBe("Struktur");
+    expect((await pageHeading()).textContent).toBe("Struktur");
   });
 });
 
 describe("navigation", () => {
-  it("starts on the structure page at /", () => {
+  it("starts on the structure page at /", async () => {
+    fakeApi(manager);
     const { router } = renderApp("/");
 
+    expect((await pageHeading()).textContent).toBe("Structure");
     expect(router.state.location.pathname).toBe("/");
-    expect(pageHeading().textContent).toBe("Structure");
     expect(within(mainNavigation()).getByRole("link", { name: "Structure" }).getAttribute("aria-current")).toBe(
       "page",
     );
@@ -80,8 +78,9 @@ describe("navigation", () => {
   it.each(navigation.map((entry) => [entry.path, enNav[entry.textKey]] as const))(
     "a click on the entry for %s shows the page %s",
     async (path, text) => {
-      stubFetch();
+      fakeApi(manager);
       const { router } = renderApp(path === "/" ? "/import" : "/");
+      await screen.findByTestId("user-name");
 
       fireEvent.click(within(mainNavigation()).getByRole("link", { name: text }));
 
@@ -95,7 +94,9 @@ describe("navigation", () => {
   );
 
   it("the name in the header leads back to the structure page", async () => {
+    fakeApi(manager);
     const { router } = renderApp("/audit");
+    await screen.findByRole("heading", { level: 2, name: "Change log" });
 
     fireEvent.click(screen.getByRole("link", { name: "2x" }));
 
@@ -109,49 +110,60 @@ describe("addresses", () => {
     ["/", "Structure"],
     ["/import", "Import"],
     ["/audit", "Change log"],
-    ["/login", "Sign in"],
     ["/devices/plc-1", "Device"],
     ["/documents/42", "File"],
-  ])("%s shows the page %s", (path, heading) => {
+  ])("%s shows the page %s", async (path, heading) => {
+    fakeApi(manager);
     renderApp(path);
 
-    expect(pageHeading().textContent).toBe(heading);
+    expect((await pageHeading()).textContent).toBe(heading);
     expect(screen.getByTestId("page-placeholder")).toBeDefined();
     expect(screen.queryByTestId("not-found")).toBeNull();
   });
 
+  it("/login shows the sign-in page to a visitor who is not signed in", async () => {
+    fakeApi(null);
+    renderApp("/login");
+
+    expect((await pageHeading()).textContent).toBe("Sign in");
+    expect(screen.getByTestId("login-form")).toBeDefined();
+  });
+
   it("/selftest shows the self-test page", async () => {
-    stubFetch();
+    fakeApi(manager);
     renderApp("/selftest");
 
-    expect(pageHeading().textContent).toBe("Self-test");
+    expect((await pageHeading()).textContent).toBe("Self-test");
     expect(await screen.findByTestId("selftest-error")).toBeDefined();
   });
 
-  it("passes the address parameters to the device and file pages", () => {
+  it("passes the address parameters to the device and file pages", async () => {
+    fakeApi(manager);
     renderApp("/devices/conveyor%20belt");
-    expect(screen.getByTestId("device-id").textContent).toBe("conveyor belt");
+    expect((await screen.findByTestId("device-id")).textContent).toBe("conveyor belt");
     cleanup();
 
     renderApp("/documents/7");
-    expect(screen.getByTestId("document-id").textContent).toBe("7");
+    expect((await screen.findByTestId("document-id")).textContent).toBe("7");
   });
 
   it.each(["/no-such-page", "/devices", "/documents/1/extra", "/selftest/x"])(
     "the unknown address %s shows NotFound inside the frame",
-    (path) => {
+    async (path) => {
+      fakeApi(manager);
       renderApp(path);
 
-      expect(screen.getByTestId("not-found")).toBeDefined();
-      expect(pageHeading().textContent).toBe("Page not found");
+      expect(await screen.findByTestId("not-found")).toBeDefined();
+      expect((await pageHeading()).textContent).toBe("Page not found");
       expect(mainNavigation()).toBeDefined();
     },
   );
 
   it("NotFound links back to the structure page", async () => {
+    fakeApi(manager);
     const { router } = renderApp("/no-such-page");
 
-    fireEvent.click(screen.getByRole("link", { name: "Go to the structure" }));
+    fireEvent.click(await screen.findByRole("link", { name: "Go to the structure" }));
 
     expect(await screen.findByRole("heading", { level: 2, name: "Structure" })).toBeDefined();
     expect(router.state.location.pathname).toBe("/");
@@ -159,17 +171,19 @@ describe("addresses", () => {
 
   it("shows NotFound in German", async () => {
     await changeLanguage("de");
+    fakeApi(manager);
     renderApp("/no-such-page");
 
-    expect(pageHeading().textContent).toBe("Seite nicht gefunden");
+    expect(await screen.findByRole("heading", { level: 2, name: "Seite nicht gefunden" })).toBeDefined();
   });
 });
 
 describe("render errors", () => {
-  it("a page that fails to render shows ErrorMessage and keeps the frame", () => {
+  it("a page that fails to render shows ErrorMessage and keeps the frame", async () => {
     // React and the router log the thrown error; that is expected here.
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    fakeApi(manager);
     function Broken(): ReactElement {
       throw new Error("broken page");
     }
@@ -183,12 +197,16 @@ describe("render errors", () => {
       ],
       { initialEntries: ["/"] },
     );
-    render(<RouterProvider router={router} />);
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
 
     expect(screen.getByTestId("error-summary").textContent).toBe(
       "Something went wrong on this page. Please try again.",
     );
     expect(screen.getByTestId("error-message").textContent).not.toContain("broken page");
-    expect(mainNavigation()).toBeDefined();
+    expect(await screen.findByRole("navigation", { name: enNav.label })).toBeDefined();
   });
 });
