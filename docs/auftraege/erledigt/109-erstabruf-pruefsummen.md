@@ -1,6 +1,6 @@
 # Auftrag 109 – Erstabruf: Unterlagen laden und Prüfsummen eintragen
 
-Meilenstein: T1 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: T1 · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 
@@ -43,7 +43,7 @@ In den Befehlen steht `TF` für `docker compose -f deploy/compose/testfactory.ya
 - `git diff main...HEAD -- testfactory/manifest.yaml` ändert keine Zeile mit `url`, `commit`, `digest`, `fetch`, `license`, `redistribution`, `note`, `verified`.
 - Der Kurzbericht enthält die Tabelle der Zusammenfassung des letzten Laufs, die Liste der Handabrufe und den Pfad des gefüllten Ordners `testfactory/extern/`.
 
-## Vorgaben und Hinweise109
+## Vorgaben und Hinweise
 
 - Voraussetzung: Die Aufträge 104, 105, 106 und 107 sind zusammengeführt. Der Rechner braucht Internet; die Datenmenge liegt nach der Recherche bei einigen hundert Megabyte.
 - Kein Push. Der Bearbeiter committet nur auf seinem Auftragszweig; die Leitstelle pusht auf a7s Freigabe (Vorgabe vom 21.11.2026, weicht von Abschnitt 8.2 Stufe A ab).
