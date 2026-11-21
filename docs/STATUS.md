@@ -21,10 +21,10 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 008 | Celery-Worker mit Valkey | C | 4 | 005 | erledigt |
 | 009 | docling-serve als Container | C | 5 | 008 | erledigt |
 | 010 | Testseite, Teil API | C | 5 | 005, 008 | erledigt |
-| 011 | CI-Hauptworkflow | C | 5 | 002, 005, 006, 008 | in Arbeit |
+| 011 | CI-Hauptworkflow | C | 5 | 002, 005, 006, 008 | erledigt (CI grün auf GitHub) |
 | 012 | Testseite, Teil Oberfläche | C | 6 | 002, 010 | erledigt |
 | 013 | Auslieferung der Oberfläche durch Django | C | 6 | 002, 009, 010 | erledigt |
-| 014 | Playwright-Test der Testseite | C | 7 | 011, 012, 013 | offen |
+| 014 | Playwright-Test der Testseite | C | 7 | 011, 012, 013 | in Arbeit |
 | 015 | ARCHITECTURE.md und README | B | 8 | 006, 007, 009, 013, 014 | offen |
 
 ### T1 – Testfabrik Teil 1
@@ -44,11 +44,11 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 111 | Prüffragen der Fertigungslinie mit Fundstelle | C | 5 | 109 | erledigt |
 | 112 | Prüffragen des Roboters (Fragen 9 und 10) | C | 6 | 110, 111 | erledigt |
 | 113 | Nachweis der drei Bedingungen je Anlage und Gerät | C | 6 | 106, 110 | erledigt |
-| 114 | Testfabrik-Prüfungen in CI und Werkzeugkette | B | 7 | 101, 112, 113, 011 | offen |
+| 114 | Testfabrik-Prüfungen in CI und Werkzeugkette | B | 7 | 101, 112, 113, 011 | in Arbeit |
 
 ## In Arbeit
 
-- 004 und 011 als Subagenten.
+- 004, 014 und 114 als Subagenten.
 
 ## Wartet auf a7
 
@@ -70,7 +70,7 @@ Nichts davon hält die laufende Arbeit auf.
 1. ~~`check_llm` gegen das echte Ollama~~ – erfüllt am 21.11.2026: `OK:` aus dem Container über `host.docker.internal`, Ollama mit Standardbindung, keine Einstellung nötig.
 2. ~~Eigenes Arbeitsverzeichnis je Auftragsbearbeiter~~ – erfüllt: Zweig und Ordner unter `.claude/worktrees/` bei jedem Start belegt.
 3. Entscheidung zur Messung aus 004 (im Windows-Ordner bleiben oder ins WSL-2-Dateisystem umziehen).
-4. CI-Läufe grün nach freigegebenem Push.
+4. ~~CI-Läufe grün~~ – erfüllt am 21.11.2026: Workflows `ci` (backend, web) und `secrets` grün auf GitHub.
 5. ~~Sichtprüfung der Testseite~~ – von der Leitstelle am 21.11.2026 im Chrome geprüft: Datenbank und Worker grün; bei gestopptem Worker rote Karte mit Fehlermeldung; nach Neustart wieder grün. Noch durch a7 anzusehen.
 6. Abnahme durch a7.
 
