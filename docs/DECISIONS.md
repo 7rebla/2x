@@ -160,3 +160,5 @@ Jede neue Abhängigkeit bekommt hier einen Eintrag (Leitplanke 7). Bevorzugt: MI
 | redis (redis-py) 8.1.0 | MIT | Client für Valkey | 008 | nach E-23 |
 | celery-types 0.26.0 | Apache-2.0 | Typen für Celery (Entwicklung) | 008 | nach E-23 |
 | Image `valkey/valkey:9.1.4` | BSD-3-Clause | Broker und Ergebnisspeicher | 008 | nach E-23 |
+| pandoc 3.14 (Image `pandoc/core:3.14.0.0`, per Digest festgelegt; Basis Alpine 3.24.4) | GPL-2.0-or-later | einmaliges Werkzeug: vier OPNsense-Seiten nach Markdown umgewandelt, `docker run --rm --network none`; nicht eingebunden, in keinem Projekt-Image | 108 | nach E-23 |
+| Testdaten `testdata/klein/`: vier Seiten der OPNsense-Dokumentation (Commit `953dd3d`, LICENSE unverändert beigelegt) und die Betriebssicherheitsverordnung als PDF von gesetze-im-internet.de | BSD-2-Clause bzw. amtliches Werk (§ 5 Abs. 1 UrhG) | Testmaterial für die CI, liegt im Repository; Leitstelle hat alle Dateien bytegleich mit dem Original geprüft | 108 | nach E-23 |

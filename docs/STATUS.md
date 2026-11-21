@@ -38,7 +38,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 105 | Manifest-Einträge der Fertigungslinie | C | 2 | 101, 102 | erledigt |
 | 106 | Aufbau der Testfabrik: Geräteliste, Netzplan, Beschreibung | C | 2 | 101, 102 | erledigt |
 | 107 | Manifest-Einträge: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 3 | 103, 105 | erledigt |
-| 108 | Frei lizenzierte Testunterlagen in `testdata/klein` | C | 3 | 101, 103 | in Arbeit |
+| 108 | Frei lizenzierte Testunterlagen in `testdata/klein` | C | 3 | 101, 103 | erledigt |
 | 109 | Erstabruf: Unterlagen laden und Prüfsummen eintragen | B | 4 | 104, 105, 106, 107 | offen |
 | 110 | Stände und Nutzungsvermerke nachtragen | C | 5 | 109 | offen |
 | 111 | Prüffragen der Fertigungslinie mit Fundstelle | C | 5 | 109 | offen |
@@ -48,7 +48,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 ## In Arbeit
 
-- 009, 010, 108 als Subagenten; 104 in Prüfung.
+- 009, 010 als Subagenten; 104 in Prüfung.
 
 ## Wartet auf a7
 
