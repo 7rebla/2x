@@ -1,6 +1,6 @@
 # Auftrag 103 – Quellen und Nutzungsbedingungen: Standardgeräte, UR5e, URSim, OPNsense-Dokumentation
 
-Meilenstein: T1 · Freigabestufe: C · Status: offen
+Meilenstein: T1 · Freigabestufe: C · Status: wartet auf a7
 
 ## Ziel
 
@@ -112,8 +112,64 @@ OPNsense-Dokumentation: https://github.com/opnsense/docs
    - C: beide nur als Verweis mit festem Commit – benannte Ausnahme von 10.3 und von der Abnahme von T1.
    - Empfehlung: A. Zeigt dieser Auftrag, dass das OPNsense-Archiv größer als 300 MB ist, legt die Leitstelle die Frage erneut vor.
 
+**Neue Fragen aus der Bearbeitung (21.11.2026, Auftragsbearbeiter) – noch nicht entschieden:**
+
+5. **Siemens: Klausel gegen Text- und Data-Mining.** Die Siemens-Nutzungsbedingungen (Abschnitt A.6.2, Stand 29.10.2026) untersagen automatisiertes Auslesen und Extrahieren von Inhalten zum Zweck der Analyse und für KI-Systeme; A.4.5 untersagt die Weitergabe. Die Testfabrik liest das Systemhandbuch ein und macht es durchsuchbar. Fundstelle: `docs/testfabrik/quellen-standardgeraete-roboter-firewall.md`, Abschnitt 1.
+   - A: Handbuch bleibt in der Testfabrik, wird aber nur von Hand geladen (`manual`) und nur lokal eingelesen; nichts davon wird veröffentlicht. Das Restrisiko der Klausel wird in Kauf genommen und im Manifest vermerkt.
+   - B: wie A, zusätzlich fragt a7 vor M1 schriftlich bei Siemens an (Entwurf wäre ein eigener Auftrag).
+   - C: Siemens-Handbuch nicht laden, nur als Verweis führen. Bedingung 2 aus Abschnitt 10.1 stützt sich für die S7-1200 dann allein auf die öffentliche Adresse.
+   - Empfehlung: A als Arbeitsstand, bis a7 entscheidet; kein automatischer Abruf von Siemens-Adressen durch das Lade-Skript. Die Bewertung der Klausel ist eine Rechtsfrage, die der Bearbeiter nicht entscheiden kann.
+6. **Siemens: welche Ausgabe des Systemhandbuchs?** Frage 2 ging davon aus, dass nur die Ausgabe 04/2012 automatisch abrufbar ist. Befund: Aktuell ist V4.7 (12/2024), ohne Anmeldung nur im Browser abrufbar, Siemens nennt dazu eine SHA-256-Prüfsumme. Die Ausgabe V4.6 (11/2022) ist per Direktadresse abrufbar und passt vermutlich besser zu den Projektarchiven (TIA Portal V18) – das ist aber nicht bestätigt.
+   - A: V4.7 (12/2024) als `manual` – entspricht der bisherigen Entscheidung zu Frage 2 (Option B).
+   - B: V4.6 (11/2022) als maßgebliche Ausgabe; Lade-Art je nach Antwort auf Frage 5 (`manual` oder `auto`).
+   - C: beide Ausgaben führen, V4.6 als maßgeblich, V4.7 als Verweis.
+   - Empfehlung: C. Die Ausgabe 04/2012 entfällt in jedem Fall. Die Passung bleibt „offen“, bis CPU und Firmware der Projektarchive bekannt sind.
+
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+**Stand 21.11.2026 – Status: wartet auf a7** (Arbeit abgeschlossen; zwei neue Fragen 5 und 6 oben).
+
+- **Was wurde gebaut?** `docs/testfabrik/quellen-standardgeraete-roboter-firewall.md`: je ein Abschnitt für Siemens S7-1200, Raspberry Pi 4B, TP-Link TL-WR902AC, UR5e-Handbücher, URSim-Image und OPNsense-Dokumentation mit Adresse, Stand, Rechteinhaber, Lizenzbefund mit Fundstelle, Folgerung, Abruf ohne Anmeldung, Prüfdatum, Größe und Lade-Art (`auto`/`manual`/`none`); dazu der Abschnitt „Passung Handbuch und Softwarestand“. Kein Code.
+- **Wie wurde getestet?** Kein Code, daher keine Tests und keine Typprüfung berührt. Geprüft wurde am Original: Kopfzeilen-Abfragen aller Adressen, Lesen der Lizenz- und Nutzungstexte, Docker-Hub-API und Registry (nur Metadaten), GitHub (`git ls-remote`, API), Siemens zusätzlich im Browser ohne Anmeldung. Die Akzeptanzkriterien wurden mit `git diff --stat main...HEAD` und `git grep -n -i "ungeprüft"` nachgeprüft.
+- **Zweig und Arbeitsverzeichnis:** Zweig `claude/auftrag-103-quellen-ur-opnsense-ac4883`, Arbeitsverzeichnis `.claude/worktrees/auftrag-103-quellen-ur-opnsense-ac4883`. Nicht gepusht.
+
+**Ergebnis je Akzeptanzkriterium**
+
+1. Nur die Quellendatei und diese Auftragsdatei geändert: erfüllt.
+2. Sechs Abschnitte, jeder mit „Lizenzbefund“, „Folgerung“, „Abruf ohne Anmeldung“ und „geprüft am“: erfüllt.
+3. OPNsense: Commit `953dd3d1…aff6`, Adresse der LICENSE-Datei, Ergebnis **BSD-2-Clause ja** (mit auf Dokumentation umformuliertem Haftungsausschluss), Hinweis zu Bildern (teils CC0) und Logos (ausgenommen): erfüllt. Größe: 108.160.157 Byte unkomprimiert laut API; die genaue Größe des `tar.gz` ist offen (U-14) – teilweise erfüllt, mit Grund.
+4. URSim: Tag und Digest für `5.25.1`, `5.26.3`, `5.24.0` mit Abrufdatum, zusätzlich an der Registry bestätigt: erfüllt.
+5. Liste der offenen Punkte per `git grep` und hier: erfüllt (siehe unten).
+6. Kein Code, Tests und Typprüfung unberührt: erfüllt.
+
+**Wichtigste Befunde**
+
+- Siemens: Aktuell ist V4.7 (12/2024, Beitrag 109977302), ohne Anmeldung nur im Browser abrufbar (`manual`); Siemens nennt eine SHA-256-Prüfsumme. V4.6 (11/2022) ist ohne Anmeldung per Direktadresse abrufbar (`auto` möglich). Nutzungsbedingungen Abschnitt A gelesen: nur eigene Zwecke, keine Weitergabe, und eine Klausel gegen Text- und Data-Mining (neu, Frage 5).
+- Raspberry Pi: Datenblatt trägt „All rights reserved“, Product Brief und Schaltplan nennen keine Lizenz – wie Herstellerunterlagen behandeln. Online-Dokumentation CC BY-SA 4.0 bestätigt.
+- UR: Script-Verzeichnis und Software-Handbuch im Stand 5.25.1 sind vorhanden (englisch). Das Script-Verzeichnis untersagt die Vervielfältigung ohne schriftliche Genehmigung. Deutsch 5.25.1 ist der neueste deutsche Stand des UR5e-Handbuchs.
+- URSim: Digest von `5.25.1` ist `sha256:36c80afd904f748486c31b38331ef8b0edbaf234432714d3f3d1dc8fe0102210`. Alle drei Patch-Tags wurden am 28.10.2026 neu gepusht – auch Patch-Tags sind beweglich, das Manifest braucht den Digest. Kein offizielles Quell-Repository und keine Lizenzangabe gefunden. LTS bis Ende 2027 für 5.26 bestätigt.
+- OPNsense: Nur 4,7 MB des Archivs sind `.rst`-Text; der Rest sind Bilder, PDFs und Archive. Das Archiv bleibt klar unter 300 MB, Frage 4 muss nicht erneut vorgelegt werden.
+
+**Abweichungen**
+
+- Vom Vorbefund: Siemens-Beitrag 109814829 ist V4.6 (11/2022), nicht V4.5; 109772940 ist die Ausgabe 11/2019; aktuell ist V4.7 unter 109977302. Das Service-Handbuch von UR gibt es in drei Fassungen (`Shared`, `SW5_25`, `SW5_25_1`), es ist also nicht unabhängig vom Softwarestand abgelegt. Die englische PDF-Übersicht für 5.25.1 verlinkt auf den Ordner `SW5_25`.
+- Vom Auftrag („nichts laden“): Zum Lesen der Vermerke wurden drei Raspberry-Pi-PDFs (zusammen rund 22 MB; der Product Brief war mit 21 MB größer als erwartet) und das Script-Verzeichnis 5.25.1 (2 MB) vorübergehend in ein temporäres Verzeichnis außerhalb des Projektordners geladen und danach gelöscht. Beim Prüfen der „permanenten Adressen“ von UR wurden zwei Handbücher einmal vollständig bzw. teilweise übertragen, aber nicht gespeichert. Im Projektordner und im Repository liegt keine Herstellerdatei.
+- Die GitHub-API war zeitweise wegen des Anfragelimits gesperrt (gemeinsame Adresse mit den parallelen Aufträgen); die Baumgrößen wurden nach Ablauf der Sperre abgefragt.
+
+**Offene Punkte (dieselbe Liste wie `git grep -n -i "ungeprüft"`)**
+
+- U-01: CPU-Typ und Firmware in den SPS-Projektarchiven (nur mit TIA Portal lesbar).
+- U-02: Zuordnung TIA Portal V18 zu Firmware V4.6.
+- U-03: Titelblätter der Siemens-Ausgaben 11/2019 und 04/2012.
+- U-04: Reichweite der Siemens-Klausel A.6.2 (Rechtsfrage, Frage 5).
+- U-05: Hardwarestand des verbauten TP-Link-Routers.
+- U-06: Datum und Geltungsbereich der TP-Link-Nutzungsbedingungen.
+- U-07: Revisions- und Copyright-Vermerk im TP-Link-PDF (Auftrag 110).
+- U-08: Softwarestand und Copyright-Vermerk auf dem Titelblatt des deutschen UR5e-Handbuchs (Auftrag 110).
+- U-09: Inhalt und Gültigkeit der UR-„Terms of Use“ von 2015.
+- U-10: Welche Fassung des UR-Service-Handbuchs zu 5.25.1 gehört.
+- U-11: Lizenzhinweis im URSim-Image selbst (T2).
+- U-12: Geltung der UR-EULA für URSim und Veröffentlichung erzeugter Dateien (Frage 3, Anfrage durch a7).
+- U-13: Vollständigkeit der Suche nach einem URSim-Quell-Repository.
+- U-14: Genaue Größe des OPNsense-Archivs als `tar.gz` (Auftrag 109).
+- U-15: Herkunft und Rechte der PDFs und Archive im OPNsense-Repository.
+- U-16: Welche OPNsense-Bilder unter CC0 stehen.
