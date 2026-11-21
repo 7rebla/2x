@@ -1,6 +1,6 @@
 # Auftrag 010 – Testseite, Teil API
 
-Meilenstein: M0 · Freigabestufe: C · Status: offen
+Meilenstein: M0 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -72,7 +72,91 @@ Alle Befehle im Wurzelverzeichnis. `D` steht für `docker compose -p twox-010`. 
    - Empfehlung: (a). Die Seite ist Gerüst; wird später eine Statusseite gewünscht, lässt sich das dann entscheiden.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Alle Akzeptanzkriterien sind erfüllt; die Läufe fanden am 21.11.2026 im Container statt. Keine neue Abhängigkeit, `deploy/compose/compose.yaml` ist nicht berührt.
+
+### Was wurde gebaut?
+
+- `backend/twox/config/taskqueue.py` (neu): die eine Stelle für den Zugriff der API auf die Warteschlange. `ping_worker(timeout_seconds)` schickt `ping` an `default` und wartet insgesamt höchstens etwa `timeout_seconds`. Fehler kommen als `TaskQueueError` (Unterklassen `BrokerUnavailableError`, `WorkerTimeoutError`) mit kurzem, unbedenklichem Text; die Originalausnahme hängt nur für das Serverprotokoll daran. Die Verbindung zum Broker wird mit genau einem Versuch aufgebaut (`ensure_connection(max_retries=0, …)`), sonst wiederholt kombu bei nicht erreichbarem Broker sehr lange. Seit der Nacharbeit hat diese eine Schreibverbindung außerdem Socket-Zeitlimits (siehe „Nacharbeit nach Prüfung“). Der Auftrag bekommt `expires` (ein nicht abgeholter Ping bleibt nicht liegen), das Ergebnis wird danach mit `forget()` aus Valkey entfernt.
+- `backend/twox/config/selftest.py` (neu): `SelftestView` (`AllowAny`, ohne Authentifizierung), Serializer `SelftestSerializer` mit `DatabaseCheckSerializer` und `WorkerCheckSerializer`, Prüfungen `check_database()` (`SHOW server_version`, keine Tabelle) und `check_worker()` (Zeitlimit 5 Sekunden). Teilausfälle ergeben HTTP 200 mit `ok: false`; Fehlertexte: `database not reachable`, `message broker not reachable`, `no result from a worker within 5 seconds`, `unexpected result from the worker`, `worker check failed` (jeder andere Fehler; dessen Text wird nicht weitergegeben). Einzelheiten landen nur im Protokoll der API (`logger.warning` mit Stacktrace).
+- `backend/twox/config/urls.py`: `GET /api/v1/selftest/`.
+- Tests: `backend/tests/config/test_selftest.py` (nach der Nacharbeit 15 Fälle ohne Worker, 1 Fall mit Markierung `worker`; in der ersten Fassung stand hier fälschlich 14, richtig waren 13); in `backend/tests/config/test_api.py` heißt der Test „nur der Health-Pfad im Schema“ jetzt `test_schema_lists_exactly_the_known_paths` und erwartet beide Pfade.
+
+Antwortfelder wie im Auftrag, Namen unverändert. `duration_ms` ist eine ganze Zahl (Millisekunden, auch im Fehlerfall gefüllt). Leere Felder sind die leere Zeichenkette `""`, nicht `null`. Schema-Komponenten: `Selftest`, `DatabaseCheck`, `WorkerCheck`; Operation `selftest_retrieve`.
+
+Beispielantwort (Kriterium 2):
+
+```json
+{"database":{"ok":true,"server_version":"18.7 (Debian 18.7-1.pgdg12+2)","error":""},"worker":{"ok":true,"result":"pong","duration_ms":383,"error":""}}
+```
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-010` im Wurzelverzeichnis des Arbeitsverzeichnisses, `.env` aus `.env.example` mit `TWOX_API_PORT=18010`, Docker Engine 29.9.3, Compose v5.7.0. Alle Läufe auf dem committeten Stand des Codes.
+
+| Nr. | Ergebnis | Tatsächliche Ausgabe (gekürzt) |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` (29.9.3) und `docker compose version` (v5.7.0), beide Exit-Code 0 |
+| 1 | erfüllt | Exit-Code 0; `migrate-1 Exited`, `valkey-1 Healthy`, `db-1 Healthy`, `api-1 Healthy`, `worker-1 Healthy` |
+| 2 | erfüllt | siehe Beispielantwort oben |
+| 3 | erfüllt | nach `D stop worker`: `{"database":{"ok":true,"server_version":"18.7 …","error":""},"worker":{"ok":false,"result":"","duration_ms":5019,"error":"no result from a worker within 5 seconds"}}`, Exit-Code 0 (kein HTTP-Fehler). Im Container gemessen: 5,04 s je Abruf; mit `docker compose exec` von außen 7,4 s (der Rest ist der Start von `exec`). Danach `D start worker`, erneut `ok: true`, `pong` |
+| 4 | erfüllt | `68 passed, 4 deselected in 16.15s`, Exit-Code 0, nichts übersprungen |
+| 5 | erfüllt | `4 passed, 68 deselected in 1.38s`, Exit-Code 0; dabei `test_selftest.py::test_selftest_against_running_worker PASSED` |
+| 6 | erfüllt | Exit-Code 0, keine Ausgabe (keine Warnungen); `/tmp/schema.yml` enthält `/api/v1/selftest/` mit `operationId: selftest_retrieve` und die Komponenten `Selftest` (Felder `database`, `worker`), `DatabaseCheck`, `WorkerCheck`. Im Test geprüft (`test_schema_contains_selftest_path_and_fields`, mit `--validate`) |
+| 7 | erfüllt | `All checks passed!`; zusätzlich `ruff format --check`: `45 files already formatted`; `Success: no issues found in 45 source files` |
+| 8 | erfüllt | `No changes detected` |
+| 9 | erfüllt | `D down -v` Exit-Code 0 (`Volume twox-010_db-data Removed`, `Volume twox-010_valkey-data Removed`, `Network twox-010_default Removed`); danach `D --profile dev down -v` Exit-Code 0; keine Container und Volumes des Projekts `twox-010` mehr. Das Projekt `2x` der Leitstelle lief durchgehend weiter |
+
+Zusätzlich geprüft:
+
+- Valkey gestoppt (Broker nicht erreichbar): `"worker":{"ok":false,"result":"","duration_ms":4009,"error":"message broker not reachable"}`, Datenbank `ok: true`, 4,03 s, HTTP 200. Das Protokoll der API enthält die Einzelheiten (`Error -2 connecting to valkey:6379 …`), die Antwort nicht.
+- Die Tests ohne Worker stellen den Ausfall so nach: echter Verbindungsversuch zu einer nicht auflösbaren Broker-Adresse mit Kennwort darin (`.invalid`), Zeitlimit des Workers (nachgestellt an `taskqueue.ping_worker`), unerwarteter Fehler mit Adresse im Text, Datenbankfehler mit Kennwort und Host im Text. Geprüft wird jeweils HTTP 200, `ok: false`, gefüllter `error` und dass der Text weder Kennwort noch Broker- oder Datenbankadresse, `redis://`, Port oder `Traceback` enthält. Dazu Einheitstests für `ping_worker` (Warteschlange `default`, `expires`, `retry=False`, Zeitlimit ≤ 5 s, `forget()`).
+- Nach den Läufen zeigt `git status --short --ignored` nur `.env` und `STARTUNTERLAGE.md`.
+
+Nicht geprüft: Verhalten, wenn Valkey erreichbar ist, aber der Ergebnisspeicher (Datenbank 1) nicht antwortet; dann greifen die Wiederholungen des Redis-Ergebnisspeichers von Celery, und die Wartezeit könnte 5 Sekunden übersteigen. (Richtiggestellt in der Nacharbeit: Die frühere Aussage, Celerys `broker_connection_timeout` begrenze bei verworfenen Paketen den Verbindungsaufbau, war falsch; beim Redis-Transport wirkt er nicht. Siehe „Nacharbeit nach Prüfung“.)
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-a49035818f4eef516`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-a49035818f4eef516` (relativ zum Projektordner)
+
+### Abweichungen und Hinweise
+
+- Keine Abweichung vom Auftrag oder von der Startunterlage. Code nach Antwort auf Frage 1 im Paket `twox/config`.
+- `apply_async(connection=…)` ist eine dokumentierte Option von Celery, fehlt aber in celery-types; dafür steht eine gezielte Ausnahme `# type: ignore[call-arg]` mit Kommentar in `taskqueue.py`.
+- `server_version` ist der volle Wert von `SHOW server_version` und enthält beim offiziellen Image den Zusatz der Distribution (`18.7 (Debian 18.7-1.pgdg12+2)`). Soll die Testseite nur `18.7` zeigen, lässt sich das in 012 oder hier mit `server_version_num` lösen.
+- Die Beschreibung der Operation im OpenAPI-Schema stammt aus dem Docstring der Ansicht (nennt die Freigabe für M0 und die Beschränkung in M1).
+- **Folgeaufgabe für M1:** `GET /api/v1/selftest/` auf angemeldete Benutzer beschränken (`AllowAny` und leere `authentication_classes` entfernen); jeder Aufruf stößt eine Aufgabe an und belegt bis zu 5 Sekunden einen Thread der API.
+- Die Images `twox-010-api`, `-worker`, `-migrate` und `-backend-dev` liegen noch lokal vor.
+- Keine offenen Fragen an a7.
+
+### Nacharbeit nach Prüfung
+
+**Status: zur Prüfung.** Commit nach der Prüfung durch die Leitstelle, gleicher Zweig.
+
+1. **Wartezeit bei nicht antwortendem Valkey begrenzt (Pflicht).** Der Redis-Transport von kombu hat ohne `transport_options` keine Socket-Zeitlimits. `ensure_connection(timeout=…)` unterbricht keinen blockierenden Socket, und `broker_connection_timeout` wirkt beim Redis-Transport nicht. In `backend/twox/config/taskqueue.py` bekommt deshalb nur die Schreibverbindung dieses einen Aufrufs `transport_options={"socket_connect_timeout": t, "socket_timeout": t}`, wobei t das Zeitlimit des Aufrufs ist (5 s). Erzeugt wird das von der neuen Funktion `broker_transport_options()`. Die Einstellungen der App und damit der Worker bleiben unverändert (`CELERY_BROKER_TRANSPORT_OPTIONS` ist nicht gesetzt). Fehler beim Senden, auch Socket-Zeitüberschreitungen, fasst Celery in `send_task` als `kombu.exceptions.OperationalError` zusammen; sie erscheinen als `message broker not reachable`. Der Docstring ist richtiggestellt.
+   - Neue Einheitstests: `test_ping_worker_bounds_the_broker_sockets` prüft, dass `connection_for_write` die beiden Zeitlimits bekommt und `ensure_connection(max_retries=0, timeout=5)` aufgerufen wird. `test_socket_timeouts_reach_the_connection_but_not_the_app_settings` prüft, dass eine echte kombu-Verbindung die Zeitlimits trägt und `app.conf.broker_transport_options` sie nicht enthält. Der Erfolgstest prüft zusätzlich, dass `apply_async` genau diese Verbindung nutzt.
+   - Praktischer Beleg mit `docker compose -p twox-010 pause valkey`, Dauer im Container gemessen:
+     - Laufende API: `"worker":{"ok":false,"result":"","duration_ms":5013,"error":"message broker not reachable"}`, 5,04 s. Ein zweiter Aufruf während der Pause dauerte ebenfalls 5,04 s.
+     - Frisch gestartete API (`restart api`, dann Valkey pausiert): `duration_ms` 5335, 5,37 s.
+     - Datenbankteil jeweils `ok: true`, HTTP 200. Nach `unpause valkey` sofort wieder `ok: true`, `pong` (12 ms bzw. 46 ms).
+2. **Broker erreichbar, Ergebnisspeicher nicht: nicht gelöst, Folgeauftrag.** Die Zeitlimits und Wiederholungen des Redis-Ergebnisspeichers (`redis_socket_timeout`, `redis_socket_connect_timeout`, `retry_policy` des Backends, `result_backend_transport_options`) sind Einstellungen der App und gelten damit auch für den Worker. Klein und ohne Wirkung auf den Worker lässt sich das nicht lösen. Betroffen sind `result.get()`, `result.forget()` und beim ersten Aufruf je Thread das Abonnement des Ergebniskanals in `apply_async`. Vorschläge für einen Folgeauftrag:
+   - (a) eigene Backend-Instanz der API mit kurzen Zeitlimits, oder
+   - (b) eine harte äußere Grenze, z. B. `ping_worker` in einem einzelnen Hilfsthread mit `future.result(timeout)`. Nachteil: Ein hängender Thread lässt Folgeaufrufe bis zu seinem Ende als Zeitüberschreitung enden.
+
+   Nicht nachgestellt.
+3. **Testanzahl richtiggestellt.** Erste Fassung: 13 Fälle ohne Worker + 1 mit Markierung `worker` (nicht 14 + 1). Nach der Nacharbeit: 15 + 1.
+
+Erneute Läufe nach der Nacharbeit (`D` = `docker compose -p twox-010`, Port 18010, Images neu gebaut):
+
+| Nr. | Ergebnis | Tatsächliche Ausgabe (gekürzt) |
+| --- | --- | --- |
+| 1 | erfüllt | `D up -d --wait db valkey worker api`, Exit-Code 0 |
+| 2 | erfüllt | `{"database":{"ok":true,"server_version":"18.7 (Debian 18.7-1.pgdg12+2)","error":""},"worker":{"ok":true,"result":"pong","duration_ms":15,"error":""}}` |
+| 3 | erfüllt | nach `D stop worker`: `"worker":{"ok":false,"result":"","duration_ms":5020,"error":"no result from a worker within 5 seconds"}`, database `ok: true`, Exit-Code 0, von außen gemessen 5,79 s. Danach `D start worker` |
+| 4 | erfüllt | `70 passed, 4 deselected in 17.36s`, Exit-Code 0, nichts übersprungen |
+| 5 | erfüllt | `4 passed, 70 deselected in 1.46s`, Exit-Code 0, darunter `test_selftest_against_running_worker PASSED` |
+| 6 | erfüllt | Exit-Code 0 ohne Warnungen; `/api/v1/selftest/` sowie `Selftest`, `DatabaseCheck` und `WorkerCheck` im Schema |
+| 7 | erfüllt | `All checks passed!`; `45 files already formatted`; `Success: no issues found in 45 source files` |
+| 8 | erfüllt | `No changes detected` |
+| 9 | erfüllt | `D down -v` Exit-Code 0 (Volumes `db-data`, `valkey-data` und Netz entfernt), danach `--profile dev down -v` Exit-Code 0; keine Container und Volumes von `twox-010` mehr. Projekt `2x` unberührt |

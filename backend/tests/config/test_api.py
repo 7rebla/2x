@@ -98,7 +98,7 @@ def test_schema_contains_health_path() -> None:
     assert schema["components"]["schemas"]["Health"]["required"] == ["status"]
 
 
-def test_schema_has_no_paths_besides_health() -> None:
+def test_schema_lists_exactly_the_known_paths() -> None:
     schema, _ = generate_schema()
 
-    assert sorted(schema["paths"]) == ["/api/v1/health/"]
+    assert sorted(schema["paths"]) == ["/api/v1/health/", "/api/v1/selftest/"]
