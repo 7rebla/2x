@@ -26,6 +26,7 @@ from kombu.exceptions import OperationalError as KombuOperationalError
 from redis.exceptions import ConnectionError as RedisConnectionError
 from rest_framework.test import APIClient
 
+from tests.accounts.users import make_user
 from twox.config import selftest, taskqueue
 from twox.config.tasks import ping
 
@@ -67,8 +68,18 @@ def assert_no_internals(text: str) -> None:
         assert fragment not in text, f"error text leaks {fragment!r}: {text!r}"
 
 
+def client_for(kind: str) -> APIClient:
+    """An API client signed in as a user of ``kind`` (see tests.accounts.users)."""
+    client = APIClient()
+    user = make_user(kind)
+    if user is not None:
+        client.force_login(user)
+    return client
+
+
 def get_selftest() -> dict[str, Any]:
-    response = APIClient().get(URL)
+    """Call the self-test as a signed-in user with the role ``read``."""
+    response = client_for("read").get(URL)
     assert response.status_code == 200
     assert response["Content-Type"] == "application/json"
     body: dict[str, Any] = response.json()
@@ -207,12 +218,26 @@ def test_database_failure_is_a_partial_failure(monkeypatch: pytest.MonkeyPatch) 
 
 
 @pytest.mark.django_db
-@pytest.mark.usefixtures("worker_answers_pong")
-def test_selftest_needs_no_credentials_and_rejects_writes() -> None:
-    client = APIClient()
+@pytest.mark.parametrize(("kind", "status"), [("anonymous", 403), ("no_role", 403), ("read", 200)])
+def test_selftest_needs_a_signed_in_user_with_role(
+    monkeypatch: pytest.MonkeyPatch, kind: str, status: int
+) -> None:
+    ping_worker = MagicMock(return_value="pong")
+    monkeypatch.setattr(taskqueue, "ping_worker", ping_worker)
 
-    assert client.get(URL).status_code == 200
-    assert client.post(URL, {}, format="json").status_code == 405
+    response = client_for(kind).get(URL)
+
+    assert response.status_code == status
+    # A refused request queues no task for the worker.
+    assert ping_worker.call_count == (1 if status == 200 else 0)
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_selftest_rejects_writes() -> None:
+    response = client_for("read").post(URL, {}, format="json")
+
+    assert response.status_code == 405
 
 
 def fake_connection_for_write() -> MagicMock:
@@ -439,7 +464,8 @@ def test_schema_contains_selftest_path_and_fields() -> None:
     assert stderr == ""
     operation = schema["paths"]["/api/v1/selftest/"]["get"]
     assert operation["operationId"] == "selftest_retrieve"
-    assert operation.get("security", [{}]) == [{}]
+    # Only the Django session; no "no credentials" entry any more.
+    assert operation["security"] == [{"cookieAuth": []}]
     response_ref = operation["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
     assert response_ref == "#/components/schemas/Selftest"
 

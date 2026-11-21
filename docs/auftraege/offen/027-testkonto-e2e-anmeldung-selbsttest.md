@@ -1,6 +1,6 @@
 # Auftrag 027 – Testkonto in CI, Anmeldung im Browser-Test, Selbsttest nur für Angemeldete
 
-Meilenstein: M1 · Freigabestufe: C · Status: offen
+Meilenstein: M1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -107,7 +107,56 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 Keine eigenen. Es gelten die Antworten zu Auftrag 016 (Frage 1), 020 und 025.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Was wurde gebaut?**
+
+- Backend: `SelftestView` ohne `AllowAny` und ohne leere `authentication_classes`; es gelten `SessionAuthentication` und `CanRead`. Docstring neu (steht auch im Schema und im Client).
+- Tests: `test_selftest.py` ruft den Selbsttest als Benutzer mit Rolle `read` auf. `test_selftest_needs_no_credentials_and_rejects_writes` ist ersetzt durch `test_selftest_needs_a_signed_in_user_with_role` (anonym 403, ohne Rolle 403, `read` 200; eine abgewiesene Anfrage stellt keine Aufgabe in die Warteschlange) und `test_selftest_rejects_writes` (405). Der Schematest erwartet jetzt `security: [{cookieAuth: []}]`.
+- `test_api.py`: `/api/v1/selftest/` aus `OPEN_PATHS` entfernt. Neu `test_every_exception_is_still_needed`: jeder Eintrag in `OPEN_PATHS` (anonym) und `ROLELESS_PATHS` (ohne Rolle) muss wirklich offen sein. Damit fällt ein veralteter Ausnahme-Eintrag künftig auf (Hinweis aus 025).
+- Testkonto: `.env.example` mit `TWOX_E2E_USERNAME=e2e-manager` und `TWOX_E2E_PASSWORD=dev-only-e2e-password`. `compose.web.yaml` reicht beide an `e2e` durch (`${…:-}`, damit `W` ohne `.env` nicht warnt). `ci.yml`, Job `e2e`: Schritt `Create test account` nach „Start services and wait until healthy“. `README.md`, Abschnitt „Browser test“: derselbe Schritt mit Hinweis auf die Entwicklungswerte.
+- Playwright: neu `web/e2e/fixtures.ts` mit `signIn(page)`, einem erweiterten `test` (jede Seite startet angemeldet) und den Hilfen `uniqueSuffix()`, `testName(art)` (`e2e-<art>-<suffix>`) und `testIp(n)` (192.0.2.1 bis 192.0.2.254). Die Anmeldung: `/` öffnen (setzt `csrftoken`), dann `POST /_allauth/browser/v1/auth/login` mit `X-CSRFToken` per `fetch` in der Seite; geprüft werden Status 200 und das Cookie `sessionid` im Browser-Kontext. Bei einem Fehler nennt die Meldung Status und Antwort von allauth (z. B. 400 `too_many_login_attempts`), nie das Kennwort. `selftest.spec.ts`, `i18n.spec.ts` und `navigation.spec.ts` importieren `test` und `expect` aus `./fixtures`. Neu `web/e2e/fixtures.spec.ts`: prüft über `/api/v1/me/`, dass die Seite als Testkonto mit Rolle `manage` angemeldet ist, sowie die drei Hilfen.
+- Schema und Client neu erzeugt (Beschreibung und `security` des Selbsttests).
+
+**Wie wurde getestet?** (Compose-Projekte `twox-027` und `twox-027-web`, `TWOX_API_PORT=18027`)
+
+| Kriterium | Ergebnis |
+| --- | --- |
+| 0 `docker version`, `docker compose version` | Exit 0 (Compose 5.7.0) |
+| 1 Build und `up -d --wait` | Exit 0, alle Dienste healthy |
+| 2 Selbsttest anonym | `403` |
+| 3 „Create test account“ zweimal | Exit 0 („Created …“, dann „Updated …“). Gegenprobe: ohne die Variable auf der Host-Seite bricht der Befehl mit „No password“ ab, `-e` ohne Wert nimmt den Wert also wirklich aus der Umgebung des Aufrufs |
+| 4 ruff check / ruff format --check / mypy | `All checks passed!` / Exit 0 / `Success: no issues found in 96 source files` |
+| 5 pytest / pytest -m worker | 487 passed, 4 deselected, 0 übersprungen / 4 passed |
+| 6 Schema neu erzeugt | nach dem Commit kein Unterschied |
+| 7 web-dev: npm ci, lint, typecheck, test, build, licenses, api:generate | je Exit 0; nach dem Commit kein Unterschied in `web/openapi` und `web/src/api` |
+| 8 Browser-Test (pull, npm ci, Testkonto, e2e) | `8 passed`, Exit 0 |
+| 9 dasselbe ohne `down -v` | `8 passed`, Exit 0 |
+| 10 `gitleaks-dir` | `no leaks found`, Exit 0 |
+| 11 Abräumen beider Projekte mit `down -v` | Exit 0 |
+
+Zusätzlich aus dem CI-Job `backend`: `makemigrations --check --dry-run` („No changes detected“) und Lizenzprüfung Python („License check passed.“). Die YAML-Syntax von `ci.yml` ist mit PyYAML im Container geprüft; der Schritt wird wörtlich so geladen wie oben.
+
+**Testkennwort in CI – Wahl und Begründung:** Erkennbarer Testwert aus `.env.example` (`dev-only-e2e-password`), kein Geheimnis des Repositorys und kein im Lauf erzeugter Wert.
+- Das Konto lebt nur in der Wegwerf-Datenbank des CI-Laufs; die API ist dort nur auf 127.0.0.1 des Runners veröffentlicht.
+- Der Wert ist ohnehin öffentlich und als Entwicklungswert erkennbar (`dev-only-…`, wie die übrigen Einträge); die Geheimnissuche bleibt grün.
+- Er gilt lokal und in CI gleich, ohne Sonderweg; ein erzeugtes Kennwort hätte den vorgegebenen Schritt geändert, den 030 bis 037 wörtlich übernehmen.
+- Im Log erscheint er nicht: Der Schritt gibt nichts aus außer „Updated/Created account 'e2e-manager' …“, GitHub zeigt nur den Skripttext mit `"$TWOX_E2E_PASSWORD"`, nicht den Wert, und `docker compose` bekommt nur den Variablennamen.
+
+**Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-ae8b0022753c35ce0`, Arbeitsverzeichnis `.claude/worktrees/agent-ae8b0022753c35ce0`.
+
+**Abweichungen**
+
+1. **Schritt „Create test account“ nicht wörtlich wie im Auftrag.** Der Auftrag schreibt `-e TWOX_ACCOUNT_PASSWORD="$TWOX_E2E_PASSWORD"`; damit stünde der Wert in den Argumenten von `docker compose` (Prozessliste). Nach dem Hinweis aus 021 (`docs/STATUS.md`) und der Vorgabe der Leitstelle steht dort nur der Variablenname:
+   ```
+   set -a; . ./.env; set +a
+   TWOX_ACCOUNT_PASSWORD="$TWOX_E2E_PASSWORD" docker compose exec -T -e TWOX_ACCOUNT_PASSWORD api python manage.py create_account "$TWOX_E2E_USERNAME" --role manage --update
+   ```
+   Diese Form übernehmen 030 bis 037; die Leitstelle sollte sie in deren Auftragstexten angleichen.
+2. **Anmeldung per `fetch` in der Seite statt über Playwrights Request-Client.** `page.request` läuft in Node und kennt die Abbildung `localhost` → `api` nicht (die gilt nur in Chromium, `playwright.config.ts`); in CI liefe die Anmeldung damit ins Leere. Ablauf und Endpunkt sind wie vorgegeben.
+3. **Zusätzlich** `web/e2e/fixtures.spec.ts` und der Test `test_every_exception_is_still_needed` (beide im genannten Bereich), damit die Änderung selbst getestet ist.
+4. `gitleaks-git` lässt sich im Arbeitsverzeichnis nicht ausführen (`/repo is not a readable Git repository`: Die `.git`-Datei eines Worktrees zeigt auf einen Pfad, den der Container nicht sieht). Nicht gefordert; `gitleaks-dir` ist grün.
+
+**Hinweise**
+
+- Jede Spezifikation meldet sich je Test einmal an. allauth begrenzt Anmeldungen auf 30 je Minute und IP-Adresse; bei deutlich mehr Browser-Tests (030–037) ggf. auf eine Anmeldung je Worker mit `storageState` umstellen.
+- Der Job `testfactory` ist nicht berührt und wurde nicht ausgeführt.

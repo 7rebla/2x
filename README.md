@@ -153,16 +153,23 @@ docker compose -f deploy/compose/compose.web.yaml run --rm web-dev npm run api:g
 
 ### Browser test (service `e2e`, profile `e2e`)
 
-A Playwright test opens the test page in Chromium and expects the database version and `pong` from the worker:
+Playwright tests open the web UI in Chromium, signed in with a test account; among other things they expect the database version and `pong` from the worker on the self-test page, which only signed-in users with a role may call. First create the test account (step "Create test account" in `.github/workflows/ci.yml`, in Git Bash or another POSIX shell):
 
 ```sh
 docker compose --profile e2e pull e2e
 docker compose --profile dev run --rm web-dev npm ci
 docker compose up -d --wait --wait-timeout 300 db valkey worker api
+set -a; . ./.env; set +a
+TWOX_ACCOUNT_PASSWORD="$TWOX_E2E_PASSWORD" docker compose exec -T -e TWOX_ACCOUNT_PASSWORD api python manage.py create_account "$TWOX_E2E_USERNAME" --role manage --update
 docker compose --profile e2e run --rm e2e
 ```
 
-Expected output: `1 passed`, exit code 0. `e2e` uses the packages that `web-dev` installed (`npm ci`) in the shared volume.
+Expected output: all tests passed, exit code 0. `e2e` uses the packages that `web-dev` installed (`npm ci`) in the shared volume.
+
+- `TWOX_E2E_USERNAME` and `TWOX_E2E_PASSWORD` in `.env.example` are development values. Never use them for a real account.
+- The password reaches the container as a variable name only (`-e TWOX_ACCOUNT_PASSWORD` without a value), not as a command-line argument.
+- With `--update` the step can run again and again, also without `down -v`; it sets the role and password of the existing account.
+- The tests sign in through the sign-in API of django-allauth (`web/e2e/fixtures.ts`). Test data follow the rules there: names `e2e-<kind>-<suffix>` with a suffix unique per run, IP addresses only from 192.0.2.0/24.
 
 ### Test factory
 

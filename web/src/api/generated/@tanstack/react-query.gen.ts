@@ -357,11 +357,12 @@ export const plantsUpdateMutation = (options?: Partial<Options<PlantsUpdateData>
 export const selftestRetrieveQueryKey = (options?: Options<SelftestRetrieveData>) => createQueryKey('selftestRetrieve', options);
 
 /**
- * Read-only self-test.
+ * Read-only self-test for signed-in users with a role.
  *
- * Open to everyone in milestone M0 on purpose (decided by a7): there is no
- * login yet, and the answer holds only the database version and ``pong``.
- * Every call queues a task, so M1 restricts this to signed-in users.
+ * Every call queues a task for the worker, so anonymous requests and users
+ * without a role get 403 (work order 027). The view states no permission of
+ * its own: the defaults apply, that is the Django session
+ * (``SessionAuthentication``) and ``CanRead`` (role ``read`` or ``manage``).
  */
 export const selftestRetrieveOptions = (options?: Options<SelftestRetrieveData>) => queryOptions<SelftestRetrieveResponse, DefaultError, SelftestRetrieveResponse, ReturnType<typeof selftestRetrieveQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {

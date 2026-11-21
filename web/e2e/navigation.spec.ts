@@ -1,4 +1,6 @@
-import { expect, type Page, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+import { expect, test } from "./fixtures";
 
 // Routing of the web UI as served by Django: the start page, a click through
 // the navigation, deep links and the page for unknown addresses.

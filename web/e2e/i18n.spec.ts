@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 // The page starts in the browser language; this test fixes it to English.
 test.use({ locale: "en-US" });
