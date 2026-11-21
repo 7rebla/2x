@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from django.conf import settings
+from django.contrib.auth.models import Group
 from django.core import mail
 from django.core.cache import cache
 from django.test import Client
@@ -67,9 +68,12 @@ def fast_password_hasher(settings: Settings) -> Iterator[None]:
 
 @pytest.fixture
 def account() -> User:
-    return User.objects.create_user(
+    """Return an account with the role read; API views need a role since 025."""
+    user = User.objects.create_user(
         username=USERNAME, password=PASSWORD, email="operator@example.test"
     )
+    user.groups.add(Group.objects.get(name="read"))
+    return user
 
 
 def browser() -> Client:
