@@ -1,0 +1,23 @@
+{
+  "heading": "Selbsttest",
+  "intro": "Prüft die Datenbank und den Hintergrunddienst über die API.",
+  "recheck": "Erneut prüfen",
+  "checking": "Wird geprüft…",
+  "statusOk": "OK",
+  "statusFailed": "Fehlgeschlagen",
+  "errorLabel": "Fehler",
+  "apiUnreachable": "Die API hat nicht geantwortet. Läuft der Server?",
+  "apiHttpError": "Die API hat mit dem HTTP-Status {{status}} geantwortet.",
+  "apiInvalidAnswer": "Die API hat eine Antwort geschickt, die diese Seite nicht lesen kann.",
+  "unexpectedError": "Der Selbsttest konnte in diesem Browser nicht ausgeführt werden. Bitte versuchen Sie es erneut.",
+  "database": {
+    "heading": "Datenbank",
+    "serverVersion": "Serverversion"
+  },
+  "worker": {
+    "heading": "Hintergrunddienst",
+    "result": "Ergebnis",
+    "duration": "Dauer",
+    "durationValue": "{{duration, number}} ms"
+  }
+}

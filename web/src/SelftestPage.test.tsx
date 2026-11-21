@@ -3,15 +3,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { loadSelftest } from "./api/selftest.ts";
 import { SelftestPage } from "./SelftestPage.tsx";
-import { texts } from "./texts.ts";
+import { changeLanguage } from "./i18n.ts";
 
 vi.mock("./api/selftest.ts", () => ({ loadSelftest: vi.fn() }));
 
 const loadSelftestMock = vi.mocked(loadSelftest);
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   loadSelftestMock.mockReset();
+  await changeLanguage("en");
+  window.localStorage.clear();
 });
 
 describe("self-test page with a failing loader", () => {
@@ -22,16 +24,16 @@ describe("self-test page with a failing loader", () => {
     render(<SelftestPage />);
 
     const error = await screen.findByTestId("selftest-error");
-    expect(error.textContent).toBe(texts.selftest.unexpectedError);
+    expect(error.textContent).toBe("The self-test could not be run in this browser. Please try again.");
     expect(error.textContent).not.toContain("AbortSignal");
     expect(screen.queryByTestId("selftest-loading")).toBeNull();
 
-    const button = screen.getByRole("button", { name: texts.selftest.recheck });
+    const button = screen.getByRole("button", { name: "Check again" });
     expect(button.hasAttribute("disabled")).toBe(false);
     fireEvent.click(button);
 
     expect((await screen.findByTestId("selftest-error")).textContent).toBe(
-      texts.selftest.apiUnreachable,
+      "The API did not respond. Is the server running?",
     );
     expect(loadSelftestMock).toHaveBeenCalledTimes(2);
   });
