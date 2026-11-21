@@ -38,8 +38,7 @@ API_PREFIX = "/api/v1/"
 #
 # Open to anonymous requests:
 # - health: container health checks carry no credentials.
-# - selftest: data source of the test page; restricted by work order 027.
-OPEN_PATHS = frozenset({"/api/v1/health/", "/api/v1/selftest/"})
+OPEN_PATHS = frozenset({"/api/v1/health/"})
 # Open to signed-in users without a role:
 # - me: the web UI tells such a user why nothing else is available.
 ROLELESS_PATHS = frozenset({"/api/v1/me/"})
@@ -327,6 +326,20 @@ def test_every_exception_names_an_existing_api_path() -> None:
 
     assert found >= OPEN_PATHS | ROLELESS_PATHS
     assert not OPEN_PATHS & ROLELESS_PATHS
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("kind", "exceptions"), [("anonymous", OPEN_PATHS), ("no_role", ROLELESS_PATHS)]
+)
+def test_every_exception_is_still_needed(kind: str, exceptions: frozenset[str]) -> None:
+    # A path that closed later (for example the self-test, work order 027)
+    # must leave the list; the path check above would not notice it.
+    client = client_for(kind)
+
+    still_open = {full for full in exceptions if client.get(full).status_code != 403}
+
+    assert still_open == exceptions
 
 
 def test_path_check_finds_every_path_without_placeholder_in_the_schema() -> None:

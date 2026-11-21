@@ -13,7 +13,6 @@ from typing import TypedDict
 from django.db import DatabaseError, connection
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
-from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -110,15 +109,13 @@ def check_worker(timeout_seconds: float = WORKER_TIMEOUT_SECONDS) -> WorkerCheck
 
 
 class SelftestView(APIView):
-    """Read-only self-test.
+    """Read-only self-test for signed-in users with a role.
 
-    Open to everyone in milestone M0 on purpose (decided by a7): there is no
-    login yet, and the answer holds only the database version and ``pong``.
-    Every call queues a task, so M1 restricts this to signed-in users.
+    Every call queues a task for the worker, so anonymous requests and users
+    without a role get 403 (work order 027). The view states no permission of
+    its own: the defaults apply, that is the Django session
+    (``SessionAuthentication``) and ``CanRead`` (role ``read`` or ``manage``).
     """
-
-    authentication_classes = ()
-    permission_classes = (AllowAny,)
 
     @extend_schema(operation_id="selftest_retrieve", responses=SelftestSerializer)
     def get(self, request: Request) -> Response:
