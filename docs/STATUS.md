@@ -22,7 +22,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 009 | docling-serve als Container | C | 5 | 008 | in Arbeit |
 | 010 | Testseite, Teil API | C | 5 | 005, 008 | erledigt |
 | 011 | CI-Hauptworkflow | C | 5 | 002, 005, 006, 008 | offen |
-| 012 | Testseite, Teil Oberfläche | C | 6 | 002, 010 | in Arbeit |
+| 012 | Testseite, Teil Oberfläche | C | 6 | 002, 010 | erledigt |
 | 013 | Auslieferung der Oberfläche durch Django | C | 6 | 002, 009, 010 | offen |
 | 014 | Playwright-Test der Testseite | C | 7 | 011, 012, 013 | offen |
 | 015 | ARCHITECTURE.md und README | B | 8 | 006, 007, 009, 013, 014 | offen |
@@ -40,7 +40,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 107 | Manifest-Einträge: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 3 | 103, 105 | erledigt |
 | 108 | Frei lizenzierte Testunterlagen in `testdata/klein` | C | 3 | 101, 103 | erledigt |
 | 109 | Erstabruf: Unterlagen laden und Prüfsummen eintragen | B | 4 | 104, 105, 106, 107 | erledigt |
-| 110 | Stände und Nutzungsvermerke nachtragen | C | 5 | 109 | in Arbeit |
+| 110 | Stände und Nutzungsvermerke nachtragen | C | 5 | 109 | erledigt |
 | 111 | Prüffragen der Fertigungslinie mit Fundstelle | C | 5 | 109 | erledigt |
 | 112 | Prüffragen des Roboters (Fragen 9 und 10) | C | 6 | 110, 111 | in Arbeit |
 | 113 | Nachweis der drei Bedingungen je Anlage und Gerät | C | 6 | 106, 110 | offen |
@@ -48,7 +48,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 ## In Arbeit
 
-- 009 (Netz abriegeln), 012 (Nacharbeit), 110, 112 als Subagenten.
+- 009 (Netz abriegeln) und 112 als Subagenten; 013 startet nach 009.
 
 ## Wartet auf a7
 

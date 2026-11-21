@@ -1,6 +1,6 @@
 # Auftrag 110 – Stände und Nutzungsvermerke aus den geladenen Unterlagen nachtragen
 
-Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: T1 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 
