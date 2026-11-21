@@ -78,6 +78,10 @@ services:
     ports:
       # Reachable from this machine only.
       - "127.0.0.1:${TWOX_API_PORT:-8000}:8000"
+    # default: database, Valkey, Ollama on the host; docling-internal: Docling.
+    networks:
+      - default
+      - docling-internal
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
@@ -116,6 +120,10 @@ services:
         condition: service_completed_successfully
       valkey:
         condition: service_healthy
+    # default: database, Valkey, Ollama on the host; docling-internal: Docling.
+    networks:
+      - default
+      - docling-internal
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
@@ -129,6 +137,72 @@ services:
       retries: 4
       start_period: 30s
       start_interval: 2s
+    restart: unless-stopped
+
+  # Document conversion (CPU image, models included). Reachable only from api
+  # and worker over the internal network docling-internal (E-32): no host
+  # port, no route to the outside. backend-dev is not attached, so run
+  # check_docling in api or worker. api and worker do not depend on it;
+  # they start while Docling is still loading or missing. Pinned by tag and
+  # digest (multi-platform index).
+  docling:
+    image: quay.io/docling-project/docling-serve-cpu:v1.38.2@sha256:7a480a1604fa3b42efeddc7db9527690d9f9bc903226136013e2bfe6b1a4dfb0
+    environment:
+      # Web UI off (also the default) - the API is all the backend needs.
+      DOCLING_SERVE_ENABLE_UI: "false"
+      # /version stays on: check_docling reads the version from it.
+      DOCLING_SERVE_SHOW_VERSION_INFO: "true"
+      # No metrics collection, no /metrics endpoint, no traces or OTLP export.
+      DOCLING_SERVE_OTEL_ENABLE_METRICS: "false"
+      DOCLING_SERVE_OTEL_ENABLE_PROMETHEUS: "false"
+      DOCLING_SERVE_OTEL_ENABLE_TRACES: "false"
+      DOCLING_SERVE_OTEL_ENABLE_OTLP_METRICS: "false"
+      # Operation without internet: the models ship in the image
+      # (DOCLING_SERVE_ARTIFACTS_PATH is set by the image). No remote
+      # inference services, no external plugins, no Hugging Face Hub access.
+      DOCLING_SERVE_ENABLE_REMOTE_SERVICES: "false"
+      DOCLING_SERVE_ALLOW_EXTERNAL_PLUGINS: "false"
+      HF_HUB_OFFLINE: "1"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      # Telemetry of ONNX Runtime 1.31 (bundled in the image): without this
+      # switch the server process opens an HTTPS connection to
+      # mobile.events.data.microsoft.com shortly after start. Measured in
+      # work order 009.
+      ORT_DISABLE_TELEMETRY: "1"
+      # E-31: the EasyOCR weights in the image have no known licence and are
+      # never used. Only RapidOCR (Apache-2.0) is allowed; docling-serve
+      # rejects every other OCR preset with HTTP 422 - including "auto",
+      # which falls back to EasyOCR when RapidOCR rejects a language. Every
+      # request therefore has to send ocr_preset "rapidocr".
+      DOCLING_SERVE_DEFAULT_OCR_PRESET: rapidocr
+      DOCLING_SERVE_DEFAULT_OCR_KIND: rapidocr
+      DOCLING_SERVE_ALLOWED_OCR_PRESETS: rapidocr
+      DOCLING_SERVE_ALLOWED_OCR_KINDS: rapidocr
+      # The warm-up at boot converts with the built-in default preset "auto"
+      # and fails once "auto" is not allowed. Models load with the first
+      # conversion instead.
+      DOCLING_SERVE_LOAD_MODELS_AT_BOOT: "false"
+    # E-32: internal network only, no route to the internet. api and worker
+    # are attached to it as well; nothing else is.
+    networks:
+      - docling-internal
+    healthcheck:
+      # /ready answers once the server and its queue run (the models load
+      # with the first conversion, see DOCLING_SERVE_LOAD_MODELS_AT_BOOT).
+      # Python as in the other services; curl happens to be in the image, but
+      # nothing relies on it.
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:5001/ready', timeout=3)"
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      # Generous: the start takes 15 to 20 s on the development machine, longer
+      # on slow disks.
+      start_period: 300s
+      start_interval: 5s
     restart: unless-stopped
 
   # Depends on the database only: plain `pytest` must not need Valkey or the
@@ -146,6 +220,15 @@ services:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+networks:
+  # All services except docling. Has a route to the outside (Ollama on the
+  # host via host.docker.internal).
+  default:
+  # docling and the services that call it (E-32). internal: no route to the
+  # outside, so docling-serve cannot download or send anything.
+  docling-internal:
+    internal: true
 
 volumes:
   db-data:
