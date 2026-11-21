@@ -218,9 +218,7 @@ class ManifestError(Exception):
         super().__init__("; ".join(str(problem) for problem in self.problems))
 
 
-def address_problem(
-    address: str, *, allow_insecure_loopback: bool = False
-) -> str | None:
+def address_problem(address: str, *, allow_insecure_loopback: bool = False) -> str | None:
     """Return why ``address`` is not allowed, or ``None`` if it is allowed.
 
     This is the only place that decides which addresses a manifest may
@@ -634,9 +632,7 @@ def parse_manifest(text: str, *, allow_insecure_loopback: bool = False) -> Manif
             parse_constant=_reject_constant,
         )
     except ValueError as error:
-        raise ManifestError(
-            [Problem(None, "file", f"not valid JSON notation: {error}")]
-        ) from error
+        raise ManifestError([Problem(None, "file", f"not valid JSON notation: {error}")]) from error
 
     problems: list[Problem] = []
     out = _Collector(problems, None)

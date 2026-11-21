@@ -83,9 +83,7 @@ class ApsManifestTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         manifest = manifest_tools.load_manifest(MANIFEST_PATH)
-        cls.entries = {
-            entry.id: entry for entry in manifest.entries if entry.id.startswith("aps-")
-        }
+        cls.entries = {entry.id: entry for entry in manifest.entries if entry.id.startswith("aps-")}
 
     def test_expected_entries_are_present(self) -> None:
         self.assertEqual(sorted(self.entries), sorted(EXPECTED_IDS))
@@ -187,9 +185,7 @@ class ApsManifestTests(unittest.TestCase):
                 if address is None:
                     continue
                 with self.subTest(entry=entry_id, field=field):
-                    self.assertRegex(
-                        sources, re.escape(address) + r"(?![A-Za-z0-9_./-])"
-                    )
+                    self.assertRegex(sources, re.escape(address) + r"(?![A-Za-z0-9_./-])")
 
 
 if __name__ == "__main__":

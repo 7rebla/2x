@@ -71,8 +71,7 @@ class CrossReferenceTest(unittest.TestCase):
                 self.assertIn(
                     device_id,
                     assignments,
-                    "device has no manifest entry and is not listed in "
-                    "DEVICES_WITHOUT_ENTRY",
+                    "device has no manifest entry and is not listed in DEVICES_WITHOUT_ENTRY",
                 )
 
     def test_exceptions_are_real_devices_with_a_reason(self) -> None:

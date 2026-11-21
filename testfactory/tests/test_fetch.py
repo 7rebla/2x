@@ -22,7 +22,7 @@ import unittest
 import urllib.request
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any, cast
+from typing import ClassVar, cast
 from unittest import mock
 
 from testfactory import fetch, manifest_tools
@@ -35,6 +35,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 # No pauses and short limits, so that failing downloads do not slow the tests.
 FAST = Settings(timeout=5.0, total_timeout=30.0, attempts=2, retry_pause=0.0)
+DEFAULT_OPTIONS = Options()
 
 Member = tuple[tarfile.TarInfo, bytes]
 
@@ -61,7 +62,9 @@ def terms() -> dict[str, object]:
     }
 
 
-def file_entry(entry_id: str, url: str | None, content: bytes | None, **changes: object) -> dict[str, object]:
+def file_entry(
+    entry_id: str, url: str | None, content: bytes | None, **changes: object
+) -> dict[str, object]:
     data: dict[str, object] = {
         "id": entry_id,
         "title": "Test file " + entry_id,
@@ -77,7 +80,9 @@ def file_entry(entry_id: str, url: str | None, content: bytes | None, **changes:
     return data
 
 
-def member(name: str, data: bytes = b"", *, kind: bytes = tarfile.REGTYPE, linkname: str = "") -> Member:
+def member(
+    name: str, data: bytes = b"", *, kind: bytes = tarfile.REGTYPE, linkname: str = ""
+) -> Member:
     info = tarfile.TarInfo(name)
     info.type = kind
     info.linkname = linkname
@@ -117,14 +122,16 @@ class _Server(http.server.ThreadingHTTPServer):
 class _Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         server = cast(_Server, self.server)
-        server.requests.append((self.path, {key.lower(): value for key, value in self.headers.items()}))
+        server.requests.append(
+            (self.path, {key.lower(): value for key, value in self.headers.items()})
+        )
         special = server.special.get(self.path)
         if special is not None:
             special(self)
             return
         super().do_GET()
 
-    def log_message(self, format: str, *args: Any) -> None:
+    def log_message(self, format: str, *args: object) -> None:
         pass
 
 
@@ -198,7 +205,9 @@ class FetchTestCase(unittest.TestCase):
         self.serve(f"owner/repo/archive/{COMMIT}.tar.gz", tar_bytes(members))
         return f"{self.base}/owner/repo"
 
-    def archive_entry(self, repository: str, tree_sha256: str | None, **changes: object) -> dict[str, object]:
+    def archive_entry(
+        self, repository: str, tree_sha256: str | None, **changes: object
+    ) -> dict[str, object]:
         data: dict[str, object] = {
             "id": "vendor-repository",
             "title": "Vendor repository",
@@ -231,7 +240,7 @@ class FetchTestCase(unittest.TestCase):
 
     def run_fetch(
         self,
-        options: Options = Options(),
+        options: Options = DEFAULT_OPTIONS,
         *,
         only: Sequence[str] | None = None,
         dest: Path | None = None,
@@ -265,7 +274,11 @@ class FetchTestCase(unittest.TestCase):
     def rows(self, stdout: str) -> dict[str, tuple[str, str, str]]:
         """Parse the summary table: ID -> (result, HTTP status, size)."""
         lines = stdout.splitlines()
-        start = next(index for index, line in enumerate(lines) if line.split() == ["ID", "RESULT", "HTTP", "SIZE"])
+        start = next(
+            index
+            for index, line in enumerate(lines)
+            if line.split() == ["ID", "RESULT", "HTTP", "SIZE"]
+        )
         result: dict[str, tuple[str, str, str]] = {}
         for line in lines[start + 1 :]:
             if not line.strip():
@@ -361,7 +374,9 @@ class FileTest(FetchTestCase):
             file_entry("new", self.serve("new.bin", new), None),
             file_entry("known", self.serve("known.bin", known), known, retrieved_on="2026-01-01"),
             # The server delivers something else than the manifest expects.
-            file_entry("changed", self.serve("changed.bin", b"other"), b"expected", size_bytes=None),
+            file_entry(
+                "changed", self.serve("changed.bin", b"other"), b"expected", size_bytes=None
+            ),
         )
         known_before = self.entry("known")
         changed_before = self.entry("changed")
@@ -462,7 +477,7 @@ class FileTest(FetchTestCase):
         # Nothing listens on port 1: any use of the proxy would fail.
         dead = "http://127.0.0.1:1"
         names = ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy")
-        with mock.patch.dict(os.environ, {name: dead for name in names}):
+        with mock.patch.dict(os.environ, dict.fromkeys(names, dead)):
             os.environ.pop("NO_PROXY", None)
             os.environ.pop("no_proxy", None)
             # The standard library itself would use these settings ...
@@ -473,7 +488,7 @@ class FileTest(FetchTestCase):
             # ... the fetch script does not.
             code, stdout, _ = self.run_fetch()
             # Not in the type stubs, hence getattr.
-            handlers: list[object] = getattr(fetch._build_opener(), "handlers")
+            handlers: list[object] = getattr(fetch._build_opener(), "handlers")  # noqa: B009
         self.assertGreater(len(handlers), 0)
         self.assertEqual(code, 0)
         self.assertEqual(self.rows(stdout)["manual"][0], "loaded")
@@ -818,7 +833,7 @@ class FileTest(FetchTestCase):
 
 
 class ArchiveTest(FetchTestCase):
-    FILES = {
+    FILES: ClassVar[dict[str, bytes]] = {
         "README.md": b"# Repository\n",
         "flows/flows.json": b'{"flows": []}\n',
         "plc/project.zap18": b"\x00\x01\x02 binary",
@@ -947,8 +962,12 @@ class ArchiveTest(FetchTestCase):
                 self.assert_nothing_left_over()
                 self.assertEqual(self.manifest_path.read_bytes(), before)
                 # Nothing appeared anywhere else.
-                self.assertEqual(sorted(path.name for path in self.work.iterdir()), ["extern", "manifest.yaml"])
-                self.assertEqual(sorted(path.name for path in self.tmp.iterdir()), ["served", "work"])
+                self.assertEqual(
+                    sorted(path.name for path in self.work.iterdir()), ["extern", "manifest.yaml"]
+                )
+                self.assertEqual(
+                    sorted(path.name for path in self.tmp.iterdir()), ["served", "work"]
+                )
                 self.assertFalse(Path("/tmp/twox-test-evil.txt").exists())
                 self.assertEqual([path for path in self.root.rglob("*") if path.is_file()], [])
 
@@ -971,16 +990,20 @@ class ArchiveTest(FetchTestCase):
         )
         # An absolute segment replaces everything before it, as a drive
         # letter does on Windows.
-        escapes: list[list[str]] = [[str(outside / "x")], ["docs", str(outside / "x")], ["..", "x"], []]
+        escapes: list[list[str]] = [
+            [str(outside / "x")],
+            ["docs", str(outside / "x")],
+            ["..", "x"],
+            [],
+        ]
         try:
             os.symlink(outside, destination / "way-out", target_is_directory=True)
             escapes.append(["way-out", "x"])
         except OSError:
             pass
         for segments in escapes:
-            with self.subTest(segments=segments):
-                with self.assertRaises(fetch.FetchError):
-                    fetch._member_path(destination, segments)
+            with self.subTest(segments=segments), self.assertRaises(fetch.FetchError):
+                fetch._member_path(destination, segments)
         self.assertEqual(list(outside.iterdir()), [])
 
     def test_symbolic_link_becomes_a_small_file(self) -> None:
@@ -1078,9 +1101,8 @@ class ArchiveTest(FetchTestCase):
             "https://github.com/owner/repo?ref=main",
             "https://github.com//repo",
         ):
-            with self.subTest(repository=repository):
-                with self.assertRaises(fetch.FetchError):
-                    fetch.archive_url(repository, COMMIT)
+            with self.subTest(repository=repository), self.assertRaises(fetch.FetchError):
+                fetch.archive_url(repository, COMMIT)
 
     def test_repository_on_unknown_host_is_not_loaded(self) -> None:
         self.write_manifest(self.archive_entry("https://example.org/owner/repo", "f" * 64))
@@ -1153,7 +1175,9 @@ class CommandLineTest(FetchTestCase):
 
     def test_verify_and_record_exclude_each_other(self) -> None:
         self.write_manifest()
-        code, _, stderr = self.run_cli("--verify", "--record", "--manifest", str(self.manifest_path))
+        code, _, stderr = self.run_cli(
+            "--verify", "--record", "--manifest", str(self.manifest_path)
+        )
         self.assertEqual(code, 2)
         self.assertIn("not allowed with", stderr)
 
@@ -1234,7 +1258,7 @@ class SummaryTest(unittest.TestCase):
         )
 
     def test_exit_code(self) -> None:
-        def code(*results: str, options: Options = Options()) -> int:
+        def code(*results: str, options: Options = DEFAULT_OPTIONS) -> int:
             return fetch.exit_code([fetch.Outcome("x", result) for result in results], options)
 
         harmless = (

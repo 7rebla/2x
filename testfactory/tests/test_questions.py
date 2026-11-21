@@ -36,7 +36,7 @@ QUESTIONS = [
     "Welche Nutzlast hat der UR5e?",
     "Wie wird der UR5e nach einem Schutzstopp wieder freigegeben?",
     "Kontrollfrage ohne Beleg: Wann wurde die Frässtation zuletzt gewartet? "
-    "Erwartet wird „Dazu finde ich nichts in den Unterlagen\".",
+    'Erwartet wird „Dazu finde ich nichts in den Unterlagen".',
 ]
 
 NO_EVIDENCE_ANSWER = "Dazu finde ich nichts in den Unterlagen"
@@ -100,7 +100,7 @@ def _candidates() -> list[dict[str, Any]]:
     return candidates
 
 
-def _all_keys(value: Any) -> list[str]:
+def _all_keys(value: object) -> list[str]:
     """Every key of every object below ``value``."""
     if isinstance(value, dict):
         keys = list(value)

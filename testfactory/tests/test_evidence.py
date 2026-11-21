@@ -88,7 +88,9 @@ def read_evidence() -> list[EvidenceRow]:
     rows = []
     for number, cells in _table_after(_lines(), TABLE_HEADER):
         if len(cells) != len(TABLE_HEADER):
-            raise AssertionError(f"line {number}: expected {len(TABLE_HEADER)} cells, got {len(cells)}")
+            raise AssertionError(
+                f"line {number}: expected {len(TABLE_HEADER)} cells, got {len(cells)}"
+            )
         rows.append(EvidenceRow(number, *cells))
     return rows
 
@@ -143,7 +145,9 @@ class EvidenceTableTest(unittest.TestCase):
         cls.manifest = manifest_assignments()
 
     def _status(self, item_id: str, condition: str) -> str:
-        matches = [row.status for row in self.rows if row.id == item_id and row.condition == condition]
+        matches = [
+            row.status for row in self.rows if row.id == item_id and row.condition == condition
+        ]
         self.assertEqual(len(matches), 1, f"{item_id} condition {condition}")
         return matches[0]
 
@@ -157,7 +161,9 @@ class EvidenceTableTest(unittest.TestCase):
             for condition in CONDITIONS:
                 with self.subTest(id=item_id, condition=condition):
                     self.assertEqual(counts[(item_id, condition)], 1)
-        self.assertEqual({row.id for row in self.rows} - expected, set(), "unknown IDs in the table")
+        self.assertEqual(
+            {row.id for row in self.rows} - expected, set(), "unknown IDs in the table"
+        )
         self.assertEqual(len(self.rows), 3 * len(expected))
 
     def test_condition_and_status_values_are_allowed(self) -> None:
@@ -188,7 +194,7 @@ class EvidenceTableTest(unittest.TestCase):
             if row.status != FULFILLED:
                 continue
             owners = {row.id, self.layout.plant_of_device.get(row.id, row.id)}
-            if row.id in self.layout.devices_of_plant and self.layout.devices_of_plant[row.id]:
+            if self.layout.devices_of_plant.get(row.id):
                 continue  # plants with devices are checked through their devices
             with self.subTest(line=row.line, id=row.id):
                 cited = set(id_spans(row.evidence)) & set(self.manifest)
@@ -224,8 +230,14 @@ class EvidenceTableTest(unittest.TestCase):
                 with self.subTest(plant=plant_id, condition=condition):
                     expected = plant_status([self._status(device, condition) for device in devices])
                     self.assertEqual(self._status(plant_id, condition), expected)
-                    row = next(r for r in self.rows if r.id == plant_id and r.condition == condition)
-                    self.assertEqual(set(devices) - set(id_spans(row.evidence)), set(), "plant row must name its devices")
+                    row = next(
+                        r for r in self.rows if r.id == plant_id and r.condition == condition
+                    )
+                    self.assertEqual(
+                        set(devices) - set(id_spans(row.evidence)),
+                        set(),
+                        "plant row must name its devices",
+                    )
 
     def test_summary_counts_match_the_table(self) -> None:
         summary = {cells[0]: cells[1:] for _, cells in _table_after(_lines(), SUMMARY_HEADER)}
@@ -237,7 +249,9 @@ class EvidenceTableTest(unittest.TestCase):
         self.assertEqual(set(summary), set(per_area))
         for area, counts in per_area.items():
             with self.subTest(area=area):
-                expected = [str(sum(counts.values()))] + [str(counts[status]) for status in STATUSES]
+                expected = [str(sum(counts.values()))] + [
+                    str(counts[status]) for status in STATUSES
+                ]
                 self.assertEqual(summary[area], expected)
 
 

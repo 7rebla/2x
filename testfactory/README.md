@@ -353,7 +353,11 @@ from testfactory import manifest_tools
 
 manifest = manifest_tools.load_manifest("testfactory/manifest.yaml")
 for entry in manifest.entries:
-    print(entry.id, entry.kind, manifest_tools.target_path("testfactory/manifest.yaml", manifest, entry))
+    print(
+        entry.id,
+        entry.kind,
+        manifest_tools.target_path("testfactory/manifest.yaml", manifest, entry),
+    )
 ```
 
 `load_manifest` and `parse_manifest` raise `ManifestError`; its `problems`
