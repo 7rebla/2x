@@ -146,3 +146,6 @@ Jede neue Abhängigkeit bekommt hier einen Eintrag (Leitplanke 7). Bevorzugt: MI
 | Image `pgvector/pgvector:0.8.7-pg18` (PostgreSQL 18.7 mit pgvector 0.8.7) | PostgreSQL-Lizenz | Datenbank | 001 | nach E-23 |
 | Image `python:3.14.10-slim-trixie` (per Digest festgelegt) als Laufzeit der Testfabrik-Skripte; Debian-Grundsystem mit 87 Paketen, darunter GPL- und LGPL-Programme | Python: PSF-2.0; Grundsystem gemischt | unveränderte Laufzeit, nicht eingebunden | 101 | nach E-23 |
 | mypy 2.4.1 mit mypy_extensions, librt, ast-serialize (MIT), typing_extensions (PSF-2.0), pathspec (MPL-2.0) im Prüf-Image der Testfabrik | wie genannt | Typprüfung der Testfabrik-Skripte (zweiter Einbauort, dieselben Versionen wie in 001) | 101 | nach E-23 |
+| djangorestframework 3.18.3, drf-spectacular 0.30.0 (mit PyYAML, uritemplate, inflection, jsonschema, referencing, rpds-py, attrs) | BSD-3-Clause; mitgezogene Pakete MIT bzw. BSD; gebündelte Bestandteile von rpds-py und PyYAML noch nicht belegt | API und OpenAPI-Beschreibung | 005 | nach E-23 |
+| uvicorn 0.54.0 (mit click, h11) | BSD-3-Clause; h11 MIT | ASGI-Server | 005 | nach E-23 |
+| djangorestframework-stubs 3.18.2 | MIT | Typen für DRF (Entwicklung) | 005 | nach E-23 |

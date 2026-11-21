@@ -15,7 +15,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 002 | Oberfläche als Grundgerüst | C | 1 | – | erledigt |
 | 003 | Suche nach Geheimnissen | C | 1 | – | erledigt (CI grün) |
 | 004 | Messung Dateizugriff | B | 2 | 001, 002 | offen |
-| 005 | API-Grundlage | C | 3 | 001 | zur Prüfung |
+| 005 | API-Grundlage | C | 3 | 001 | erledigt |
 | 006 | Lizenzprüfung | C | 3 | 001, 002 | in Arbeit |
 | 007 | Prüfung der Erreichbarkeit von Ollama | B | 3 | 001 | erledigt |
 | 008 | Celery-Worker mit Valkey | C | 4 | 005 | offen |
@@ -35,8 +35,8 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 102 | Quellen und Lizenzlage der Fertigungslinie | C | 1 | – | erledigt |
 | 103 | Quellen und Nutzungsbedingungen: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 1 | – | in Arbeit (eigene Sitzung) |
 | 104 | Lade-Skript `fetch.py` | B | 2 | 101 | in Arbeit |
-| 105 | Manifest-Einträge der Fertigungslinie | C | 2 | 101, 102 | offen |
-| 106 | Aufbau der Testfabrik: Geräteliste, Netzplan, Beschreibung | C | 2 | 101, 102 | offen |
+| 105 | Manifest-Einträge der Fertigungslinie | C | 2 | 101, 102 | in Arbeit |
+| 106 | Aufbau der Testfabrik: Geräteliste, Netzplan, Beschreibung | C | 2 | 101, 102 | in Arbeit |
 | 107 | Manifest-Einträge: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 3 | 103, 105 | offen |
 | 108 | Frei lizenzierte Testunterlagen in `testdata/klein` | C | 3 | 101, 103 | offen |
 | 109 | Erstabruf: Unterlagen laden und Prüfsummen eintragen | B | 4 | 104, 105, 106, 107 | offen |
@@ -48,7 +48,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 ## In Arbeit
 
-- 006, 104 als Subagenten; 103 als eigene Sitzungen (gestartet am 21.11.2026).
+- 006, 104, 105, 106 als Subagenten; 103 als eigene Sitzungen (gestartet am 21.11.2026).
 
 ## Wartet auf a7
 

@@ -1,6 +1,6 @@
 # Auftrag 005 – API-Grundlage
 
-Meilenstein: M0 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: M0 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 
