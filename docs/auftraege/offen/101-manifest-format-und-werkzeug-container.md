@@ -1,6 +1,6 @@
 # Auftrag 101 – Manifest-Format und Werkzeug-Container der Testfabrik
 
-Meilenstein: T1 · Freigabestufe: C · Status: wartet auf a7 (Frage 5: Lizenzen von zwei mypy-Abhängigkeiten; alles andere ist fertig)
+Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -115,6 +115,7 @@ In den Befehlen steht `TF` für `docker compose -f deploy/compose/testfactory.ya
    Nach der Vorgabe dieses Auftrags („Lizenz außerhalb von MIT, Apache-2.0, BSD, PostgreSQL-Lizenz: nicht einbauen, Frage in den Auftrag“) ist mypy deshalb **nicht** ins Prüf-Image eingebaut. Ohne `pathspec` startet mypy nicht (ausprobiert: `ModuleNotFoundError: No module named 'pathspec'`); `typing_extensions` ist ebenfalls Pflicht.
    Einordnung: PSF-2.0 ist die Lizenz von Python selbst (freizügig, kein Copyleft). MPL-2.0 erlaubt Leitplanke 7 „nur als unverändert eingebundene Bibliothek und mit Eintrag im Entscheidungsprotokoll“. Beide Pakete wären nur im Prüf-Image als unverändertes Werkzeug vorhanden, nicht im eigenen Code und nicht in einer Auslieferung.
    - A: beide zulassen (pathspec als unveränderte MPL-Bibliothek nach Leitplanke 7, typing_extensions unter PSF-2.0 wie Python selbst), je mit Eintrag im Entscheidungsprotokoll. Dann wird im Dockerfile der unten stehende Block eingefügt; damit ist das letzte Akzeptanzkriterium erfüllt (mit genau diesem Block in einem nicht eingecheckten Probe-Image geprüft: `Success: no issues found in 4 source files`).
+   - **Entschieden nach E-23, Option A** (Mitteilung der Leitstelle vom 21.11.2026; Beleg: `docs/DECISIONS.md` auf `main`, E-23: PSF-2.0 gilt als gleichwertig freizügig, pathspec ist benannte Ausnahme, beide schon mit Auftrag 001 eingetragen). Der Block unten ist eingebaut.
    - B: mypy nicht verwenden; ein anderes Typprüfwerkzeug wählen (ungeprüft, neue Abhängigkeit, die Aufrufform der T1-Aufträge ändert sich).
    - C: Typprüfung der Testfabrik bis Auftrag 114 zurückstellen und dort mit der M0-Werkzeugkette lösen. Auftrag 001 verwendet nach Abschnitt 5.2 erwartbar ebenfalls mypy und hat dann dieselbe Frage (ungeprüft).
    - Empfehlung: A.
@@ -135,12 +136,12 @@ In den Befehlen steht `TF` für `docker compose -f deploy/compose/testfactory.ya
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
 
-**Status: wartet auf a7** – wegen Frage 5. Alles außer dem Einbau von mypy ist fertig und committet.
+**Status: zur Prüfung.** Frage 5 ist nach E-23 mit Option A entschieden; mypy ist eingebaut, alle Akzeptanzkriterien sind erfüllt.
 
 ### Was wurde gebaut?
 
 - `deploy/compose/testfactory.yaml`: Projekt `twox-testfactory`, Dienste `fetch`, `check`, `check-offline`, keine Ports. Repository als `/work`; bei `fetch` beschreibbar (für `extern/`), bei `check` und `check-offline` nur lesend. `__pycache__` und mypy-Cache landen nicht im Repository.
-- `deploy/compose/testfactory.Dockerfile`: dasselbe Python-Image wie `fetch`. **mypy fehlt noch** (Frage 5); an der Stelle steht ein Platzhalter-Kommentar.
+- `deploy/compose/testfactory.Dockerfile`: dasselbe Python-Image wie `fetch` plus mypy 2.4.1 mit allen fünf mitgezogenen Paketen in fester Version.
 - `testfactory/__init__.py`, `testfactory/tests/__init__.py`, `testfactory/mypy.ini` (`strict`, `extern/` und `generated/` ausgeschlossen), `testfactory/manifest.yaml` (Grundgerüst, keine Einträge).
 - `testfactory/manifest_tools.py` (nur Standardbibliothek): `load_manifest`, `parse_manifest`, Datenklassen `Manifest`, `Entry`, `Terms`, `dump_manifest`/`write_manifest` (stabile Form), `find_incomplete`, `address_problem` (die eine Adressprüfung), `tree_sha256`, `file_sha256`, `target_path`, Befehl `check [--complete] [PFAD]`. Alle Befunde einer Datei werden gesammelt gemeldet, je mit Eintrags-ID und Feldname.
 - `testfactory/README.md` (Englisch): Ordner, Regeln aus 10.4, Aufrufe, jedes Feld aus den Punkten 6 und 7, Definition von `tree_sha256`.
@@ -153,16 +154,16 @@ Docker Engine 29.9.3, Compose v5.7.0. Aufrufe mit `-p twox-101`; `TF` wie im Auf
 | Akzeptanzkriterium | Ergebnis |
 | --- | --- |
 | `docker version`, `docker compose version` | erfüllt, Exit 0 |
-| `TF build check` | erfüllt, Exit 0 (Image noch ohne mypy) |
+| `TF build check` | erfüllt, Exit 0 |
 | `TF run --rm fetch python -m testfactory.manifest_tools check` | erfüllt: `testfactory/manifest.yaml: OK (0 entries)`, Exit 0; `pip list` im Image zeigt nur `pip` |
 | Tests in `check` | erfüllt: `Ran 53 tests`, `OK` |
 | Tests in `check-offline` | erfüllt: `Ran 53 tests`, `OK`, keiner übersprungen |
-| mypy in `check` | **nicht erfüllt**: `exec: "mypy": executable file not found` (nicht eingebaut, Frage 5). Ersatzweise in einem nicht eingecheckten Probe-Image mit dem Block aus Frage 5, ohne Netz: `Success: no issues found in 4 source files` |
+| mypy in `check` | erfüllt: `Success: no issues found in 4 source files`, Exit 0 |
 | `TF config --services`; kein `ports:` | erfüllt: `fetch`, `check`, `check-offline`; `git grep` findet nichts |
 | `git diff --stat main...HEAD` | erfüllt: nur die neun Dateien aus „Betroffene Bereiche“ und diese Auftragsdatei |
 | README beschreibt Felder und `tree_sha256` | erfüllt |
 
-Aufgeräumt mit `down -v`; das Probe-Image wurde gelöscht.
+Alle Kriterien wurden nach dem Einbau von mypy noch einmal vollständig ausgeführt. Im ersten Durchlauf (vor der Entscheidung zu Frage 5) fehlte mypy im Image; die Typprüfung lief damals nur in einem nicht eingecheckten Probe-Image, das wieder gelöscht ist. Aufgeräumt mit `down -v`.
 
 ### Zweig und Arbeitsverzeichnis
 
@@ -187,7 +188,7 @@ Der Auftrag lässt einige Einzelheiten offen. So umgesetzt und in der README bes
 
 ### Abweichungen
 
-- mypy ist nicht eingebaut (Frage 5). Bis zur Entscheidung stimmen zwei Stellen nicht mit dem Ist-Zustand überein: die README und der Kopfkommentar der Compose-Datei nennen den mypy-Aufruf, der noch fehlschlägt.
+- mypy wurde erst nach der Entscheidung zu Frage 5 eingebaut (eigener Commit).
 - Image-Tag: `python:3.14.10-slim-trixie` statt des im Auftrag genannten `3.14-slim`; es ist dasselbe Image (gleicher Digest), nur mit festem Patch-Stand und fester Debian-Ausgabe.
 - Die drei Dienste teilen sich über YAML-Anker dieselben Einstellungen; `check-offline` kann das Image selbst bauen, wenn es fehlt.
 
@@ -198,7 +199,7 @@ Abhängigkeiten (alle am 21.11.2026 am Original geprüft: Registry-Abfrage für 
 | Name, Version | Lizenz | Zweck | Quelle |
 | --- | --- | --- | --- |
 | Docker-Image `python:3.14.10-slim-trixie`, Digest `sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f` (am Prüftag identisch mit `3.14-slim` und `3.14.10-slim`) | Python 3.14.10: PSF-2.0. Grundsystem Debian 13 „trixie“ mit 87 Paketen, darunter GPL-2, GPL-3, LGPL, BSD, MIT/Expat, ISC u. a. (laut `/usr/share/doc/*/copyright`). Mitgeliefert: pip 26.2.2 (MIT) | Laufzeit für Werkzeuge, Tests und Typprüfung der Testfabrik; unverändert benutzt, nicht Teil des eigenen Codes (Frage 4, Option A) | Docker Hub `library/python` |
-| mypy 2.4.1 – **erst nach Entscheidung zu Frage 5** | MIT; mitgezogen: mypy_extensions 1.2.0 (MIT), librt 0.17.0 (MIT), ast-serialize 0.13.1 (MIT), typing_extensions 4.16.0 (PSF-2.0), pathspec 1.1.1 (MPL-2.0) | Typprüfung, nur in `check` und `check-offline` | PyPI |
+| mypy 2.4.1 | MIT; mitgezogen: mypy_extensions 1.2.0 (MIT), librt 0.17.0 (MIT), ast-serialize 0.13.1 (MIT), typing_extensions 4.16.0 (PSF-2.0), pathspec 1.1.1 (MPL-2.0) | Typprüfung, nur in `check` und `check-offline` | PyPI |
 
 Abweichungen von der Startunterlage:
 
