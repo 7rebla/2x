@@ -154,9 +154,14 @@ services:
       DOCLING_SERVE_ALLOW_EXTERNAL_PLUGINS: "false"
       HF_HUB_OFFLINE: "1"
       HF_HUB_DISABLE_TELEMETRY: "1"
+      # Telemetry of ONNX Runtime 1.31 (bundled in the image): without this
+      # switch the server process opens an HTTPS connection to
+      # mobile.events.data.microsoft.com shortly after start. Measured in
+      # work order 009.
+      ORT_DISABLE_TELEMETRY: "1"
     healthcheck:
-      # /ready answers 503 until the models are loaded. The image has no curl;
-      # its Python is used instead.
+      # /ready answers 503 until the models are loaded. Python as in the other
+      # services; curl happens to be in the image, but nothing relies on it.
       test:
         - CMD
         - python
