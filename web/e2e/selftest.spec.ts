@@ -1,7 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 // Acceptance of milestone M0: the page served by Django shows a value from the
-// database and a result from the worker, read live through the API. The page
+// database and a result from the worker, read live through the API. Since
+// work order 027 only signed-in users with a role may call the self-test; the
+// test account comes from the shared sign-in step (fixtures.ts). The page
 // is opened directly at /selftest, so Django's delivery of index.html for UI
 // paths (work order 016) is checked as well.
 test("self-test page shows the database version and the worker result", async ({ page }) => {
