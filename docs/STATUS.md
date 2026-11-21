@@ -113,11 +113,11 @@ Nichts davon hält die laufende Arbeit auf.
 | 028 | Protokoll (Backend) | C | 5 | erledigt |
 | 029 | Datei-API | C | 5 | erledigt |
 | 030 | Anmeldung in der Oberfläche | C | 5 | erledigt |
-| 031 | CSV-Import (Backend) | C | 6 | in Arbeit |
+| 031 | CSV-Import (Backend) | C | 6 | erledigt |
 | 032 | Oberfläche: Struktur und Geräte | B | 6 | erledigt |
 | 033 | Oberfläche: Protokoll | B | 6 | erledigt |
-| 034 | Backend-Übersetzung (gettext) | C | 7 | offen |
-| 035 | Oberfläche: CSV-Import | B | 7 | offen |
+| 034 | Backend-Übersetzung (gettext) | C | 7 | in Arbeit |
+| 035 | Oberfläche: CSV-Import | B | 7 | in Arbeit |
 | 036 | Oberfläche: Dateien | B | 7 | in Arbeit |
 | 037 | Nachweis der M1-Abnahme | B | 8 | offen |
 | 038 | README und ARCHITECTURE für M1 | B | 8 | offen |
@@ -139,3 +139,4 @@ Hinweise aus Welle 1:
 - 029: Eine eigene ASGI-Hülle (`asgi.py`) weist zu große Uploads mit 413 ab, bevor Django sie zwischenspeichert. Liegengebliebene `.part`-Dateien entfernt `python manage.py remove_stale_uploads` (nur von Hand). Für 038: Restdatei in `/tmp` des api-Containers nach hartem Abbruch möglich; fehlt ein Blob, ergibt der Download 500.
 - 032: In der Prüfung gefunden und behoben: Nach einer 400-Antwort sprang die Auswahl des übergeordneten Eintrags still auf den alten Wert zurück. Für 036: `web/e2e/navigation.spec.ts` prüft den Direktaufruf über den Platzhalter `/documents/7` und muss angepasst werden. Feldfehler liest `pages/structure/save.ts` über eine eigene fetch-Hülle; brauchen 035/036 Feldfehler, ist ein Feld `body` in `ApiError` (`api/errors.ts`) die einfachere Lösung.
 - 033: Protokollseite `/audit` mit Filtern (Objektart, Benutzer) und Komponente `AuditTrail` (für 036). Feldnamen erscheinen unübersetzt (z. B. `ip_address`); Filter stehen nicht in der Adresse.
+- 031: CSV-Import über `POST /api/v1/imports/devices/` (Probelauf Standard, Fehler in der Datei → 200 mit Bericht und `saved: false`) und Befehl `import_devices` (verlangt Konto mit Rolle manage). Gleichzeitiges Anlegen derselben Kennung ergibt jetzt 400 statt 500. Grenze für später: keine eigene Größengrenze für die Importdatei (über die API gilt nur die Upload-Grenze von 200 MB, verarbeitet synchron im Speicher; beim Befehl unbegrenzt) – vor M6 eine kleine Importgrenze setzen. Werte mit `=`, `+`, `-`, `@` bleiben unverändert; ein späterer CSV-Export muss sie entschärfen.
