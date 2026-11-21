@@ -20,9 +20,9 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 007 | Prüfung der Erreichbarkeit von Ollama | B | 3 | 001 | erledigt |
 | 008 | Celery-Worker mit Valkey | C | 4 | 005 | erledigt |
 | 009 | docling-serve als Container | C | 5 | 008 | in Arbeit |
-| 010 | Testseite, Teil API | C | 5 | 005, 008 | in Arbeit |
+| 010 | Testseite, Teil API | C | 5 | 005, 008 | erledigt |
 | 011 | CI-Hauptworkflow | C | 5 | 002, 005, 006, 008 | offen |
-| 012 | Testseite, Teil Oberfläche | C | 6 | 002, 010 | offen |
+| 012 | Testseite, Teil Oberfläche | C | 6 | 002, 010 | in Arbeit |
 | 013 | Auslieferung der Oberfläche durch Django | C | 6 | 002, 009, 010 | offen |
 | 014 | Playwright-Test der Testseite | C | 7 | 011, 012, 013 | offen |
 | 015 | ARCHITECTURE.md und README | B | 8 | 006, 007, 009, 013, 014 | offen |
@@ -39,16 +39,16 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 106 | Aufbau der Testfabrik: Geräteliste, Netzplan, Beschreibung | C | 2 | 101, 102 | erledigt |
 | 107 | Manifest-Einträge: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 3 | 103, 105 | erledigt |
 | 108 | Frei lizenzierte Testunterlagen in `testdata/klein` | C | 3 | 101, 103 | erledigt |
-| 109 | Erstabruf: Unterlagen laden und Prüfsummen eintragen | B | 4 | 104, 105, 106, 107 | in Arbeit |
-| 110 | Stände und Nutzungsvermerke nachtragen | C | 5 | 109 | offen |
-| 111 | Prüffragen der Fertigungslinie mit Fundstelle | C | 5 | 109 | offen |
+| 109 | Erstabruf: Unterlagen laden und Prüfsummen eintragen | B | 4 | 104, 105, 106, 107 | erledigt |
+| 110 | Stände und Nutzungsvermerke nachtragen | C | 5 | 109 | in Arbeit |
+| 111 | Prüffragen der Fertigungslinie mit Fundstelle | C | 5 | 109 | in Arbeit |
 | 112 | Prüffragen des Roboters (Fragen 9 und 10) | C | 6 | 110, 111 | offen |
 | 113 | Nachweis der drei Bedingungen je Anlage und Gerät | C | 6 | 106, 110 | offen |
 | 114 | Testfabrik-Prüfungen in CI und Werkzeugkette | B | 7 | 101, 112, 113, 011 | offen |
 
 ## In Arbeit
 
-- 009, 109 als Subagenten; 010 in Prüfung.
+- 009, 012, 110, 111 als Subagenten.
 
 ## Wartet auf a7
 
@@ -85,3 +85,5 @@ Nichts davon hält die laufende Arbeit auf.
 
 - Welle 1 prüfen und zusammenführen, dann 004 (Messung) und danach 005, 006, 007.
 - Freie Plätze mit T1 füllen: zuerst 102 und 103 (reine Recherche), dann 101.
+- Folgeaufträge vorgemerkt: Selbsttest-Endpunkt in M1 auf angemeldete Benutzer beschränken; Zeitlimit für den Fall „Broker erreichbar, Ergebnisspeicher nicht" (Vorschläge im Kurzbericht von 010).
+- Siemens-Systemhandbuch V4.6 lädt a7 bei Gelegenheit selbst (E-27): Quelle und Ablage stehen im Kurzbericht von 109; danach `fetch --record --only siemens-s7-1200-system-manual-v4-6-de`.

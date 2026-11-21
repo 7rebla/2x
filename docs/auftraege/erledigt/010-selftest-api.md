@@ -1,6 +1,6 @@
 # Auftrag 010 – Testseite, Teil API
 
-Meilenstein: M0 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: M0 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 
