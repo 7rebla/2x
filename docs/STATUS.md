@@ -91,3 +91,7 @@ Nichts davon hält die laufende Arbeit auf.
 - Für M1 vorgemerkt (aus 013): Mit dem Django-Admin muss `AppDirectoriesFinder` wieder in `STATICFILES_FINDERS`.
 - Für die Abnahme T1 vorgemerkt (aus 113, `testfactory/layout/evidence.md`): 69 Nachweise, davon 37 erfüllt, 24 offen, 8 „folgt in T2". Zentral offen ist O-1: Keine fischertechnik-Unterlage nennt einen APS-Softwarestand, damit ist Bedingung 2 für die ganze Fertigungslinie offen. Auslegung des Bearbeiters: Bedingung 1 gilt über den Release-Stand APS 1.3.0 als erfüllt. Beides entscheidet a7 bei der Abnahme.
 - Für M6 vorgemerkt (aus 015): Eine eigene `.env`-Vorlage für Tester ohne Debug und ohne Entwicklungs-Kennwörter; `.env.example` ist eine reine Entwicklungsvorlage. Der Schema-Befehl in `web/openapi/README.md` braucht unter Git Bash `MSYS_NO_PATHCONV=1`.
+
+## M1 – Geräte und Dateien (entworfen 21.11.2026)
+
+23 Aufträge 016–038 in 8 Wellen liegen unter `docs/auftraege/offen/`. 33 Fragen an a7 mit Optionen und Empfehlung: `docs/auftraege/M1-FRAGEN.md`. Kein M1-Auftrag startet vor der Antwort (Stufe C: Anmeldung, Rechte, Datenmodell, neue Abhängigkeiten).
