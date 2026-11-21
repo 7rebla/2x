@@ -131,6 +131,38 @@ services:
       start_interval: 2s
     restart: unless-stopped
 
+  # Document conversion (CPU image, models included). Reachable inside the
+  # compose network only: no host port. api and worker do not depend on it;
+  # they start while Docling is still loading or missing. Pinned by tag and
+  # digest (multi-platform index).
+  docling:
+    image: quay.io/docling-project/docling-serve-cpu:v1.38.2@sha256:7a480a1604fa3b42efeddc7db9527690d9f9bc903226136013e2bfe6b1a4dfb0
+    environment:
+      # Web UI off (also the default) - the API is all the backend needs.
+      DOCLING_SERVE_ENABLE_UI: "false"
+      # /version stays on: check_docling reads the version from it.
+      DOCLING_SERVE_SHOW_VERSION_INFO: "true"
+      # No metrics collection, no /metrics endpoint, no traces or OTLP export.
+      DOCLING_SERVE_OTEL_ENABLE_METRICS: "false"
+      DOCLING_SERVE_OTEL_ENABLE_PROMETHEUS: "false"
+      DOCLING_SERVE_OTEL_ENABLE_TRACES: "false"
+      DOCLING_SERVE_OTEL_ENABLE_OTLP_METRICS: "false"
+    healthcheck:
+      # /ready answers 503 until the models are loaded. The image has no curl;
+      # its Python is used instead.
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:5001/ready', timeout=3)"
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      # Loading the models takes a while on the first start.
+      start_period: 300s
+      start_interval: 5s
+    restart: unless-stopped
+
   # Depends on the database only: plain `pytest` must not need Valkey or the
   # worker. `pytest -m worker` expects both to be running already.
   backend-dev:
