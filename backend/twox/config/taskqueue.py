@@ -29,15 +29,33 @@ class WorkerTimeoutError(TaskQueueError):
     """No worker delivered a result in time."""
 
 
+def broker_transport_options(timeout_seconds: float) -> dict[str, float]:
+    """Socket timeouts for a broker connection of the API (Redis transport)."""
+    return {"socket_connect_timeout": timeout_seconds, "socket_timeout": timeout_seconds}
+
+
 def ping_worker(timeout_seconds: float) -> str:
     """Send ``ping`` to the queue ``default`` and return the worker's answer.
 
-    Publishing and waiting together take at most about ``timeout_seconds``.
+    Publishing and waiting each are bounded by ``timeout_seconds``: the broker
+    connection of this call gets socket timeouts (connect and read/write) of
+    that length, so a broker that does not answer at all (dropped packets,
+    paused container) cannot block the caller. Without these options kombu's
+    Redis transport has no socket timeouts, and Celery's
+    ``broker_connection_timeout`` does not apply to it.
+
+    Not bounded here: a reachable broker whose result store does not answer.
+    The result backend keeps Celery's own timeouts and retries, which are
+    shared with the worker.
+
     Raises :class:`TaskQueueError` (or a subclass) on any failure.
     """
     deadline = time.monotonic() + timeout_seconds
     try:
-        with ping.app.connection_for_write() as connection:
+        # The options apply to this one write connection only, never to the worker.
+        with ping.app.connection_for_write(
+            transport_options=broker_transport_options(timeout_seconds)
+        ) as connection:
             # Without this, kombu keeps retrying an unreachable broker for a
             # long time; here a single attempt is enough (0 retries).
             connection.ensure_connection(max_retries=0, timeout=math.ceil(timeout_seconds))

@@ -208,11 +208,11 @@ def test_selftest_needs_no_credentials_and_rejects_writes() -> None:
     assert client.post(URL, {}, format="json").status_code == 405
 
 
-def fake_connection() -> MagicMock:
-    """A broker connection that connects fine; publishing is faked separately."""
+def fake_connection_for_write() -> MagicMock:
+    """Replaces ``connection_for_write``: the broker connects fine, nothing is sent."""
     connection_mock = MagicMock()
     connection_mock.__enter__.return_value = connection_mock
-    return connection_mock
+    return MagicMock(return_value=connection_mock)
 
 
 def test_ping_worker_sends_to_default_queue_and_returns_answer(
@@ -221,7 +221,8 @@ def test_ping_worker_sends_to_default_queue_and_returns_answer(
     result = MagicMock()
     result.get.return_value = "pong"
     apply_async = MagicMock(return_value=result)
-    monkeypatch.setattr(ping.app, "connection_for_write", fake_connection)
+    connection_for_write = fake_connection_for_write()
+    monkeypatch.setattr(ping.app, "connection_for_write", connection_for_write)
     monkeypatch.setattr(ping, "apply_async", apply_async)
 
     assert taskqueue.ping_worker(5) == "pong"
@@ -230,8 +231,38 @@ def test_ping_worker_sends_to_default_queue_and_returns_answer(
     assert kwargs["queue"] == "default"
     assert kwargs["expires"] == 5
     assert kwargs["retry"] is False
+    assert kwargs["connection"] is connection_for_write.return_value
     assert 0 < result.get.call_args.kwargs["timeout"] <= 5
     result.forget.assert_called_once()
+
+
+def test_ping_worker_bounds_the_broker_sockets(monkeypatch: pytest.MonkeyPatch) -> None:
+    result = MagicMock()
+    result.get.return_value = "pong"
+    connection_for_write = fake_connection_for_write()
+    monkeypatch.setattr(ping.app, "connection_for_write", connection_for_write)
+    monkeypatch.setattr(ping, "apply_async", MagicMock(return_value=result))
+
+    taskqueue.ping_worker(5)
+
+    options = connection_for_write.call_args.kwargs["transport_options"]
+    assert options == {"socket_connect_timeout": 5, "socket_timeout": 5}
+    connection = connection_for_write.return_value
+    connection.ensure_connection.assert_called_once_with(max_retries=0, timeout=5)
+
+
+def test_socket_timeouts_reach_the_connection_but_not_the_app_settings() -> None:
+    options = taskqueue.broker_transport_options(5)
+
+    # Building a kombu connection opens no socket.
+    with ping.app.connection_for_write(transport_options=options) as connection:
+        transport_options = connection.transport_options or {}
+        assert transport_options["socket_connect_timeout"] == 5
+        assert transport_options["socket_timeout"] == 5
+
+    # The worker reads its broker options from the app settings; they stay untouched.
+    assert "socket_timeout" not in ping.app.conf.broker_transport_options
+    assert "socket_connect_timeout" not in ping.app.conf.broker_transport_options
 
 
 def test_ping_worker_turns_result_timeout_into_safe_error(
@@ -239,7 +270,7 @@ def test_ping_worker_turns_result_timeout_into_safe_error(
 ) -> None:
     result = MagicMock()
     result.get.side_effect = CeleryTimeoutError("The operation timed out.")
-    monkeypatch.setattr(ping.app, "connection_for_write", fake_connection)
+    monkeypatch.setattr(ping.app, "connection_for_write", fake_connection_for_write())
     monkeypatch.setattr(ping, "apply_async", MagicMock(return_value=result))
 
     with pytest.raises(taskqueue.WorkerTimeoutError) as caught:
@@ -255,7 +286,7 @@ def test_ping_worker_turns_broker_error_into_safe_error(
     refuse = MagicMock(
         side_effect=KombuOperationalError(f"Error 111 connecting to {UNREACHABLE_BROKER}")
     )
-    monkeypatch.setattr(ping.app, "connection_for_write", fake_connection)
+    monkeypatch.setattr(ping.app, "connection_for_write", fake_connection_for_write())
     monkeypatch.setattr(ping, "apply_async", refuse)
 
     with pytest.raises(taskqueue.BrokerUnavailableError) as caught:
