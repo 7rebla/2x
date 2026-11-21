@@ -1,1 +1,64 @@
-{}
+{
+  "heading": "Dateien",
+  "listLabel": "Dateien des Geräts",
+  "empty": "Zu diesem Gerät gibt es noch keine Dateien.",
+  "columns": {
+    "title": "Titel",
+    "kind": "Art",
+    "version": "Version",
+    "date": "Hochgeladen",
+    "size": "Größe",
+    "user": "Benutzer",
+    "filename": "Dateiname",
+    "checksum": "Prüfsumme (SHA-256)",
+    "download": "Herunterladen"
+  },
+  "kind": {
+    "document": "Dokument",
+    "configuration": "Konfiguration"
+  },
+  "versionNumber": "Version {{number}}",
+  "system": "System",
+  "noVersion": "Keine Version",
+  "checksum": {
+    "show": "Vollständige Prüfsumme anzeigen"
+  },
+  "download": {
+    "link": "Herunterladen",
+    "version": "Version {{number}} herunterladen"
+  },
+  "document": {
+    "heading": "Datei",
+    "detailsLabel": "Angaben zur Datei",
+    "device": "Gerät",
+    "deviceFallback": "Gerät {{id}}",
+    "created": "Angelegt",
+    "createdBy": "Angelegt von",
+    "versions": "Versionen",
+    "versionsLabel": "Alle Versionen, neueste zuerst",
+    "history": "Protokoll der Datei"
+  },
+  "upload": {
+    "newDocument": "Neue Datei hochladen",
+    "newVersion": "Neue Version hochladen",
+    "file": "Datei",
+    "title": "Titel",
+    "titleHint": "Freiwillig; ohne Titel gilt der Dateiname.",
+    "kind": "Art",
+    "configurationLocked": "Konfiguration (noch nicht möglich)",
+    "configurationHint": "Konfigurationsdateien werden noch nicht angenommen: Sie können Zugangsdaten enthalten, und diese werden erst ab Meilenstein M5 geschwärzt. Bitte Konfigurationen auch nicht als Dokument hochladen.",
+    "submit": "Hochladen",
+    "submitting": "Wird hochgeladen …",
+    "noFile": "Bitte eine Datei wählen.",
+    "uploaded": "Als Version {{number}} hochgeladen.",
+    "duplicates": "Derselbe Inhalt liegt bereits an anderer Stelle:",
+    "duplicateEntry": "Version {{number}}",
+    "sameAsLatest": "Inhalt gleicht Version {{number}}. Es wurde keine neue Version angelegt.",
+    "sameAsLatestFrom": "Version {{number}} wurde am {{date}} hochgeladen.",
+    "tooLarge": "Die Datei ist größer als die Obergrenze von {{limit}}.",
+    "tooLargeUnknown": "Die Datei ist größer als die Obergrenze für Uploads.",
+    "invalid": "Die Datei wurde nicht hochgeladen. Bitte die markierten Felder prüfen.",
+    "configurationRejected": "Konfigurationsdateien werden noch nicht angenommen (das Schwärzen von Zugangsdaten folgt mit Meilenstein M5).",
+    "otherErrors": "Meldungen der API"
+  }
+}
