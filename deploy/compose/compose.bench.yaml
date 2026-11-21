@@ -1,0 +1,51 @@
+# Overlay for deploy/compose/bench-file-access.sh (work order 004).
+# Not meant for daily use. Load it after the two regular files:
+#   docker compose -p twox-bench --env-file .env \
+#     -f deploy/compose/compose.yaml -f deploy/compose/compose.web.yaml \
+#     -f deploy/compose/compose.bench.yaml --profile dev ...
+#
+# Location 1 (Windows folder) uses the regular services backend-dev and
+# web-dev with their bind mounts. Location 2 (Linux file system) uses the
+# copies below: same build, same settings, but the source tree lives in a
+# named volume inside the Docker Desktop VM instead of the Windows folder.
+services:
+  # Shared npm cache for both locations, so that `npm ci` measures unpacking
+  # and writing node_modules rather than the download.
+  web-dev:
+    volumes:
+      - npm_cache:/root/.npm
+
+  backend-dev-vol:
+    extends:
+      file: compose.yaml
+      service: backend-dev
+    volumes: !override
+      - backend_src:/app
+
+  web-dev-vol:
+    extends:
+      file: compose.web.yaml
+      service: web-dev
+    # node_modules lives inside the source volume, as it would in a checkout
+    # on the Linux file system.
+    volumes: !override
+      - web_src:/app
+      - npm_cache:/root/.npm
+
+  # Copies the current source tree into the two volumes (read-only bind
+  # mounts as the source). Uses the web-dev build, which has tar.
+  bench-seed:
+    profiles: ["dev"]
+    build:
+      context: ../../web
+      target: dev
+    volumes:
+      - ../../backend:/src/backend:ro
+      - ../../web:/src/web:ro
+      - backend_src:/dst/backend
+      - web_src:/dst/web
+
+volumes:
+  backend_src:
+  web_src:
+  npm_cache:
