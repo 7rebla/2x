@@ -15,7 +15,8 @@
     "test": "vitest run",
     "build": "vite build",
     "licenses": "sh scripts/check-licenses.sh",
-    "api:generate": "openapi-ts"
+    "api:generate": "openapi-ts",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "react": "19.3.1",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "0.99.0",
+    "@playwright/test": "1.65.1",
     "@tailwindcss/vite": "4.3.5",
     "@testing-library/dom": "10.4.2",
     "@testing-library/react": "16.3.3",

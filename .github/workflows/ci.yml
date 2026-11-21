@@ -184,3 +184,51 @@ jobs:
       # Proof that nothing above loaded vendor material.
       - name: No downloaded material
         run: test ! -e testfactory/extern
+
+  # Browser test of the test page served by Django (acceptance of M0). The
+  # root compose.yaml includes the web compose file, so e2e and api share one
+  # project and network. The converter service is not started.
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Show runner user and Docker versions
+        run: |
+          id
+          docker version
+          docker compose version
+
+      - name: Prepare .env
+        run: cp .env.example .env
+
+      - name: Build images
+        run: docker compose --profile dev build migrate api worker web-dev
+
+      - name: Pull Playwright image
+        run: docker compose --profile e2e pull e2e
+
+      - name: Install packages (npm ci)
+        run: docker compose --profile dev run --rm web-dev npm ci
+
+      - name: Start services and wait until healthy
+        run: docker compose up -d --wait --wait-timeout 300 db valkey worker api
+
+      - name: Browser test (Playwright)
+        run: docker compose --profile e2e run --rm e2e
+
+      # The HTML report is not readable in the log; the error context files
+      # of the failed tests hold the page snapshot and the error.
+      - name: Container status, logs and Playwright results on failure
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --no-color --timestamps
+          if [ -d web/test-results ]; then
+            find web/test-results -type f | sort
+            find web/test-results -name error-context.md -exec cat {} +
+          fi
