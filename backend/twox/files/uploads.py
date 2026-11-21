@@ -24,8 +24,8 @@ Django's own memory limits stay as they are: a file part above
 ``FILE_UPLOAD_TEMP_DIR`` (the system default), bounded per request by the
 checks above.
 
-:class:`LimitedUploadView` bundles 2 and 3 for DRF views with uploads; the CSV
-import (work order 031) uses it as well.
+:class:`LimitedUploadView` bundles 2 and 3 for DRF views with uploads; it is
+meant for the CSV import (work order 031) as well.
 """
 
 import json
