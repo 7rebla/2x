@@ -131,7 +131,7 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 8. `makemigrations --check --dry-run`: „No changes detected“; Lizenzprüfung: Exit 0.
 9. OpenAPI-Schema neu erzeugt: kein Unterschied (Schema und Client unverändert).
 10. Bau `migrate api worker web-dev`, `pull e2e`, `npm ci`, Testkonto, `e2e`: 15 bestanden. Das Testkonto habe ich unter PowerShell angelegt (Werte aus `.env`, Kennwort nur als Variablenname `-e TWOX_ACCOUNT_PASSWORD`), nicht mit dem Bash-Schritt, weil `.env` nicht über Git Bash eingelesen werden sollte.
-11. Abräumen: siehe unten.
+11. `down -v` mit beiden Profilen: Exit 0.
 - `ci.yml` mit PyYAML geladen: gültig, neuer Schritt an der richtigen Stelle.
 
 **Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-a46dcf69fe1eb72ea`, Arbeitsverzeichnis `.claude/worktrees/agent-a46dcf69fe1eb72ea`.
