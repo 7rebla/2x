@@ -15,9 +15,9 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 002 | Oberfläche als Grundgerüst | C | 1 | – | erledigt |
 | 003 | Suche nach Geheimnissen | C | 1 | – | erledigt (CI grün) |
 | 004 | Messung Dateizugriff | B | 2 | 001, 002 | offen |
-| 005 | API-Grundlage | C | 3 | 001 | in Arbeit |
+| 005 | API-Grundlage | C | 3 | 001 | zur Prüfung |
 | 006 | Lizenzprüfung | C | 3 | 001, 002 | in Arbeit |
-| 007 | Prüfung der Erreichbarkeit von Ollama | B | 3 | 001 | in Arbeit |
+| 007 | Prüfung der Erreichbarkeit von Ollama | B | 3 | 001 | erledigt |
 | 008 | Celery-Worker mit Valkey | C | 4 | 005 | offen |
 | 009 | docling-serve als Container | C | 5 | 008 | offen |
 | 010 | Testseite, Teil API | C | 5 | 005, 008 | offen |
@@ -48,7 +48,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 ## In Arbeit
 
-- 005, 006, 007, 104 als Subagenten; 103 als eigene Sitzungen (gestartet am 21.11.2026).
+- 006, 104 als Subagenten; 103 als eigene Sitzungen (gestartet am 21.11.2026).
 
 ## Wartet auf a7
 
@@ -64,8 +64,8 @@ Nichts davon hält die laufende Arbeit auf.
 
 ## Offene Abnahmebedingungen M0
 
-1. `check_llm` ist einmal mit „OK:" gegen das echte Ollama gelaufen (Auftrag 007).
-2. Der Subagent `auftrag` startet in einem eigenen Arbeitsverzeichnis unter `.claude/worktrees/` mit eigenem Zweig (Prüfung beim Start von Welle 1).
+1. ~~`check_llm` gegen das echte Ollama~~ – erfüllt am 21.11.2026: `OK:` aus dem Container über `host.docker.internal`, Ollama mit Standardbindung, keine Einstellung nötig.
+2. ~~Eigenes Arbeitsverzeichnis je Auftragsbearbeiter~~ – erfüllt: Zweig und Ordner unter `.claude/worktrees/` bei jedem Start belegt.
 3. Entscheidung zur Messung aus 004 (im Windows-Ordner bleiben oder ins WSL-2-Dateisystem umziehen).
 4. CI-Läufe grün nach freigegebenem Push.
 5. Sichtprüfung der Testseite unter `http://localhost:8000/` nach dem Zusammenführen von 012 und 013.
