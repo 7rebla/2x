@@ -33,7 +33,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | --- | --- | --- | --- | --- | --- |
 | 101 | Manifest-Format und Werkzeug-Container | C | 1 | – (Python-Version aus 001 eintragen) | erledigt |
 | 102 | Quellen und Lizenzlage der Fertigungslinie | C | 1 | – | erledigt |
-| 103 | Quellen und Nutzungsbedingungen: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 1 | – | in Arbeit (eigene Sitzung) |
+| 103 | Quellen und Nutzungsbedingungen: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 1 | – | erledigt |
 | 104 | Lade-Skript `fetch.py` | B | 2 | 101 | in Arbeit |
 | 105 | Manifest-Einträge der Fertigungslinie | C | 2 | 101, 102 | in Arbeit |
 | 106 | Aufbau der Testfabrik: Geräteliste, Netzplan, Beschreibung | C | 2 | 101, 102 | in Arbeit |
@@ -48,7 +48,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 ## In Arbeit
 
-- 008, 104, 105, 106 als Subagenten; 103 als eigene Sitzungen (gestartet am 21.11.2026).
+- 008, 104, 105, 106 als Subagenten.
 
 ## Wartet auf a7
 
@@ -62,6 +62,8 @@ Nichts davon hält die laufende Arbeit auf.
 6. **Prüffragen in der CI (Auftrag 011, Frage 1):** Empfehlung: aufgezeichnete Antworten in der CI, dazu der echte Lauf lokal vor jedem Zusammenführen. Entscheidung spätestens zu M3.
 7. **Startunterlage berichtigen (Auftrag 102, Frage 5):** Laut Recherche haben fünf statt vier Module eine S7-1200 (zusätzlich DPS). Die Leitstelle ändert die Startunterlage nicht ohne a7.
 8. **Gebündelte Bibliotheken in psycopg-binary (Auftrag 006):** Zwei davon stehen unter LGPL (keyutils, libxcrypt), dazu OLDAP-2.8 und BSD-Varianten mit Nennungsklausel. Alle sind unverändert als eigene Dateien eingebunden – derselbe Fall wie psycopg selbst nach Leitplanke 7. Empfehlung: als Teil der benannten Ausnahme psycopg bestätigen. Die Lizenz von keyutils ist nur aus einer Zweitquelle belegt.
+9. **Siemens: Klausel gegen Text- und Data-Mining (Auftrag 103, Frage 5).** Die Siemens-Nutzungsbedingungen untersagen automatisiertes Auslesen von Inhalten für Analyse und KI-Systeme sowie die Weitergabe. Die Testfabrik würde das S7-1200-Systemhandbuch einlesen und durchsuchbar machen. Optionen: A nur von Hand laden, nur lokal einlesen, Restrisiko vermerken · B wie A, zusätzlich Anfrage bei Siemens · C Handbuch nicht laden, nur verweisen. Arbeitsstand bis zur Entscheidung: A, und das Lade-Skript ruft keine Siemens-Adresse automatisch ab. Das ist eine Rechtsfrage, die die Leitstelle nicht entscheidet.
+10. **Siemens: welche Ausgabe (Auftrag 103, Frage 6).** Aktuell ist V4.7 (12/2024, nur im Browser abrufbar); V4.6 (11/2022) passt vermutlich besser zu TIA Portal V18, das ist nicht bestätigt. Empfehlung und Arbeitsstand: beide führen, V4.6 maßgeblich, V4.7 als Verweis; beides ohne automatischen Abruf.
 
 ## Offene Abnahmebedingungen M0
 

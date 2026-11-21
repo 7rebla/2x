@@ -45,6 +45,8 @@ In den Befehlen steht `TF` für `docker compose -f deploy/compose/testfactory.ya
 
 ## Vorgaben und Hinweise
 
+**Nachtrag der Leitstelle (21.11.2026, aus Auftrag 103):** Maßgebliche Quelle ist `docs/testfabrik/quellen-standardgeraete-roboter-firewall.md`. Arbeitsstand zu Siemens, bis a7 entscheidet: Systemhandbuch S7-1200 V4.6 (11/2022) als maßgebliche Ausgabe, V4.7 (12/2024) als Verweis; **kein automatischer Abruf von Siemens-Adressen** (Lade-Art `manual` bzw. `none`), wegen der Klausel gegen Text- und Data-Mining in den Siemens-Nutzungsbedingungen. Die Ausgabe 04/2012 entfällt. URSim immer mit Digest festlegen (Patch-Tags sind beweglich). Raspberry-Pi-Datenblatt und Product Brief wie Herstellerunterlagen behandeln.
+
 **Nachtrag der Leitstelle (21.11.2026, aus der Prüfung von Auftrag 101):** `repository` immer als volle `https://github.com/...`-Adresse. Ziele (`target`) nicht ineinander verschachteln; Archive bekommen getrennte Unterordner. `size_bytes` bei `kind: reference` und `file`+`manual` ohne `url` lässt das Werkzeug erst nach Auftrag 104 zu – ist 104 noch nicht zusammengeführt, die Größe vorerst in `notes` führen und das im Kurzbericht nennen. Vor dem Commit die Datei in die kanonische Form bringen (`load_manifest`/`write_manifest` im Dienst `fetch`, nach Auftrag 104 der dortige Unterbefehl) und `check` laufen lassen. Maßgebliche Quelle ist `docs/testfabrik/quellen-fertigungslinie.md` bzw. die Quellen-Datei aus Auftrag 103.
 
 - Voraussetzung: Die Aufträge 103 und 105 sind zusammengeführt; a7s Antworten zu den Fragen 1, 2 und 4 in Auftrag 103 liegen vor. Ohne Antwort auf Frage 1 (Softwarestand UR5e/URSim): Status „wartet auf a7“. Läuft gleichzeitig mit 108, das andere Dateien schreibt.

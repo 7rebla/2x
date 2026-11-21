@@ -1,6 +1,6 @@
 # Auftrag 103 – Quellen und Nutzungsbedingungen: Standardgeräte, UR5e, URSim, OPNsense-Dokumentation
 
-Meilenstein: T1 · Freigabestufe: C · Status: wartet auf a7
+Meilenstein: T1 · Freigabestufe: C · Status: erledigt (Fragen 5 und 6 liegen bei a7, siehe STATUS)
 
 ## Ziel
 
