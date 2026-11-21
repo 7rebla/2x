@@ -227,3 +227,51 @@ Gegenproben während der Arbeit: Ohne `include_fields` enthielt der Eintrag beim
 - **Für 033:** `changes` hat zwei Formen (siehe Schema, `oneOf`); Zeiten in `changes` sind Text in UTC ohne Zonenangabe.
 
 Keine weitere neue Abhängigkeit. `docs/DECISIONS.md` und `docs/STATUS.md` nicht geändert. Kein Push.
+
+### Nacharbeit (nach Prüfung der Leitstelle)
+
+**Befund:** auditlog 3.4.2 übernimmt zwei Kopfzeilen ungeprüft in den Eintrag:
+- `X-Correlation-ID` als `cid` (`CharField(255)`).
+- `X-Forwarded-Port` als `remote_port` (`int(...)`, auch mit `AUDITLOG_DISABLE_REMOTE_ADDR`).
+
+Ein zu langer `cid` oder ein negativer bzw. zu großer Port lässt das Schreiben des Eintrags scheitern. Das geschieht in `post_save`, also nach dem Speichern der Änderung: Die Änderung bleibt ohne Eintrag gespeichert, die Antwort ist 500. Damit ließ sich das Protokoll umgehen. Die Punkte unter „Hinweise“ zu `cid` und `remote_port` sind damit erledigt.
+
+**Änderungen (Commit `eba5d56`):**
+- `settings.py`: `AUDITLOG_CID_HEADER = None`. `set_cid` liest dann keinen Kopf mehr und setzt `cid` immer auf `None` (`auditlog/cid.py`, 3.4.2).
+- `twox/accounts/audit.py`: `AuditMiddleware`, Unterklasse von `auditlog.middleware.AuditlogMiddleware`. `_get_remote_addr` und `_get_remote_port` liefern immer `None`; übernommen wird nur der angemeldete Benutzer (`_get_actor`). Sie ersetzt in `MIDDLEWARE` die Middleware von auditlog an derselben Stelle (nach `AuthenticationMiddleware`).
+- `tests/config/test_settings.py`: Middleware-Liste; `AUDITLOG_CID_HEADER is None`; die Middleware von auditlog selbst steht nicht in der Liste.
+- `tests/accounts/test_audit.py`, 12 neue Fälle:
+  - Je Anfrage über die API (Standort anlegen, dann ändern) mit `X-Correlation-ID` aus 300 Zeichen, kurzem `X-Correlation-ID`, `X-Forwarded-Port` „abc“, „-1“, „99999999999“ und „8443“, `X-Forwarded-For` und allem zusammen: Die Änderung ist gespeichert (201/200, Name geändert), beide Einträge sind geschrieben, mit dem angemeldeten Benutzer und mit `cid`, `remote_port`, `remote_addr` = `None`. Die Werte von Korrelations-ID und Adressen stehen in keiner Spalte.
+  - Kein Eintrag in der Tabelle hat danach `cid`, `remote_port` oder `remote_addr`.
+  - Gegenprobe im Test: Die Middleware von auditlog liefert für „-1“ und „99999999999“ diese Zahlen, `AuditMiddleware` liefert `None`. `set_cid` liest mit dem Standardkopf den 300-Zeichen-Wert, mit `None` nichts.
+
+**Gegenprobe gegen den alten Stand** (Einstellungen kurz zurückgestellt, danach wiederhergestellt, nicht committet): Die neuen Tests scheitern.
+- 300-Zeichen-`cid`: `DataError: value too long for type character varying(255)`.
+- Port „-1“: `IntegrityError … auditlog_logentry_remote_port_check`.
+- Kurzer `cid`: wird gespeichert (`'client-value'`).
+- Folgefehler: Läuft der Fall mit 300 Zeichen vorher, scheitern auch die übrigen Fälle derselben Sitzung mit `DataError`; die Ursache habe ich nicht untersucht. Einzeln geht „abc“ durch.
+
+**Gelangt noch ein anderer Wert aus der Anfrage in den Eintrag?** Am Quelltext 3.4.2 abgelesen: nein.
+- Die Middleware gibt nur `remote_addr`, `remote_port` und `actor` weiter; die ersten beiden sind jetzt `None`, `actor` ist der Benutzer der Sitzung. `_set_extra_data` setzt nur diese Schlüssel.
+- `log_create` und `log_m2m_changes` füllen sonst `content_type`, `object_pk`/`object_id` (Primärschlüssel), `object_repr` (`str()` des Objekts, `TextField`), `changes` (Feldwerte nach der Prüfung durch Serializer und Modell, `JSONField`), `cid` (jetzt immer `None`). `serialized_data` und `additional_data` bleiben leer.
+- **`actor_email` bleibt:** die E-Mail-Adresse des Akteurs aus seinem Konto, nicht aus der Anfrage. Höchstens 254 Zeichen wie `EmailField`, passt also in die Spalte. Bei unseren Konten ist sie leer.
+- Inhalte wie Namen oder Notizen stehen weiter in `object_repr` und `changes`. Das sind die protokollierten Daten selbst, ohne Längengrenze in der Spalte.
+
+**Prüfungen** nach der Nacharbeit, `docker compose -p twox-028`, `.env` mit `TWOX_API_PORT=18028`:
+
+| Prüfung | Ergebnis |
+| --- | --- |
+| Bau `migrate api worker backend-dev`, `up -d --wait` | Exit 0; `logs migrate` zeigt 17 Migrationen von auditlog |
+| `ruff check` | `All checks passed!` |
+| `ruff format --check` | 105 Dateien, Exit 0 |
+| `mypy` | `Success: no issues found in 105 source files` |
+| `pytest` | `793 passed, 4 deselected`, nichts übersprungen |
+| `pytest -m worker` | `4 passed` |
+| `makemigrations --check --dry-run` | `No changes detected` |
+| Lizenzprüfung | `License check passed.` |
+| `spectacular` | Exit 0, ohne Ausgabe; `git diff --exit-code -- web/openapi` Exit 0 (API unverändert, Client daher nicht neu erzeugt) |
+| `--profile dev --profile e2e down -v`, `W --profile dev down -v` | Exit 0, kein Container und kein Volume von twox-028 übrig |
+
+Zusätzlich am laufenden Dienst (uvicorn, Laufzeit-Image): als Testkonto angemeldet, fünf `POST /api/v1/sites/` mit je einer der Kopfzeilen (300-Zeichen-Korrelations-ID, Port „-1“, „99999999999“, „abc“, `X-Forwarded-For`). Alle 201, fünf Standorte und fünf Einträge mit Akteur, `cid`, `remote_port` und `remote_addr` leer.
+
+`main` (026, 027) habe ich nicht eingeführt; Schema und Client erzeugt die Leitstelle beim Zusammenführen neu. e2e und web-Job liefen in der Nacharbeit nicht erneut; es gibt keine Änderung an API, Schema oder Oberfläche.
