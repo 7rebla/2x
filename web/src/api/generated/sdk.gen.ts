@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { HealthRetrieveData, HealthRetrieveResponses, SelftestRetrieveData, SelftestRetrieveResponses } from './types.gen';
+import type { HealthRetrieveData, HealthRetrieveResponses, MeRetrieveData, MeRetrieveResponses, SelftestRetrieveData, SelftestRetrieveResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -22,6 +22,22 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
  * Open to everyone on purpose: container health checks carry no credentials.
  */
 export const healthRetrieve = <ThrowOnError extends boolean = false>(options?: Options<HealthRetrieveData, ThrowOnError>): RequestResult<HealthRetrieveResponses, unknown, ThrowOnError> => (options?.client ?? client).get<HealthRetrieveResponses, unknown, ThrowOnError>({ url: '/api/v1/health/', ...options });
+
+/**
+ * The signed-in user and their role.
+ *
+ * Open to every signed-in user, also without a role, so that the web UI can
+ * tell such a user why nothing else is available.
+ */
+export const meRetrieve = <ThrowOnError extends boolean = false>(options?: Options<MeRetrieveData, ThrowOnError>): RequestResult<MeRetrieveResponses, unknown, ThrowOnError> => (options?.client ?? client).get<MeRetrieveResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/me/',
+    ...options
+});
 
 /**
  * Read-only self-test.
