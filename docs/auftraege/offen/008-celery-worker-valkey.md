@@ -1,6 +1,6 @@
 # Auftrag 008 – Celery-Worker mit Valkey
 
-Meilenstein: M0 · Freigabestufe: C · Status: offen
+Meilenstein: M0 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -78,7 +78,99 @@ Alle Befehle im Wurzelverzeichnis. `D` steht für `docker compose -p twox-008`. 
    - Empfehlung: (a), aus demselben Grund wie bei PostgreSQL 19: zwei Tage alt ist für ein Gerüst zu frisch. Der Bearbeiter prüft das genaue Tag auf Docker Hub.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Alle Akzeptanzkriterien sind erfüllt; die Läufe fanden am 21.11.2026 im Container statt. Für die Leitstelle zu beachten: eine neue Zeile in der Regeldatei der Lizenzprüfung (python-dateutil, siehe unten) und die Einträge fürs Entscheidungsprotokoll.
+
+### Was wurde gebaut?
+
+- `backend/pyproject.toml`, `backend/uv.lock`: `celery[redis]>=5.7.0,<5.8` (Laufzeit), `celery-types>=0.26.0,<0.27` (Entwicklung). pytest: Markierung `worker`, `addopts` um `-m "not worker"` ergänzt.
+- `backend/twox/config/celery.py`: Celery-Anwendung `twox`, Einstellungen aus den Django-Einstellungen mit Vorsatz `CELERY_`; `backend/twox/config/__init__.py` stellt sie als `celery_app` bereit.
+- `backend/twox/config/tasks.py`: Aufgabe `twox.config.ping`, gibt `pong` zurück.
+- `backend/twox/config/settings.py`: `CELERY_BROKER_URL` und `CELERY_RESULT_BACKEND` aus `TWOX_CELERY_BROKER_URL` und `TWOX_CELERY_RESULT_BACKEND` (Vorgabe `redis://valkey:6379/0` und `/1`), Serialisierung und angenommene Inhalte nur JSON, Warteschlangen `ingest`, `embed`, `default`, Standard `default`.
+- `deploy/compose/compose.yaml`: Dienste `valkey` (`valkey/valkey:9.1.4`, Healthcheck `valkey-cli ping`, Volume `valkey-data`, kein Host-Port) und `worker` (Stufe `runtime`, `celery -A twox.config worker --queues ingest,embed,default`, Healthcheck über `celery inspect ping` an genau diesen Worker, `extra_hosts`, kein Host-Port). Die Broker-Variablen stehen im gemeinsamen Anker, also bei `migrate`, `api`, `worker` und `backend-dev`. `api` wartet zusätzlich auf `valkey`; `backend-dev` hängt weiter nur an `db`.
+- `.env.example`: die zwei neuen Variablen.
+- `backend/scripts/license-rules.txt`: eine neue Schreibweise (siehe „Lizenzprüfung“).
+- Tests: `backend/tests/config/test_celery.py` (13 Fälle, ohne Broker) und `backend/tests/config/test_worker.py` (3 Fälle mit Markierung `worker`: je ein Hin- und Rückweg über `default`, `ingest` und `embed`).
+
+Über den Wortlaut des Auftrags hinaus festgelegt:
+
+- Jede Warteschlange hat eine eigene Vermittlung (Exchange) und einen eigenen Schlüssel gleichen Namens. Mit der Kurzform `Queue("ingest")` hingen alle drei an derselben Vermittlung `default` mit demselben Schlüssel; das war im ersten Lauf an `inspect active_queues` zu sehen und ist behoben.
+- `CELERY_TASK_CREATE_MISSING_QUEUES = False`: Ein falsch geschriebener Warteschlangenname ist ein Fehler und erzeugt keine vierte Warteschlange, die niemand bedient.
+- `CELERY_RESULT_ACCEPT_CONTENT = ["json"]`, `CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True`, `CELERY_TIMEZONE = "UTC"`.
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-008` im Wurzelverzeichnis des Arbeitsverzeichnisses, `.env` mit `TWOX_API_PORT=18008`, Docker Engine 29.9.3, Compose v5.7.0. Die Kriterien 1, 4, 5, 10 und 11 liefen nach der letzten Änderung noch einmal von leerem Zustand aus (`down -v`, dann `up -d --wait`).
+
+| Nr. | Ergebnis | Tatsächliche Ausgabe (gekürzt) |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` (29.9.3) und `docker compose version` (v5.7.0), beide Exit-Code 0 |
+| 1 | erfüllt | Exit-Code 0; `migrate-1 Exited`, `valkey-1 Healthy`, `db-1 Healthy`, `api-1 Healthy`, `worker-1 Healthy`; `D ps`: `api`, `db`, `valkey`, `worker` jeweils `(healthy)`, `migrate` `Exited (0)` |
+| 2 | erfüllt | `-> celery@44b3f35c9f31: OK` / `pong` / `1 node online.` |
+| 3 | erfüllt | drei Einträge: `'name': 'ingest', 'exchange': {'name': 'ingest', …`, ebenso `embed` und `default` |
+| 4 | erfüllt | `55 passed, 3 deselected in 14.88s`, Exit-Code 0, nichts übersprungen |
+| 5 | erfüllt | `3 passed, 55 deselected in 1.01s`, Exit-Code 0 |
+| 6 | erfüllt | nach `D stop worker`: `3 failed, 55 deselected in 31.25s`, Exit-Code 1, Meldung `Failed: Celery worker not reachable: no result for 'ping' from queue 'embed' within 10 seconds. Start it with …`. Nach `D start worker` wieder `3 passed` |
+| 7 | erfüllt | `All checks passed!`; `42 files already formatted`, Exit-Code 0; `Success: no issues found in 42 source files` |
+| 8 | erfüllt | `redis://valkey:6379/0` |
+| 9 | erfüllt | `valkey` und `worker`: `Publishers` nur mit `PublishedPort 0` und leerer Adresse (die Ports 6379 und 8000 sind im Image deklariert, aber nicht veröffentlicht); einziger veröffentlichter Port: `api` auf `127.0.0.1:18008` |
+| 10 | erfüllt, mit Ergänzung der Regeldatei | erster Lauf: Exit-Code 1, `python-dateutil 2.9.0.post0: license "Apache Software License; BSD License" is not allowed`. Nach Eintrag der Schreibweise: `52 packages`, `License check passed.`, Exit-Code 0 |
+| 11 | erfüllt | `D down -v` Exit-Code 0 (`Volume twox-008_valkey-data Removed`, `Volume twox-008_db-data Removed`); danach `--profile dev down -v`; keine Container und Volumes des Projekts `twox-008` mehr. Das Projekt `2x` der Leitstelle lief durchgehend weiter (`api` und `db` healthy) |
+
+Die Kriterien 2, 3, 6, 7, 8 und 9 liefen auf dem endgültigen Stand des Codes, aber vor dem Eintrag in die Regeldatei der Lizenzprüfung und vor dem letzten Neuaufbau von leerem Zustand; danach änderte sich nur noch die Regeldatei.
+
+Zusätzlich: `python manage.py check` ohne Befund, `makemigrations --check --dry-run`: `No changes detected`. Der Worker läuft als Benutzer mit UID 10001. Nach den Läufen zeigt `git status --short --ignored` nur `.env` und `STARTUNTERLAGE.md`.
+
+Nicht geprüft: Verhalten, wenn Valkey ganz fehlt (der Test fängt dafür `OperationalError` ab und meldet ebenfalls „Celery worker not reachable“; dieser Zweig lief nicht). Ebenso nicht geprüft: Verhalten des Workers nach einem Ausfall von Valkey im laufenden Betrieb.
+
+**Zu prüfender Punkt „redis-py 8.x mit Valkey“:** redis-py 8.1.0 arbeitet mit Valkey 9.1.4 über celery 5.7.0 und kombu 5.7.0 fehlerfrei: Aufträge über alle drei Warteschlangen, Ergebnisse aus Datenbank 1, Fernsteuerung (`inspect ping`, `inspect active_queues`). Im gesichteten Protokoll des Workers (Start und erster Auftrag) keine Warnung und kein Fehler.
+
+### Lizenzprüfung
+
+Die Prüfung meldete genau ein Paket: python-dateutil 2.9.0.post0 (von celery mitgezogen) mit der Angabe „Apache Software License; BSD License“ – zwei Classifier, die das Skript absichtlich nicht als Auswahl wertet. Die Datei `LICENSE` des Pakets nennt Apache-2.0 und eine BSD-Lizenz; beide stehen auf der Liste der Leitplanke 7. Gemäß Hinweis der Leitstelle ist die Schreibweise wörtlich als `allow | Apache Software License; BSD License` eingetragen. Keine Lizenz außerhalb der zugelassenen Liste.
+
+### Festgeschriebene Versionen, Lizenzen, Quellen (für das Entscheidungsprotokoll)
+
+Direkte Abhängigkeiten:
+
+| Name | Version | Lizenz | Quelle |
+| --- | --- | --- | --- |
+| celery (mit Extra `redis`) | 5.7.0 | BSD-3-Clause | https://pypi.org/project/celery/ |
+| celery-types (nur Entwicklung) | 0.26.0 | Apache-2.0 | https://pypi.org/project/celery-types/ |
+| Image `valkey/valkey` | 9.1.4 (Debian 13; Digest `sha256:3ab0eca823ebbf0fe352476ebac330ac9e5f14b592b9a954eab296d341e81b0e`) | BSD-3-Clause | https://hub.docker.com/r/valkey/valkey · Lizenz: `COPYING` im Tag 9.1.4 von https://github.com/valkey-io/valkey („SPDX-License-Identifier: BSD-3-Clause“) |
+
+Das Tag `9.1.4` ist laut Docker Hub vom 18.11.2026 und das neueste der Reihe 9.1. Das Image wird unverändert als Laufzeit benutzt. Die Lizenzen der Python-Pakete stammen aus der Ausgabe von pip-licenses im Container.
+
+Mitgezogene Pakete (Lizenz wie von pip-licenses gemeldet):
+
+| Name | Version | Lizenz |
+| --- | --- | --- |
+| kombu | 5.7.0 | BSD-3-Clause |
+| redis (redis-py) | 8.1.0 | MIT |
+| amqp | 5.4.2 | BSD License |
+| billiard | 4.3.2 | BSD License |
+| vine | 5.1.0 | BSD License |
+| click-didyoumean | 0.3.1 | MIT License |
+| click-plugins | 1.1.1.2 | BSD License |
+| click-repl | 0.4.1 | MIT |
+| prompt-toolkit | 3.0.53 | BSD License |
+| python-dateutil | 2.9.0.post0 | Apache Software License; BSD License |
+| six | 1.17.0 | MIT License |
+| tzlocal | 5.4.5 | MIT |
+
+click 8.5.1 (BSD-3-Clause) war schon vorher vorhanden.
+
+Vorschlag für einen Satz im Entscheidungsprotokoll: „Hintergrundarbeit läuft über Celery, wie in Abschnitt 5.2 der Startunterlage festgelegt; Djangos eingebautes Tasks-Framework wird nicht verwendet. Valkey wird über Celerys Redis-Transport angesprochen (Adressen mit `redis://`), weil Celery kein `valkey://` kennt; der Client ist redis-py.“
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-aa0fe36fce1a33f0b`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-aa0fe36fce1a33f0b` (relativ zum Projektordner)
+
+### Abweichungen
+
+- Keine Abweichung vom Auftrag oder von der Startunterlage.
+- Die Lock-Datei entstand nicht mit `D run --rm backend-dev uv lock`: Das Image `backend-dev` baut mit `uv sync --locked` und lässt sich mit geänderter `pyproject.toml` und alter Lock-Datei nicht bauen. Stattdessen wurde die Stufe `builder` desselben Dockerfiles gebaut und `uv lock` darin ausgeführt (gleiche Versionen von uv und Python, nichts unter Windows installiert). Das Hilfs-Image ist wieder gelöscht.
+- Der Worker startet mit Celerys Vorgabe für die Zahl der Prozesse (einer je Prozessorkern, auf diesem Rechner 16). Eine feste Zahl oder eine Variable dafür ist nicht Teil des Auftrags; Vorschlag: mit den fachlichen Aufgaben in M2 festlegen.
+- `valkey` hat ein benanntes Volume `valkey-data` (das Image deklariert `/data` ohnehin als Volume); `down -v` entfernt es.
+- Die Images `twox-008-api`, `-worker`, `-migrate` und `-backend-dev` liegen noch lokal vor.
