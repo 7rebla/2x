@@ -1,6 +1,6 @@
 # Auftrag 105 – Manifest-Einträge der Fertigungslinie
 
-Meilenstein: T1 · Freigabestufe: C · Status: offen
+Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -68,7 +68,62 @@ In den Befehlen steht `TF` für `docker compose -f deploy/compose/testfactory.ya
 Keine eigenen; maßgeblich sind die Antworten zu den Fragen 2 bis 5 in Auftrag 102.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Was wurde gebaut?**
+
+- `testfactory/manifest.yaml`: 19 Einträge der Fertigungslinie, in kanonischer Form (über `parse_manifest`/`write_manifest` im Dienst `fetch` geschrieben). Alle Prüfsummen sind `null`.
+  - 2 × `git-archive`, `fetch: auto`: `aps-repository` (`main` @ `b8082e16…`) und `aps-repository-dev` (`release` @ `24568073…`), `repository` als volle `https://github.com/...`-Adresse, `size_bytes` = Summe der Dateigrößen aus Auftrag 102.
+  - 16 × `file`, `fetch: auto`: je Deutsch und Englisch Quick-Start, Dokumentation 02/2025, Belegungspläne, Kalibrierung (ZIP), Fehlersuche, IP-Adresse eines Moduls ändern, Software-Versionen, Software-Update. IDs `aps-<thema>-de` / `-en`. `size_bytes` aus der Quellen-Datei.
+  - 1 × `reference`, `fetch: none`: `aps-rpi-image` (Kurzadresse des Herstellers als `url`, Weiterleitungsziel, Größe und „keine Prüfsumme, Dritt-Hoster“ in `notes`).
+  - Ziele: `fischertechnik/aps-24v/repositories/<name>` und `fischertechnik/aps-24v/documents/<de|en>/<Dateiname>`; nichts ineinander verschachtelt.
+  - `terms` überall `license: none-stated`, `redistribution: false`, `checked_on: 2026-11-21`.
+- `testfactory/tests/test_manifest_aps.py`: 12 Tests (erwartete IDs; `terms.note`, `terms.holder`, `software_version`, `assigned_to`; 40-stellige, festgelegte Commits; kein `redistribution: true`; Kennungen nur aus der Liste des Auftrags; Ziele nicht verschachtelt; nicht aufgenommenes Material fehlt; jede Adresse steht in der Quellen-Datei, Kurzform `P` ausgeschrieben).
+
+**Nicht aufgenommen (wie entschieden)**
+
+- Add-on-Dokumentation FTS/AGV (Deutsch und Englisch): Auftrag 102 hat belegt, dass sie nicht zum Grundprodukt gehört; nach der Entscheidung der Leitstelle wird sie nicht geladen.
+- Add-on Brennofen (Deutsch und Englisch): Zusatzmodul nicht Teil der Testfabrik (Frage 3 in Auftrag 102, Antwort A).
+- Altstände A1 bis A3.
+
+**Was vorerst in `notes` steht (nachziehen nach Auftrag 104)**
+
+- `aps-rpi-image`: Größe 8.869.171.712 Byte steht in `notes`, weil das Format `size_bytes` bei `kind: reference` noch ablehnt. Nach 104 in `size_bytes` übernehmen und den Satz in `notes` kürzen.
+- `file` + `manual` ohne `url` kommt bei der Fertigungslinie nicht vor; hier ist nichts nachzuziehen.
+- Vergleichs-Prüfsummen der beiden Handbücher aus Auftrag 102 stehen in `notes` (nicht in `sha256`); Auftrag 109 kann sie mit dem Erstabruf vergleichen.
+
+**Wie wurde getestet?** (alles im Container, Compose-Projekt `twox-105`, am Ende mit `down -v` entfernt)
+
+- `docker version` (Engine 29.9.3) und `docker compose version` (v5.7.0): Exit 0.
+- `TF run --rm fetch python -m testfactory.manifest_tools check`: `testfactory/manifest.yaml: OK (19 entries)`, Exit 0.
+- `TF run --rm check python -m unittest discover -s testfactory/tests -t . -v`: `Ran 65 tests`, `OK`; die 12 Tests aus `test_manifest_aps` sind dabei. Dasselbe im Dienst `check-offline`: `OK`.
+- `TF run --rm check mypy --config-file testfactory/mypy.ini testfactory`: `Success: no issues found in 5 source files`.
+- `git grep -n -i -E "passw|kennwort" -- testfactory/manifest.yaml testfactory/tests/test_manifest_aps.py`: kein Treffer.
+- Adressen wortgleich mit der Quellen-Datei: durch den Test `test_every_address_is_taken_from_the_source_file` für alle 19 Einträge geprüft (`url`, `landing_page`, `repository`).
+- `git diff --stat main...HEAD`: nur `testfactory/manifest.yaml`, `testfactory/tests/test_manifest_aps.py` und diese Auftragsdatei. `git status --porcelain`: nichts unter `testfactory/extern/`.
+- Nicht ausgeführt: `check --complete` (schlägt erwartungsgemäß fehl, solange die Prüfsummen offen sind – Auftrag 109). Es wurde nichts heruntergeladen und keine Adresse abgerufen.
+
+**Zweig und Arbeitsverzeichnis**
+
+Zweig `worktree-agent-a40a68a2b16a0d25e`, Arbeitsverzeichnis `.claude/worktrees/agent-a40a68a2b16a0d25e`. Nicht gepusht, nicht zusammengeführt.
+
+**Abweichungen und eigene Festlegungen (bitte prüfen)**
+
+1. `terms.verified`: `true` nur bei den drei Quellen, deren Inhalt Auftrag 102 selbst geöffnet und durchsucht hat – Handbuch Deutsch, Handbuch Englisch, Repository 2 (ausgecheckt, Volltextsuche). `false` mit Grund in `notes` bei den 14 nicht geöffneten Unterlagen, bei Repository 1 (nur Dateibaum und drei Markdown-Dateien gelesen; Lizenzfeld der GitHub-API und eingebettete Lizenztexte der Archive ungeprüft) und beim Abbild. Das ist die strengere Lesart von „Was die Quellen-Datei als ungeprüft führt, bleibt `verified: false`“; die Leitstelle kann Repository 1 auf `true` setzen, wenn ihr der Dateibaum-Befund genügt.
+2. `software_version`: Unterlagen „APS 1.3.0“ (aktueller Softwarestand laut Update-Blog; dass die einzelne Unterlage zu diesem Stand gehört, ist ungeprüft und so in `version_source` vermerkt). Repository 1 „APS 1.3.0 (main, 02.03.2026)“ wie in der Quellen-Datei; Repository 2 entsprechend „APS 1.3.0 (release, 02.03.2026)“; Abbild „APS 1.3.0 (unverified)“, weil die Datei älter ist als der Tag v1.3.0.
+3. `document_version`: nur wo belegt („Version 4, 02/2025“ vom Titelblatt des deutschen Handbuchs laut 102; sonst Datum aus dem Dateinamen). Bei den zehn Dateien ohne Datum im Namen `null`, mit Vermerk „kann sich still ändern“ in `notes`.
+4. `assigned_to`:
+   - Handbuch und Quick-Start: alle acht Anlagen (Vorgabe).
+   - Belegungspläne, Kalibrierung, Fehlersuche, Software-Versionen, Software-Update: alle acht Anlagen, aber nur nach Titel – der Inhalt ist nicht geöffnet; als „assignment unverified“ vermerkt.
+   - „IP-Adresse eines Moduls ändern“: die fünf SPS (`dps-plc`, `hbw-plc`, `drill-plc`, `mill-plc`, `aiqs-plc`), ebenfalls nur nach Titel.
+   - Repository 1: die fünf SPS, `dps-txt`, `aiqs-txt`, `agv-txt`, `cgw-txt` und `ccu-rpi` (Zuordnung nach Dateinamen, Inhalt der Archive ungeprüft). Repository 2: `aps-core` und `ccu-rpi`. Abbild: `ccu-rpi`.
+   - `aps-router` ist keinem Eintrag zugeordnet; seine Unterlagen gehören zu Auftrag 107.
+5. `terms.holder` beim Abbild ist ein Text mit „unverified …“, weil der Rechteinhaber laut Quellen-Datei ungeprüft ist und das Feld Pflicht ist.
+6. `retrieved_on` ist bei allen Einträgen der 21.11.2026 (letzte Prüfung der Quelle in Auftrag 102, nicht ein Abruf). Auftrag 109 überschreibt das Feld beim Erstabruf.
+7. Sprache der Freitexte im Manifest (`notes`, `terms.note`, `version_source`): Englisch, wie README und Code der Testfabrik. Titel in der Sprache der Unterlage.
+8. Der Test geht über Punkt 6 des Umfangs hinaus (Adressabgleich mit der Quellen-Datei, Kennungen, Ziele). Er liest dafür `docs/testfabrik/quellen-fertigungslinie.md`; wird die Datei verschoben, muss der Pfad im Test mitziehen.
+9. Zugangsdaten: nichts übernommen. Die `notes` sagen nur, dass Handbuch, README und Abbild Standard-Zugangsdaten enthalten und Repository 2 eine Datei mit Hash des Broker-Geheimnisses; Werte und Dateiname stehen nicht im Manifest.
+10. Das Manifest wurde mit einem Wegwerf-Skript außerhalb des Repositorys erzeugt (im Dienst `fetch` ausgeführt, nicht eingecheckt).
+
+**Offene Fragen**
+
+Keine, die blockiert. Zur Kenntnis für die Leitstelle: Punkt 1 (Lesart von `verified`) und Punkt 4 (Zuordnung nach Titel) sind Auslegungen des Bearbeiters.
