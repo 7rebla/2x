@@ -1,0 +1,409 @@
+{
+  "schema_version": 1,
+  "manifest": "manifest.yaml",
+  "notes": "Test questions of section 11 of the project brief with the expected answers and their evidence (work order 111; questions 9 and 10 follow in work order 112). JSON notation like the manifest. Expected answers are written in the project's own words; the file holds no quotations from vendor documents, because the fischertechnik material carries no license. Every source names a manifest entry by manifest_id. Locators of PDF files give the page index of the file counted from 1 ('PDF-S.') and the printed page number ('gedr. S.'). Locators of repository files give the path from the repository root and the line of the raw file at the commit pinned in the manifest entry. Default access data that some sources contain are never copied here. The candidates are further possible questions found during the research; they do not count for the acceptance of M3.",
+  "questions": [
+    {
+      "id": 1,
+      "question": "Unter welcher Adresse ist die Zentralsteuerung der Fertigungslinie erreichbar?",
+      "kind": "fact",
+      "status": "verified",
+      "expected_answer": "Die Zentralsteuerung (Raspberry Pi, CCU) hat die feste IP-Adresse 192.168.0.100 im Netz des APS-Routers. Ihre Bedienoberfläche öffnet man im Browser unter http://192.168.0.100, nachdem man sich mit dem WLAN des Routers verbunden hat.",
+      "key_facts": [
+        "192.168.0.100"
+      ],
+      "sources": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 31 (gedr. S. 30), Schritt 5 der Router-Einrichtung",
+          "supports": "The Raspberry Pi (CCU) has the fixed IP address 192.168.0.100."
+        },
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 18 (gedr. S. 17)",
+          "supports": "The user interface of the central control is opened in a browser at http://192.168.0.100 after joining the router's WLAN."
+        },
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 38 (gedr. S. 37), Tabelle Zugriff Softwarekomponenten, Zeilen CCU",
+          "supports": "The CCU services (SSH, MQTT broker, Node-RED) are listed under 192.168.0.100."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "README.md, Zeile 150",
+          "supports": "The physical factory's Raspberry Pi is at 192.168.0.100."
+        }
+      ],
+      "verified_on": "2026-11-21",
+      "notes": null
+    },
+    {
+      "id": 2,
+      "question": "Über welchen Port erreicht man Node-RED auf der Zentralsteuerung?",
+      "kind": "fact",
+      "status": "verified",
+      "expected_answer": "Node-RED läuft als Container auf der Zentralsteuerung und ist über Port 1880 erreichbar, also unter http://192.168.0.100:1880.",
+      "key_facts": [
+        "1880"
+      ],
+      "sources": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 38 (gedr. S. 37), Tabelle Zugriff Softwarekomponenten, Zeile Node-RED",
+          "supports": "Node-RED on the CCU: 192.168.0.100, port 1880."
+        },
+        {
+          "manifest_id": "aps-repository",
+          "locator": "README.md, Zeile 43",
+          "supports": "A Node-RED container runs on the Raspberry Pi and is reached at http://192.168.0.100:1880/."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "README.md, Zeile 181",
+          "supports": "Node-RED is listed at http://192.168.0.100:1880."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "docker-compose-prod.yml, Zeilen 55-56",
+          "supports": "The production Compose file publishes port 1880 for the Node-RED service."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "nodeRed/settings.js, Zeile 144",
+          "supports": "The Node-RED web server listens on port 1880 unless PORT is set."
+        }
+      ],
+      "verified_on": "2026-11-21",
+      "notes": null
+    },
+    {
+      "id": 3,
+      "question": "Über welches Protokoll tauschen die TXT-Controller Daten mit der Zentralsteuerung aus?",
+      "kind": "fact",
+      "status": "verified",
+      "expected_answer": "Die TXT-4.0-Controller kommunizieren per MQTT mit der Zentralsteuerung. Der MQTT-Broker (Mosquitto) läuft auf dem Raspberry Pi und ist dort über Port 1883 erreichbar.",
+      "key_facts": [
+        "MQTT"
+      ],
+      "sources": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 36 (gedr. S. 35), Abschnitt Technischer Aufbau APS",
+          "supports": "The TXT 4.0 controllers communicate with the central control via MQTT; the MQTT broker runs on the Raspberry Pi."
+        },
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 38 (gedr. S. 37), Tabelle Zugriff Softwarekomponenten, Zeile lokaler MQTT-Broker",
+          "supports": "The local MQTT broker on the CCU uses port 1883."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "README.md, Zeilen 120 und 136",
+          "supports": "The architecture diagram connects the TXT controllers to the Mosquitto broker on the Raspberry Pi via MQTT."
+        }
+      ],
+      "verified_on": "2026-11-21",
+      "notes": null
+    },
+    {
+      "id": 4,
+      "question": "Wie gelangen Befehle der Zentralsteuerung zu den Siemens-Steuerungen der Module?",
+      "kind": "fact",
+      "status": "verified",
+      "expected_answer": "Die Zentralsteuerung veröffentlicht Befehle als MQTT-Nachrichten (Topic module/v1/ff/<serial>/order). Node-RED auf dem Raspberry Pi übersetzt sie in Schreibzugriffe per OPC UA auf den OPC-UA-Server, der auf jeder SPS läuft (Port 4840). Zustände liest Node-RED per OPC UA zurück und meldet sie per MQTT.",
+      "key_facts": [
+        "MQTT",
+        "Node-RED",
+        "OPC UA"
+      ],
+      "sources": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 36 (gedr. S. 35), Abschnitt Technischer Aufbau APS",
+          "supports": "Each PLC runs its own OPC UA server; Node-RED on the Raspberry Pi bridges OPC UA and MQTT."
+        },
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 38 (gedr. S. 37), Tabelle Zugriff Softwarekomponenten, Zeile SPS",
+          "supports": "The S7-1200 PLCs are reached via OPC UA on port 4840."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "docs/04-opcua-relationship.md, Zeilen 106-117 und 134-136",
+          "supports": "Node-RED receives the order on module/v1/ff/<serial>/order, writes the command nodes of the PLC via OPC UA and polls the PLC for state changes."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "docs/02-architecture.md, Zeilen 66-68",
+          "supports": "Siemens S7 PLC layer, OPC UA server on the PLC, Node-RED bridges OPC UA to MQTT."
+        },
+        {
+          "manifest_id": "aps-repository",
+          "locator": "Node-RED/flows.json, Zeile 1342",
+          "supports": "Example endpoint: the flows reach the drilling station's PLC at opc.tcp://192.168.0.50:4840."
+        }
+      ],
+      "verified_on": "2026-11-21",
+      "notes": "The handbook table (PDF-S. 38) lists PLC address blocks for MILL, DRILL, OVEN, AIQS, HBW and DPS; OVEN is an add-on and not part of the test factory, so five modules of the test factory have a PLC."
+    },
+    {
+      "id": 5,
+      "question": "Welche Version des TIA Portals setzen die SPS-Projekte voraus?",
+      "kind": "fact",
+      "status": "verified",
+      "expected_answer": "Die SPS-Projekte wurden mit TIA Portal V18 erstellt; zum Öffnen und Bearbeiten der Projektarchive wird TIA Portal V18 benötigt.",
+      "key_facts": [
+        "V18"
+      ],
+      "sources": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 34 (gedr. S. 33), Abschnitt Programmieraufgaben zur SPS Entwicklung",
+          "supports": "The provided PLC solutions were created with TIA Portal V18."
+        },
+        {
+          "manifest_id": "aps-repository",
+          "locator": "README.md, Zeile 47",
+          "supports": "TIA Portal V18 is required to access the PLC programs."
+        },
+        {
+          "manifest_id": "aps-repository",
+          "locator": "Verzeichnis PLC-programs/S7_1200_TIAv18/ (Ordnername; Archive mit der Endung .zap18)",
+          "supports": "The project archives are stored as TIA Portal V18 archives."
+        }
+      ],
+      "verified_on": "2026-11-21",
+      "notes": null
+    },
+    {
+      "id": 6,
+      "question": "Welche CPU steckt in den Modulsteuerungen? (Die Unterlagen widersprechen sich; erwartet werden beide Fundstellen.)",
+      "kind": "contradiction",
+      "status": "verified",
+      "expected_answer": "Die Unterlagen widersprechen sich: Das Handbuch nennt auf PDF-S. 34 (gedr. S. 33) im selben Satz eine SIMATIC S7-1200 mit CPU 1512SP, auf PDF-S. 36 (gedr. S. 35) und in der Tabelle auf PDF-S. 38 (gedr. S. 37) dagegen nur die S7-1200. Welche CPU tatsächlich verbaut ist, lässt sich aus den Unterlagen nicht entscheiden.",
+      "key_facts": [
+        "S7-1200",
+        "1512SP"
+      ],
+      "sources": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 34 (gedr. S. 33), Abschnitt Programmieraufgaben zur SPS Entwicklung",
+          "supports": "Statement A: one sentence names a SIMATIC S7-1200 together with a CPU 1512SP."
+        },
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 36 (gedr. S. 35), Abschnitt Technischer Aufbau APS",
+          "supports": "Statement B: the modules use the PLC S7-1200; no other CPU is named."
+        },
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 38 (gedr. S. 37), Tabelle Zugriff Softwarekomponenten, Zeile SPS",
+          "supports": "Statement B: the PLC row names Siemens S7-1200 only."
+        },
+        {
+          "manifest_id": "aps-repository",
+          "locator": "Verzeichnis PLC-programs/S7_1200_TIAv18/ (Ordnername)",
+          "supports": "Statement B: the folder of the PLC project archives is named after the S7-1200."
+        }
+      ],
+      "verified_on": "2026-11-21",
+      "notes": "Both statements come from the same document. Which CPU is really used cannot be checked without TIA Portal at the project archives. That the CPU 1512SP does not belong to the S7-1200 series is not stated in a loaded source (the Siemens manual is not loaded, E-27) and is therefore not part of the expected answer."
+    },
+    {
+      "id": 7,
+      "question": "Was ist zu tun, wenn das Transportfahrzeug seine Spur verliert?",
+      "kind": "fact",
+      "status": "verified",
+      "expected_answer": "Das Handbuch nennt den Spurverlust des FTS als Grund für eine abgebrochene Produktion: Über den Reset-Button in der Bedienoberfläche wird die Anlage wieder betriebsfähig, bestehende Aufträge werden dabei gelöscht. Danach muss das FTS vor den Wareneingang/-ausgang gestellt (Kamera zum Modul) und über „Docke an DPS“ neu angedockt werden.",
+      "key_facts": [
+        "Reset",
+        "Docke an DPS"
+      ],
+      "sources": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 27 (gedr. S. 26)",
+          "supports": "Losing the track is named as a reason why production does not finish; the reset button in the user interface restores an operable state and deletes the existing orders."
+        },
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 22 (gedr. S. 21), Abschnitt Fahrerloses Transportsystem in der APS positionieren",
+          "supports": "The AGV is placed in front of the goods receipt/delivery module with its camera towards the module and docked via the button Docke an DPS; this is needed after a restart or reset."
+        }
+      ],
+      "verified_on": "2026-11-21",
+      "notes": "The troubleshooting document (aps-troubleshooting-de, 3 pages) has no entry for a lost track. Its AGV entry (PDF-S. 2) concerns another symptom (AGV docks and then stops) and refers to the wiring of the IR track sensor; its general entry for error messages refers to the reset via the dashboard. Neither is used as evidence here."
+    },
+    {
+      "id": 8,
+      "question": "Welche MQTT-Topics verwendet die Bohrstation?",
+      "kind": "fact",
+      "status": "verified",
+      "expected_answer": "Die Bohrstation nutzt das gemeinsame Topic-Schema der Module. Sie abonniert module/v1/ff/<serial>/order und module/v1/ff/<serial>/instantAction und veröffentlicht module/v1/ff/<serial>/state, module/v1/ff/<serial>/connection und module/v1/ff/<serial>/factsheet; <serial> ist die bereinigte Seriennummer ihrer SPS.",
+      "key_facts": [
+        "module/v1/ff/<serial>/order",
+        "module/v1/ff/<serial>/instantAction",
+        "module/v1/ff/<serial>/state",
+        "module/v1/ff/<serial>/connection",
+        "module/v1/ff/<serial>/factsheet"
+      ],
+      "sources": [
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "docs/06-modules/drill.md, Zeilen 31-32",
+          "supports": "Topics subscribed and published by the DRILL module."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "docs/06-modules/drill.md, Zeile 8",
+          "supports": "The serial number is a cleaned variant of the PLC serial number."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "docs/06-modules.md, Zeilen 34-46",
+          "supports": "All production modules, DRILL included, use the same topic structure."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "docs/02-architecture.md, Zeilen 121-127",
+          "supports": "Module topic namespace module/v1/ff/<serial>/ with state, order, instantAction, connection and factsheet."
+        }
+      ],
+      "verified_on": "2026-11-21",
+      "notes": null
+    },
+    {
+      "id": 9,
+      "question": "Welche Nutzlast hat der UR5e?",
+      "kind": "fact",
+      "status": "pending",
+      "expected_answer": null,
+      "key_facts": [],
+      "sources": [],
+      "verified_on": null,
+      "notes": "Filled in by work order 112."
+    },
+    {
+      "id": 10,
+      "question": "Wie wird der UR5e nach einem Schutzstopp wieder freigegeben?",
+      "kind": "fact",
+      "status": "pending",
+      "expected_answer": null,
+      "key_facts": [],
+      "sources": [],
+      "verified_on": null,
+      "notes": "Filled in by work order 112."
+    },
+    {
+      "id": 11,
+      "question": "Kontrollfrage ohne Beleg: Wann wurde die Frässtation zuletzt gewartet? Erwartet wird „Dazu finde ich nichts in den Unterlagen\".",
+      "kind": "no-evidence",
+      "status": "verified",
+      "expected_answer": "Dazu finde ich nichts in den Unterlagen",
+      "key_facts": [
+        "Dazu finde ich nichts in den Unterlagen"
+      ],
+      "sources": [],
+      "verified_on": "2026-11-21",
+      "notes": "Searched on 2026-11-21 for maintenance terms (Wartung, gewartet, maintenance): the German handbook, quick start guide and troubleshooting document as text, and all Markdown files of both repositories. Only docs/07-calibration.md of aps-repository-dev mentions maintenance in general (recalibration after mechanical work); no source records a maintenance date."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "c1",
+      "question": "Unter welchen Adressen erreicht Node-RED die OPC-UA-Server der SPS?",
+      "kind": "contradiction",
+      "status": "verified",
+      "expected_answer": "Die Quellen widersprechen sich: Handbuch (Tabelle PDF-S. 38) und Node-RED-Flows nennen MILL 192.168.0.40, DRILL .50, AIQS .70, HBW .80 und DPS .90, jeweils Port 4840. Die Compose-Datei der Entwicklungsumgebung setzt dagegen MILL .135, DRILL .130, AIQS .120, HBW .140 und DPS .150. Die Compose-Datei für den Betrieb setzt diese Adressen nicht.",
+      "key_facts": [
+        "192.168.0.40",
+        "4840",
+        ".135"
+      ],
+      "sources": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 38 (gedr. S. 37), Tabelle Zugriff Softwarekomponenten, Zeile SPS",
+          "supports": "Statement A: address blocks per module (MILL .40-.45, DRILL .50-.55, AIQS .70-.75, HBW .80-.83, DPS .90), port 4840."
+        },
+        {
+          "manifest_id": "aps-repository",
+          "locator": "Node-RED/flows.json, Zeilen 1315, 1342, 1396, 1423 und 1450",
+          "supports": "Statement A: OPC UA endpoints MILL .40, DRILL .50, AIQS .70, DPS .90, HBW .80, port 4840."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "docker-compose.yml, Zeilen 53-58",
+          "supports": "Statement B: the development environment sets MILL .135, DRILL .130, OVEN .125, AIQS .120, DPS .150, HBW .140."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "docker-compose-prod.yml, Zeilen 53-54",
+          "supports": "The production Compose file sets only the time zone for Node-RED, not the PLC addresses."
+        }
+      ],
+      "verified_on": "2026-11-21",
+      "notes": "Candidate for an additional contradiction question (question 2 of work order 111, answer A: kept as a candidate; a7 decides at the first test). Also listed in layout/network-plan.md, section Widersprüche in den Quellen."
+    },
+    {
+      "id": "c2",
+      "question": "Nach welchem Standard sind die MQTT-Nachrichten der Fertigungslinie aufgebaut?",
+      "kind": "fact",
+      "status": "verified",
+      "expected_answer": "Das Handbuch nennt VDA 5050 für die Kommunikation mit dem FTS. Die Protokollbeschreibung der Zentralsteuerung beschreibt ein abgewandeltes VDA 5050 auf Grundlage von Version 2.0, das auch für alle Produktionsmodule gilt und um eigene Aktionen und Topics erweitert ist.",
+      "key_facts": [
+        "VDA 5050",
+        "2.0"
+      ],
+      "sources": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "locator": "PDF-S. 37 (gedr. S. 36)",
+          "supports": "Communication with the AGV is based on VDA 5050."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "docs/11-appendices.md, Zeilen 18 und 26",
+          "supports": "Modified VDA 5050 based on version 2.0; applied to all modules and AGVs."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "docs/01-introduction.md, Zeilen 48-52",
+          "supports": "The VDA 5050 principles are extended to the static production modules, with own actions and topics."
+        }
+      ],
+      "verified_on": "2026-11-21",
+      "notes": null
+    },
+    {
+      "id": "c3",
+      "question": "Über welchen Port erreicht ein Browser den MQTT-Broker der Zentralsteuerung per WebSocket?",
+      "kind": "fact",
+      "status": "verified",
+      "expected_answer": "Der Mosquitto-Broker auf der Zentralsteuerung bietet MQTT über WebSocket auf Port 9001 an (ws://192.168.0.100:9001). Diese Angabe steht nur in den Dateien des Dev-Repositorys, nicht im Handbuch.",
+      "key_facts": [
+        "9001"
+      ],
+      "sources": [
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "mosquitto/config/mosquitto.conf, Zeilen 8-9",
+          "supports": "Second listener on port 9001 with the WebSocket protocol."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "docker-compose-prod.yml, Zeile 46",
+          "supports": "The production Compose file publishes port 9001 of the broker."
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "locator": "README.md, Zeile 183",
+          "supports": "MQTT WebSocket at ws://192.168.0.100:9001."
+        }
+      ],
+      "verified_on": "2026-11-21",
+      "notes": "Tests whether an answer marks a fact that only one kind of source states (observation of work order 106)."
+    }
+  ]
+}
