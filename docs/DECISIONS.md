@@ -38,8 +38,8 @@ Quelle der Einträge E-01 bis E-13: `STARTUNTERLAGE.md`, Entwurf 2 vom 21.11.202
 | E-28 | Die in psycopg-binary gebündelten Bibliotheken – darunter keyutils (LGPL-2.0-or-later) und libxcrypt (LGPL-2.1-or-later), dazu OLDAP-2.8 und BSD-Varianten mit Nennungsklausel – gehören zur benannten Ausnahme psycopg (unverändert eingebunden, Leitplanke 7) | ✔ | 21.11.2026 |
 | E-29 | Hintergrundarbeit läuft über Celery (Startunterlage 5.2); Djangos eingebautes Tasks-Framework wird nicht verwendet. Valkey wird über Celerys Redis-Transport angesprochen (Adressen mit `redis://`, Client redis-py), weil Celery kein `valkey://` kennt. Nur JSON-Serialisierung, kein pickle | ✔ (nach E-23) | 21.11.2026 |
 | E-30 | Das Tabellen-Modell TableFormer (docling-models) unter CDLA-Permissive-2.0 ist als benannte Ausnahme für das unveränderte Docling-Image zugelassen | ✔ | 21.11.2026 |
-| E-31 | Die EasyOCR-Gewichte im Docling-Image (Lizenz nicht feststellbar) werden hingenommen, aber nie benutzt: Das Backend fordert nie `ocr_engine: easyocr` an, nur RapidOCR (Apache-2.0) | ✔ | 21.11.2026 |
-| E-32 | Docling darf nicht ins Internet: `ORT_DISABLE_TELEMETRY=1` (ONNX Runtime baute sonst eine Verbindung zu Microsoft-Telemetrieadressen auf) UND ein internes Docker-Netz ohne Internetzugang für docling, an das nur api und worker angebunden sind | ✔ | 21.11.2026 |
+| E-31 | Die EasyOCR-Gewichte im Docling-Image (Lizenz nicht feststellbar) werden hingenommen, aber nie benutzt: Das Backend fordert nie `ocr_engine: easyocr` an, nur RapidOCR (Apache-2.0). Bestätigt von a7 auch nach dem Befund, dass die Nutzungsbedingungen von jaided.ai die kostenlose Version auf nicht-kommerzielle Nutzung beschränken (ob das die Gewichte betrifft, ist unklar): 2x gibt das Image nicht weiter und nutzt die Gewichte nie; Restrisiko bekannt | ✔ | 21.11.2026 |
+| E-32 | Docling darf nicht ins Internet: `ORT_DISABLE_TELEMETRY=1` (dokumentiert in den Release Notes von ONNX Runtime 1.29.0) (ONNX Runtime baute sonst eine Verbindung zu Microsoft-Telemetrieadressen auf) UND ein internes Docker-Netz ohne Internetzugang für docling, an das nur api und worker angebunden sind | ✔ | 21.11.2026 |
 
 ## Begründungen
 
