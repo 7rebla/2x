@@ -69,10 +69,10 @@ Nichts davon hält die laufende Arbeit auf.
 
 1. ~~`check_llm` gegen das echte Ollama~~ – erfüllt am 21.11.2026: `OK:` aus dem Container über `host.docker.internal`, Ollama mit Standardbindung, keine Einstellung nötig.
 2. ~~Eigenes Arbeitsverzeichnis je Auftragsbearbeiter~~ – erfüllt: Zweig und Ordner unter `.claude/worktrees/` bei jedem Start belegt.
-3. Entscheidung zur Messung aus 004 (im Windows-Ordner bleiben oder ins WSL-2-Dateisystem umziehen).
+3. ~~Messung 004~~ – entschieden mit E-34: bleiben.
 4. ~~CI-Läufe grün~~ – erfüllt am 21.11.2026: Workflows `ci` (backend, web) und `secrets` grün auf GitHub.
 5. ~~Sichtprüfung der Testseite~~ – von der Leitstelle am 21.11.2026 im Chrome geprüft: Datenbank und Worker grün; bei gestopptem Worker rote Karte mit Fehlermeldung; nach Neustart wieder grün. Noch durch a7 anzusehen.
-6. Abnahme durch a7.
+6. ~~Abnahme durch a7~~ – M0 abgenommen (E-35), T1 abgenommen mit Lücke O-1 (E-36).
 
 ## Erledigt seit dem letzten Bericht
 

@@ -41,6 +41,9 @@ Quelle der Einträge E-01 bis E-13: `STARTUNTERLAGE.md`, Entwurf 2 vom 21.11.202
 | E-31 | Die EasyOCR-Gewichte im Docling-Image (Lizenz nicht feststellbar) werden hingenommen, aber nie benutzt: Das Backend fordert nie `ocr_engine: easyocr` an, nur RapidOCR (Apache-2.0). Bestätigt von a7 auch nach dem Befund, dass die Nutzungsbedingungen von jaided.ai die kostenlose Version auf nicht-kommerzielle Nutzung beschränken (ob das die Gewichte betrifft, ist unklar): 2x gibt das Image nicht weiter und nutzt die Gewichte nie; Restrisiko bekannt | ✔ | 21.11.2026 |
 | E-32 | Docling darf nicht ins Internet: `ORT_DISABLE_TELEMETRY=1` (dokumentiert in den Release Notes von ONNX Runtime 1.29.0) (ONNX Runtime baute sonst eine Verbindung zu Microsoft-Telemetrieadressen auf) UND ein internes Docker-Netz ohne Internetzugang für docling, an das nur api und worker angebunden sind | ✔ | 21.11.2026 |
 | E-33 | Prüffrage 10 („Wie wird der UR5e nach einem Schutzstopp wieder freigegeben?") meint den Halt durch eine Schutzeinrichtung (SF2, Safeguard Stop), nicht den vom Roboter selbst ausgelösten Halt (Robot Stop) | ✔ | 21.11.2026 |
+| E-34 | Das Projekt bleibt im Windows-Ordner (Messung aus Auftrag 004: Entwicklerbefehle nur 1,0- bis 1,5-mal langsamer als im Docker-Volume). Regel: Abhängigkeiten, Build-Ergebnisse und Zwischenspeicher nie in den eingebundenen Quelltext; neu messen, wenn der Quelltext stark wächst | ✔ | 21.11.2026 |
+| E-35 | Meilenstein M0 ist abgenommen | ✔ | 21.11.2026 |
+| E-36 | Meilenstein T1 ist abgenommen, mit der benannten Lücke O-1 (keine fischertechnik-Unterlage nennt einen Softwarestand der Anlage; Bedingung 2 für die Fertigungslinie offen, siehe `testfactory/layout/evidence.md`) | ✔ | 21.11.2026 |
 
 ## Begründungen
 
