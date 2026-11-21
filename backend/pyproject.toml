@@ -4,6 +4,7 @@ version = "0.0.0"
 description = "2x backend: asset records with sourced answers"
 requires-python = ">=3.14,<3.15"
 dependencies = [
+    "celery[redis]>=5.7.0,<5.8",
     "django>=6.1.3,<6.2",
     "djangorestframework>=3.18.3,<3.19",
     "drf-spectacular>=0.30.0,<0.31",
@@ -13,6 +14,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "celery-types>=0.26.0,<0.27",
     "django-stubs[compatible-mypy]>=6.1.2,<6.2",
     "djangorestframework-stubs[compatible-mypy]>=3.18.2,<3.19",
     "mypy>=2.4.1,<2.5",
@@ -64,5 +66,10 @@ django_settings_module = "twox.config.settings"
 DJANGO_SETTINGS_MODULE = "twox.config.settings"
 pythonpath = ["."]
 testpaths = ["tests"]
-addopts = ["--strict-markers", "--strict-config", "-ra"]
+# Plain `pytest` needs the database only. Tests that need a running Celery
+# worker carry the marker `worker` and run with `pytest -m worker`.
+addopts = ["--strict-markers", "--strict-config", "-ra", "-m", "not worker"]
+markers = [
+    "worker: needs a running Celery worker (run with `pytest -m worker`)",
+]
 xfail_strict = true

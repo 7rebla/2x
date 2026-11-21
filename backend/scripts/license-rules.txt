@@ -27,6 +27,11 @@ allow | BSD-3-Clause
 allow | BSD License
 allow | PostgreSQL
 
+# Both parts are on the preferred list. Spelling reported for python-dateutil
+# (pulled in by celery): two classifiers, its LICENSE file says Apache-2.0 and
+# BSD-3-Clause.
+allow | Apache Software License; BSD License
+
 # E-23: treated as equally permissive.
 allow | ISC
 allow | 0BSD
