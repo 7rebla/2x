@@ -76,7 +76,7 @@ Alle Befehle laufen im Wurzelverzeichnis des Arbeitsverzeichnisses, in der Form 
 0. `docker version` und `docker compose version` enden mit Exit-Code 0. Sonst Status „wartet auf a7“ mit „Docker Desktop fehlt“.
 1. `D --profile dev build migrate api worker backend-dev` und `D up -d --wait --wait-timeout 300 db valkey worker api` enden mit Exit-Code 0.
 2. Import über den Befehl (`<Testkennwort>` ist ein selbst gewählter Entwicklungswert):
-   - `D exec -T -e TWOX_ACCOUNT_PASSWORD=<Testkennwort> api python manage.py create_account importer1 --role manage --update`
+   - `TWOX_ACCOUNT_PASSWORD=<Testkennwort> D exec -T -e TWOX_ACCOUNT_PASSWORD api python manage.py create_account importer1 --role manage --update` (Wert nur in der Umgebung, nie als Argument; Hinweis aus 021/027)
    - Dann `D run --rm backend-dev python manage.py import_devices /testfactory/layout/devices.csv --user importer1 --commit`: gibt 1 Standort, 3 Bereiche, 10 Anlagen und 13 Geräte als angelegt aus.
    - Ein zweiter Aufruf meldet 0 angelegt und 0 geändert.
 3. Prüfungen und Typen:
