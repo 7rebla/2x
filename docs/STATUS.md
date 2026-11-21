@@ -41,14 +41,14 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 108 | Frei lizenzierte Testunterlagen in `testdata/klein` | C | 3 | 101, 103 | erledigt |
 | 109 | Erstabruf: Unterlagen laden und Prüfsummen eintragen | B | 4 | 104, 105, 106, 107 | erledigt |
 | 110 | Stände und Nutzungsvermerke nachtragen | C | 5 | 109 | in Arbeit |
-| 111 | Prüffragen der Fertigungslinie mit Fundstelle | C | 5 | 109 | in Arbeit |
-| 112 | Prüffragen des Roboters (Fragen 9 und 10) | C | 6 | 110, 111 | offen |
+| 111 | Prüffragen der Fertigungslinie mit Fundstelle | C | 5 | 109 | erledigt |
+| 112 | Prüffragen des Roboters (Fragen 9 und 10) | C | 6 | 110, 111 | in Arbeit |
 | 113 | Nachweis der drei Bedingungen je Anlage und Gerät | C | 6 | 106, 110 | offen |
 | 114 | Testfabrik-Prüfungen in CI und Werkzeugkette | B | 7 | 101, 112, 113, 011 | offen |
 
 ## In Arbeit
 
-- 009, 012, 110, 111 als Subagenten.
+- 009 (Netz abriegeln), 012 (Nacharbeit), 110, 112 als Subagenten.
 
 ## Wartet auf a7
 

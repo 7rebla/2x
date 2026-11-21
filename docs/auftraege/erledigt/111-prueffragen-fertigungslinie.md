@@ -86,7 +86,7 @@ Weitere Hinweise
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
 
-**Status: zur Prüfung.** Keine offene Frage an a7.
+**Status: erledigt.** Keine offene Frage an a7.
 
 ### Was wurde gebaut?
 
