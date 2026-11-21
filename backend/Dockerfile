@@ -57,14 +57,19 @@ COPY web/ ./
 RUN npm run build
 # Licence notices of everything that ends up in the shipped bundle, written
 # next to the build as THIRD-PARTY-NOTICES.txt (served below /static/).
-# Shipped code: the production dependencies (react, react-dom, scheduler),
-# the API client that @hey-api/openapi-ts copies from its templates into
-# src/api/generated, the module preload helper Vite inlines and the base
-# styles Tailwind CSS emits. The build fails if the production dependencies
-# change, so that a new runtime package cannot ship without its notice.
+# Shipped code: the production dependencies (react, react-dom, scheduler,
+# i18next, react-i18next, html-parse-stringify), the API client that
+# @hey-api/openapi-ts copies from its templates into src/api/generated, the
+# module preload helper Vite inlines and the base styles Tailwind CSS emits.
+# The build fails if the production dependencies change, so that a new
+# runtime package cannot ship without its notice.
+# npm also lists typescript, @types/react and csstype here: i18next and
+# react-i18next declare typescript and @types/react as optional peer
+# dependencies, and the dev install satisfies them. They are type
+# information only, nothing of them reaches the bundle, so they get no notice.
 RUN set -eu; \
     runtime=$(npm ls --omit=dev --all --parseable | sed -n 's|^/web/node_modules/||p' | sort | tr '\n' ' '); \
-    if [ "$runtime" != "react react-dom scheduler " ]; then \
+    if [ "$runtime" != "@types/react csstype html-parse-stringify i18next react react-dom react-i18next scheduler typescript " ]; then \
         echo "Production dependencies changed ($runtime): update the notice list in backend/Dockerfile." >&2; \
         exit 1; \
     fi; \
@@ -75,7 +80,7 @@ RUN set -eu; \
         echo; \
         echo "The files below /static/ contain code from the following packages."; \
         echo "Each section quotes the package's licence file unchanged."; \
-        for pkg in react react-dom scheduler @hey-api/openapi-ts vite tailwindcss; do \
+        for pkg in react react-dom scheduler i18next react-i18next html-parse-stringify @hey-api/openapi-ts vite tailwindcss; do \
             dir=node_modules/$pkg; \
             licence_file=$(find "$dir" -maxdepth 1 -type f -iname 'licen[cs]e*' | sort | head -n 1); \
             if [ -z "$licence_file" ]; then echo "No licence file in $dir" >&2; exit 1; fi; \
