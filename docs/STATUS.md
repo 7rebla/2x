@@ -34,12 +34,12 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 101 | Manifest-Format und Werkzeug-Container | C | 1 | – (Python-Version aus 001 eintragen) | erledigt |
 | 102 | Quellen und Lizenzlage der Fertigungslinie | C | 1 | – | erledigt |
 | 103 | Quellen und Nutzungsbedingungen: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 1 | – | erledigt |
-| 104 | Lade-Skript `fetch.py` | B | 2 | 101 | zur Prüfung |
+| 104 | Lade-Skript `fetch.py` | B | 2 | 101 | erledigt |
 | 105 | Manifest-Einträge der Fertigungslinie | C | 2 | 101, 102 | erledigt |
 | 106 | Aufbau der Testfabrik: Geräteliste, Netzplan, Beschreibung | C | 2 | 101, 102 | erledigt |
 | 107 | Manifest-Einträge: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 3 | 103, 105 | erledigt |
 | 108 | Frei lizenzierte Testunterlagen in `testdata/klein` | C | 3 | 101, 103 | erledigt |
-| 109 | Erstabruf: Unterlagen laden und Prüfsummen eintragen | B | 4 | 104, 105, 106, 107 | offen |
+| 109 | Erstabruf: Unterlagen laden und Prüfsummen eintragen | B | 4 | 104, 105, 106, 107 | in Arbeit |
 | 110 | Stände und Nutzungsvermerke nachtragen | C | 5 | 109 | offen |
 | 111 | Prüffragen der Fertigungslinie mit Fundstelle | C | 5 | 109 | offen |
 | 112 | Prüffragen des Roboters (Fragen 9 und 10) | C | 6 | 110, 111 | offen |
@@ -48,7 +48,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 ## In Arbeit
 
-- 009, 010 als Subagenten; 104 in Nacharbeit nach Sicherheitsprüfung (Symlink-Name mit Laufwerksbuchstabe).
+- 009, 109 als Subagenten; 010 in Prüfung.
 
 ## Wartet auf a7
 

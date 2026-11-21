@@ -1,6 +1,6 @@
 # Auftrag 104 – Lade-Skript fetch.py
 
-Meilenstein: T1 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: T1 · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 
