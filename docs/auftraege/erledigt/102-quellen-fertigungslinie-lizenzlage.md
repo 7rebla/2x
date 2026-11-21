@@ -1,6 +1,6 @@
 # Auftrag 102 – Quellen und Lizenzlage der Fertigungslinie (fischertechnik APS 24V)
 
-Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: T1 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 

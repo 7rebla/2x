@@ -32,7 +32,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | Nr. | Auftrag | Stufe | Welle | Hängt ab von | Status |
 | --- | --- | --- | --- | --- | --- |
 | 101 | Manifest-Format und Werkzeug-Container | C | 1 | – (Python-Version aus 001 eintragen) | in Arbeit |
-| 102 | Quellen und Lizenzlage der Fertigungslinie | C | 1 | – | in Arbeit (eigene Sitzung) |
+| 102 | Quellen und Lizenzlage der Fertigungslinie | C | 1 | – | erledigt |
 | 103 | Quellen und Nutzungsbedingungen: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 1 | – | in Arbeit (eigene Sitzung) |
 | 104 | Lade-Skript `fetch.py` | B | 2 | 101 | offen |
 | 105 | Manifest-Einträge der Fertigungslinie | C | 2 | 101, 102 | offen |
