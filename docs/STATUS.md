@@ -18,9 +18,9 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 005 | API-Grundlage | C | 3 | 001 | erledigt |
 | 006 | Lizenzprüfung | C | 3 | 001, 002 | erledigt |
 | 007 | Prüfung der Erreichbarkeit von Ollama | B | 3 | 001 | erledigt |
-| 008 | Celery-Worker mit Valkey | C | 4 | 005 | in Arbeit |
-| 009 | docling-serve als Container | C | 5 | 008 | offen |
-| 010 | Testseite, Teil API | C | 5 | 005, 008 | offen |
+| 008 | Celery-Worker mit Valkey | C | 4 | 005 | erledigt |
+| 009 | docling-serve als Container | C | 5 | 008 | in Arbeit |
+| 010 | Testseite, Teil API | C | 5 | 005, 008 | in Arbeit |
 | 011 | CI-Hauptworkflow | C | 5 | 002, 005, 006, 008 | offen |
 | 012 | Testseite, Teil Oberfläche | C | 6 | 002, 010 | offen |
 | 013 | Auslieferung der Oberfläche durch Django | C | 6 | 002, 009, 010 | offen |
@@ -34,7 +34,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 101 | Manifest-Format und Werkzeug-Container | C | 1 | – (Python-Version aus 001 eintragen) | erledigt |
 | 102 | Quellen und Lizenzlage der Fertigungslinie | C | 1 | – | erledigt |
 | 103 | Quellen und Nutzungsbedingungen: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 1 | – | erledigt |
-| 104 | Lade-Skript `fetch.py` | B | 2 | 101 | in Arbeit |
+| 104 | Lade-Skript `fetch.py` | B | 2 | 101 | zur Prüfung |
 | 105 | Manifest-Einträge der Fertigungslinie | C | 2 | 101, 102 | erledigt |
 | 106 | Aufbau der Testfabrik: Geräteliste, Netzplan, Beschreibung | C | 2 | 101, 102 | erledigt |
 | 107 | Manifest-Einträge: Standardgeräte, UR5e, URSim, OPNsense-Doku | C | 3 | 103, 105 | in Arbeit |
@@ -48,7 +48,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 ## In Arbeit
 
-- 008, 104, 107, 108 als Subagenten.
+- 009, 010, 107, 108 als Subagenten; 104 in Prüfung.
 
 ## Wartet auf a7
 

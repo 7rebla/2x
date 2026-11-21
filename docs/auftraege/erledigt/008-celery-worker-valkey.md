@@ -1,6 +1,6 @@
 # Auftrag 008 – Celery-Worker mit Valkey
 
-Meilenstein: M0 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: M0 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 

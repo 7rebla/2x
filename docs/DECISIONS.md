@@ -36,6 +36,7 @@ Quelle der Einträge E-01 bis E-13: `STARTUNTERLAGE.md`, Entwurf 2 vom 21.11.202
 | E-26 | Die Leitstelle pusht `main` nach jedem geprüften Zusammenführen ohne Einzelrückfrage; vorher laufen Geheimnissuche und Namensprüfung über den Verlauf. Auftragszweige werden weiterhin nicht gepusht (ergänzt E-14) | ✔ | 21.11.2026 |
 | E-27 | Siemens-Unterlagen (S7-1200-Systemhandbuch) werden nur von a7 selbst im Browser geladen (Lade-Art `manual`) und nur lokal eingelesen; nichts davon wird veröffentlicht, kein automatischer Abruf von Siemens-Adressen. Das Restrisiko der Klausel gegen Text- und Data-Mining (Siemens-Nutzungsbedingungen A.6.2) wird in Kauf genommen und im Manifest vermerkt. Maßgeblich V4.6 (11/2022), V4.7 (12/2024) als Verweis | ✔ | 21.11.2026 |
 | E-28 | Die in psycopg-binary gebündelten Bibliotheken – darunter keyutils (LGPL-2.0-or-later) und libxcrypt (LGPL-2.1-or-later), dazu OLDAP-2.8 und BSD-Varianten mit Nennungsklausel – gehören zur benannten Ausnahme psycopg (unverändert eingebunden, Leitplanke 7) | ✔ | 21.11.2026 |
+| E-29 | Hintergrundarbeit läuft über Celery (Startunterlage 5.2); Djangos eingebautes Tasks-Framework wird nicht verwendet. Valkey wird über Celerys Redis-Transport angesprochen (Adressen mit `redis://`, Client redis-py), weil Celery kein `valkey://` kennt. Nur JSON-Serialisierung, kein pickle | ✔ (nach E-23) | 21.11.2026 |
 
 ## Begründungen
 
@@ -155,3 +156,7 @@ Jede neue Abhängigkeit bekommt hier einen Eintrag (Leitplanke 7). Bevorzugt: MI
 | In psycopg-binary 3.3.9 gebündelt (Rad für linux/x86_64): libpq 18.6 (PostgreSQL-Lizenz), OpenSSL 3.5.9 (Apache-2.0), MIT Kerberos 1.22.2 und libcom_err (MIT-artig), OpenLDAP (OLDAP-2.8, BSD-artig), Cyrus SASL (BSD-artig mit Nennungsklausel), keyutils (LGPL-2.0-or-later, nur aus Zweitquelle belegt), libxcrypt (LGPL-2.1-or-later) | wie genannt; kein GPL, AGPL und keine Nutzungsbeschränkung gefunden | unverändert als eigene, dynamisch geladene Dateien im Rad; gelangen ins Laufzeit-Image | 006 | ✔ a7, 21.11.2026 (E-28) |
 | Eigenes npm-Paket `twox-web` (private; vom Werkzeug als UNLICENSED gemeldet, Projektlizenz Apache-2.0) | Apache-2.0 | von der Lizenzprüfung ausgenommen | 006 | nach E-23 |
 | poppler-utils (im offiziellen Python-Image einmalig nachinstalliert) | GPL-2.0 | einmaliges Werkzeug zum Lesen von PDF-Seiten im Wegwerf-Container; nicht eingebunden, nicht im Repository, in keinem Projekt-Image | 106 | wie pandoc nach E-23 |
+| celery[redis] 5.7.0 (mit kombu, amqp, billiard, vine, click-Erweiterungen, prompt-toolkit, python-dateutil, tzlocal, six) | BSD-3-Clause; mitgezogene Pakete BSD, MIT bzw. Apache/BSD | Hintergrundarbeit | 008 | nach E-23 |
+| redis (redis-py) 8.1.0 | MIT | Client für Valkey | 008 | nach E-23 |
+| celery-types 0.26.0 | Apache-2.0 | Typen für Celery (Entwicklung) | 008 | nach E-23 |
+| Image `valkey/valkey:9.1.4` | BSD-3-Clause | Broker und Ergebnisspeicher | 008 | nach E-23 |
