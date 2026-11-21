@@ -1,6 +1,6 @@
 # Auftrag 102 – Quellen und Lizenzlage der Fertigungslinie (fischertechnik APS 24V)
 
-Meilenstein: T1 · Freigabestufe: C · Status: offen
+Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -121,7 +121,59 @@ Korrekturbedarf an Abschnitt 10.2 der Startunterlage
    - Empfehlung: A. Die Antwort gilt auch für die Aufträge 103, 106 und 113.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Was wurde gebaut?**
+
+- `docs/testfabrik/quellen-fertigungslinie.md`: je Quelle (Repository 1, Repository 2, Unterlagen-Seite, Raspberry-Pi-Abbild) Adresse, Stand, Rechteinhaber, Größe, Lizenzbefund mit Fundstelle, Folgerung, „geprüft am“. Dazu Dateiliste von Repository 1, Tabelle der 20 Unterlagen, vier reine Verweise (drei Altstände, Abbild), Antwort auf den Prüfpunkt Add-on FTS, Korrekturbedarf a bis h, Liste der offenen Punkte.
+- `docs/testfabrik/anfrage-fischertechnik-entwurf.md`: Entwurf der Anfrage, Deutsch, mit Platzhaltern für den Absender. Nicht versendet.
+
+**Ergebnis in Kürze**
+
+- Lizenzlage unverändert: in beiden Repositories keine Lizenz (Repository 2 zusätzlich `UNLICENSED` und toter LICENSE-Verweis), Unterlagen ohne Nutzungsbedingungen, Abbild ohne jede Angabe. Es bleibt bei „laden ja, weitergeben nein“.
+- Impressum im Browser gelesen: keine Aussage zum Urheberrecht. a7 muss die Seite nicht mehr selbst lesen.
+- Add-on-Dokumentation FTS gehört nicht zum Grundprodukt, sondern zu einem Zusatzpaket (weiteres Fahrzeug); Fundstellen in der Quellen-Datei.
+- Korrekturbedarf a bis h: alle acht Punkte bestätigt.
+
+**Wie wurde getestet?**
+
+Kein Code, daher keine Tests und keine Typprüfung berührt. Geprüft wurde am Original, nur lesend und ohne Anmeldung, am 21.11.2026:
+
+- Repositories: `git ls-remote`, Verlauf und Baum; Repository 2 in einem Arbeitsordner außerhalb des Projekts ausgecheckt und durchsucht; von Repository 1 nur die drei Markdown-Dateien gelesen, Größen der übrigen Dateien per HEAD.
+- Unterlagen: HEAD-Anfrage an alle 23 Adressen (alle HTTP 200); Verlinkung im Quelltext der vier Seiten; Handbuch DE und EN sowie Add-on FTS DE außerhalb des Projekts geladen und als Text durchsucht (zusammen 6,3 MB).
+- Abbild: nur HEAD (Weiterleitung, Größe, Datum).
+- Akzeptanzkriterien: beide Commit-Kennungen je 1 Treffer; 20 Tabellenzeilen; je Quelle die Zeilen Lizenzbefund, Folgerung, geprüft am (4 × 3 = 12 Treffer); `git diff --stat main...HEAD` zeigt die zwei Dateien unter `docs/testfabrik/` und diese Auftragsdatei.
+
+**Zweig und Arbeitsverzeichnis**
+
+Zweig `claude/auftrag-102-quellen-aps-486298`, Arbeitsverzeichnis `.claude/worktrees/auftrag-102-quellen-aps-486298`. Nicht gepusht.
+
+**Abweichungen vom Vorbefund**
+
+1. Repository 1 hat 34 Baumeinträge (28 Dateien, 6 Ordner), nicht 33.
+2. Repository 1 hat einen zweiten Zweig `bugfix/change-timings` (gleicher Commit wie v1.0.1); v1.0.1 ist ein annotierter Tag.
+3. README von Repository 2: Die Zeilenangaben des Vorbefunds liegen um eins zu hoch. LICENSE-Verweis in Zeile 321 (Überschrift 319), CONTRIBUTING in Zeile 317, lokaler Betrieb Zeilen 323–338, Hinweis „Module nicht simuliert“ in Zeile 334.
+4. Größen ergänzt: `software-info-aps_de.pdf` 249.791 B, `software-update-aps_de.pdf` 3.344.210 B, die drei Altstände.
+5. Abbild: Der Speicherort liefert `Last-Modified` (25.09.2024) und ein `ETag`; das ETag ist keine Inhaltsprüfsumme. Das Datum liegt vor dem Tag v1.3.0 – ob das Abbild Stand 1.3.0 enthält, ist offen.
+6. Der Update-Blog verlinkt als aktuelle Software den Tag v1.3.0, nicht `main`. Frage 2 ist entschieden (A); nur zur Kenntnis.
+7. Über den Auftrag hinaus: Die Seitenangaben des Handbuchs (PDF-S. 3–4, 15, 31, 34, 38) wurden am Text der geladenen Datei geprüft und bestätigt, statt sie ungeprüft zu lassen. Die Spaltenzuordnung der Tabelle auf PDF-S. 38 prüft Auftrag 106 erneut.
+8. Im Dev-Repository steht ein Kennwort-Hash (`mosquitto/config/password.txt`), im Handbuch und im README von Repository 1 stehen Standard-Zugangsdaten. Nichts davon wurde übernommen; für die Schwärzungsprüfung vermerkt.
+
+**Was nicht ging / ungeprüft** (dieselbe Liste wie im Abschnitt „Offen gebliebene Punkte“ der Quellen-Datei)
+
+1. Lizenzfeld der GitHub-API für beide Repositories: ungeprüft – die Anfragegrenze ohne Anmeldung war erreicht; mit Anmeldung wurde bewusst nicht abgefragt. Der Befund stützt sich auf Dateibaum und Volltextsuche.
+2. Eingebettete Lizenztexte in `.zap18` und `.ft`: ungeprüft (Auftrag 110).
+3. Inhalt der `.ft`-Archive und ihre Zuordnung zu Modulen: ungeprüft.
+4. Aufteilung der Rechte zwischen Hersteller und Dienstleister: ungeprüft.
+5. Zweig `docs` von Repository 2: ungeprüft.
+6. Stand der Dateien ohne Datum im Namen (Nr. 1, 4, 6, 9, 12, 14, 17–20, A2, A3): ungeprüft (Auftrag 110).
+7. Urheber- oder Lizenzvermerke in den nicht geöffneten Unterlagen (alle außer Nr. 2, 8, 10): ungeprüft.
+8. Texte der Shop-AGB und der B2B-AGB: ungeprüft.
+9. Artikelnummern der Add-ons FTS und Brennofen: ungeprüft.
+10. Abbild: Softwarestand, Inhalt, Lizenzen, Rechteinhaber ungeprüft.
+11. Nutzungsbedingungen von GitHub: ungeprüft.
+
+**Hinweise an die Leitstelle (keine Blockade)**
+
+- Auftrag 105: Soll die Add-on-Dokumentation FTS geladen werden, obwohl sie kein Gerät der Testfabrik beschreibt? Optionen: A nicht laden (wie Brennofen, folgt der Logik von Frage 3) · B als ergänzende Unterlage zum Transportfahrzeug laden. Empfehlung: A.
+- Der Vorbefund im Auftrag nennt in der Zeile zu Repository 2 README-Zeilen, die um eins abweichen (siehe Abweichung 3); maßgeblich ist die Quellen-Datei.
+- Der Versand der Anfrage (Frage 1, Antwort A) bleibt bei a7.
