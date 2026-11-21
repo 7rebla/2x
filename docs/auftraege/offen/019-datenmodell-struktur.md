@@ -1,6 +1,6 @@
 # Auftrag 019 – Datenmodell Standort, Bereich, Anlage, Gerät
 
-Meilenstein: M1 · Freigabestufe: C · Status: offen
+Meilenstein: M1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -98,7 +98,67 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
    - Empfehlung: (a). Ein Betrieb, keine Mandanten (Startunterlage 4, „Nicht in Stufe 1“). (b) braucht Prüfungen über die Kette, die die Datenbank nicht direkt abbildet.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+### Was wurde gebaut?
+
+- `backend/twox/assets/models.py`: `Site`, `Area`, `Plant`, `Device` nach Frage 1 (a) und 2 (a), gemeinsame abstrakte Basis `TimestampedModel` (`created_at`, `updated_at`).
+  - Fremdschlüssel mit `PROTECT` und `related_name` (`areas`, `plants`, `devices`).
+  - Benannte `UniqueConstraint`: `assets_site_name_unique`, `assets_area_site_name_unique` (Standort + Name), `assets_plant_key_unique`, `assets_device_key_unique` (beide systemweit).
+  - Kennungen: `CharField(64)` mit `RegexValidator` `^[a-z0-9-]+$` (Code `invalid_key`). Namen: `CharField(200)`.
+  - Gerätefelder `manufacturer`, `model`, `software_version`, `address_source`, `protocols`, `notes` und `Plant.notes` als `TextField(blank=True)`.
+  - `ip_address`: `GenericIPAddressField(blank=True, null=True)`; leer wird als NULL gespeichert (Django verlangt `null=True`, weil ein leerer Text kein gültiger `inet`-Wert ist).
+  - `__str__`: Standort und Bereich zeigen den Namen, Anlage und Gerät `Name (Kennung)`. `Meta.ordering`: Name bzw. Kennung. `verbose_name` und `verbose_name_plural` (Modelle) sowie die Feldbezeichnungen mit `gettext_lazy`.
+- `backend/twox/assets/migrations/0001_initial.py` (von `makemigrations` erzeugt, mit `ruff format` formatiert) und `migrations/__init__.py`.
+- `backend/tests/assets/__init__.py`, `backend/tests/assets/test_models.py`: 23 Testfälle (mit Parametrisierung). Abgedeckt: Kette anlegen; Anlage ohne Gerät mit Notiz; doppelter Bereichsname am selben Standort schlägt fehl (Datenbank und `full_clean`), am anderen nicht; Standortname eindeutig; Anlagen- und Gerätekennung systemweit eindeutig; `PROTECT` bei Standort, Bereich und Anlage; ungültige IP von `full_clean()` abgewiesen, leere erlaubt; ungültige Kennungen (Großbuchstaben, Unterstrich, Leerzeichen, Punkt, Umlaut, leer) bei Anlage und Gerät abgewiesen, Kennungen der Testfabrik angenommen; Notiz und Adressherkunft mit über 1000 Zeichen unverändert gespeichert; leere Freitextfelder erlaubt; `ordering`, `verbose_name` und Constraint-Namen vorhanden.
+
+**Zuordnung der 13 Spalten von `testfactory/layout/devices.csv`** (längster Wert in der Datei in Klammern):
+
+| Spalte | Feld | Typ |
+| --- | --- | --- |
+| `site` (10) | `Site.name` | `CharField(200)`, eindeutig |
+| `area` (15) | `Area.name` | `CharField(200)`, eindeutig je Standort |
+| `plant_id` (14) | `Plant.key` | `CharField(64)`, Kennung, systemweit eindeutig |
+| `plant_name` (42) | `Plant.name` | `CharField(200)` |
+| `device_id` (11) | `Device.key` | `CharField(64)`, Kennung, systemweit eindeutig |
+| `device_name` (40) | `Device.name` | `CharField(200)` |
+| `manufacturer` (31) | `Device.manufacturer` | `TextField`, leer erlaubt |
+| `model` (60) | `Device.model` | `TextField`, leer erlaubt |
+| `software_version` (105) | `Device.software_version` | `TextField`, leer erlaubt |
+| `ip_address` (13) | `Device.ip_address` | `GenericIPAddressField`, leer = NULL |
+| `address_source` (155) | `Device.address_source` | `TextField`, leer erlaubt |
+| `protocols` (108) | `Device.protocols` | `TextField`, leer erlaubt |
+| `notes` (319) | `Device.notes`; bei der Zeile ohne Gerät (`aps-charging`) `Plant.notes` | `TextField`, leer erlaubt |
+
+Alle 10 Anlagen- und 13 Gerätekennungen der Datei erfüllen das Kennungsmuster und sind eindeutig; die 7 belegten Adressen sind gültige IPv4-Adressen, die 6 (plus Zeile ohne Gerät) leeren werden NULL. Ein Import ist nicht gebaut (Auftrag 031).
+
+### Wie wurde getestet?
+
+Alle Befehle mit `D` = `docker compose -p twox-019` im Wurzelverzeichnis des Arbeitsverzeichnisses, `.env` aus `.env.example` mit `TWOX_API_PORT=18019`. Docker Engine 29.9.3, Compose v5.7.0. Die Läufe fanden auf dem Stand des Commits mit Modellen, Migration und Tests statt.
+
+| Nr. | Ergebnis | Tatsächliche Ausgabe (gekürzt) |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` (29.9.3), `docker compose version` (v5.7.0), Exit-Code 0 |
+| 1 | erfüllt | Build Exit-Code 0; `up -d --wait …` Exit-Code 0; `D logs migrate`: `Applying assets.0001_initial... OK` |
+| 2 | erfüllt | `All checks passed!`; `57 files already formatted`, Exit-Code 0; `Success: no issues found in 57 source files` |
+| 3 | erfüllt | `133 passed, 4 deselected`, Exit-Code 0, nichts übersprungen (`-rs` ohne Eintrag); `pytest -m worker`: `4 passed, 133 deselected`, Exit-Code 0 |
+| 4 | erfüllt | `No changes detected` |
+| 5 | erfüllt | `spectacular` Exit-Code 0; `git diff --exit-code -- web/openapi` Exit-Code 0, keine neue Datei |
+| 6 | erfüllt | `D --profile dev --profile e2e down -v` Exit-Code 0; keine Container und Volumes des Projekts `twox-019` mehr |
+
+Zusätzlich wie in der CI: `sh scripts/check-licenses.sh` meldet `License check passed.` (keine neue Abhängigkeit).
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-ab59c12bd071e1006`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-ab59c12bd071e1006` (relativ zum Projektordner)
+- Nicht gepusht, nichts zusammengeführt.
+
+### Abweichungen und Hinweise
+
+- **`manufacturer` und `model` sind `TextField`**, nicht `CharField`. Der Umfang nennt nur Namen und Kennungen als `CharField`; die übrigen Gerätefelder sind laut E-41 Freitext 1:1 aus der CSV. So gibt es keine Längengrenze, die ein späterer Import verletzen könnte.
+- **Kennungsmuster wörtlich nach Umfang** (`^[a-z0-9-]+$`): Ein Bindestrich am Anfang oder Ende, doppelte Bindestriche oder nur `-` wären damit erlaubt. Soll das strenger sein (`^[a-z0-9]+(-[a-z0-9]+)*$`), ist es eine Zeile plus neue Migration; alle Kennungen der Testfabrik erfüllen beide Muster. Die Prüfung läuft in `full_clean()` (Validator), nicht als Datenbank-Constraint.
+- **`Meta.ordering` und `Meta.constraints` als Tupel**, weil Ruff (`RUF012`) Listen als veränderliche Klassenattribute bemängelt.
+- **Reihenfolge in der Migration:** Django legt `Area`, `Plant`, `Device`, `Site` an und ergänzt danach `Area.site` und die Constraints. Das ist die unveränderte Ausgabe von `makemigrations`.
+- **`twox.assets` stand schon in `INSTALLED_APPS`**; `settings.py` und `urls.py` sind nicht berührt.
+- Lokal liegen noch die Images `twox-019-*`; Container, Netze und Volumes sind entfernt.
+- Keine offenen Fragen an a7.
