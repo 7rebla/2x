@@ -1,6 +1,6 @@
 # Auftrag 004 – Messung Dateizugriff
 
-Meilenstein: M0 · Freigabestufe: B · Status: offen
+Meilenstein: M0 · Freigabestufe: B · Status: zur Prüfung
 
 ## Ziel
 
@@ -71,7 +71,111 @@ a7 kann anhand von Messwerten entscheiden, ob das Repository im Windows-Ordner b
    - Empfehlung: (a). (b) nur nachholen, wenn das Ergebnis knapp ausfällt. Der Auftrag ist für (a) geschrieben.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Messung am 21.11.2026 abgeschlossen, zwei vollständige Läufe.
+
+### Was wurde gebaut?
+
+- `deploy/compose/bench-file-access.sh`: Bash-Skript, ruft nur `docker compose` auf (Statistik mit `awk`/`sort` aus Git Bash). Es baut die Images, startet `db`, kopiert `backend/` und `web/` (ohne `node_modules`, `dist`) per `tar` in zwei benannte Volumes, füllt einen gemeinsamen npm-Zwischenspeicher und misst dann jeden Schritt in einem frischen Container (`run --rm`). Die Zeit wird im Container mit `date +%s%N` um den Befehl gemessen; der Containerstart zählt nicht mit. Je Schritt ein kalter Lauf (getrennt ausgewiesen) und `BENCH_RUNS` warme Läufe (Vorgabe 5), daraus Median und Spannweite. L1 und L2 wechseln sich Schritt für Schritt ab, die Reihenfolge kehrt sich je Wiederholung um. Am Ende: `down --volumes --rmi local --remove-orphans`, `backend/.bench-fs`, `web/dist` und der leere Einhängepunkt `web/node_modules` werden entfernt (nur wenn sie vorher nicht da waren). Einstellbar: `BENCH_PROJECT` (Vorgabe `twox-bench`), `BENCH_RUNS`, `BENCH_RAW` (Rohdaten behalten).
+- `deploy/compose/compose.bench.yaml`: Überlagerung zu `compose.yaml` und `compose.web.yaml`. Dienste `backend-dev-vol` und `web-dev-vol` (per `extends` aus `backend-dev`/`web-dev`, Quelltext im Volume statt Bind-Mount), `bench-seed` (Kopierdienst), Volume `npm_cache` für `web-dev` und `web-dev-vol`.
+- Lage 1 (L1) = die heutigen Dienste `backend-dev` und `web-dev` (Bind-Mount aus dem Windows-Ordner; `node_modules` wie bisher im Volume). Lage 2 (L2) = Quelltext und `node_modules` in benannten Volumes (WSL-2-Dateisystem der Docker-Desktop-VM), gemäß E-23 ohne Kopie in die Debian-Umgebung.
+- Arbeitsschritte: Backend `pytest -q`, `mypy .`, `ruff check .`, `python manage.py check`; Web `npm ci --prefer-offline`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`; Dateisystem mit Python-Standardbibliothek: 10 000 Dateien à 100 Byte anlegen, lesen, löschen (je einzeln gemessen) und `backend/` 20-mal rekursiv auflisten mit `os.stat` (je Durchgang rund 57 Dateien).
+
+### Messbedingungen
+
+- Datum 21.11.2026, Lauf 1 von 17:47 bis 18:04, Lauf 2 von 18:04 bis 18:21 Ortszeit (die Kopfzeile der Skriptausgabe nennt die Endzeit in UTC).
+- Docker Desktop 4.99.0 (245822), Engine 29.9.3, Compose 5.7.0; WSL 2.3.26.0, Kernel 5.15.167.4-microsoft-standard-WSL2, 16 CPUs in der VM; Windows 11 Pro 10.0.26300. Rechner laut Startunterlage 5.5.
+- Compose-Projekt `twox-004-bench` (über `BENCH_PROJECT`, siehe Abweichungen). Kein Host-Port.
+- **Störgrößen:** Parallel liefen die Aufträge 011 (lokal mit Docker-Läufen) und 113 (ohne Docker) sowie die Testumgebung „2x“ der Leitstelle (5 Container, im Leerlauf, zusammen unter 6 % CPU bei einer Stichprobe). Ein Virenscanner unter Windows wurde nicht geprüft. Gegenmaßnahme: abwechselnde Messung (siehe oben). Einzelne Ausreißer in den Spannweiten (z. B. mypy 9,52 s in Lauf 1) gehen vermutlich auf diese Last zurück; die Mediane sind davon kaum berührt.
+- `npm ci` liest aus einem gemeinsamen, vorher gefüllten npm-Zwischenspeicher (`--prefer-offline`), damit nicht die Download-Zeit gemessen wird.
+- mypy- und pytest-Zwischenspeicher liegen laut Dockerfile in `/tmp` des Containers; jeder Lauf ist für sie also kalt (wie heute bei `run --rm`).
+
+### Messtabelle (Sekunden; Median und Spannweite aus 5 warmen Läufen; Faktor = Median L1 / Median L2)
+
+Lauf 1:
+
+| Arbeitsschritt | L1 kalt | L2 kalt | L1 Median | L1 Spanne | L2 Median | L2 Spanne | Faktor |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| pytest | 27,18 | 24,67 | 28,05 | 27,25–29,70 | 25,74 | 24,92–26,43 | 1,09 |
+| mypy | 5,07 | 4,70 | 5,58 | 5,14–9,52 | 4,94 | 4,75–7,82 | 1,13 |
+| ruff check | 0,10 | 0,04 | 0,09 | 0,09–0,17 | 0,04 | 0,02–0,09 | 2,25 |
+| manage.py check | 2,23 | 1,94 | 2,25 | 2,25–3,22 | 2,01 | 1,95–2,49 | 1,12 |
+| npm ci | 5,26 | 5,53 | 6,07 | 5,81–6,21 | 6,03 | 5,47–8,50 | 1,01 |
+| npm run lint | 3,07 | 2,79 | 3,12 | 2,90–3,26 | 2,69 | 2,64–3,63 | 1,16 |
+| npm run typecheck | 1,55 | 1,43 | 1,46 | 1,43–1,52 | 1,32 | 1,27–1,50 | 1,11 |
+| npm run test | 1,72 | 1,22 | 1,55 | 1,50–1,57 | 1,16 | 1,06–1,26 | 1,34 |
+| npm run build | 0,70 | 0,51 | 0,76 | 0,68–0,76 | 0,51 | 0,46–0,66 | 1,49 |
+| 10 000 Dateien anlegen | 16,58 | 0,32 | 16,27 | 16,13–17,21 | 0,33 | 0,32–0,34 | 49 |
+| 10 000 Dateien lesen | 15,37 | 0,11 | 15,02 | 14,90–16,08 | 0,11 | 0,10–0,12 | 137 |
+| 10 000 Dateien löschen | 8,62 | 0,15 | 8,97 | 8,73–9,73 | 0,14 | 0,13–0,16 | 64 |
+| Auflisten + stat (20 Durchgänge) | 2,38 | 0,01 | 2,38 | 2,27–2,41 | 0,01 | 0,01–0,01 | > 200 |
+
+Lauf 2 (Kriterium 2):
+
+| Arbeitsschritt | L1 kalt | L2 kalt | L1 Median | L1 Spanne | L2 Median | L2 Spanne | Faktor |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| pytest | 27,67 | 25,61 | 28,03 | 27,70–29,75 | 25,40 | 25,35–27,96 | 1,10 |
+| mypy | 5,12 | 4,66 | 5,25 | 5,12–5,39 | 4,84 | 4,67–4,90 | 1,08 |
+| ruff check | 0,10 | 0,02 | 0,10 | 0,09–0,11 | 0,04 | 0,03–0,05 | 2,50 |
+| manage.py check | 2,30 | 1,95 | 2,32 | 2,21–2,55 | 1,99 | 1,92–2,23 | 1,17 |
+| npm ci | 5,49 | 5,40 | 5,83 | 5,70–6,08 | 5,95 | 5,69–6,18 | 0,98 |
+| npm run lint | 3,24 | 3,36 | 3,04 | 3,01–3,10 | 2,72 | 2,64–2,86 | 1,12 |
+| npm run typecheck | 1,63 | 1,57 | 1,54 | 1,48–1,62 | 1,36 | 1,29–1,43 | 1,13 |
+| npm run test | 1,82 | 1,23 | 1,60 | 1,55–1,61 | 1,14 | 1,13–1,20 | 1,40 |
+| npm run build | 0,74 | 0,59 | 0,75 | 0,71–0,81 | 0,51 | 0,49–0,57 | 1,47 |
+| 10 000 Dateien anlegen | 16,37 | 0,51 | 16,55 | 16,53–17,02 | 0,32 | 0,30–0,34 | 52 |
+| 10 000 Dateien lesen | 15,19 | 0,12 | 14,94 | 14,33–15,42 | 0,11 | 0,10–0,13 | 136 |
+| 10 000 Dateien löschen | 9,11 | 0,14 | 8,76 | 8,49–8,99 | 0,13 | 0,13–0,14 | 67 |
+| Auflisten + stat (20 Durchgänge) | 2,59 | 0,01 | 2,32 | 2,25–2,38 | 0,01 | 0,01–0,01 | > 200 |
+
+Abweichung der Mediane über 5 s zwischen Lauf 1 und 2: pytest L1 0,1 %, L2 1,3 %; mypy L1 5,9 %; npm ci L1 4,0 %, L2 1,3 %; anlegen L1 1,7 %; lesen L1 0,5 %; löschen L1 2,3 %. Alle unter 20 %. Schritte unter 5 s: nur Spannweite (siehe Tabellen).
+
+Ein Vorlauf mit `BENCH_RUNS=1` (17:41) lieferte dieselben Größenordnungen.
+
+### Bewertung und Empfehlung: **bleiben**
+
+- Die reinen Dateisystem-Operationen sind im Windows-Ordner 50- bis über 200-mal langsamer (rund 1,5 ms je angelegter, gelesener oder gelöschter Datei, rund 2 ms je `stat` (Hochrechnung aus rund 1 100 Aufrufen), gegen Mikrosekunden im Volume).
+- Die tatsächlichen Entwicklerbefehle spüren das kaum, weil heute schon alles Dateireiche außerhalb des Windows-Ordners liegt: die Python-Umgebung im Image (`/opt/venv`), `node_modules` im Volume, Zwischenspeicher in `/tmp`. Der Quelltext selbst ist klein (`backend/` 57, `web/` 39 Dateien unter Git). Faktor 1,0 bis 1,5 (ruff 2,5, aber bei 0,1 s); absolut 0,0 bis 2,7 s je Befehl. Ein kompletter Durchgang aller neun Befehle kostet im Windows-Ordner etwa 49 s, im Volume etwa 44 s (Summe der Mediane, Lauf 2).
+- pytest braucht in beiden Lagen rund 25 bis 28 s; der Großteil hängt also nicht am Dateizugriff (vermutlich Anlegen der Testdatenbank und Migrationen – nicht geprüft).
+- Das Ergebnis ist nicht knapp. Eine Zusatzmessung nach Frage 1 (b) ist nicht nötig.
+- **Alternative ohne Umzug (empfohlen als Regel):** Abhängigkeiten, Build-Ergebnisse und Zwischenspeicher weiterhin nie in den Windows-Ordner legen – wie `node_modules` in Auftrag 002 und die Zwischenspeicher in Auftrag 001. Nach den Zahlen oben würde z. B. ein `node_modules` mit einigen zehntausend Dateien im Bind-Mount allein durch das Schreiben mehrere Minuten kosten (Hochrechnung, nicht gemessen). `web/dist` (Build-Ausgabe) liegt heute noch im Bind-Mount; bei der jetzigen Größe kostet das etwa 0,25 s.
+- Neu bewerten, falls der Quelltext stark wächst oder ein Werkzeug viele Dateien im Quelltextbaum schreibt (z. B. Dateibeobachtung im Vite-Entwicklungsserver; laut Claude-Code-Doku bricht die Dateibeobachtung über das Netzdateisystem – nicht gemessen).
+
+### Folgen eines Umzugs (falls a7 anders entscheidet)
+
+- Projektpfad in Startunterlage 5.5 und 13 ändert sich (Linux-Pfad in der Debian-Umgebung).
+- Claude-Desktop-App: Laut Claude-Code-Doku (Seite „desktop-wsl“, gelesen am 21.11.2026) kann die Desktop-App Sitzungen in einer WSL-2-Distribution führen; `\\wsl.localhost\…`-Ordner öffnen sich darin, Git muss in der Distribution installiert sein, Worktrees „funktionieren“. **Ungeprüft:** ob die Unteragenten-Isolation mit Arbeitsverzeichnissen unter `.claude/worktrees/` dort genauso läuft (die Doku sagt dazu nichts ausdrücklich). Laut derselben Seite fehlen in WSL-Sitzungen Plugins, teils Konnektoren und das Terminal; Vertrauen gilt je Distribution und Ordner neu.
+- Git: Git für Windows (Git Bash, Grundlage des Bash-Werkzeugs von Claude Code unter Windows) würde durch Git in Debian ersetzt; laut Doku braucht eine WSL-Einrichtung kein Git für Windows. Zugangsdaten für GitHub und Signaturen müssten in Debian neu eingerichtet werden (ungeprüft, wie aufwendig).
+- Docker: Bind-Mounts aus der Debian-Umgebung laufen über die WSL-Integration von Docker Desktop; diese muss für die Distribution eingeschaltet sein (ungeprüft, ob sie es ist).
+- Regel „Nur im Projektordner arbeiten“ bezöge sich auf den neuen Pfad; die Windows-Werkzeuge (Editor, Explorer) griffen dann ihrerseits über das Netzdateisystem zu.
+- Ollama läuft weiter unter Windows; die Erreichbarkeit über `host.docker.internal` ändert sich durch den Umzug nicht (Annahme, nicht geprüft).
+
+### Entwurf für das Entscheidungsprotokoll
+
+> **E-xx Lage des Repositorys: Windows-Ordner bleibt (Entwurf, Entscheidung durch a7).** Gemessen in Auftrag 004 am 21.11.2026 (Docker Desktop 4.99.0, WSL 2.3.26.0). Die typischen Entwicklerbefehle (pytest, mypy, ruff, manage.py check, npm ci/lint/typecheck/test/build) sind im Bind-Mount aus dem Windows-Ordner 0 bis 50 % langsamer als in einem benannten Docker-Volume (ruff 150 % bei 0,1 s), absolut höchstens etwa 3 s je Befehl. Reine Dateioperationen sind im Windows-Ordner 50- bis über 200-mal langsamer. Das Repository bleibt deshalb im Windows-Ordner; Regel: Abhängigkeiten, Build-Ergebnisse und Zwischenspeicher liegen in Images, Volumes oder `/tmp` des Containers, nie im eingebundenen Quelltext. Neu messen mit `deploy/compose/bench-file-access.sh`, wenn der Quelltext stark wächst oder ein Werkzeug viele Dateien im Quelltextbaum schreibt.
+
+### Wie wurde getestet? (Akzeptanzkriterien)
+
+| Nr. | Ergebnis | Tatsächliche Ausgabe (gekürzt) |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` (Engine 29.9.3) und `docker compose version` (v5.7.0): Exit 0 |
+| 1 | erfüllt | `bash deploy/compose/bench-file-access.sh` in Git Bash (aufgerufen über PowerShell, mit `BENCH_PROJECT=twox-004-bench`): zweimal Exit 0, Tabelle mit allen Schritten und Medianen beider Lagen |
+| 2 | erfüllt | Alle Mediane über 5 s weichen zwischen Lauf 1 und 2 höchstens 5,9 % ab (mypy L1) |
+| 3 | erfüllt | Nach jedem Lauf leer: `docker ps -a` und `docker volume ls` mit Filter `twox-bench` und mit Filter `twox-004`; auch die gebauten `twox-004-bench-*`-Images sind entfernt |
+| 4 | erfüllt | `git status --short` nach den Läufen: nur das Skript und die Compose-Datei (danach committet); `--ignored` zeigt nur `.env` und `STARTUNTERLAGE.md` |
+| 5 | erfüllt | `git ls-files --eol deploy/compose/bench-file-access.sh`: `i/lf w/lf` |
+| 6 | erfüllt | Tabelle, Messbedingungen, Empfehlung und Folgen eines Umzugs: siehe oben |
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-a633e87805d65981b`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-a633e87805d65981b` (relativ zum Projektordner)
+
+### Abweichungen
+
+- **Projektname:** Vorgabe im Skript ist `twox-bench` (Auftrag). Gemessen wurde nach Vorgabe der Leitstelle mit `BENCH_PROJECT=twox-004-bench`. Kriterium 3 wurde deshalb zusätzlich mit dem Filter `twox-004` geprüft.
+- **Mehr Wiederholungen und Schritte als im Auftrag:** 1 kalter + 5 warme Läufe statt 3; zusätzlich `npm run lint` und `npm run typecheck` (Hinweis der Leitstelle). Messbefehl `npm ci --prefer-offline` mit gemeinsamem npm-Zwischenspeicher-Volume (sonst misst man den Download).
+- **Nicht allein in der Welle:** Parallel liefen 011, 113 und die Testumgebung „2x“ (siehe Störgrößen).
+- **`down --rmi local`:** Das Skript entfernt auch die eigenen gebauten Images; der Build-Zwischenspeicher von Docker bleibt.
+- Nicht gemessen: `node_modules` im Bind-Mount (nur hochgerechnet), Vite-Entwicklungsserver mit Dateibeobachtung, Git-Befehle (Nicht-Ziel), Frage 1 (b).
+- Ausgeführt wurde das Skript aus PowerShell über Git Bash (`bash.exe` aus Git für Windows), nicht über das Bash-Werkzeug der Sitzung.
