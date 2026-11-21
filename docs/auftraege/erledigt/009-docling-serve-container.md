@@ -1,6 +1,6 @@
 # Auftrag 009 – docling-serve als Container
 
-Meilenstein: M0 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: M0 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 

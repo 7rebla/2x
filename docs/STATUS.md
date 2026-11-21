@@ -19,11 +19,11 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 006 | Lizenzprüfung | C | 3 | 001, 002 | erledigt |
 | 007 | Prüfung der Erreichbarkeit von Ollama | B | 3 | 001 | erledigt |
 | 008 | Celery-Worker mit Valkey | C | 4 | 005 | erledigt |
-| 009 | docling-serve als Container | C | 5 | 008 | in Arbeit |
+| 009 | docling-serve als Container | C | 5 | 008 | erledigt |
 | 010 | Testseite, Teil API | C | 5 | 005, 008 | erledigt |
 | 011 | CI-Hauptworkflow | C | 5 | 002, 005, 006, 008 | offen |
 | 012 | Testseite, Teil Oberfläche | C | 6 | 002, 010 | erledigt |
-| 013 | Auslieferung der Oberfläche durch Django | C | 6 | 002, 009, 010 | offen |
+| 013 | Auslieferung der Oberfläche durch Django | C | 6 | 002, 009, 010 | in Arbeit |
 | 014 | Playwright-Test der Testseite | C | 7 | 011, 012, 013 | offen |
 | 015 | ARCHITECTURE.md und README | B | 8 | 006, 007, 009, 013, 014 | offen |
 
@@ -48,7 +48,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 ## In Arbeit
 
-- 009 (Netz abriegeln) und 112 als Subagenten; 013 startet nach 009.
+- 013 und 112 als Subagenten.
 
 ## Wartet auf a7
 
@@ -87,3 +87,4 @@ Nichts davon hält die laufende Arbeit auf.
 - Freie Plätze mit T1 füllen: zuerst 102 und 103 (reine Recherche), dann 101.
 - Folgeaufträge vorgemerkt: Selbsttest-Endpunkt in M1 auf angemeldete Benutzer beschränken; Zeitlimit für den Fall „Broker erreichbar, Ergebnisspeicher nicht" (Vorschläge im Kurzbericht von 010).
 - Siemens-Systemhandbuch V4.6 lädt a7 bei Gelegenheit selbst (E-27): Quelle und Ablage stehen im Kurzbericht von 109; danach `fetch --record --only siemens-s7-1200-system-manual-v4-6-de`.
+- Für M2 vorgemerkt (aus 009): Jede Anfrage an Docling muss `ocr_preset: "rapidocr"` mitschicken, sonst antwortet der Dienst mit 422 (E-31). Docling lädt seine Modelle erst bei der ersten Umwandlung; `healthy` heißt nur „Server läuft". `backend-dev` erreicht Docling absichtlich nicht.
