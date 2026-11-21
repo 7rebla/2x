@@ -1,1 +1,52 @@
-{}
+{
+  "heading": "Change log",
+  "intro": "Who changed what and when, newest first.",
+  "tableLabel": "Changes",
+  "filter": {
+    "legend": "Filter",
+    "objectType": "Object type",
+    "allObjectTypes": "All object types",
+    "actor": "User",
+    "actorHint": "Exact user name",
+    "apply": "Apply filter",
+    "reset": "Reset filter"
+  },
+  "column": {
+    "timestamp": "Time",
+    "actor": "User",
+    "action": "Action",
+    "objectType": "Object type",
+    "object": "Object",
+    "changes": "Changes"
+  },
+  "action": {
+    "create": "Created",
+    "update": "Changed",
+    "delete": "Deleted"
+  },
+  "objectType": {
+    "site": "Site",
+    "area": "Area",
+    "plant": "Plant",
+    "device": "Device",
+    "document": "File",
+    "documentVersion": "File version",
+    "user": "User"
+  },
+  "noActor": "System (no signed-in user)",
+  "objectId": "ID {{id}}",
+  "emptyValue": "(empty)",
+  "noFieldChanges": "No field values",
+  "membership": {
+    "add": "added",
+    "delete": "removed"
+  },
+  "empty": "No entries found.",
+  "pagination": {
+    "label": "Pages of the change log",
+    "previous": "Previous page",
+    "next": "Next page",
+    "status": "Page {{page}} of {{pages}}",
+    "total": "Entries: {{count, number}}"
+  }
+}

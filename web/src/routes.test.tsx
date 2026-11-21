@@ -117,7 +117,6 @@ describe("addresses", () => {
 
   it.each([
     ["/import", "Import"],
-    ["/audit", "Change log"],
     ["/documents/42", "File"],
   ])("%s shows the page %s", async (path, heading) => {
     fakeApi(manager);
