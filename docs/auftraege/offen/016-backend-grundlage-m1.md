@@ -1,6 +1,6 @@
 # Auftrag 016 – Backend-Grundlage für M1: Sitzungen, Admin, CSRF, Sprachen, Zwischenspeicher, URL-Aufteilung
 
-Meilenstein: M1 · Freigabestufe: C · Status: offen
+Meilenstein: M1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -160,7 +160,55 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
    - Empfehlung: (a), weil es in M1 noch keine Zwei-Faktor-Anmeldung gibt. Ebenfalls ein Vorschlag der Leitstelle.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Was wurde gebaut?**
+
+- `settings.py`: `sessions`, `messages` und der Admin (über `twox.config.admin_site.TwoxAdminConfig`, App-Name bleibt `django.contrib.admin`). Middleware in der Reihenfolge Security, WhiteNoise, Session, Locale, Common, Csrf, Authentication, Messages, XFrameOptions. `TEMPLATES` (DjangoTemplates, `APP_DIRS`, Kontextprozessoren `request`, `auth`, `messages`). Vier Standard-Prüfer, Mindestlänge 12. `SESSION_COOKIE_AGE` 8 Stunden, `SESSION_COOKIE_HTTPONLY = True`, `SESSION_COOKIE_SAMESITE` und `CSRF_COOKIE_SAMESITE` = `"Lax"`. `CACHES["default"]` = `RedisCache` aus `TWOX_CACHE_URL` (Standard `redis://valkey:6379/2`). DRF: `SessionAuthentication`, Rechte weiter `IsAuthenticated`, Renderer und Parser JSON. `LANGUAGES` de/en, `LOCALE_PATHS = [BASE_DIR / "locale"]`, `LANGUAGE_CODE` bleibt `en`. `TWOX_MEDIA_ROOT` (absoluter `Path`, Standard `/data/media`) und `TWOX_UPLOAD_MAX_BYTES` (ganze Zahl größer 0, Standard 200 000 000) mit Prüfung; kein `MEDIA_URL`.
+- `admin_site.py`: `TwoxAdminSite.has_permission` nur für aktive Superuser; `TwoxAdminConfig` mit `default_site`.
+- `staticfinders.py`: `AdminAppDirectoriesFinder` durchsucht nur `django.contrib.admin`; steht zusätzlich zum `FileSystemFinder` in `STATICFILES_FINDERS`.
+- `urls.py`: `admin/`; `api/v1/` bindet `twox.accounts.urls`, `twox.assets.urls`, `twox.files.urls` ein (neu, leere typisierte Listen). `web_index` für `/` und alle Pfade, deren erstes Segment nicht `api`, `static`, `admin`, `_allauth` oder `accounts` ist (Segment gefolgt von `/` oder Pfadende). `webui.py`: zusätzlich `ensure_csrf_cookie`, weiter nur GET und HEAD.
+- `deploy/compose/compose.yaml` (gemeinsamer Umgebungsblock) und `.env.example`: `TWOX_CACHE_URL`.
+- Tests: neu `tests/conftest.py` (LocMemCache für alle Tests, nach jedem Test geleert), `tests/config/test_admin.py`, `tests/config/expected_paths/` (je App eine Liste, `ALL_EXPECTED_PATHS` als Vereinigung); erweitert `test_settings.py`, `test_webui.py` (`test_unknown_paths_are_404_not_the_ui` ersetzt, Sammeltest um Admin-Dateien und Lizenzdateien erweitert, Test des Finders), `test_api.py` (Sitzung mit `force_login`, CSRF mit `enforce_csrf_checks=True`, Schema-Pfade aus `expected_paths`).
+
+Fremdbibliotheken des Admins (abgelesen an den mitgelieferten Dateien unter `staticfiles/admin/` im Image, Django 6.1.3):
+
+| Bibliothek | Version | Lizenz | Lizenzdatei |
+| --- | --- | --- | --- |
+| jQuery | 3.7.1 (Kopf von `jquery.js`) | MIT (Text in `LICENSE.txt`, OpenJS Foundation) | `admin/js/vendor/jquery/LICENSE.txt` |
+| Select2 | 4.0.13 (Kopf von `select2.full.js`) | MIT (`LICENSE.md`; dazu `admin/css/vendor/select2/LICENSE-SELECT2.md`) | `admin/js/vendor/select2/LICENSE.md` |
+| XRegExp | 5.1.1 (`XRegExp.version` in `xregexp.js`) | MIT (`LICENSE.txt`) | `admin/js/vendor/xregexp/LICENSE.txt` |
+
+Hinweis für den Eintrag im Entscheidungsprotokoll: Der Admin liefert außerdem Symbole aus Font Awesome Free 6.7.2 unter CC-BY-4.0 aus (`admin/img/*.svg`; Hinweis in `admin/img/README.md`, das ebenfalls gesammelt und ausgeliefert wird; jede SVG trägt den Urheberkommentar). Das gebündelte `xregexp.js` enthält Teile von `@babel/runtime-corejs3` (core-js, MIT).
+
+**Wie wurde getestet?** Alles mit `docker compose -p twox-016`, `.env` aus `.env.example` mit `TWOX_API_PORT=18016`.
+
+| AK | Ergebnis |
+| --- | --- |
+| 0 | erfüllt: `docker version` (Server 29.9.3) und `docker compose version` (v5.7.0) Exit 0 |
+| 1 | erfüllt: Bau Exit 0, `up -d --wait` Exit 0; `logs migrate` zeigt `admin.0001_initial` bis `admin.0003_…` und `sessions.0001_initial ... OK` |
+| 2 | erfüllt: `200` |
+| 3 | erfüllt: `http://localhost:8000/admin/login/?next=/admin/` |
+| 4 | erfüllt: Exit 0 |
+| 5 | erfüllt: `jquery/LICENSE.txt`, `select2/LICENSE.md`, `xregexp/LICENSE.txt`; alle drei auch per HTTP mit 200 ausgeliefert |
+| 6 | erfüllt: `1`; `valkey-cli -n 2 dbsize` danach `1` |
+| 7 | erfüllt: `All checks passed!`, `ruff format --check` Exit 0, `Success: no issues found in 64 source files` |
+| 8 | erfüllt: `161 passed, 4 deselected`, 0 fehlgeschlagen, 0 übersprungen; `pytest -m worker`: `4 passed` |
+| 9 | erfüllt: `No changes detected` |
+| 10 | erfüllt: `License check passed.` (53 Pakete) |
+| 11 | erfüllt: `spectacular` ohne Ausgabe, `git diff --exit-code -- web/openapi` ohne Unterschied, keine neuen Dateien |
+| 12 | erfüllt: Bau, `pull e2e`, `npm ci` Exit 0; `1 passed` |
+| 13 | erfüllt: `down -v` Exit 0, danach kein Container des Projekts `twox-016` mehr |
+
+Schema und API-Client sind unverändert, der web-Job war daher nicht nötig. Zusätzlich geprüft: `/devices/1` liefert im Container `200 text/html` und setzt `csrftoken`.
+
+**Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-abd60229e0d6eaceb`, Arbeitsverzeichnis `.claude/worktrees/agent-abd60229e0d6eaceb`.
+
+**Abweichungen**
+
+1. `backend/tests/accounts/test_user_model.py` (nicht im Auftrag genannt) angepasst: Mit dem Admin hat `User` die Rückwärtsbeziehung `logentry`. Der Test „User fügt keine Felder hinzu“ zählt jetzt nur eigene Felder, keine automatisch erzeugten Rückwärtsbeziehungen. Ohne die Änderung schlägt `pytest` fehl.
+2. „200 MB“ ist dezimal umgesetzt: 200 000 000 Byte (nicht 200 MiB = 209 715 200 Byte). Bitte bestätigen oder ändern; der Wert steht an einer Stelle in `settings.py` und im Test.
+3. Ein POST auf einen Oberflächen-Pfad ergibt im Test-Client ohne CSRF-Prüfung 405 (wie verlangt); mit CSRF-Prüfung (wie im Browser) weist vorher die CSRF-Middleware mit 403 ab. Beides ist getestet.
+4. Ein Benutzer mit `is_staff` ohne `is_superuser` kann sich über das Anmeldeformular des Admins anmelden (Djangos Formular prüft `is_staff`), bekommt danach aber keinen Zugang (Umleitung auf `/admin/login/`). Ein Superuser ohne `is_staff` kann sich über dieses Formular nicht anmelden. Beides ändert sich mit Auftrag 030 (Anmeldung nur über die Oberfläche). Der erste Fall ist getestet.
+5. Die Seitenpfade haben ein eigenes URL-Muster mit dem Namen `web-ui`; `web-index` bleibt für `/`.
+
+Keine neue Abhängigkeit. `docs/DECISIONS.md`, `docs/STATUS.md` und `docs/ARCHITECTURE.md` nicht geändert (Doku folgt in 038).

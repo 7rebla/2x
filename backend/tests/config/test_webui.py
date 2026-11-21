@@ -1,4 +1,4 @@
-"""Delivery of the built web UI: index.html at /, the build below /static/.
+"""Delivery of the built web UI: index.html for its pages, the build below /static/.
 
 Every test works on a prepared folder, never on a real build.
 """
@@ -7,10 +7,12 @@ import json
 from pathlib import Path
 
 import pytest
+from django.conf import settings
 from django.test import Client
 from pytest_django.fixtures import Settings
 
 from tests.config.test_settings import run_python
+from twox.config.staticfinders import ADMIN_APP_NAME, AdminAppDirectoriesFinder
 
 INDEX_HTML = """<!doctype html>
 <html lang="en">
@@ -117,12 +119,64 @@ def test_api_is_not_caught_by_the_ui() -> None:
 
 
 @pytest.mark.usefixtures("built_ui")
-@pytest.mark.parametrize("path", ["/api/", "/api/v1/", "/api/v1/unknown/", "/unknown/"])
-def test_unknown_paths_are_404_not_the_ui(path: str) -> None:
+@pytest.mark.parametrize(
+    "path", ["/devices/1", "/selftest", "/apix/", "/unknown/", "/static-files", "/administration"]
+)
+def test_page_paths_of_the_ui_serve_index_html(path: str) -> None:
+    response = Client().get(path)
+
+    assert response.status_code == 200
+    assert response["Content-Type"] == "text/html; charset=utf-8"
+    assert '<div id="root"></div>' in response.content.decode()
+    assert response["Cache-Control"] == "no-cache"
+
+
+@pytest.mark.usefixtures("built_ui")
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api",
+        "/api/",
+        "/api/v1/",
+        "/api/v1/unknown",
+        "/api/v1/unknown/",
+        "/static",
+        "/static/missing.js",
+        "/_allauth/x",
+        "/accounts/x",
+    ],
+)
+def test_reserved_paths_never_serve_the_ui(path: str) -> None:
     response = Client().get(path)
 
     assert response.status_code == 404
     assert '<div id="root">' not in response.content.decode()
+
+
+@pytest.mark.usefixtures("built_ui")
+def test_admin_without_slash_redirects_instead_of_serving_the_ui() -> None:
+    response = Client().get("/admin")
+
+    assert response.status_code == 301
+    assert response["Location"] == "/admin/"
+
+
+@pytest.mark.usefixtures("built_ui")
+@pytest.mark.parametrize("path", ["/", "/devices/1"])
+def test_ui_sets_the_csrf_cookie(path: str) -> None:
+    response = Client().get(path)
+
+    cookie = response.cookies[settings.CSRF_COOKIE_NAME]
+    assert cookie.value
+    assert cookie["samesite"] == "Lax"
+
+
+@pytest.mark.usefixtures("built_ui")
+@pytest.mark.parametrize("path", ["/", "/devices/1"])
+def test_ui_paths_reject_writes(path: str) -> None:
+    assert Client().head(path).status_code == 200
+    assert Client().post(path).status_code == 405
+    assert Client(enforce_csrf_checks=True).post(path).status_code == 403
 
 
 @pytest.mark.usefixtures("missing_ui")
@@ -167,13 +221,31 @@ def test_collectstatic_copies_the_build_without_database(tmp_path: Path) -> None
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout) == {"dirs": [str(dist)], "url": "/static/"}
     assert (static_root / "index.html").read_text(encoding="utf-8") == INDEX_HTML
-    # Exactly the build: nothing from the app folders (e.g. DRF's own assets).
     collected = sorted(
         path.relative_to(static_root).as_posix()
         for path in static_root.rglob("*")
         if path.is_file()
     )
-    assert collected == ["assets/index-abc123.js", "assets/index-def456.css", "index.html"]
+    # The build plus the admin's files; nothing from other app folders (for
+    # example DRF's own assets below rest_framework/).
+    outside_admin = [name for name in collected if not name.startswith("admin/")]
+    assert outside_admin == ["assets/index-abc123.js", "assets/index-def456.css", "index.html"]
+    assert "admin/css/base.css" in collected
+    assert not (static_root / "rest_framework").exists()
+    # The licence files of the libraries the admin ships are served too.
+    for library in ("jquery", "select2", "xregexp"):
+        licences = list((static_root / "admin" / "js" / "vendor" / library).glob("LICENSE*"))
+        assert len(licences) == 1, library
+
+
+def test_admin_finder_searches_the_admin_app_only() -> None:
+    finder = AdminAppDirectoriesFinder()
+
+    found = sorted(path for path, _ in finder.list([]))
+
+    assert finder.apps == [ADMIN_APP_NAME]
+    assert "admin/css/base.css" in found
+    assert all(path.startswith("admin/") for path in found)
 
 
 def test_missing_build_adds_no_static_folder(tmp_path: Path) -> None:

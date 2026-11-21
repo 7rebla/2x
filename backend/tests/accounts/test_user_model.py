@@ -14,7 +14,11 @@ def test_auth_user_model_is_accounts_user() -> None:
 
 
 def test_user_adds_no_fields_to_abstract_user() -> None:
-    own = {field.name for field in User._meta.get_fields()}
+    # Reverse relations from other models (e.g. the admin's log entries) are
+    # not fields of the user model itself.
+    own = {
+        field.name for field in User._meta.get_fields() if not field.auto_created or field.concrete
+    }
     inherited = {field.name for field in AbstractUser._meta.get_fields()}
 
     # The abstract base has no primary key; the concrete model gets the default one.

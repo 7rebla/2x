@@ -6,8 +6,10 @@ prefix ``TWOX_``. Importing this module never opens a database connection.
 
 import os
 from pathlib import Path
+from typing import Any
 
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.translation import gettext_lazy
 from kombu import Exchange, Queue
 
 _TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
@@ -39,6 +41,30 @@ def env_list(name: str) -> list[str]:
     return [item.strip() for item in os.environ.get(name, "").split(",") if item.strip()]
 
 
+def env_positive_int(name: str, default: int) -> int:
+    """Return the variable ``name`` as a whole number greater than zero."""
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 0
+    if value < 1:
+        raise ImproperlyConfigured(
+            f"Environment variable {name} must be a whole number greater than zero."
+        )
+    return value
+
+
+def env_absolute_path(name: str, default: str) -> Path:
+    """Return the variable ``name`` as an absolute path."""
+    value = Path(env_str(name, default))
+    if not value.is_absolute():
+        raise ImproperlyConfigured(f"Environment variable {name} must be an absolute path.")
+    return value
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = env_str("TWOX_SECRET_KEY")
@@ -46,11 +72,17 @@ DEBUG = env_bool("TWOX_DEBUG", default=False)
 ALLOWED_HOSTS = env_list("TWOX_ALLOWED_HOSTS")
 
 INSTALLED_APPS = [
-    # auth and contenttypes are what the custom user model needs. Sessions,
-    # admin and the login itself arrive with milestone M1.
+    # The Django admin with the project's own site (superusers only), see
+    # twox/config/admin_site.py. Its app name stays django.contrib.admin.
+    "twox.config.admin_site.TwoxAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
-    # collectstatic gathers the built web UI at image build time.
+    # Server-side sessions: the web UI signs in with a session cookie at the
+    # same origin, no token in the browser (E-38).
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    # collectstatic gathers the built web UI and the admin's files at image
+    # build time.
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
@@ -64,16 +96,38 @@ INSTALLED_APPS = [
     "twox.importers",
 ]
 
+# Order as in the Django documentation (middleware ordering).
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     # Serves STATIC_ROOT below STATIC_URL; everything else passes through.
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 ROOT_URLCONF = "twox.config.urls"
 ASGI_APPLICATION = "twox.config.asgi.application"
+
+# Needed by the admin (and later by allauth); the web UI itself is no template.
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
 
 DATABASES = {
     "default": {
@@ -91,12 +145,43 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Set before the first migration; changing it later is costly.
 AUTH_USER_MODEL = "accounts.User"
 
+# Django's four standard validators; at least 12 characters, as there is no
+# second factor in milestone M1 (E-38).
+AUTH_PASSWORD_VALIDATORS: list[dict[str, Any]] = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 12},
+    },
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+
+# Sessions live in the database and last 8 hours, about one work shift (E-38).
+SESSION_COOKIE_AGE = 8 * 60 * 60
+# Both values are Django's defaults; set here so that a change is visible.
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+# Secure cookies, CSRF_TRUSTED_ORIGINS, HSTS and CSP follow in milestone M6.
+
+# Shared by all API processes: it holds, for example, the login rate limit
+# (work order 020). Valkey speaks the Redis protocol, hence redis://.
+# Importing this module opens no connection.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": env_str("TWOX_CACHE_URL", "redis://valkey:6379/2"),
+    }
+}
+
 REST_FRAMEWORK = {
     # Closed by default: a view is public only if it says so itself.
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
-    # No way to log in yet. Authentication is decided in milestone M1; until
-    # then DRF's defaults (session and HTTP basic) stay switched off.
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    # The web UI uses the Django session at the same origin; DRF then checks
+    # the CSRF token on every write of a signed-in user (E-38). No HTTP basic,
+    # no tokens in the browser.
+    "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
@@ -133,17 +218,22 @@ CELERY_TIMEZONE = "UTC"
 
 # Web UI. Vite builds it with base "/static/" (web/vite.config.ts); the image
 # build runs collectstatic, which copies the build output from WEB_DIST_DIR
-# into STATIC_ROOT. WhiteNoise serves STATIC_ROOT, the view at / returns its
-# index.html. There is no Node server at runtime.
+# into STATIC_ROOT. WhiteNoise serves STATIC_ROOT; the UI view returns its
+# index.html for / and every page path of the UI (see twox/config/urls.py).
+# There is no Node server at runtime.
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 WEB_DIST_DIR = Path(env_str("TWOX_WEB_DIST_DIR", str(BASE_DIR.parent / "web" / "dist")))
 # Only if a build exists: backend-dev and the tests run without one.
 STATICFILES_DIRS = [WEB_DIST_DIR] if WEB_DIST_DIR.is_dir() else []
-# Only the web UI build. The app folders are not searched: the assets of the
-# DRF browsable API (switched off, JSON only) would otherwise be shipped too.
-# The admin arrives with milestone M1 and has to be added here then.
-STATICFILES_FINDERS = ["django.contrib.staticfiles.finders.FileSystemFinder"]
+# The web UI build plus the files of the admin, including the licence files of
+# the libraries it ships (jQuery, Select2, XRegExp). No other app folder is
+# searched: the assets of the DRF browsable API (switched off, JSON only)
+# would otherwise be shipped too.
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "twox.config.staticfinders.AdminAppDirectoriesFinder",
+]
 # Plain storage: Vite already puts a content hash into every asset name, and
 # no compressed copies are made (nothing between server and browser should
 # compress or buffer, see the answer stream in milestone M3).
@@ -164,9 +254,23 @@ def web_asset_is_immutable(path: str, url: str) -> bool:
 WHITENOISE_IMMUTABLE_FILE_TEST = web_asset_is_immutable
 
 LANGUAGE_CODE = "en"
+# German and English; LocaleMiddleware picks one per request. The catalogs
+# follow in work order 034.
+LANGUAGES = [
+    ("de", gettext_lazy("German")),
+    ("en", gettext_lazy("English")),
+]
+LOCALE_PATHS = [BASE_DIR / "locale"]
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
+
+# Uploaded files. There is no MEDIA_URL on purpose: files leave the server
+# through the API only, never as a plain URL.
+TWOX_MEDIA_ROOT = env_absolute_path("TWOX_MEDIA_ROOT", "/data/media")
+# Upper limit for one upload in bytes; 200 MB (decimal, 200,000,000 bytes) by
+# default (E-42).
+TWOX_UPLOAD_MAX_BYTES = env_positive_int("TWOX_UPLOAD_MAX_BYTES", 200 * 1000 * 1000)
 
 # Defined here, used by later milestones.
 TWOX_LLM_BASE_URL = env_str("TWOX_LLM_BASE_URL", "http://host.docker.internal:11434/v1")
