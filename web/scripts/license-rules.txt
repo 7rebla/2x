@@ -1,0 +1,51 @@
+# License rules for the npm packages (read by check-licenses.sh).
+#
+# Line format, fields separated by "|":
+#   allow      | <license>
+#   allow-dev  | <license>
+#   except     | <package> | <license> | <reason> | <decision record>
+#   except-dev | <package> | <license> | <reason> | <decision record>
+#
+# "allow" lists one accepted spelling per line. A license string reported by
+# license-checker-rseidelsohn must equal an entry exactly (case-sensitive).
+# There are no wildcards: a new spelling fails the check until it is added
+# here on purpose. Expressions are evaluated: "A OR B" passes if one side is
+# allowed, "A AND B" only if every side is allowed.
+#
+# "allow-dev" is valid only for packages outside the production tree
+# (everything that "npm ci --omit=dev" would not install). Such packages are
+# development and build tools and never reach the shipped files.
+#
+# "except" accepts one named package with exactly the stated license;
+# "except-dev" does the same, but only outside the production tree. Anything
+# that is not on the preferred list of guardrail 7 or its equivalents goes
+# here, never under "allow". UNKNOWN and UNLICENSED can never be allowed in
+# general; such a package needs its own exception line after it has been
+# clarified.
+#
+# Decision records live in docs/DECISIONS.md.
+
+# Guardrail 7: preferred licenses.
+allow | MIT
+allow | Apache-2.0
+allow | BSD-2-Clause
+allow | BSD-3-Clause
+allow | PostgreSQL
+
+# E-23: treated as equally permissive.
+allow | ISC
+allow | 0BSD
+allow | PSF-2.0
+allow | Python-2.0
+
+# E-25: development and build packages only, not in shipped code.
+allow-dev | BlueOak-1.0.0
+allow-dev | CC-BY-3.0
+allow-dev | CC-BY-4.0
+allow-dev | CC0-1.0
+
+# Named exceptions.
+except-dev | lightningcss | MPL-2.0 | CSS processing at build time (pulled in by Tailwind CSS and Vite), used unmodified, not in shipped code | E-23, table "Abhängigkeiten" (lightningcss)
+except-dev | lightningcss-linux-x64-gnu | MPL-2.0 | platform binary of lightningcss (x64 container) | E-23, table "Abhängigkeiten" (lightningcss)
+except-dev | lightningcss-linux-arm64-gnu | MPL-2.0 | platform binary of lightningcss (arm64 container) | E-23, table "Abhängigkeiten" (lightningcss)
+except | twox-web | UNLICENSED | this project itself: the tool reports every package with "private": true this way; package.json declares Apache-2.0 | work order 006, note of the coordinator

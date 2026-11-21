@@ -1,0 +1,39 @@
+# License rules for the Python environment (read by check-licenses.sh).
+#
+# Line format, fields separated by "|":
+#   allow  | <license>
+#   except | <package> | <license> | <reason> | <decision record>
+#
+# "allow" lists one accepted spelling per line. A license string reported by
+# pip-licenses must equal an entry exactly (case-sensitive). There are no
+# wildcards: a new spelling fails the check until it is added here on purpose.
+# Expressions are evaluated: "A OR B" passes if one side is allowed,
+# "A AND B" only if every side is allowed.
+#
+# "except" accepts one named package with exactly the stated license. Anything
+# that is not on the preferred list of guardrail 7 or its equivalents goes
+# here, never under "allow". UNKNOWN can never be allowed in general; a
+# package without a detectable license needs its own "except" line after it
+# has been clarified.
+#
+# Decision records live in docs/DECISIONS.md.
+
+# Guardrail 7: preferred licenses.
+allow | MIT
+allow | MIT License
+allow | Apache-2.0
+allow | BSD-2-Clause
+allow | BSD-3-Clause
+allow | BSD License
+allow | PostgreSQL
+
+# E-23: treated as equally permissive.
+allow | ISC
+allow | 0BSD
+allow | PSF-2.0
+allow | Python-2.0
+
+# Named exceptions.
+except | psycopg | LGPL-3.0-only | PostgreSQL driver, used as an unmodified library | guardrail 7, E-23, table "Abhängigkeiten" (psycopg)
+except | psycopg-binary | LGPL-3.0-only | binary build of the PostgreSQL driver, used as an unmodified library | guardrail 7, E-23, table "Abhängigkeiten" (psycopg)
+except | pathspec | Mozilla Public License 2.0 (MPL 2.0) | development only, pulled in by mypy, used unmodified | E-23, table "Abhängigkeiten" (pathspec)
