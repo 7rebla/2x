@@ -1,5 +1,9 @@
-"""Root URL configuration. Routes are added by later work orders."""
+"""Root URL configuration."""
 
-from django.urls import URLPattern, URLResolver
+from django.urls import URLPattern, URLResolver, path
 
-urlpatterns: list[URLPattern | URLResolver] = []
+from twox.config.health import HealthView
+
+urlpatterns: list[URLPattern | URLResolver] = [
+    path("api/v1/health/", HealthView.as_view(), name="health"),
+]

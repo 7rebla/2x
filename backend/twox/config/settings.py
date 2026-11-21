@@ -45,6 +45,12 @@ DEBUG = env_bool("TWOX_DEBUG", default=False)
 ALLOWED_HOSTS = env_list("TWOX_ALLOWED_HOSTS")
 
 INSTALLED_APPS = [
+    # auth and contenttypes are what the custom user model needs. Sessions,
+    # admin and the login itself arrive with milestone M1.
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "rest_framework",
+    "drf_spectacular",
     "twox.assets",
     "twox.files",
     "twox.ingest",
@@ -76,6 +82,27 @@ DATABASES = {
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Set before the first migration; changing it later is costly.
+AUTH_USER_MODEL = "accounts.User"
+
+REST_FRAMEWORK = {
+    # Closed by default: a view is public only if it says so itself.
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    # No way to log in yet. Authentication is decided in milestone M1; until
+    # then DRF's defaults (session and HTTP basic) stay switched off.
+    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "2x API",
+    "DESCRIPTION": "Asset records with sourced answers.",
+    "VERSION": "0.0.0",
+    "SCHEMA_PATH_PREFIX": "/api/v1",
+}
 
 LANGUAGE_CODE = "en"
 TIME_ZONE = "UTC"

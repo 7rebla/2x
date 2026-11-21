@@ -124,6 +124,8 @@ def test_app_is_installed(app_name: str) -> None:
 
 
 def test_exactly_the_eight_project_apps_are_installed() -> None:
-    project_apps = sorted(config.name for config in apps.get_app_configs())
+    project_apps = sorted(
+        config.name for config in apps.get_app_configs() if config.name.startswith("twox.")
+    )
 
     assert project_apps == sorted(EXPECTED_APPS)
