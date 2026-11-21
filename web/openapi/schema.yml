@@ -20,6 +20,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/Health'
           description: ''
+  /api/v1/me/:
+    get:
+      operationId: me_retrieve
+      description: |-
+        The signed-in user and their role.
+
+        Open to every signed-in user, also without a role, so that the web UI can
+        tell such a user why nothing else is available.
+      tags:
+      - me
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
   /api/v1/selftest/:
     get:
       operationId: selftest_retrieve
@@ -63,6 +82,34 @@ components:
           $ref: '#/components/schemas/StatusEnum'
       required:
       - status
+    Me:
+      type: object
+      description: The signed-in user as the web UI needs it.
+      properties:
+        username:
+          type: string
+        role:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        is_superuser:
+          type: boolean
+      required:
+      - is_superuser
+      - role
+      - username
+    NullEnum:
+      enum:
+      - null
+    RoleEnum:
+      enum:
+      - manage
+      - read
+      type: string
+      description: |-
+        * `manage` - manage
+        * `read` - read
     Selftest:
       type: object
       properties:
@@ -95,3 +142,8 @@ components:
       - error
       - ok
       - result
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

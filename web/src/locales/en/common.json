@@ -4,5 +4,19 @@
     "label": "Language",
     "de": "Deutsch",
     "en": "English"
+  },
+  "loading": "Loading…",
+  "placeholder": "This page is not built yet.",
+  "error": {
+    "http": "The API answered with HTTP status {{status}}.",
+    "network": "The API did not respond. Is the server running?",
+    "invalidAnswer": "The API sent an answer this page cannot read.",
+    "unexpected": "Something went wrong on this page. Please try again.",
+    "detailLabel": "Message from the API"
+  },
+  "notFound": {
+    "heading": "Page not found",
+    "text": "There is no page at this address.",
+    "home": "Go to the structure"
   }
 }

@@ -6,10 +6,13 @@ The web UI talks to the API only through a client generated from the backend's O
 | --- | --- | --- |
 | OpenAPI schema of the backend (drf-spectacular) | `web/openapi/schema.yml` | yes |
 | Generator configuration (`@hey-api/openapi-ts`) | `web/openapi-ts.config.ts` | yes |
-| Generated client (types, SDK functions, fetch client) | `web/src/api/generated/` | yes, never edited by hand |
-| Hand-written wrapper used by the UI | `web/src/api/selftest.ts` | yes |
+| Generated client (types, SDK functions, fetch client, TanStack Query options) | `web/src/api/generated/` | yes, never edited by hand |
+| Error handling (`ApiError`) and query defaults | `web/src/api/errors.ts`, `web/src/api/queryClient.ts` | yes |
+| Hand-written wrapper of the self-test page | `web/src/api/selftest.ts` | yes |
 
-The generated code has no runtime dependency: the fetch client is copied into `src/api/generated/client/` and `core/`.
+The fetch client is copied into `src/api/generated/client/` and `core/` and needs no package.
+The plugin `@tanstack/react-query` writes `src/api/generated/@tanstack/react-query.gen.ts` (query options and keys per endpoint);
+that file imports the runtime package `@tanstack/react-query`. How pages use it: `web/src/pages/README.md`.
 It uses relative URLs (`/api/v1/...`), because UI and API are served from the same origin.
 The generator runs offline; the input must start with `./` (a bare `a/b` would be read as a Hey API registry shorthand).
 

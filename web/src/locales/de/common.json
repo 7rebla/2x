@@ -4,5 +4,19 @@
     "label": "Sprache",
     "de": "Deutsch",
     "en": "English"
+  },
+  "loading": "Wird geladen…",
+  "placeholder": "Diese Seite ist noch nicht gebaut.",
+  "error": {
+    "http": "Die API hat mit dem HTTP-Status {{status}} geantwortet.",
+    "network": "Die API hat nicht geantwortet. Läuft der Server?",
+    "invalidAnswer": "Die API hat eine Antwort geschickt, die diese Seite nicht lesen kann.",
+    "unexpected": "Auf dieser Seite ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+    "detailLabel": "Meldung der API"
+  },
+  "notFound": {
+    "heading": "Seite nicht gefunden",
+    "text": "Unter dieser Adresse gibt es keine Seite.",
+    "home": "Zur Struktur"
   }
 }

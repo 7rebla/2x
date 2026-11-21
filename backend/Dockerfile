@@ -58,18 +58,23 @@ RUN npm run build
 # Licence notices of everything that ends up in the shipped bundle, written
 # next to the build as THIRD-PARTY-NOTICES.txt (served below /static/).
 # Shipped code: the production dependencies (react, react-dom, scheduler,
-# i18next, react-i18next, html-parse-stringify), the API client that
-# @hey-api/openapi-ts copies from its templates into src/api/generated, the
-# module preload helper Vite inlines and the base styles Tailwind CSS emits.
+# i18next, react-i18next, html-parse-stringify, react-router with cookie-es
+# and @remix-run/route-pattern, @tanstack/react-query with
+# @tanstack/query-core), the API client that @hey-api/openapi-ts copies from
+# its templates into src/api/generated (including the TanStack Query options),
+# the module preload helper Vite inlines and the base styles Tailwind CSS
+# emits. The dependencies of react-router get a notice even where the bundler
+# drops parts of them.
 # The build fails if the production dependencies change, so that a new
 # runtime package cannot ship without its notice.
-# npm also lists typescript, @types/react and csstype here: i18next and
-# react-i18next declare typescript and @types/react as optional peer
-# dependencies, and the dev install satisfies them. They are type
-# information only, nothing of them reaches the bundle, so they get no notice.
+# npm also lists typescript, @types/react, @types/react-dom and csstype here:
+# i18next, react-i18next, react-router and @tanstack/react-query declare
+# typescript, @types/react or @types/react-dom as optional peer dependencies,
+# and the dev install satisfies them. They are type information only, nothing
+# of them reaches the bundle, so they get no notice.
 RUN set -eu; \
     runtime=$(npm ls --omit=dev --all --parseable | sed -n 's|^/web/node_modules/||p' | sort | tr '\n' ' '); \
-    if [ "$runtime" != "@types/react csstype html-parse-stringify i18next react react-dom react-i18next scheduler typescript " ]; then \
+    if [ "$runtime" != "@remix-run/route-pattern @tanstack/query-core @tanstack/react-query @types/react @types/react-dom cookie-es csstype html-parse-stringify i18next react react-dom react-i18next react-router scheduler typescript " ]; then \
         echo "Production dependencies changed ($runtime): update the notice list in backend/Dockerfile." >&2; \
         exit 1; \
     fi; \
@@ -80,7 +85,7 @@ RUN set -eu; \
         echo; \
         echo "The files below /static/ contain code from the following packages."; \
         echo "Each section quotes the package's licence file unchanged."; \
-        for pkg in react react-dom scheduler i18next react-i18next html-parse-stringify @hey-api/openapi-ts vite tailwindcss; do \
+        for pkg in react react-dom scheduler i18next react-i18next html-parse-stringify react-router cookie-es @remix-run/route-pattern @tanstack/react-query @tanstack/query-core @hey-api/openapi-ts vite tailwindcss; do \
             dir=node_modules/$pkg; \
             licence_file=$(find "$dir" -maxdepth 1 -type f -iname 'licen[cs]e*' | sort | head -n 1); \
             if [ -z "$licence_file" ]; then echo "No licence file in $dir" >&2; exit 1; fi; \
@@ -113,7 +118,11 @@ RUN TWOX_SECRET_KEY=collectstatic-only TWOX_DB_PASSWORD=collectstatic-only \
 
 FROM base AS runtime
 RUN groupadd --system --gid 10001 twox \
-    && useradd --system --uid 10001 --gid twox --no-create-home --shell /usr/sbin/nologin twox
+    && useradd --system --uid 10001 --gid twox --no-create-home --shell /usr/sbin/nologin twox \
+    && install -d -m 0750 -o twox -g twox /data/media
+# /data/media is the mount point of the volume media-data (uploaded files). A
+# new, empty named volume takes over owner and mode of this directory, so the
+# app user can write there. Everything else, /app included, stays read-only.
 COPY --from=runtime-deps /opt/venv /opt/venv
 COPY backend/manage.py ./
 COPY backend/twox ./twox

@@ -37,7 +37,7 @@ Run everything from the repository root.
    The first start takes a while: the backend image is built (including the web UI) and the Docling image is downloaded. Start it as a background command if your tool has a time limit.
    After the download the services usually become healthy within about half a minute.
 
-3. Open the test page: <http://localhost:8000/>
+3. Open the test page: <http://localhost:8000/selftest>
 
    It shows two cards: **Database - OK** with the PostgreSQL server version, and **Worker - OK** with the result `pong` and the round-trip time.
    "Check again" repeats the test. If the worker is stopped, the worker card turns red and shows the error from the API.

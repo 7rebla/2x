@@ -1,8 +1,8 @@
 import { type ReactElement, type ReactNode, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { DatabaseCheck, WorkerCheck } from "./api/generated";
-import { loadSelftest, type SelftestOutcome } from "./api/selftest.ts";
+import type { DatabaseCheck, WorkerCheck } from "../api/generated";
+import { loadSelftest, type SelftestOutcome } from "../api/selftest.ts";
 
 type PageState = { kind: "loading" } | SelftestOutcome;
 
