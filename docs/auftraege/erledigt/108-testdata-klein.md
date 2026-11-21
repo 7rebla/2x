@@ -1,6 +1,6 @@
 # Auftrag 108 – Frei lizenzierte Testunterlagen in testdata/klein
 
-Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: T1 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 
