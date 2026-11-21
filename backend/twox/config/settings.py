@@ -176,8 +176,9 @@ CACHES = {
 }
 
 REST_FRAMEWORK = {
-    # Closed by default: a view is public only if it says so itself.
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    # Closed by default: without a permission class of its own, a view needs
+    # a role (E-40). Exceptions are listed in tests/config/test_api.py.
+    "DEFAULT_PERMISSION_CLASSES": ["twox.accounts.permissions.CanRead"],
     # The web UI uses the Django session at the same origin; DRF then checks
     # the CSRF token on every write of a signed-in user (E-38). No HTTP basic,
     # no tokens in the browser.

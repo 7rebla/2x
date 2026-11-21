@@ -12,6 +12,9 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from rest_framework.settings import api_settings
+
+from twox.accounts.permissions import CanRead
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -258,6 +261,14 @@ def test_cookies_are_same_site_lax_and_session_cookie_http_only() -> None:
     assert settings.SESSION_COOKIE_SAMESITE == "Lax"
     assert settings.CSRF_COOKIE_SAMESITE == "Lax"
     assert settings.SESSION_COOKIE_HTTPONLY is True
+
+
+def test_default_permission_class_is_can_read() -> None:
+    # A view without a permission class of its own needs a role (E-40).
+    assert settings.REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"] == [
+        "twox.accounts.permissions.CanRead"
+    ]
+    assert [CanRead] == api_settings.DEFAULT_PERMISSION_CLASSES
 
 
 def test_tests_run_with_the_local_memory_cache() -> None:
