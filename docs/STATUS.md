@@ -100,7 +100,7 @@ Nichts davon hält die laufende Arbeit auf.
 | --- | --- | --- | --- | --- |
 | 016 | Backend-Grundlage: Sitzungen, Admin, CSRF, Sprachen, Zwischenspeicher | C | 1 | in Arbeit |
 | 017 | Selbsttest: Zeitlimit Ergebnisspeicher | B | 1 | in Arbeit |
-| 018 | Oberfläche zweisprachig | C | 1 | in Arbeit |
+| 018 | Oberfläche zweisprachig | C | 1 | erledigt |
 | 019 | Datenmodell Standort, Bereich, Anlage, Gerät | C | 1 | erledigt |
 | 020 | Anmeldung mit django-allauth, Ratenbegrenzung | C | 2 | offen |
 | 021 | Rollen, Konto-Endpunkt, Befehl create_account | C | 2 | offen |
