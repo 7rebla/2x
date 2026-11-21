@@ -37,6 +37,9 @@ Quelle der Einträge E-01 bis E-13: `STARTUNTERLAGE.md`, Entwurf 2 vom 21.11.202
 | E-27 | Siemens-Unterlagen (S7-1200-Systemhandbuch) werden nur von a7 selbst im Browser geladen (Lade-Art `manual`) und nur lokal eingelesen; nichts davon wird veröffentlicht, kein automatischer Abruf von Siemens-Adressen. Das Restrisiko der Klausel gegen Text- und Data-Mining (Siemens-Nutzungsbedingungen A.6.2) wird in Kauf genommen und im Manifest vermerkt. Maßgeblich V4.6 (11/2022), V4.7 (12/2024) als Verweis | ✔ | 21.11.2026 |
 | E-28 | Die in psycopg-binary gebündelten Bibliotheken – darunter keyutils (LGPL-2.0-or-later) und libxcrypt (LGPL-2.1-or-later), dazu OLDAP-2.8 und BSD-Varianten mit Nennungsklausel – gehören zur benannten Ausnahme psycopg (unverändert eingebunden, Leitplanke 7) | ✔ | 21.11.2026 |
 | E-29 | Hintergrundarbeit läuft über Celery (Startunterlage 5.2); Djangos eingebautes Tasks-Framework wird nicht verwendet. Valkey wird über Celerys Redis-Transport angesprochen (Adressen mit `redis://`, Client redis-py), weil Celery kein `valkey://` kennt. Nur JSON-Serialisierung, kein pickle | ✔ (nach E-23) | 21.11.2026 |
+| E-30 | Das Tabellen-Modell TableFormer (docling-models) unter CDLA-Permissive-2.0 ist als benannte Ausnahme für das unveränderte Docling-Image zugelassen | ✔ | 21.11.2026 |
+| E-31 | Die EasyOCR-Gewichte im Docling-Image (Lizenz nicht feststellbar) werden hingenommen, aber nie benutzt: Das Backend fordert nie `ocr_engine: easyocr` an, nur RapidOCR (Apache-2.0) | ✔ | 21.11.2026 |
+| E-32 | Docling darf nicht ins Internet: `ORT_DISABLE_TELEMETRY=1` (ONNX Runtime baute sonst eine Verbindung zu Microsoft-Telemetrieadressen auf) UND ein internes Docker-Netz ohne Internetzugang für docling, an das nur api und worker angebunden sind | ✔ | 21.11.2026 |
 
 ## Begründungen
 
