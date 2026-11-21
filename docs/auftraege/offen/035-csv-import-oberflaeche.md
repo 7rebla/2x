@@ -1,6 +1,6 @@
 # Auftrag 035 – Oberfläche: CSV-Import der Geräteliste
 
-Meilenstein: M1 · Freigabestufe: B · Status: offen
+Meilenstein: M1 · Freigabestufe: B · Status: zur Prüfung
 
 ## Ziel
 
@@ -73,7 +73,43 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
 Keine.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Alle Kriterien 0–5 erfüllt; Läufe am 22.11.2026 im Container (Docker Engine 29.9.3, Compose v5.7.0). Keine neue Abhängigkeit, keine offene Frage an a7.
+
+### Was wurde gebaut?
+
+- `web/src/pages/ImportPage.tsx` (`/import`, ersetzt den Platzhalter): Beschreibung des Formats (13 Spalten als Konstante `deviceListColumns` in der Reihenfolge nach E-44, UTF-8/Komma, Abgleich über `plant_id`/`device_id`, nie löschen, Anlagenzeile ohne `device_id`, alles oder nichts). Dateiauswahl → „Probelauf starten“ (`dry_run=true`) über `devicesImportMutation` des erzeugten Clients (multipart, CSRF-Kopf aus `api/client.ts`). „Übernehmen“ erscheint nur nach einem Probelauf ohne Fehler und sendet dieselbe Datei mit `dry_run=false`; danach Bericht, `reloadAfterSave` und Link „Zur Struktur“. Eine andere Datei verwirft den Bericht. 400 zeigt die Meldungen der API (über `save()` aus `structure/save.ts`), 413 einen eigenen Hinweis plus die Meldung der API mit der Obergrenze, alles andere `ErrorMessage`.
+- `web/src/components/ImportReportView.tsx` (neu): Zusammenfassung (Probelauf/gespeichert/Fehlerzahl, Plural), Tabelle je Ebene mit angelegt/geändert/unverändert, bei Fehlern stattdessen Tabelle Zeile/Spalte/Meldung („ganze Datei“ bzw. „–“ bei `null`). Werte und Meldungen nur als Text.
+- `web/src/locales/{de,en}/import.json`: alle Texte, gleiche Schlüssel.
+- `web/src/pages/README.md`: Abschnitt „Device list import“.
+- Vitest `web/src/pages/ImportPage.test.tsx` (12 Fälle): Formatbeschreibung und gesperrter Knopf ohne Datei; Probelauf → Zähler → Übernehmen (zwei POST, `dry_run` `true`/`false`, CSRF-Kopf, multipart, dieselbe Datei), Link zur Struktur; Fehleranzeige mit Zeile/Spalte/Meldung, Markup in der Meldung bleibt Text, kein „Übernehmen“; Einzahl; Fehler beim Übernehmen; Dateiwechsel; 413; 400; 500; Deutsch; Rolle `read` sieht den Hinweis und sendet nichts; Rolle `manage` sieht das Formular.
+- Playwright `web/e2e/import.spec.ts` (2 Fälle): eigene CSV mit `e2e-site-…`, `e2e-area-…`, `e2e-plant-…`, `e2e-device-…-1`/`-2`, IPs aus `testIp()`; Probelauf zeigt 2 angelegte Geräte (und je 1 Standort/Bereich/Anlage), Struktur danach noch leer für diesen Standort, „Übernehmen“, beide Geräte in der Struktur unter der Anlage, erneuter Probelauf zeigt 2 unverändert. Zweiter Fall: ungültige IP `192.0.2.256` in der zweiten Gerätezeile → genau ein Fehler in Zeile 3, Spalte `ip_address`, kein „Übernehmen“, nichts gespeichert. Keine Konsolenfehler.
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-035`, `W` = `docker compose -p twox-035-web -f deploy/compose/compose.web.yaml`; `.env` aus `.env.example` (ohne BOM) mit `TWOX_API_PORT=18035`. Die Umgebungen „2x“ und „twox-leit“ wurden nicht berührt.
+
+| AK | Ergebnis |
+| --- | --- |
+| 0 | erfüllt: `docker version` (Server 29.9.3), `docker compose version` (v5.7.0), Exit 0 |
+| 1 | erfüllt: `W --profile dev build web-dev`, `npm ci`; `lint`, `typecheck` ohne Meldung; `test`: 16 Dateien, 269 Fälle bestanden; `build`: `index-….js 489.46 kB` (gzip 149.75 kB); `licenses`: „License check passed.“ – je Exit 0 |
+| 2 | erfüllt: `npm run api:generate` Exit 0; `git diff --exit-code -- web/openapi web/src/api` Exit 0, `git status --porcelain --untracked-files=all` dort leer |
+| 3 | erfüllt: Bau, `pull e2e`, `npm ci`, `up -d --wait` (alle gesund), „Create test account“ wie in `ci.yml` („Created account 'e2e-manager' …“), `D --profile e2e run --rm e2e`: „17 passed“, Exit 0 |
+| 4 | erfüllt: ohne `down -v` erneut `up --wait`, „Create test account“ („Updated …“), e2e: „17 passed“, Exit 0; der Probelauf zeigte wieder 2 angelegte Geräte (Test prüft das) |
+| 5 | erfüllt: `D --profile dev --profile e2e down -v` und `W --profile dev down -v` Exit 0; danach kein Container und kein Volume mit `twox-035` |
+
+„Create test account“ lief in PowerShell: Werte aus `.env` gelesen, Kennwort nur als Umgebungsvariable `TWOX_ACCOUNT_PASSWORD` und an `docker compose exec -T -e TWOX_ACCOUNT_PASSWORD` nur als Variablenname übergeben.
+
+### Zweig und Arbeitsverzeichnis
+
+Zweig `worktree-agent-ab771ef1b216c0f3d`, Arbeitsverzeichnis `.claude/worktrees/agent-ab771ef1b216c0f3d`. Nicht gepusht, nicht zusammengeführt.
+
+### Abweichungen und Hinweise
+
+1. **`web/src/routes.test.tsx` geändert** (nicht im Bereich genannt, aber nötig): Der Fall „%s shows the page %s“ erwartete für `/import` den Platzhalter. `/import` ist aus der Liste genommen und hat einen eigenen Fall („/import shows the import page“). 036 ändert dieselbe Liste (Eintrag `/documents/42`) – beim Zusammenführen ist ein kleiner Konflikt in diesem Block wahrscheinlich; beide Einträge verlassen die Liste.
+2. **`web/src/pages/README.md`** um einen Abschnitt am Ende ergänzt; 036 hängt dort vermutlich ebenfalls an (Konflikt am Dateiende möglich, beide Abschnitte behalten).
+3. **Knopfname:** „Übernehmen“ / „Apply“ (nach dem Auftrag; die Leitstelle nannte „Speichern“).
+4. **413:** Die Obergrenze steht in der Meldung der API (übersetzt mit 034); die Seite zeigt dazu einen eigenen Satz. Die Seite kennt die Grenze nicht selbst und prüft die Größe nicht vorab.
+5. **Vitest und multipart:** Unter jsdom sendet Nodes fetch eine jsdom-`File` ohne Inhalt (im Browser kein Problem, der Playwright-Test lädt echt hoch). Der Test prüft deshalb die an `FormData.append` übergebene Datei (Identität) und liest `dry_run` aus dem multipart-Rumpf. Keine Änderung an gemeinsamen Testhilfen.
+6. **Rolle:** Die Sichtbarkeit regelt weiter `RequireRole` aus 030 (Hinweis „keine Berechtigung“); die Seite prüft die Rolle nicht zusätzlich.
+7. `routes.tsx`, `navigation.ts`, `Layout.tsx`, `package.json`, `api/errors.ts`, Schema und erzeugter Client unverändert.

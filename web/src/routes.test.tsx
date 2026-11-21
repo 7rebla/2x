@@ -116,13 +116,12 @@ describe("addresses", () => {
     expect(await screen.findByTestId("structure-tree")).toBeDefined();
   });
 
-  it.each([["/import", "Import"]])("%s shows the page %s", async (path, heading) => {
+  it("/import shows the import page", async () => {
     fakeApi(manager);
-    renderApp(path);
+    renderApp("/import");
 
-    expect((await pageHeading()).textContent).toBe(heading);
-    expect(screen.getByTestId("page-placeholder")).toBeDefined();
-    expect(screen.queryByTestId("not-found")).toBeNull();
+    expect((await pageHeading()).textContent).toBe("Import");
+    expect(await screen.findByTestId("import-form")).toBeDefined();
   });
 
   it("/login shows the sign-in page to a visitor who is not signed in", async () => {
