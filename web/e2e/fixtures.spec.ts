@@ -5,6 +5,10 @@ declare const process: { readonly env: Readonly<Record<string, string | undefine
 // The shared sign-in step and the test data helpers of fixtures.ts.
 
 test("the page starts signed in with the test account and its role", async ({ page }) => {
+  // The page starts empty; the session comes with the worker's storage state.
+  await page.goto("/");
+  await expect(page.getByTestId("user-name")).toHaveText(process.env.TWOX_E2E_USERNAME ?? "");
+
   const answer = await page.evaluate(async () => {
     const result = await fetch("/api/v1/me/");
     return { status: result.status, body: (await result.json()) as unknown };

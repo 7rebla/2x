@@ -1,8 +1,14 @@
-import { test as base, type Page } from "@playwright/test";
+import { test as base, type BrowserContext, type Page } from "@playwright/test";
 
 // Shared steps and test data helpers of the browser tests. Every spec imports
 // `test` and `expect` from here, so each test starts signed in with the test
 // account (TWOX_E2E_USERNAME, TWOX_E2E_PASSWORD; README, "Browser test").
+//
+// Each worker signs in once and hands the cookies (storage state) to every
+// test it runs: allauth allows 30 sign-ins per minute and IP address. A spec
+// that needs a browser without a session sets
+//   test.use({ storageState: { cookies: [], origins: [] } })
+// No test may sign out the shared session; sign-out tests sign in themselves.
 
 // The web UI has no Node types (@types/node is not a dependency); this file
 // only reads environment variables.
@@ -69,12 +75,26 @@ export async function signIn(page: Page): Promise<void> {
   }
 }
 
-// Every test gets a page that is already signed in.
-export const test = base.extend<{ page: Page }>({
-  page: async ({ page }, provide) => {
-    await signIn(page);
-    await provide(page);
+/** Cookies and local storage of a browser context, as Playwright saves them. */
+export type StorageState = Awaited<ReturnType<BrowserContext["storageState"]>>;
+
+// Every test gets a page that is already signed in: the worker signs in once
+// (workerStorageState) and each test's context starts with that state.
+export const test = base.extend<object, { workerStorageState: StorageState }>({
+  storageState: async ({ workerStorageState }, provide) => {
+    await provide(workerStorageState);
   },
+  workerStorageState: [
+    async ({ browser }, provide, workerInfo) => {
+      const context = await browser.newContext({ baseURL: workerInfo.project.use.baseURL });
+      const page = await context.newPage();
+      await signIn(page);
+      const state = await context.storageState();
+      await context.close();
+      await provide(state);
+    },
+    { scope: "worker" },
+  ],
 });
 
 export { expect } from "@playwright/test";
