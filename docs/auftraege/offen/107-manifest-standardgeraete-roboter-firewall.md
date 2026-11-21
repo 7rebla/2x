@@ -1,6 +1,6 @@
 # Auftrag 107 – Manifest-Einträge: Standardgeräte, UR5e, URSim, OPNsense-Dokumentation
 
-Meilenstein: T1 · Freigabestufe: C · Status: offen
+Meilenstein: T1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -63,7 +63,45 @@ In den Befehlen steht `TF` für `docker compose -f deploy/compose/testfactory.ya
 Keine eigenen; maßgeblich sind die Antworten zu den Fragen 1, 2 und 4 in Auftrag 103.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Stand 21.11.2026 – Status: zur Prüfung**
+
+**Was wurde gebaut?**
+
+- `testfactory/manifest.yaml`: 12 neue Einträge hinter den 19 bestehenden (diese unverändert), in kanonischer Form (`load_manifest`/`write_manifest` im Dienst `fetch`). Alle Prüfsummen `null`, nichts geladen.
+  - Siemens: `siemens-s7-1200-system-manual-v4-6-de` (`file`/`manual`, maßgeblich nach E-27, mit `url` und `landing_page`, `size_bytes` 36.472.132) und `siemens-s7-1200-system-manual-v4-7-de` (`reference`/`none`, Verweis). Beide `license: proprietary`, Zuordnung zu den fünf `…-plc`. Restrisiko der Klausel A.6.2 (Text- und Data-Mining) in `notes` beider Einträge vermerkt; Ausgabe 04/2012 nicht aufgenommen.
+  - Raspberry Pi: `rpi4b-datasheet-en` und `rpi4b-product-brief-en` (`file`/`auto`, wie Herstellerunterlagen, `redistribution: false`), `rpi-documentation` (`reference`/`none`, `repository`, `branch` `master`, `commit` `97485d97…`, `license: CC-BY-SA-4.0`, `redistribution: false` wegen Frage 3 in Auftrag 108 Antwort A). Zuordnung `ccu-rpi`.
+  - TP-Link: `tl-wr902ac-user-guide-v3-en` (`file`/`auto`), Zuordnung `aps-router`; Hardwarestand nur indirekt belegt (U-05) in `notes`.
+  - UR5e: `ur5e-user-manual-de`, `ur5e-software-handbook-en`, `ur5e-script-directory-en`, `ur5e-service-manual-en` (alle `file`/`auto`, Ordner `SW5_25_1`, `software_version` „PolyScope 5.25.1“). Zuordnung `ur5e`.
+  - URSim: `ursim-e-series` (`container-image`/`none`, `universalrobots/ursim_e-series`, Tag `5.25.1`, Digest `sha256:36c80afd…2210`, `terms_url` = UR-EULA, `license: none-stated`). Zuordnung `ur5e`.
+  - OPNsense: `opnsense-docs` (`git-archive`/`auto`, `https://github.com/opnsense/docs`, `master` @ `953dd3d1…aff6`, `size_bytes` 108.160.157, `license: BSD-2-Clause` von Hand, `terms_url` = LICENSE am festen Commit, `redistribution: true`, `verified: true`). `software_version` leer, Vermerk „set in T2“ in `version_source` und `notes`. Zuordnung `opnsense-fw`.
+  - Ziele: `siemens/…`, `raspberry-pi/…`, `tp-link/…`, `universal-robots/ur5e/documents/<de|en>/…`, `opnsense/repositories/docs`; nichts ineinander verschachtelt.
+  - `verified: true` nur, wo 103 am Original gelesen hat: Datenblatt, Product Brief, Script-Verzeichnis, Raspberry-Pi-Dokumentation, OPNsense. Alle anderen `false` mit Grund in `notes`.
+- `testfactory/tests/test_manifest_other.py`: 13 Tests (erwartete IDs; URSim mit Patch-Tag und Digest; gleicher Softwarestand Handbuch/URSim; `terms.note` bei allen 31 Einträgen; `redistribution: true` nur bei `BSD-2-Clause`/`public-domain`; keine Adresse mit `/latest/`, kein beweglicher Tag; Siemens nie `auto`; OPNsense-Archiv; Raspberry-Pi-Doku nur Verweis; `assigned_to` gegen `devices.csv`; Begründung bei `verified: false`; Ziele nicht verschachtelt; jede Adresse inkl. `terms_url` wortgleich in der Quellen-Datei aus 103).
+
+**Vorerst in `notes` statt in eigenen Feldern** (Format vor Auftrag 104):
+
+- Größe der Verweise: V4.7 „laut Seite 32.770 KB“, Raspberry-Pi-Dokumentation 148.169.882 Byte.
+- Von Siemens veröffentlichte SHA-256 der V4.7 (`reference` hat kein Prüfsummenfeld).
+- Komprimierte Größe des URSim-Images (961.067.605 Byte; `size_bytes` ist bei `container-image` nicht erlaubt).
+- SHA-256 der OPNsense-LICENSE-Datei und die Archiv-Adresse `codeload.github.com/…`.
+
+**Wie wurde getestet?** (Container, Projektname `twox-107`, danach `down -v`)
+
+- `docker version` / `docker compose version`: Exit 0 (Server 29.9.3, Compose v5.7.0).
+- `TF run --rm fetch python -m testfactory.manifest_tools check`: `testfactory/manifest.yaml: OK (31 entries)`, Exit 0.
+- `TF run --rm check python -m unittest discover -s testfactory/tests -t . -v`: `Ran 97 tests`, `OK`, `test_manifest_other` dabei; ebenso `check-offline`: `OK`.
+- `TF run --rm check mypy --config-file testfactory/mypy.ini testfactory`: `Success: no issues found in 7 source files`.
+- `git diff main...HEAD -- testfactory/manifest.yaml`: nur hinzugefügte Zeilen (0 entfernte).
+- `git diff --stat main...HEAD`: nur `testfactory/manifest.yaml`, `testfactory/tests/test_manifest_other.py` und diese Auftragsdatei.
+
+**Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-a3df18e8661be55a1`, Arbeitsverzeichnis `.claude/worktrees/agent-a3df18e8661be55a1`. Nicht gepusht.
+
+**Abweichungen und Hinweise**
+
+- `software_version` ist `null` bei Siemens (CPU/Firmware offen, U-01/U-02), Raspberry-Pi-Unterlagen (an keinen Softwarestand gebunden), TP-Link (Firmware offen) und OPNsense (T2). Der Auftrag verlangt „jeweils mit Softwarestand“; einen Stand zu erfinden wäre gegen die Vorgaben, der Grund steht jeweils in `version_source`.
+- Siemens V4.6 hat `verified: false`, obwohl 103 die Siemens-Nutzungsbedingungen am Original gelesen hat: Die Datei selbst wurde nicht geöffnet (gleiche Regel wie in 105).
+- Raspberry-Pi-Dokumentation: `redistribution: false`, obwohl CC BY-SA 4.0 die Weitergabe erlaubt – das Projekt gibt sie nach Frage 3 in 108 (Antwort A) nicht weiter, und die Testvorgabe lässt `true` nur für `BSD-2-Clause`/`public-domain` zu. Begründung in `terms.note`.
+- Sprache der TP-Link-Anleitung als `en` angenommen (englische Herstellerseiten, Datei nicht geöffnet); vermerkt in `version_source`.
+- Nicht aufgenommen, obwohl in der Quellen-Datei als Verweis geführt: englisches UR5e-Benutzerhandbuch 5.25.1, deutsches Software-Handbuch als HTML, ältere UR-Stände, Siemens-Ausgabe 11/2019, G2-Handbuch, Raspberry-Pi-Schaltplan, TP-Link-HTML-Anleitung. Der Auftrag nennt sie nicht. Das deutsche Software-Handbuch (HTML) könnte für Auftrag 112 als Verweis nützlich sein.
+- Keine offenen Fragen an a7.
