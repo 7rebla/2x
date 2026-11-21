@@ -63,7 +63,7 @@ describe("device page", () => {
     expect(field("key")).toBe("test-plc-1");
     expect(field("name")).toBe("Test controller");
     expect(field("manufacturer")).toBe("Test maker");
-    expect(field("model")).toBe("Model T");
+    expect(field("model")).toBe("Test model");
     expect(field("software_version")).toBe("1.0.0");
     expect(field("ip_address")).toBe("192.0.2.10");
     expect(field("protocols")).toBe("Test protocol");
@@ -173,7 +173,7 @@ describe("device page", () => {
       key: "test-plc-1",
       name: "Test controller",
       manufacturer: "Test maker",
-      model: "Model T",
+      model: "Test model",
       software_version: "2.0.0",
       ip_address: "192.0.2.10",
       address_source: "Line one of the source\nLine two of the source",

@@ -78,7 +78,7 @@ export function sampleStructure(): Structure {
       device(base, 1000, 100, "test-plc-1", "Test controller", {
         ip_address: "192.0.2.10",
         manufacturer: "Test maker",
-        model: "Model T",
+        model: "Test model",
         software_version: "1.0.0",
         address_source: "Line one of the source\nLine two of the source",
         protocols: "Test protocol",
