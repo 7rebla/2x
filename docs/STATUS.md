@@ -116,11 +116,11 @@ Nichts davon hält die laufende Arbeit auf.
 | 031 | CSV-Import (Backend) | C | 6 | erledigt |
 | 032 | Oberfläche: Struktur und Geräte | B | 6 | erledigt |
 | 033 | Oberfläche: Protokoll | B | 6 | erledigt |
-| 034 | Backend-Übersetzung (gettext) | C | 7 | in Arbeit |
+| 034 | Backend-Übersetzung (gettext) | C | 7 | erledigt |
 | 035 | Oberfläche: CSV-Import | B | 7 | erledigt |
 | 036 | Oberfläche: Dateien | B | 7 | erledigt |
-| 037 | Nachweis der M1-Abnahme | B | 8 | offen |
-| 038 | README und ARCHITECTURE für M1 | B | 8 | offen |
+| 037 | Nachweis der M1-Abnahme | B | 8 | in Arbeit |
+| 038 | README und ARCHITECTURE für M1 | B | 8 | in Arbeit |
 | 039 | Landkarte als interaktive Vorschau (M1b, E-48) | C | – | in Arbeit |
 
 Hinweise aus Welle 1:
@@ -142,3 +142,4 @@ Hinweise aus Welle 1:
 - 033: Protokollseite `/audit` mit Filtern (Objektart, Benutzer) und Komponente `AuditTrail` (für 036). Feldnamen erscheinen unübersetzt (z. B. `ip_address`); Filter stehen nicht in der Adresse.
 - 031: CSV-Import über `POST /api/v1/imports/devices/` (Probelauf Standard, Fehler in der Datei → 200 mit Bericht und `saved: false`) und Befehl `import_devices` (verlangt Konto mit Rolle manage). Gleichzeitiges Anlegen derselben Kennung ergibt jetzt 400 statt 500. Grenze für später: keine eigene Größengrenze für die Importdatei (über die API gilt nur die Upload-Grenze von 200 MB, verarbeitet synchron im Speicher; beim Befehl unbegrenzt) – vor M6 eine kleine Importgrenze setzen. Werte mit `=`, `+`, `-`, `@` bleiben unverändert; ein späterer CSV-Export muss sie entschärfen.
 - 036: Dateien je Gerät hochladen, Versionen ansehen, herunterladen. Die Dateiseite zeigt nur Protokolleinträge zu `files.document`, neue Versionen erscheinen nur unter `/audit` (für 037). `files.heading` und `files.placeholder` in `assets.json` sind ungenutzt. Hilfen aus `pages/structure/save.ts` werden auch von `components/files/` genutzt – später an einen gemeinsamen Ort ziehen. Bündel knapp unter 500 kB.
+- 034: Backend-Meldungen auf Deutsch (73 Einträge, `backend/locale/de/LC_MESSAGES/django.po`, Fundstellen ohne Zeilennummern). `.mo` entsteht nur im Build (Stufe `locale-build`) und in den Tests; gettext ist nicht im Laufzeit-Image (geprüft). Unübersetzt bleiben Verwaltungsbefehle, Selbsttest-Diagnosen, OpenAPI-Texte und Djangos „No … matches the given query.“
