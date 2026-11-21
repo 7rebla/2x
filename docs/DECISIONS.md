@@ -32,6 +32,7 @@ Quelle der Einträge E-01 bis E-13: `STARTUNTERLAGE.md`, Entwurf 2 vom 21.11.202
 | E-22 | In Repository-Dateien heißt der Projektinhaber „a7"; Personennamen stehen nicht im Repository | ✔ | 21.11.2026 |
 | E-23 | Die Fragen in den Aufträgen für M0 und T1 entscheidet die Leitstelle gemäß der jeweiligen Empfehlung; a7 kann jede Entscheidung nachträglich ändern | ✔ (aus E-14 und E-21 abgeleitet) | 21.11.2026 |
 | E-24 | Höchstens fünf Aufträge gleichzeitig statt drei (ändert Abschnitt 8.5). Einzelne Aufträge dürfen als eigene Sitzungen laufen, damit a7 hineinsehen kann | ✔ | 21.11.2026 |
+| E-25 | BlueOak-1.0.0, CC-BY-3.0, CC-BY-4.0 und CC0-1.0 sind bei reinen Entwicklungs- und Build-Paketen zugelassen (nicht im ausgelieferten Code). Anlass: mitgezogene Pakete in Auftrag 002 | ✔ | 21.11.2026 |
 
 ## Begründungen
 
