@@ -1,6 +1,6 @@
 # Auftrag 034 – Backend-Übersetzung Deutsch: gettext-Kataloge, Bau und Prüfung
 
-Meilenstein: M1 · Freigabestufe: C · Status: offen
+Meilenstein: M1 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -106,7 +106,50 @@ Voraussetzung: M1-Liste von a7 freigegeben (`docs/STATUS.md`, „Freigegeben“)
    - Empfehlung: (a). Die Ausgabe eines GPL-Programms fällt laut GPL-FAQ grundsätzlich nicht unter die GPL; das Werkzeug wird nicht ausgeliefert.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Was wurde gebaut?**
+
+- Katalog `backend/locale/de/LC_MESSAGES/django.po`: 73 Einträge, alle übersetzt, keine `fuzzy` (auch nicht im Kopf). Darin die Rollen-Anzeigenamen „Verwalten“/„Lesen“ (`ROLE_LABELS`), alle Import-Meldungen, Datei-Meldungen (413, 409, Konfiguration), Eindeutigkeits-Meldungen der Struktur, Modell- und Feldbezeichnungen. Begriffe wie in der Oberfläche (Standort, Bereich, Anlage, Gerät, Kennung, Softwarestand); Anrede „Sie“. `document` heißt „Dokument“, weil derselbe Text auch die Art (Dokument/Konfiguration) bezeichnet.
+- Nachgezogene Markierungen (ohne Modelle, keine Migration): Titel des Admins (`admin_site.py`, „2x-Verwaltung“), Namen der Apps im Admin (`apps.py` von accounts „Konten“, assets „Struktur“, files „Dateien“; englisch „Accounts“, „Structure“, „Files“ – vorher zeigte der Admin „Assets“).
+- `twox/files/uploads.py`: Die 413-Antwort der ASGI-Hülle entsteht vor Django und damit vor `LocaleMiddleware`; sie war deshalb immer Englisch. Neue Funktion `scope_language()` wählt die Sprache wie `LocaleMiddleware` aus `Accept-Language` (Sprach-Cookie und URL-Präfix werden nicht ausgewertet; beides nutzt das Projekt nicht).
+- `backend/Dockerfile`: GNU gettext im Dev-Image (Stufe `dev`) und in der neuen Bau-Stufe `locale-build`, die `compilemessages` ausführt, alle Nicht-`.mo`-Dateien entfernt und prüft, dass eine `.mo` entstanden ist. Das Laufzeit-Image übernimmt nur `/app/locale` mit den `.mo`-Dateien. Installierte Version: Debian-Paket gettext 0.23.1-2, `msgfmt (GNU gettext-tools) 0.23.1`; `python:3.14.10-slim` beruht auf Debian trixie (13.7).
+- `.gitignore`: `*.mo`.
+- `backend/tests/conftest.py`: Fixture für die ganze Sitzung übersetzt jede `.po` unter `LOCALE_PATHS` mit `msgfmt --check` nach `/tmp/pytest-of-…/locale…` und setzt `LOCALE_PATHS` per `override_settings` darauf.
+- `backend/tests/config/test_i18n.py` (26 Fälle): Import mit falschem Kopf de/en, Django-Meldung im Import auf Deutsch, 409 bei doppelter Version de/en, DRF-403 auf `/api/v1/me/` mit `de`, `de-DE,…`, `en`, `fr` und ohne Kopf, 413 der ASGI-Hülle de/en/ohne Kopf, `scope_language`, Rollen- und Admin-Bezeichnungen auf Deutsch, `msgattrib --untranslated`/`--only-fuzzy` leer, keine `.mo` unter `/app`, Test-Kataloge liegen außerhalb von `/app`. Eine Fixture setzt nach jedem Test die Standardsprache zurück (`LocaleMiddleware` lässt die Sprache der letzten Anfrage aktiv).
+- CI-Job `backend`: Schritt „Translation catalogue up to date“ nach den Worker-Tests, Befehle wörtlich wie im Auftrag; dieselben Befehle mit Hinweisen in `README.md` unter „Backend“.
+
+**Wie wurde getestet?** (Compose-Projekt `twox-034`, `TWOX_API_PORT=18034`)
+
+0. `docker version`, `docker compose version`: Exit 0.
+1. Bau `migrate api worker backend-dev` und `up -d --wait …`: Exit 0.
+2. `exec api sh -c "command -v msgfmt"`: Exit 127 (ungleich 0). `ls locale/de/LC_MESSAGES/django.mo`: Exit 0. Zusätzlich im laufenden Laufzeit-Image: kein `msg*`, `xgettext`, `gettextize`, `autopoint`, `envsubst` in `/usr/bin`, keine `libgettextpo`/`libgettextlib`/`libgettextsrc` in `/usr/lib/x86_64-linux-gnu`, `dpkg-query` kennt weder `gettext`, `gettext-base` noch `libgettextpo0`; unter `/app/locale` liegt nur `de/LC_MESSAGES/django.mo`.
+3. `pytest` in diesem Arbeitsverzeichnis ohne Vorschritt: 1093 bestanden, 0 fehlgeschlagen, 0 übersprungen (4 abgewählt = Worker). `pytest -m worker`: 4 bestanden.
+4. `git status --porcelain --ignored -- backend/locale`: leer; keine `.mo` unter `backend/`.
+5. Schritt „Translation catalogue up to date“: Exit 0, `git status` leer.
+6. Deutsche Meldung: `{"detail":"Anmeldedaten fehlen."}`.
+7. `ruff check`: „All checks passed!“; `ruff format --check`: Exit 0; `mypy`: „Success: no issues found in 132 source files“.
+8. `makemigrations --check --dry-run`: „No changes detected“; Lizenzprüfung: Exit 0.
+9. OpenAPI-Schema neu erzeugt: kein Unterschied (Schema und Client unverändert).
+10. Bau `migrate api worker web-dev`, `pull e2e`, `npm ci`, Testkonto, `e2e`: 15 bestanden. Das Testkonto habe ich unter PowerShell angelegt (Werte aus `.env`, Kennwort nur als Variablenname `-e TWOX_ACCOUNT_PASSWORD`), nicht mit dem Bash-Schritt, weil `.env` nicht über Git Bash eingelesen werden sollte.
+11. `down -v` mit beiden Profilen: Exit 0.
+- `ci.yml` mit PyYAML geladen: gültig, neuer Schritt an der richtigen Stelle.
+
+**Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-a46dcf69fe1eb72ea`, Arbeitsverzeichnis `.claude/worktrees/agent-a46dcf69fe1eb72ea`.
+
+**Abweichungen**
+
+- `backend/tests/config/test_settings.py` (nicht im Auftrag genannt) geändert: Der Test prüfte `settings.LOCALE_PATHS`, das in den Tests jetzt auf die übersetzten Kopien zeigt; er liest den Wert nun aus dem Settings-Modul selbst.
+- `backend/twox/files/uploads.py` geändert (mehr als reines Markieren): Ohne die Änderung bliebe die 413-Antwort der ASGI-Hülle immer Englisch.
+- `backend/twox/config/settings.py`: nur der Kommentar zu den Katalogen.
+- Nicht übersetzt: Meldungen der Verwaltungsbefehle (`create_account`, `import_devices`, `check_*`; Django-Befehle laufen ohne Sprachwahl) und die Fehlertexte des Selbsttests (`database not reachable` u. ä.; technische Diagnose der Testseite). Hilfetexte und Beschreibungen im OpenAPI-Schema bleiben Englisch (Entwicklerdoku), daher keine Schemaänderung.
+
+**Hinweise und offene Punkte**
+
+- Zeilennummern in den Fundstellen: erledigt mit der Nacharbeit unten (Entscheidung der Leitstelle).
+- `get_object_or_404` liefert über DRF „No Device matches the given query.“; dieser Text stammt von Django ohne Übersetzung und bleibt Englisch.
+- Die Lizenzausnahme für gettext (E-46) steht noch nicht in der Abhängigkeitstabelle von `docs/DECISIONS.md`; das ändert nur die Leitstelle. Vorschlag: „GNU gettext 0.23.1 (Debian trixie, Paket gettext 0.23.1-2) | GPL (Programme), LGPL (libintl), Version der Lizenz nicht einzeln geprüft | makemessages, compilemessages, msgfmt in den Tests; nur Dev-Image und Bau-Stufe `locale-build`, nicht im Laufzeit-Image | 034 | E-46“.
+**Nacharbeit (Entscheidung der Leitstelle nach der Prüfung)**
+
+- `makemessages -l de --add-location=file` überall: CI-Schritt in `ci.yml`, README (Abschnitt Backend), Kopfkommentar der `.po`. Die `.po` ist damit neu erzeugt; die Fundstellen nennen nur noch die Datei (`#: twox/accounts/roles.py`), keine Zeilennummern. Inhalt und Übersetzungen unverändert.
+- `.dockerignore`: `**/*.mo`, damit lokale `.mo`-Dateien nicht in den Build-Kontext gelangen.
+- Prüfungen (`-p twox-034`): Schritt „Translation catalogue up to date“ wie in `ci.yml` Exit 0 (nach dem Commit), `pytest` 1093 bestanden, 0 fehlgeschlagen, 0 übersprungen; `ruff check` „All checks passed!“, `ruff format --check` Exit 0, `mypy` „Success: no issues found in 132 source files“; `ci.yml` mit PyYAML im Container geladen, der Schritt enthält die neuen Befehle; keine `.mo` unter `backend/locale`; `down -v` Exit 0.

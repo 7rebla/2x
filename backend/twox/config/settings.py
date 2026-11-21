@@ -318,8 +318,10 @@ def web_asset_is_immutable(path: str, url: str) -> bool:
 WHITENOISE_IMMUTABLE_FILE_TEST = web_asset_is_immutable
 
 LANGUAGE_CODE = "en"
-# German and English; LocaleMiddleware picks one per request. The catalogs
-# follow in work order 034.
+# German and English; LocaleMiddleware picks one per request. The German
+# catalogue is backend/locale/de/LC_MESSAGES/django.po; the runtime image holds
+# it compiled (.mo, built in the image only), the tests compile it on the fly
+# (tests/conftest.py).
 LANGUAGES = [
     ("de", gettext_lazy("German")),
     ("en", gettext_lazy("English")),

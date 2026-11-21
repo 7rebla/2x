@@ -11,6 +11,8 @@
 **/.env.*
 **/__pycache__/
 **/*.py[cod]
+# Compiled translation catalogues are built in the image only (E-46).
+**/*.mo
 backend/.venv/
 backend/.mypy_cache/
 backend/.ruff_cache/

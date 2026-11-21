@@ -23,6 +23,7 @@ from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
 
 # Address of the sign-in page of the web UI (web/src/routes.tsx).
@@ -32,9 +33,9 @@ WEB_UI_LOGIN_PATH = "/login"
 class TwoxAdminSite(AdminSite):
     """Admin site that admits active superusers only."""
 
-    site_header = "2x administration"
-    site_title = "2x administration"
-    index_title = "Administration"
+    site_header = _("2x administration")
+    site_title = _("2x administration")
+    index_title = _("Administration")
 
     def has_permission(self, request: HttpRequest) -> bool:
         """Return True for an active superuser, never for staff alone."""

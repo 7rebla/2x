@@ -121,6 +121,18 @@ docker compose run --rm backend-dev sh scripts/check-licenses.sh
 - `pytest -m worker` runs only those; they need the `valkey` and `worker` services running.
 - `sh scripts/check-licenses.sh` is the licence check of the Python packages; it fails on every licence that is not allowed in `backend/scripts/license-rules.txt`.
 
+Translation catalogue up to date (regenerates `backend/locale/de/LC_MESSAGES/django.po` from the texts marked with `gettext` or `gettext_lazy`; any difference apart from the creation date means the catalogue is out of date):
+
+```sh
+docker compose run --rm backend-dev python manage.py makemessages -l de --add-location=file
+git diff --exit-code -I '^"POT-Creation-Date:' -- backend/locale
+test -z "$(git status --porcelain --untracked-files=all -- backend/locale)"
+```
+
+- After a change to backend texts, run `makemessages` as above, translate every new entry in `django.po` and remove `fuzzy` flags; `pytest` fails while the catalogue has untranslated or fuzzy entries (`tests/config/test_i18n.py`).
+- The API answers in German if the request asks for it (`Accept-Language: de`), otherwise in English.
+- Compiled catalogues (`.mo`) are never committed. The runtime image compiles them in a build stage; `pytest` compiles them into a temporary directory outside `/app`. GNU gettext (GPL) is a tool of the `dev` image and that build stage only, not part of the runtime image (E-46).
+
 OpenAPI schema up to date (regenerates `web/openapi/schema.yml`; any difference means the checked-in schema is out of date):
 
 ```sh

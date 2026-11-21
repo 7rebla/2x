@@ -1,0 +1,346 @@
+# German translation of the 2x backend.
+# This file is distributed under the same licence as the 2x project (Apache-2.0).
+# Update it with: docker compose run --rm backend-dev python manage.py makemessages -l de --add-location=file
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 2x\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-21 23:45+0000\n"
+"PO-Revision-Date: 2026-11-22 00:00+0000\n"
+"Last-Translator: 2x project\n"
+"Language-Team: German\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: twox/accounts/apps.py
+msgid "Accounts"
+msgstr "Konten"
+
+#: twox/accounts/roles.py
+msgid "Manage"
+msgstr "Verwalten"
+
+#: twox/accounts/roles.py
+msgid "Read"
+msgstr "Lesen"
+
+#: twox/assets/apps.py
+msgid "Structure"
+msgstr "Struktur"
+
+#: twox/assets/csv_import.py
+#, python-format
+msgid "The line is longer than %(limit)d bytes."
+msgstr "Die Zeile ist länger als %(limit)d Byte."
+
+#: twox/assets/csv_import.py
+#, python-format
+msgid ""
+"The file is not UTF-8 (byte %(position)d of this line). Save it as UTF-8 and "
+"try again."
+msgstr ""
+"Die Datei ist nicht in UTF-8 kodiert (Byte %(position)d dieser Zeile). "
+"Speichern Sie sie als UTF-8 und versuchen Sie es erneut."
+
+#: twox/assets/csv_import.py
+#, python-format
+msgid ""
+"The first line must name exactly these %(count)d columns in this order: "
+"%(columns)s."
+msgstr ""
+"Die erste Zeile muss genau diese %(count)d Spalten in dieser Reihenfolge "
+"nennen: %(columns)s."
+
+#: twox/assets/csv_import.py
+#, python-format
+msgid "Missing: %(columns)s."
+msgstr "Es fehlen: %(columns)s."
+
+#: twox/assets/csv_import.py
+#, python-format
+msgid "Not expected: %(columns)s."
+msgstr "Nicht erwartet: %(columns)s."
+
+#: twox/assets/csv_import.py
+msgid "The separator must be a comma, not a semicolon."
+msgstr "Das Trennzeichen muss ein Komma sein, kein Semikolon."
+
+#: twox/assets/csv_import.py
+#, python-format
+msgid "A field in this row is longer than %(limit)d characters."
+msgstr "Ein Feld in dieser Zeile ist länger als %(limit)d Zeichen."
+
+#: twox/assets/csv_import.py
+#, python-format
+msgid "The row is not valid CSV: %(reason)s."
+msgstr "Die Zeile ist kein gültiges CSV: %(reason)s."
+
+#: twox/assets/csv_import.py
+msgid "The rest of the file was not checked."
+msgstr "Der Rest der Datei wurde nicht geprüft."
+
+#: twox/assets/csv_import.py
+msgid "A row with a device_id needs a device_name."
+msgstr "Eine Zeile mit device_id braucht einen device_name."
+
+#: twox/assets/csv_import.py
+msgid ""
+"This column describes a device; leave it empty in a row without device_id."
+msgstr ""
+"Diese Spalte beschreibt ein Gerät; lassen Sie sie in einer Zeile ohne "
+"device_id leer."
+
+#: twox/assets/csv_import.py
+#, python-format
+msgid "The row has %(found)d fields instead of %(expected)d."
+msgstr "Die Zeile hat %(found)d Felder statt %(expected)d."
+
+#: twox/assets/csv_import.py
+#, python-format
+msgid "Line %(line)d gives the plant %(key)s another value in this column."
+msgstr ""
+"Zeile %(line)d gibt der Anlage %(key)s in dieser Spalte einen anderen Wert."
+
+#: twox/assets/csv_import.py
+#, python-format
+msgid "The device %(key)s appears in line %(line)d already."
+msgstr "Das Gerät %(key)s steht schon in Zeile %(line)d."
+
+#: twox/assets/csv_import.py
+#, python-format
+msgid "Line %(line)d gives the plant %(key)s other notes."
+msgstr "Zeile %(line)d gibt der Anlage %(key)s andere Notizen."
+
+#: twox/assets/csv_import.py
+msgid "The file is empty."
+msgstr "Die Datei ist leer."
+
+#: twox/assets/csv_import.py
+#, python-format
+msgid "The file has more than %(limit)d rows."
+msgstr "Die Datei hat mehr als %(limit)d Zeilen."
+
+#: twox/assets/csv_import.py
+#, python-format
+msgid "More than %(limit)d errors; reading stopped at line %(line)d."
+msgstr "Mehr als %(limit)d Fehler; das Lesen endete in Zeile %(line)d."
+
+#: twox/assets/csv_import.py
+msgid "Another change was saved at the same time; run the import again."
+msgstr ""
+"Gleichzeitig wurde eine andere Änderung gespeichert; starten Sie den Import "
+"erneut."
+
+#: twox/assets/csv_import.py
+msgid "The database refused this row."
+msgstr "Die Datenbank hat diese Zeile abgelehnt."
+
+#: twox/assets/integrity.py
+msgid "A site with this name exists already."
+msgstr "Es gibt schon einen Standort mit diesem Namen."
+
+#: twox/assets/integrity.py
+msgid "This site has an area with this name already."
+msgstr "Dieser Standort hat schon einen Bereich mit diesem Namen."
+
+#: twox/assets/integrity.py
+msgid "A plant with this key exists already."
+msgstr "Es gibt schon eine Anlage mit dieser Kennung."
+
+#: twox/assets/integrity.py
+msgid "A device with this key exists already."
+msgstr "Es gibt schon ein Gerät mit dieser Kennung."
+
+#: twox/assets/models.py
+msgid "Use only lowercase letters, digits and hyphens."
+msgstr "Verwenden Sie nur Kleinbuchstaben, Ziffern und Bindestriche."
+
+#: twox/assets/models.py twox/files/models.py
+msgid "created at"
+msgstr "angelegt am"
+
+#: twox/assets/models.py
+msgid "updated at"
+msgstr "zuletzt geändert am"
+
+#: twox/assets/models.py
+msgid "name"
+msgstr "Name"
+
+#: twox/assets/models.py
+msgid "site"
+msgstr "Standort"
+
+#: twox/assets/models.py
+msgid "sites"
+msgstr "Standorte"
+
+#: twox/assets/models.py
+msgid "area"
+msgstr "Bereich"
+
+#: twox/assets/models.py
+msgid "areas"
+msgstr "Bereiche"
+
+#: twox/assets/models.py
+msgid "key"
+msgstr "Kennung"
+
+#: twox/assets/models.py
+msgid "notes"
+msgstr "Notizen"
+
+#: twox/assets/models.py
+msgid "plant"
+msgstr "Anlage"
+
+#: twox/assets/models.py
+msgid "plants"
+msgstr "Anlagen"
+
+#: twox/assets/models.py
+msgid "manufacturer"
+msgstr "Hersteller"
+
+#: twox/assets/models.py
+msgid "model"
+msgstr "Modell"
+
+#: twox/assets/models.py
+msgid "software version"
+msgstr "Softwarestand"
+
+#: twox/assets/models.py
+msgid "IP address"
+msgstr "IP-Adresse"
+
+#: twox/assets/models.py
+msgid "address source"
+msgstr "Herkunft der Adresse"
+
+#: twox/assets/models.py
+msgid "protocols"
+msgstr "Protokolle"
+
+#: twox/assets/models.py twox/files/models.py
+msgid "device"
+msgstr "Gerät"
+
+#: twox/assets/models.py
+msgid "devices"
+msgstr "Geräte"
+
+#: twox/config/admin_site.py
+msgid "2x administration"
+msgstr "2x-Verwaltung"
+
+#: twox/config/admin_site.py
+msgid "Administration"
+msgstr "Verwaltung"
+
+#: twox/config/settings.py
+msgid "German"
+msgstr "Deutsch"
+
+#: twox/config/settings.py
+msgid "English"
+msgstr "Englisch"
+
+#: twox/files/apps.py
+msgid "Files"
+msgstr "Dateien"
+
+#: twox/files/models.py
+msgid "Enter a media type of the form type/subtype."
+msgstr "Geben Sie einen Medientyp der Form Typ/Untertyp ein."
+
+#: twox/files/models.py
+msgid "Enter a SHA-256 checksum as 64 lowercase hexadecimal characters."
+msgstr ""
+"Geben Sie eine SHA-256-Prüfsumme aus 64 kleingeschriebenen "
+"Hexadezimalzeichen ein."
+
+#: twox/files/models.py
+msgid "document"
+msgstr "Dokument"
+
+#: twox/files/models.py
+msgid "configuration"
+msgstr "Konfiguration"
+
+#: twox/files/models.py
+msgid "title"
+msgstr "Titel"
+
+#: twox/files/models.py
+msgid "kind"
+msgstr "Art"
+
+#: twox/files/models.py
+msgid "created by"
+msgstr "angelegt von"
+
+#: twox/files/models.py
+msgid "documents"
+msgstr "Dokumente"
+
+#: twox/files/models.py
+msgid "number"
+msgstr "Nummer"
+
+#: twox/files/models.py
+msgid "blob key"
+msgstr "Speicherschlüssel"
+
+#: twox/files/models.py
+msgid "SHA-256"
+msgstr "SHA-256"
+
+#: twox/files/models.py
+msgid "size in bytes"
+msgstr "Größe in Byte"
+
+#: twox/files/models.py
+msgid "content type"
+msgstr "Inhaltstyp"
+
+#: twox/files/models.py
+msgid "original file name"
+msgstr "ursprünglicher Dateiname"
+
+#: twox/files/models.py
+msgid "uploaded by"
+msgstr "hochgeladen von"
+
+#: twox/files/models.py
+msgid "document version"
+msgstr "Dokumentversion"
+
+#: twox/files/models.py
+msgid "document versions"
+msgstr "Dokumentversionen"
+
+#: twox/files/services.py twox/files/uploads.py
+#, python-format
+msgid "The file is larger than the limit of %(max_bytes)d bytes."
+msgstr "Die Datei ist größer als die Grenze von %(max_bytes)d Byte."
+
+#: twox/files/services.py
+msgid ""
+"Configuration files are not accepted yet: access data in them cannot be "
+"redacted before a later version."
+msgstr ""
+"Konfigurationsdateien werden noch nicht angenommen: Zugangsdaten darin "
+"können erst in einer späteren Version geschwärzt werden."
+
+#: twox/files/services.py
+#, python-format
+msgid ""
+"The file is identical to the newest version %(number)d of this document."
+msgstr ""
+"Die Datei ist identisch mit der neuesten Version %(number)d dieses Dokuments."

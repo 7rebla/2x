@@ -35,7 +35,8 @@ from typing import Any
 from django.conf import settings
 from django.core.files.uploadhandler import FileUploadHandler, StopUpload, load_handler
 from django.http import HttpRequest
-from django.utils.translation import gettext
+from django.utils import translation
+from django.utils.translation import gettext, trans_real
 from rest_framework import status
 from rest_framework.exceptions import APIException
 from rest_framework.parsers import MultiPartParser
@@ -175,8 +176,32 @@ class LimitedUploadView(APIView):
         return data
 
 
-async def _send_too_large(send: Send) -> None:
-    body = json.dumps({"detail": too_large_message()}).encode()
+def scope_language(scope: Scope) -> str:
+    """The language for an answer of the ASGI middleware, from ``Accept-Language``.
+
+    The middleware answers before Django runs, so ``LocaleMiddleware`` has not
+    chosen a language yet. This picks it the same way from the header: the
+    first supported language in order of preference, else ``LANGUAGE_CODE``.
+    """
+    header = ""
+    for name, value in scope.get("headers", ()):
+        if name.lower() == b"accept-language":
+            header = value.decode("latin-1")
+            break
+    for code, _quality in trans_real.parse_accept_lang_header(header):
+        if code == "*":
+            break
+        try:
+            return translation.get_supported_language_variant(code)
+        except LookupError:
+            continue
+    language: str = settings.LANGUAGE_CODE
+    return language
+
+
+async def _send_too_large(scope: Scope, send: Send) -> None:
+    with translation.override(scope_language(scope)):
+        body = json.dumps({"detail": too_large_message()}).encode()
     await send(
         {
             "type": "http.response.start",
@@ -212,7 +237,7 @@ class RequestBodyLimitMiddleware:
         limit = max_request_bytes()
         length = _header_content_length(scope)
         if length is not None and length > limit:
-            await _send_too_large(send)
+            await _send_too_large(scope, send)
             return
 
         received = 0
@@ -239,7 +264,7 @@ class RequestBodyLimitMiddleware:
 
         await self.app(scope, limited_receive, tracking_send)
         if exceeded and not response_started:
-            await _send_too_large(send)
+            await _send_too_large(scope, send)
 
 
 def _header_content_length(scope: Scope) -> int | None:

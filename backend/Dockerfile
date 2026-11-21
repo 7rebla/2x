@@ -3,9 +3,11 @@
 #
 # Two targets:
 #   dev      development and CI tooling, runs as root so that writes to the
-#            bind-mounted source tree work on every host; needs no web build
-#   runtime  application plus the built web UI, no development tools and no
-#            Node, runs as non-root (default)
+#            bind-mounted source tree work on every host; needs no web build;
+#            has GNU gettext for makemessages and the tests
+#   runtime  application plus the built web UI and the compiled translation
+#            catalogues, no development tools, no Node and no gettext, runs
+#            as non-root (default)
 
 ARG PYTHON_IMAGE=python:3.14.10-slim
 ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.13.9
@@ -34,7 +36,16 @@ COPY backend/pyproject.toml backend/uv.lock ./
 FROM builder AS runtime-deps
 RUN uv sync --locked --no-dev
 
+# GNU gettext (msgfmt, xgettext, msgmerge, msgattrib), the tools behind
+# makemessages and compilemessages. Licence: the programs are GPL, libintl is
+# LGPL. Allowed as a tool in the dev image and in the stage locale-build only
+# (E-46): never in the runtime image, never linked into the project. The
+# runtime reads the compiled catalogues with Python's own gettext module.
+# Debian trixie ships gettext 0.23.1.
 FROM builder AS dev
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gettext \
+    && rm -rf /var/lib/apt/lists/*
 # Tool caches go to /tmp, never into the bind-mounted source tree.
 ENV MYPY_CACHE_DIR=/tmp/mypy_cache \
     RUFF_CACHE_DIR=/tmp/ruff_cache \
@@ -116,6 +127,26 @@ RUN TWOX_SECRET_KEY=collectstatic-only TWOX_DB_PASSWORD=collectstatic-only \
     TWOX_WEB_DIST_DIR=/web-dist \
     python manage.py collectstatic --noinput
 
+# Compiles the translation catalogues (backend/locale/*/LC_MESSAGES/*.po) with
+# compilemessages, which runs msgfmt from GNU gettext (see the stage dev for
+# the licence). Compiled .mo files exist only in images, never in the
+# repository or the bind-mounted source tree (E-34, E-46). Only the .mo files
+# leave this stage. As in the stage static, the two variables exist only for
+# this command.
+FROM base AS locale-build
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gettext \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=runtime-deps /opt/venv /opt/venv
+COPY backend/manage.py ./
+COPY backend/twox ./twox
+COPY backend/locale ./locale
+RUN set -eu; \
+    TWOX_SECRET_KEY=compilemessages-only TWOX_DB_PASSWORD=compilemessages-only \
+        python manage.py compilemessages; \
+    find locale -type f ! -name '*.mo' -delete; \
+    test -n "$(find locale -type f -name '*.mo')"
+
 FROM base AS runtime
 RUN groupadd --system --gid 10001 twox \
     && useradd --system --uid 10001 --gid twox --no-create-home --shell /usr/sbin/nologin twox \
@@ -128,6 +159,8 @@ COPY backend/manage.py ./
 COPY backend/twox ./twox
 # Owned by root and read-only for the app user: nothing writes here at runtime.
 COPY --from=static /app/staticfiles ./staticfiles
+# The compiled catalogues only (LOCALE_PATHS = /app/locale); no gettext here.
+COPY --from=locale-build /app/locale ./locale
 USER twox
 EXPOSE 8000
 # Django has no ASGI lifespan handler, so uvicorn does not need to probe for one.
