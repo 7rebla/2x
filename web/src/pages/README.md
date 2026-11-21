@@ -96,19 +96,19 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 
 ## Files
 
-- ../components/DeviceFiles.tsx (on the device page) lists the files of the device with their newest version:
+- `../components/DeviceFiles.tsx` (on the device page) lists the files of the device with their newest version:
   title (link to the file page), kind, number, date, size, user, the checksum shortened (a click shows all of it)
   and a download link. Managers upload new files there; the kind "configuration" is shown but cannot be chosen,
   because configurations are rejected until redaction arrives in M5 (E-42); the form says so.
-- DocumentPage.tsx (/documents/:documentId) shows one file with all versions, newest first, each with a
-  download link, the form for a new version (managers) and the change log of the file (AuditTrail, managers only,
+- `DocumentPage.tsx` (`/documents/:documentId`) shows one file with all versions, newest first, each with a
+  download link, the form for a new version (managers) and the change log of the file (`AuditTrail`, managers only,
   because the change log API is readable for managers only).
-- Downloads are plain links to /api/v1/document-versions/<id>/download/; the API answers with
-  Content-Disposition: attachment and the session cookie goes along.
-- Uploads go through the generated client (multipart/form-data) in ../components/files/upload.ts, with a fetch of
+- Downloads are plain links to `/api/v1/document-versions/<id>/download/`; the API answers with
+  `Content-Disposition: attachment` and the session cookie goes along.
+- Uploads go through the generated client (multipart/form-data) in `../components/files/upload.ts`, with a fetch of
   its own that keeps a copy of 400, 409 and 413 answers: field errors appear at their fields, 409 names the version
   with the same content, 413 the limit (read from the API's message), and the duplicates of a successful upload
   appear with links to the device and the file. There is no progress display (the client reports none).
 - File names, titles and user names are rendered as text, never through the interpolation of i18next.
-- Tests fake the file API with ../components/files/testData.ts. Under jsdom, Node's Request cannot read
-  jsdom files, so tests use 	extFile() and akeUploadApi(), which send forms as multipart text.
+- Tests fake the file API with `../components/files/testData.ts`. Under jsdom, Node's Request cannot read
+  jsdom files, so tests use `textFile()` and `fakeUploadApi()`, which send forms as multipart text.
