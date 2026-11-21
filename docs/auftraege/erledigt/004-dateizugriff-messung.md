@@ -1,6 +1,6 @@
 # Auftrag 004 – Messung Dateizugriff
 
-Meilenstein: M0 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M0 · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 

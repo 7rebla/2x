@@ -14,7 +14,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 | 001 | Backend: Werkzeuge und Container | C | 1 | – | erledigt |
 | 002 | Oberfläche als Grundgerüst | C | 1 | – | erledigt |
 | 003 | Suche nach Geheimnissen | C | 1 | – | erledigt (CI grün) |
-| 004 | Messung Dateizugriff | B | 2 | 001, 002 | in Arbeit |
+| 004 | Messung Dateizugriff | B | 2 | 001, 002 | erledigt |
 | 005 | API-Grundlage | C | 3 | 001 | erledigt |
 | 006 | Lizenzprüfung | C | 3 | 001, 002 | erledigt |
 | 007 | Prüfung der Erreichbarkeit von Ollama | B | 3 | 001 | erledigt |
@@ -48,7 +48,7 @@ Höchstens fünf Bearbeiter gleichzeitig (E-24), M0 und T1 zusammen gezählt. Ei
 
 ## In Arbeit
 
-- 004 als Subagent (Messung läuft).
+- keine; alle 29 Aufträge für M0 und T1 sind erledigt.
 
 ## Wartet auf a7
 
