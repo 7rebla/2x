@@ -4,10 +4,68 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+/**
+ * An area of a site. ``site`` is the id of the site.
+ */
+export type Area = {
+    readonly id: number;
+    site: number;
+    name: string;
+    readonly created_at: string;
+    readonly updated_at: string;
+};
+
+/**
+ * The area of a device, for reading.
+ */
+export type AreaRef = {
+    readonly id: number;
+    readonly name: string;
+};
+
 export type DatabaseCheck = {
     ok: boolean;
     server_version: string;
     error: string;
+};
+
+/**
+ * A device with its chain plant > area > site, for reading.
+ */
+export type Device = {
+    readonly id: number;
+    plant: PlantRef;
+    area: AreaRef;
+    site: SiteRef;
+    readonly key: string;
+    readonly name: string;
+    readonly manufacturer: string;
+    readonly model: string;
+    readonly software_version: string;
+    readonly ip_address: string | null;
+    readonly address_source: string;
+    readonly protocols: string;
+    readonly notes: string;
+    readonly created_at: string;
+    readonly updated_at: string;
+};
+
+/**
+ * Input for creating and changing a device. ``plant`` is the id of the plant.
+ *
+ * An empty IP address is stored as no address (``null``).
+ */
+export type DeviceWrite = {
+    plant: number;
+    key: string;
+    name: string;
+    manufacturer?: string;
+    model?: string;
+    software_version?: string;
+    ip_address?: string | null;
+    address_source?: string;
+    protocols?: string;
+    notes?: string;
 };
 
 /**
@@ -29,6 +87,80 @@ export type Me = {
 export type NullEnum = never;
 
 /**
+ * An area of a site. ``site`` is the id of the site.
+ */
+export type PatchedArea = {
+    readonly id?: number;
+    site?: number;
+    name?: string;
+    readonly created_at?: string;
+    readonly updated_at?: string;
+};
+
+/**
+ * Input for creating and changing a device. ``plant`` is the id of the plant.
+ *
+ * An empty IP address is stored as no address (``null``).
+ */
+export type PatchedDeviceWrite = {
+    plant?: number;
+    key?: string;
+    name?: string;
+    manufacturer?: string;
+    model?: string;
+    software_version?: string;
+    ip_address?: string | null;
+    address_source?: string;
+    protocols?: string;
+    notes?: string;
+};
+
+/**
+ * A plant of an area. ``area`` is the id of the area.
+ */
+export type PatchedPlant = {
+    readonly id?: number;
+    area?: number;
+    key?: string;
+    name?: string;
+    notes?: string;
+    readonly created_at?: string;
+    readonly updated_at?: string;
+};
+
+/**
+ * A site of the operation.
+ */
+export type PatchedSite = {
+    readonly id?: number;
+    name?: string;
+    readonly created_at?: string;
+    readonly updated_at?: string;
+};
+
+/**
+ * A plant of an area. ``area`` is the id of the area.
+ */
+export type Plant = {
+    readonly id: number;
+    area: number;
+    key: string;
+    name: string;
+    notes?: string;
+    readonly created_at: string;
+    readonly updated_at: string;
+};
+
+/**
+ * The plant of a device, for reading.
+ */
+export type PlantRef = {
+    readonly id: number;
+    readonly key: string;
+    readonly name: string;
+};
+
+/**
  * * `manage` - manage
  * * `read` - read
  */
@@ -37,6 +169,24 @@ export type RoleEnum = 'manage' | 'read';
 export type Selftest = {
     database: DatabaseCheck;
     worker: WorkerCheck;
+};
+
+/**
+ * A site of the operation.
+ */
+export type Site = {
+    readonly id: number;
+    name: string;
+    readonly created_at: string;
+    readonly updated_at: string;
+};
+
+/**
+ * The site of a device, for reading.
+ */
+export type SiteRef = {
+    readonly id: number;
+    readonly name: string;
 };
 
 /**
@@ -50,6 +200,230 @@ export type WorkerCheck = {
     duration_ms: number;
     error: string;
 };
+
+/**
+ * An area of a site. ``site`` is the id of the site.
+ */
+export type AreaWritable = {
+    site: number;
+    name: string;
+};
+
+/**
+ * An area of a site. ``site`` is the id of the site.
+ */
+export type PatchedAreaWritable = {
+    site?: number;
+    name?: string;
+};
+
+/**
+ * A plant of an area. ``area`` is the id of the area.
+ */
+export type PatchedPlantWritable = {
+    area?: number;
+    key?: string;
+    name?: string;
+    notes?: string;
+};
+
+/**
+ * A site of the operation.
+ */
+export type PatchedSiteWritable = {
+    name?: string;
+};
+
+/**
+ * A plant of an area. ``area`` is the id of the area.
+ */
+export type PlantWritable = {
+    area: number;
+    key: string;
+    name: string;
+    notes?: string;
+};
+
+/**
+ * A site of the operation.
+ */
+export type SiteWritable = {
+    name: string;
+};
+
+export type AreasListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Only areas of the site with this id.
+         */
+        site?: number;
+    };
+    url: '/api/v1/areas/';
+};
+
+export type AreasListResponses = {
+    200: Array<Area>;
+};
+
+export type AreasListResponse = AreasListResponses[keyof AreasListResponses];
+
+export type AreasCreateData = {
+    body: AreaWritable;
+    path?: never;
+    query?: never;
+    url: '/api/v1/areas/';
+};
+
+export type AreasCreateResponses = {
+    201: Area;
+};
+
+export type AreasCreateResponse = AreasCreateResponses[keyof AreasCreateResponses];
+
+export type AreasRetrieveData = {
+    body?: never;
+    path: {
+        /**
+         * A unique integer value identifying this area.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/api/v1/areas/{id}/';
+};
+
+export type AreasRetrieveResponses = {
+    200: Area;
+};
+
+export type AreasRetrieveResponse = AreasRetrieveResponses[keyof AreasRetrieveResponses];
+
+export type AreasPartialUpdateData = {
+    body?: PatchedAreaWritable;
+    path: {
+        /**
+         * A unique integer value identifying this area.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/api/v1/areas/{id}/';
+};
+
+export type AreasPartialUpdateResponses = {
+    200: Area;
+};
+
+export type AreasPartialUpdateResponse = AreasPartialUpdateResponses[keyof AreasPartialUpdateResponses];
+
+export type AreasUpdateData = {
+    body: AreaWritable;
+    path: {
+        /**
+         * A unique integer value identifying this area.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/api/v1/areas/{id}/';
+};
+
+export type AreasUpdateResponses = {
+    200: Area;
+};
+
+export type AreasUpdateResponse = AreasUpdateResponses[keyof AreasUpdateResponses];
+
+export type DevicesListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Only devices of the plant with this id.
+         */
+        plant?: number;
+        /**
+         * Only devices of the site with this id (through area and plant).
+         */
+        site?: number;
+    };
+    url: '/api/v1/devices/';
+};
+
+export type DevicesListResponses = {
+    200: Array<Device>;
+};
+
+export type DevicesListResponse = DevicesListResponses[keyof DevicesListResponses];
+
+export type DevicesCreateData = {
+    body: DeviceWrite;
+    path?: never;
+    query?: never;
+    url: '/api/v1/devices/';
+};
+
+export type DevicesCreateResponses = {
+    201: Device;
+};
+
+export type DevicesCreateResponse = DevicesCreateResponses[keyof DevicesCreateResponses];
+
+export type DevicesRetrieveData = {
+    body?: never;
+    path: {
+        /**
+         * A unique integer value identifying this device.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/api/v1/devices/{id}/';
+};
+
+export type DevicesRetrieveResponses = {
+    200: Device;
+};
+
+export type DevicesRetrieveResponse = DevicesRetrieveResponses[keyof DevicesRetrieveResponses];
+
+export type DevicesPartialUpdateData = {
+    body?: PatchedDeviceWrite;
+    path: {
+        /**
+         * A unique integer value identifying this device.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/api/v1/devices/{id}/';
+};
+
+export type DevicesPartialUpdateResponses = {
+    200: Device;
+};
+
+export type DevicesPartialUpdateResponse = DevicesPartialUpdateResponses[keyof DevicesPartialUpdateResponses];
+
+export type DevicesUpdateData = {
+    body: DeviceWrite;
+    path: {
+        /**
+         * A unique integer value identifying this device.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/api/v1/devices/{id}/';
+};
+
+export type DevicesUpdateResponses = {
+    200: Device;
+};
+
+export type DevicesUpdateResponse = DevicesUpdateResponses[keyof DevicesUpdateResponses];
 
 export type HealthRetrieveData = {
     body?: never;
@@ -77,6 +451,91 @@ export type MeRetrieveResponses = {
 
 export type MeRetrieveResponse = MeRetrieveResponses[keyof MeRetrieveResponses];
 
+export type PlantsListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Only plants of the area with this id.
+         */
+        area?: number;
+    };
+    url: '/api/v1/plants/';
+};
+
+export type PlantsListResponses = {
+    200: Array<Plant>;
+};
+
+export type PlantsListResponse = PlantsListResponses[keyof PlantsListResponses];
+
+export type PlantsCreateData = {
+    body: PlantWritable;
+    path?: never;
+    query?: never;
+    url: '/api/v1/plants/';
+};
+
+export type PlantsCreateResponses = {
+    201: Plant;
+};
+
+export type PlantsCreateResponse = PlantsCreateResponses[keyof PlantsCreateResponses];
+
+export type PlantsRetrieveData = {
+    body?: never;
+    path: {
+        /**
+         * A unique integer value identifying this plant.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/api/v1/plants/{id}/';
+};
+
+export type PlantsRetrieveResponses = {
+    200: Plant;
+};
+
+export type PlantsRetrieveResponse = PlantsRetrieveResponses[keyof PlantsRetrieveResponses];
+
+export type PlantsPartialUpdateData = {
+    body?: PatchedPlantWritable;
+    path: {
+        /**
+         * A unique integer value identifying this plant.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/api/v1/plants/{id}/';
+};
+
+export type PlantsPartialUpdateResponses = {
+    200: Plant;
+};
+
+export type PlantsPartialUpdateResponse = PlantsPartialUpdateResponses[keyof PlantsPartialUpdateResponses];
+
+export type PlantsUpdateData = {
+    body: PlantWritable;
+    path: {
+        /**
+         * A unique integer value identifying this plant.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/api/v1/plants/{id}/';
+};
+
+export type PlantsUpdateResponses = {
+    200: Plant;
+};
+
+export type PlantsUpdateResponse = PlantsUpdateResponses[keyof PlantsUpdateResponses];
+
 export type SelftestRetrieveData = {
     body?: never;
     path?: never;
@@ -89,3 +548,83 @@ export type SelftestRetrieveResponses = {
 };
 
 export type SelftestRetrieveResponse = SelftestRetrieveResponses[keyof SelftestRetrieveResponses];
+
+export type SitesListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/sites/';
+};
+
+export type SitesListResponses = {
+    200: Array<Site>;
+};
+
+export type SitesListResponse = SitesListResponses[keyof SitesListResponses];
+
+export type SitesCreateData = {
+    body: SiteWritable;
+    path?: never;
+    query?: never;
+    url: '/api/v1/sites/';
+};
+
+export type SitesCreateResponses = {
+    201: Site;
+};
+
+export type SitesCreateResponse = SitesCreateResponses[keyof SitesCreateResponses];
+
+export type SitesRetrieveData = {
+    body?: never;
+    path: {
+        /**
+         * A unique integer value identifying this site.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/api/v1/sites/{id}/';
+};
+
+export type SitesRetrieveResponses = {
+    200: Site;
+};
+
+export type SitesRetrieveResponse = SitesRetrieveResponses[keyof SitesRetrieveResponses];
+
+export type SitesPartialUpdateData = {
+    body?: PatchedSiteWritable;
+    path: {
+        /**
+         * A unique integer value identifying this site.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/api/v1/sites/{id}/';
+};
+
+export type SitesPartialUpdateResponses = {
+    200: Site;
+};
+
+export type SitesPartialUpdateResponse = SitesPartialUpdateResponses[keyof SitesPartialUpdateResponses];
+
+export type SitesUpdateData = {
+    body: SiteWritable;
+    path: {
+        /**
+         * A unique integer value identifying this site.
+         */
+        id: number;
+    };
+    query?: never;
+    url: '/api/v1/sites/{id}/';
+};
+
+export type SitesUpdateResponses = {
+    200: Site;
+};
+
+export type SitesUpdateResponse = SitesUpdateResponses[keyof SitesUpdateResponses];

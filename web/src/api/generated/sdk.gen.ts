@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { HealthRetrieveData, HealthRetrieveResponses, MeRetrieveData, MeRetrieveResponses, SelftestRetrieveData, SelftestRetrieveResponses } from './types.gen';
+import type { AreasCreateData, AreasCreateResponses, AreasListData, AreasListResponses, AreasPartialUpdateData, AreasPartialUpdateResponses, AreasRetrieveData, AreasRetrieveResponses, AreasUpdateData, AreasUpdateResponses, DevicesCreateData, DevicesCreateResponses, DevicesListData, DevicesListResponses, DevicesPartialUpdateData, DevicesPartialUpdateResponses, DevicesRetrieveData, DevicesRetrieveResponses, DevicesUpdateData, DevicesUpdateResponses, HealthRetrieveData, HealthRetrieveResponses, MeRetrieveData, MeRetrieveResponses, PlantsCreateData, PlantsCreateResponses, PlantsListData, PlantsListResponses, PlantsPartialUpdateData, PlantsPartialUpdateResponses, PlantsRetrieveData, PlantsRetrieveResponses, PlantsUpdateData, PlantsUpdateResponses, SelftestRetrieveData, SelftestRetrieveResponses, SitesCreateData, SitesCreateResponses, SitesListData, SitesListResponses, SitesPartialUpdateData, SitesPartialUpdateResponses, SitesRetrieveData, SitesRetrieveResponses, SitesUpdateData, SitesUpdateResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -17,6 +17,175 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      */
     meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
+
+/**
+ * Areas of the sites.
+ */
+export const areasList = <ThrowOnError extends boolean = false>(options?: Options<AreasListData, ThrowOnError>): RequestResult<AreasListResponses, unknown, ThrowOnError> => (options?.client ?? client).get<AreasListResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/areas/',
+    ...options
+});
+
+/**
+ * Areas of the sites.
+ */
+export const areasCreate = <ThrowOnError extends boolean = false>(options: Options<AreasCreateData, ThrowOnError>): RequestResult<AreasCreateResponses, unknown, ThrowOnError> => (options.client ?? client).post<AreasCreateResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/areas/',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Areas of the sites.
+ */
+export const areasRetrieve = <ThrowOnError extends boolean = false>(options: Options<AreasRetrieveData, ThrowOnError>): RequestResult<AreasRetrieveResponses, unknown, ThrowOnError> => (options.client ?? client).get<AreasRetrieveResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/areas/{id}/',
+    ...options
+});
+
+/**
+ * Areas of the sites.
+ */
+export const areasPartialUpdate = <ThrowOnError extends boolean = false>(options: Options<AreasPartialUpdateData, ThrowOnError>): RequestResult<AreasPartialUpdateResponses, unknown, ThrowOnError> => (options.client ?? client).patch<AreasPartialUpdateResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/areas/{id}/',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Areas of the sites.
+ */
+export const areasUpdate = <ThrowOnError extends boolean = false>(options: Options<AreasUpdateData, ThrowOnError>): RequestResult<AreasUpdateResponses, unknown, ThrowOnError> => (options.client ?? client).put<AreasUpdateResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/areas/{id}/',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Devices of the plants, each with its chain plant > area > site.
+ *
+ * Writes take the plant as an id (``DeviceWrite``); every answer shows the
+ * device as it is read (``Device``).
+ */
+export const devicesList = <ThrowOnError extends boolean = false>(options?: Options<DevicesListData, ThrowOnError>): RequestResult<DevicesListResponses, unknown, ThrowOnError> => (options?.client ?? client).get<DevicesListResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/devices/',
+    ...options
+});
+
+/**
+ * Devices of the plants, each with its chain plant > area > site.
+ *
+ * Writes take the plant as an id (``DeviceWrite``); every answer shows the
+ * device as it is read (``Device``).
+ */
+export const devicesCreate = <ThrowOnError extends boolean = false>(options: Options<DevicesCreateData, ThrowOnError>): RequestResult<DevicesCreateResponses, unknown, ThrowOnError> => (options.client ?? client).post<DevicesCreateResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/devices/',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Devices of the plants, each with its chain plant > area > site.
+ *
+ * Writes take the plant as an id (``DeviceWrite``); every answer shows the
+ * device as it is read (``Device``).
+ */
+export const devicesRetrieve = <ThrowOnError extends boolean = false>(options: Options<DevicesRetrieveData, ThrowOnError>): RequestResult<DevicesRetrieveResponses, unknown, ThrowOnError> => (options.client ?? client).get<DevicesRetrieveResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/devices/{id}/',
+    ...options
+});
+
+/**
+ * Devices of the plants, each with its chain plant > area > site.
+ *
+ * Writes take the plant as an id (``DeviceWrite``); every answer shows the
+ * device as it is read (``Device``).
+ */
+export const devicesPartialUpdate = <ThrowOnError extends boolean = false>(options: Options<DevicesPartialUpdateData, ThrowOnError>): RequestResult<DevicesPartialUpdateResponses, unknown, ThrowOnError> => (options.client ?? client).patch<DevicesPartialUpdateResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/devices/{id}/',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Devices of the plants, each with its chain plant > area > site.
+ *
+ * Writes take the plant as an id (``DeviceWrite``); every answer shows the
+ * device as it is read (``Device``).
+ */
+export const devicesUpdate = <ThrowOnError extends boolean = false>(options: Options<DevicesUpdateData, ThrowOnError>): RequestResult<DevicesUpdateResponses, unknown, ThrowOnError> => (options.client ?? client).put<DevicesUpdateResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/devices/{id}/',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * Open to everyone on purpose: container health checks carry no credentials.
@@ -40,6 +209,83 @@ export const meRetrieve = <ThrowOnError extends boolean = false>(options?: Optio
 });
 
 /**
+ * Plants of the areas.
+ */
+export const plantsList = <ThrowOnError extends boolean = false>(options?: Options<PlantsListData, ThrowOnError>): RequestResult<PlantsListResponses, unknown, ThrowOnError> => (options?.client ?? client).get<PlantsListResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/plants/',
+    ...options
+});
+
+/**
+ * Plants of the areas.
+ */
+export const plantsCreate = <ThrowOnError extends boolean = false>(options: Options<PlantsCreateData, ThrowOnError>): RequestResult<PlantsCreateResponses, unknown, ThrowOnError> => (options.client ?? client).post<PlantsCreateResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/plants/',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Plants of the areas.
+ */
+export const plantsRetrieve = <ThrowOnError extends boolean = false>(options: Options<PlantsRetrieveData, ThrowOnError>): RequestResult<PlantsRetrieveResponses, unknown, ThrowOnError> => (options.client ?? client).get<PlantsRetrieveResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/plants/{id}/',
+    ...options
+});
+
+/**
+ * Plants of the areas.
+ */
+export const plantsPartialUpdate = <ThrowOnError extends boolean = false>(options: Options<PlantsPartialUpdateData, ThrowOnError>): RequestResult<PlantsPartialUpdateResponses, unknown, ThrowOnError> => (options.client ?? client).patch<PlantsPartialUpdateResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/plants/{id}/',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Plants of the areas.
+ */
+export const plantsUpdate = <ThrowOnError extends boolean = false>(options: Options<PlantsUpdateData, ThrowOnError>): RequestResult<PlantsUpdateResponses, unknown, ThrowOnError> => (options.client ?? client).put<PlantsUpdateResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/plants/{id}/',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Read-only self-test.
  *
  * Open to everyone in milestone M0 on purpose (decided by a7): there is no
@@ -47,3 +293,80 @@ export const meRetrieve = <ThrowOnError extends boolean = false>(options?: Optio
  * Every call queues a task, so M1 restricts this to signed-in users.
  */
 export const selftestRetrieve = <ThrowOnError extends boolean = false>(options?: Options<SelftestRetrieveData, ThrowOnError>): RequestResult<SelftestRetrieveResponses, unknown, ThrowOnError> => (options?.client ?? client).get<SelftestRetrieveResponses, unknown, ThrowOnError>({ url: '/api/v1/selftest/', ...options });
+
+/**
+ * Sites of the operation.
+ */
+export const sitesList = <ThrowOnError extends boolean = false>(options?: Options<SitesListData, ThrowOnError>): RequestResult<SitesListResponses, unknown, ThrowOnError> => (options?.client ?? client).get<SitesListResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/sites/',
+    ...options
+});
+
+/**
+ * Sites of the operation.
+ */
+export const sitesCreate = <ThrowOnError extends boolean = false>(options: Options<SitesCreateData, ThrowOnError>): RequestResult<SitesCreateResponses, unknown, ThrowOnError> => (options.client ?? client).post<SitesCreateResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/sites/',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Sites of the operation.
+ */
+export const sitesRetrieve = <ThrowOnError extends boolean = false>(options: Options<SitesRetrieveData, ThrowOnError>): RequestResult<SitesRetrieveResponses, unknown, ThrowOnError> => (options.client ?? client).get<SitesRetrieveResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/sites/{id}/',
+    ...options
+});
+
+/**
+ * Sites of the operation.
+ */
+export const sitesPartialUpdate = <ThrowOnError extends boolean = false>(options: Options<SitesPartialUpdateData, ThrowOnError>): RequestResult<SitesPartialUpdateResponses, unknown, ThrowOnError> => (options.client ?? client).patch<SitesPartialUpdateResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/sites/{id}/',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Sites of the operation.
+ */
+export const sitesUpdate = <ThrowOnError extends boolean = false>(options: Options<SitesUpdateData, ThrowOnError>): RequestResult<SitesUpdateResponses, unknown, ThrowOnError> => (options.client ?? client).put<SitesUpdateResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/sites/{id}/',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
