@@ -46,11 +46,12 @@ test("a click in the navigation leads from / to the self-test page", async ({ pa
 test("an address with a parameter opens directly", async ({ page }) => {
   const consoleErrors = collectConsoleErrors(page);
 
-  const response = await page.goto("/devices/plc-1");
+  // The device page opens directly as well (assets.spec.ts, with a device of its own).
+  const response = await page.goto("/documents/7");
   expect(response?.status()).toBe(200);
 
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Device");
-  await expect(page.getByTestId("device-id")).toHaveText("plc-1");
+  await expect(page.getByRole("heading", { level: 2 })).toHaveText("File");
+  await expect(page.getByTestId("document-id")).toHaveText("7");
 
   expect(consoleErrors, "errors in the browser console").toEqual([]);
 });

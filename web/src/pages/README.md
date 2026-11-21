@@ -76,3 +76,20 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 - `main.tsx` installs both (and the client configuration) once. Tests render the whole app with
   `../test/renderApp.tsx` and fake the server with `../test/fakeApi.ts` (who `/api/v1/me/` reports, other answers).
 - The self-test page keeps its own loading code from M0 (`../api/selftest.ts`).
+
+## Structure and devices
+
+- `StructurePage.tsx` (`/`) loads the four lists (`sites`, `areas`, `plants`, `devices`) and builds the tree
+  site > area > plant > device in the browser (`structure/tree.ts`), with the number of devices on every level.
+  The search filters that tree in the browser by name, key or IP address; it sends no request.
+- `DevicePage.tsx` (`/devices/:deviceId`) shows every field of one device, the chain as breadcrumb and
+  `../components/DeviceFiles.tsx`, a placeholder that work order 036 replaces (same name and props).
+  An id that cannot be a device id, or a 404 of the API, shows `NotFound`.
+- `structure/forms.tsx` holds the forms of all four levels: React 19 form actions (`useActionState`),
+  no form library, the generated mutation options of TanStack Query. Only `manage` sees the buttons (`useRole()`).
+- Field errors: `structure/save.ts` sends a write call with a fetch of its own that keeps a copy of a 400 answer
+  (the shared `ApiError` keeps only status and `detail`). DRF's messages then appear at their fields
+  (`aria-invalid`, `aria-describedby`); keys without a field (`non_field_errors`, `detail`) appear above the fields.
+  The entry stays in the form.
+- After saving, every cached answer except the sign-in state is fetched again (`reloadAfterSave`), then the form closes.
+- Tests fake the structure API with `structure/testData.ts` (names `Test …`, addresses from 192.0.2.0/24).
