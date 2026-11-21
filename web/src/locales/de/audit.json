@@ -1,1 +1,52 @@
-{}
+{
+  "heading": "Änderungsprotokoll",
+  "intro": "Wer hat was wann geändert, neueste zuerst.",
+  "tableLabel": "Änderungen",
+  "filter": {
+    "legend": "Filter",
+    "objectType": "Objektart",
+    "allObjectTypes": "Alle Objektarten",
+    "actor": "Benutzer",
+    "actorHint": "Genauer Benutzername",
+    "apply": "Filter anwenden",
+    "reset": "Filter zurücksetzen"
+  },
+  "column": {
+    "timestamp": "Zeitpunkt",
+    "actor": "Benutzer",
+    "action": "Aktion",
+    "objectType": "Objektart",
+    "object": "Objekt",
+    "changes": "Änderungen"
+  },
+  "action": {
+    "create": "Angelegt",
+    "update": "Geändert",
+    "delete": "Gelöscht"
+  },
+  "objectType": {
+    "site": "Standort",
+    "area": "Bereich",
+    "plant": "Anlage",
+    "device": "Gerät",
+    "document": "Datei",
+    "documentVersion": "Dateiversion",
+    "user": "Benutzer"
+  },
+  "noActor": "System (kein angemeldeter Benutzer)",
+  "objectId": "ID {{id}}",
+  "emptyValue": "(leer)",
+  "noFieldChanges": "Keine Feldwerte",
+  "membership": {
+    "add": "hinzugefügt",
+    "delete": "entfernt"
+  },
+  "empty": "Keine Einträge gefunden.",
+  "pagination": {
+    "label": "Seiten des Änderungsprotokolls",
+    "previous": "Vorherige Seite",
+    "next": "Nächste Seite",
+    "status": "Seite {{page}} von {{pages}}",
+    "total": "Einträge: {{count, number}}"
+  }
+}

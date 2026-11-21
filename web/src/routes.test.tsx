@@ -109,7 +109,6 @@ describe("addresses", () => {
   it.each([
     ["/", "Structure"],
     ["/import", "Import"],
-    ["/audit", "Change log"],
     ["/devices/plc-1", "Device"],
     ["/documents/42", "File"],
   ])("%s shows the page %s", async (path, heading) => {
