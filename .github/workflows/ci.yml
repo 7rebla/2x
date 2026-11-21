@@ -185,9 +185,9 @@ jobs:
       - name: No downloaded material
         run: test ! -e testfactory/extern
 
-  # Browser test of the test page served by Django (acceptance of M0). The
-  # root compose.yaml includes the web compose file, so e2e and api share one
-  # project and network. The converter service is not started.
+  # Browser test of the web UI served by Django, signed in with a test
+  # account. The root compose.yaml includes the web compose file, so e2e and
+  # api share one project and network. The converter service is not started.
   e2e:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -217,6 +217,18 @@ jobs:
 
       - name: Start services and wait until healthy
         run: docker compose up -d --wait --wait-timeout 300 db valkey worker api
+
+      # Test account the browser test signs in with. The values are the
+      # development values from .env.example (copied to .env above), not a
+      # repository secret: the account lives only in the database of this run.
+      # The password reaches the container as a variable name only (-e without
+      # a value), never as a command-line argument; nothing here prints it.
+      # --update makes the step repeatable. Work orders 030 to 037 copy this
+      # step word for word.
+      - name: Create test account
+        run: |
+          set -a; . ./.env; set +a
+          TWOX_ACCOUNT_PASSWORD="$TWOX_E2E_PASSWORD" docker compose exec -T -e TWOX_ACCOUNT_PASSWORD api python manage.py create_account "$TWOX_E2E_USERNAME" --role manage --update
 
       - name: Browser test (Playwright)
         run: docker compose --profile e2e run --rm e2e
