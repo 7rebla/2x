@@ -113,7 +113,11 @@ RUN TWOX_SECRET_KEY=collectstatic-only TWOX_DB_PASSWORD=collectstatic-only \
 
 FROM base AS runtime
 RUN groupadd --system --gid 10001 twox \
-    && useradd --system --uid 10001 --gid twox --no-create-home --shell /usr/sbin/nologin twox
+    && useradd --system --uid 10001 --gid twox --no-create-home --shell /usr/sbin/nologin twox \
+    && install -d -m 0750 -o twox -g twox /data/media
+# /data/media is the mount point of the volume media-data (uploaded files). A
+# new, empty named volume takes over owner and mode of this directory, so the
+# app user can write there. Everything else, /app included, stays read-only.
 COPY --from=runtime-deps /opt/venv /opt/venv
 COPY backend/manage.py ./
 COPY backend/twox ./twox
