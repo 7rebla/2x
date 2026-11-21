@@ -146,17 +146,26 @@ describe("generated query options with Loading and ErrorMessage", () => {
   });
 
   it("shows HTTP status and the API's text", async () => {
+    renderProbe(() => Promise.resolve(answer(404, JSON.stringify({ detail: "No Selftest matches the given query." }))));
+
+    expect((await screen.findByTestId("error-summary")).textContent).toBe(
+      "The API answered with HTTP status 404.",
+    );
+    expect(screen.getByTestId("error-detail").textContent).toBe("No Selftest matches the given query.");
+    expect(screen.getByRole("alert")).toBeDefined();
+  });
+
+  it("shows a 403 as missing permission (an expired session leads to the sign-in page instead)", async () => {
     renderProbe(() =>
-      Promise.resolve(answer(403, JSON.stringify({ detail: "Authentication credentials were not provided." }))),
+      Promise.resolve(answer(403, JSON.stringify({ detail: "You do not have permission to perform this action." }))),
     );
 
     expect((await screen.findByTestId("error-summary")).textContent).toBe(
-      "The API answered with HTTP status 403.",
+      "You do not have permission for this page or action.",
     );
     expect(screen.getByTestId("error-detail").textContent).toBe(
-      "Authentication credentials were not provided.",
+      "You do not have permission to perform this action.",
     );
-    expect(screen.getByRole("alert")).toBeDefined();
   });
 
   it("shows a missing answer in German", async () => {

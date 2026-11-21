@@ -1,0 +1,49 @@
+import type { ReactElement, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import { Navigate, Outlet, useLocation } from "react-router";
+
+import { hasRole, loginPathFor, type Role, useRole, useSession } from "../session.ts";
+import { ErrorMessage } from "./ErrorMessage.tsx";
+import { Loading } from "./Loading.tsx";
+
+/**
+ * Route element around every page except /login: without a session it sends
+ * the browser to the sign-in page, which returns to this address afterwards.
+ */
+export function RequireSession(): ReactElement {
+  const session = useSession();
+  const location = useLocation();
+  switch (session.status) {
+    case "loading":
+      return <Loading />;
+    case "error":
+      return <ErrorMessage error={session.error} />;
+    case "signed-out":
+      return <Navigate to={loginPathFor(`${location.pathname}${location.search}${location.hash}`)} replace />;
+    case "signed-in":
+      return <Outlet />;
+  }
+}
+
+/**
+ * Shows `children` only to a user whose role includes `role`; everyone else
+ * gets a "no permission" notice. No redirect and no sign-out: the session is
+ * valid, only the permission is missing.
+ */
+export function RequireRole({ role, children }: { role: Role; children: ReactNode }): ReactElement {
+  const access = useRole();
+  if (hasRole(access.role, role)) {
+    return <>{children}</>;
+  }
+  return <NoPermission />;
+}
+
+/** Notice for a page or action the signed-in user's role does not allow. */
+export function NoPermission(): ReactElement {
+  const { t } = useTranslation("auth");
+  return (
+    <p role="alert" data-testid="no-permission" className="rounded border border-amber-300 bg-amber-50 p-4 text-amber-900">
+      {t("noPermission")}
+    </p>
+  );
+}

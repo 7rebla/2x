@@ -4,11 +4,17 @@
 // _allauth/ and accounts/ (E-39), so each address below can be opened directly.
 // Later work orders replace only their own file in pages/; the routes, the
 // frame (components/Layout.tsx) and the navigation (navigation.ts) stay.
+//
+// Every page except /login needs a session (RequireSession) and a role
+// (RequireRole, from navigation.ts).
+import type { ReactElement } from "react";
 import type { RouteObject } from "react-router";
 
 import { Layout } from "./components/Layout.tsx";
 import { NotFound } from "./components/NotFound.tsx";
 import { RouteError } from "./components/RouteError.tsx";
+import { RequireRole, RequireSession } from "./components/SessionGuards.tsx";
+import { requiredRole } from "./navigation.ts";
 import { AuditPage } from "./pages/AuditPage.tsx";
 import { DevicePage } from "./pages/DevicePage.tsx";
 import { DocumentPage } from "./pages/DocumentPage.tsx";
@@ -16,6 +22,11 @@ import { ImportPage } from "./pages/ImportPage.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
 import { SelftestPage } from "./pages/SelftestPage.tsx";
 import { StructurePage } from "./pages/StructurePage.tsx";
+
+/** A page that needs the role of `path` in navigation.ts ("read" if it has no entry). */
+function guarded(path: string, page: ReactElement): ReactElement {
+  return <RequireRole role={requiredRole(path)}>{page}</RequireRole>;
+}
 
 export const routes: RouteObject[] = [
   {
@@ -28,14 +39,19 @@ export const routes: RouteObject[] = [
         // Keeps the frame around a page that fails to render.
         errorElement: <RouteError />,
         children: [
-          { index: true, element: <StructurePage /> },
-          { path: "devices/:deviceId", element: <DevicePage /> },
-          { path: "documents/:documentId", element: <DocumentPage /> },
-          { path: "import", element: <ImportPage /> },
-          { path: "audit", element: <AuditPage /> },
           { path: "login", element: <LoginPage /> },
-          { path: "selftest", element: <SelftestPage /> },
-          { path: "*", element: <NotFound /> },
+          {
+            element: <RequireSession />,
+            children: [
+              { index: true, element: guarded("/", <StructurePage />) },
+              { path: "devices/:deviceId", element: guarded("/devices", <DevicePage />) },
+              { path: "documents/:documentId", element: guarded("/documents", <DocumentPage />) },
+              { path: "import", element: guarded("/import", <ImportPage />) },
+              { path: "audit", element: guarded("/audit", <AuditPage />) },
+              { path: "selftest", element: guarded("/selftest", <SelftestPage />) },
+              { path: "*", element: <NotFound /> },
+            ],
+          },
         ],
       },
     ],

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Selftest } from "./api/generated";
 import { changeLanguage } from "./i18n.ts";
+import { fakeApi, jsonResponse, manager } from "./test/fakeApi.ts";
 import { renderApp } from "./test/renderApp.tsx";
 
 const healthy: Selftest = {
@@ -20,36 +21,23 @@ const workerDown: Selftest = {
   },
 };
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
 /**
- * Node's Request (used under jsdom) rejects relative URLs, a browser resolves them
- * against the page address. This subclass does what the browser does.
+ * Replaces the browser's fetch; the generated client looks it up on every call.
+ * The page is signed in as a manager; the self-test calls get `answers` in order
+ * (the last one repeats). Returns the self-test calls made so far.
  */
-class PageRelativeRequest extends Request {
-  constructor(input: RequestInfo | URL, init?: RequestInit) {
-    super(typeof input === "string" ? new URL(input, window.location.href) : input, init);
-  }
-}
-
-/** Replaces the browser's fetch; the generated client looks it up on every call. */
-function stubApi(...answers: (() => Promise<Response>)[]): ReturnType<typeof vi.fn> {
-  const fetchMock = vi.fn((request: Request): Promise<Response> => {
-    const answer = answers[Math.min(fetchMock.mock.calls.length - 1, answers.length - 1)];
+function stubApi(...answers: (() => Promise<Response>)[]): () => Request[] {
+  let selftestCalls = 0;
+  const api = fakeApi(manager, (request) => {
+    expect(new URL(request.url).pathname).toBe("/api/v1/selftest/");
+    const answer = answers[Math.min(selftestCalls, answers.length - 1)];
+    selftestCalls += 1;
     if (answer === undefined) {
       throw new Error("no stubbed answer");
     }
-    expect(new URL(request.url).pathname).toBe("/api/v1/selftest/");
     return answer();
   });
-  vi.stubGlobal("Request", PageRelativeRequest);
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
+  return () => api.requestsTo("/api/v1/selftest/");
 }
 
 afterEach(async () => {
@@ -67,11 +55,17 @@ describe("self-test page at /selftest", () => {
     expect(screen.getByRole("heading", { level: 1, name: "2x" })).toBeDefined();
   });
 
+  it("shows that it is checking while the API has not answered", async () => {
+    stubApi(() => new Promise<Response>(() => undefined));
+    renderApp("/selftest");
+
+    expect((await screen.findByTestId("selftest-loading")).textContent).toBe("Checking…");
+  });
+
   it("shows database version and worker result when everything is fine", async () => {
     stubApi(() => Promise.resolve(jsonResponse(healthy)));
     renderApp("/selftest");
 
-    expect(screen.getByTestId("selftest-loading").textContent).toBe("Checking…");
     expect((await screen.findByTestId("database-version")).textContent).toBe(
       "18.7 (Debian 18.7-1.pgdg12+2)",
     );
@@ -99,11 +93,11 @@ describe("self-test page at /selftest", () => {
   });
 
   it("shows a separate state when the API does not respond", async () => {
-    const fetchMock = stubApi(() => Promise.reject(new TypeError("Failed to fetch")));
+    const selftestCalls = stubApi(() => Promise.reject(new TypeError("Failed to fetch")));
     renderApp("/selftest");
 
     const error = await screen.findByTestId("selftest-error");
-    expect(fetchMock).toHaveBeenCalled();
+    expect(selftestCalls().length).toBeGreaterThan(0);
     expect(error.textContent).toBe("The API did not respond. Is the server running?");
     expect(error.getAttribute("role")).toBe("alert");
     expect(screen.queryByTestId("database-check")).toBeNull();
@@ -143,18 +137,18 @@ describe("self-test page at /selftest", () => {
   });
 
   it("fetches again when the user clicks the recheck button", async () => {
-    const fetchMock = stubApi(
+    const selftestCalls = stubApi(
       () => Promise.reject(new TypeError("Failed to fetch")),
       () => Promise.resolve(jsonResponse(healthy)),
     );
     renderApp("/selftest");
     await screen.findByTestId("selftest-error");
-    const callsBefore = fetchMock.mock.calls.length;
+    const callsBefore = selftestCalls().length;
 
     fireEvent.click(screen.getByRole("button", { name: "Check again" }));
 
     expect((await screen.findByTestId("worker-result")).textContent).toBe("pong");
-    expect(fetchMock.mock.calls.length).toBe(callsBefore + 1);
+    expect(selftestCalls().length).toBe(callsBefore + 1);
     expect(screen.queryByTestId("selftest-error")).toBeNull();
   });
 });
