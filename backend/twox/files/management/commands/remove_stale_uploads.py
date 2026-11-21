@@ -10,6 +10,7 @@ touched. Run it in the ``api`` or ``worker`` container, for example:
     python manage.py remove_stale_uploads --older-than-hours 24
 """
 
+import math
 import time
 from pathlib import Path
 
@@ -60,8 +61,15 @@ class Command(BaseCommand):
 
     def handle(self, *args: object, **options: object) -> None:
         hours = options["older_than_hours"]
-        if not isinstance(hours, float) or hours < 1:
-            raise CommandError("--older-than-hours must be at least 1.")
+        # int from code (call_command), float from the command line; bool is
+        # an int but no period. nan and inf would pass a plain "< 1" check.
+        if (
+            isinstance(hours, bool)
+            or not isinstance(hours, int | float)
+            or not math.isfinite(hours)
+            or hours < 1
+        ):
+            raise CommandError("--older-than-hours must be a finite number of at least 1.")
         removed = remove_stale_uploads(Path(settings.TWOX_MEDIA_ROOT), hours * 3600)
         for path in removed:
             self.stdout.write(f"Removed {path.name}")

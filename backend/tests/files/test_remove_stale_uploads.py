@@ -76,6 +76,36 @@ def test_command_default_is_24_hours(media_root: Path) -> None:
     assert out.getvalue().strip() == "Removed 0 stale temporary upload file(s)."
 
 
-def test_command_refuses_a_period_below_one_hour(media_root: Path) -> None:
-    with pytest.raises(CommandError, match="at least 1"):
-        call_command("remove_stale_uploads", "--older-than-hours", "0.5")
+@pytest.mark.parametrize("value", ["0.5", "nan", "inf", "0"])
+def test_command_refuses_an_invalid_period_from_the_command_line(
+    media_root: Path, value: str
+) -> None:
+    old = make_file(media_root / "tmp" / "upload-a.part", 1000 * HOUR)
+
+    with pytest.raises(CommandError, match="finite number of at least 1"):
+        call_command("remove_stale_uploads", "--older-than-hours", value)
+
+    assert old.exists()
+
+
+@pytest.mark.parametrize("value", [0.5, float("nan"), float("inf"), 0, True, "48"])
+def test_command_refuses_an_invalid_period_from_code(media_root: Path, value: object) -> None:
+    old = make_file(media_root / "tmp" / "upload-a.part", 1000 * HOUR)
+
+    with pytest.raises(CommandError, match="finite number of at least 1"):
+        call_command("remove_stale_uploads", older_than_hours=value)
+
+    assert old.exists()
+
+
+@pytest.mark.parametrize("value", [48, 24.0])
+def test_command_accepts_int_and_float_from_code(media_root: Path, value: float) -> None:
+    old = make_file(media_root / "tmp" / "upload-old.part", 49 * HOUR)
+    kept = make_file(media_root / "tmp" / "upload-kept.part", 23 * HOUR)
+    out = StringIO()
+
+    call_command("remove_stale_uploads", older_than_hours=value, stdout=out)
+
+    assert not old.exists()
+    assert kept.exists()
+    assert out.getvalue().splitlines()[-1] == "Removed 1 stale temporary upload file(s)."

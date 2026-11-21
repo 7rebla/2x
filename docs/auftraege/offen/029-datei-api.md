@@ -175,3 +175,5 @@ Live gegen uvicorn im `api`-Container geprüft (Wegwerf-Testkonto mit Rolle `man
 - Reihenfolge beim Zusammenführen: Nach 026, 027 und 028 müssen Schema und Client auf dem neuen `main` neu erzeugt werden; dieser Zweig wurde auf dem Stand `25fa4d7` erzeugt.
 
 Keine neue Abhängigkeit. `settings.py`, `.env.example`, `compose.yaml`, Migrationen, `storage.py`, `services.py`, `docs/DECISIONS.md` und `docs/STATUS.md` nicht geändert. Kein Push.
+
+**Nacharbeit (nach Prüfung der Leitstelle):** `remove_stale_uploads` prüft die Frist jetzt robust: `int` oder `float` (kein `bool`), endlich (`math.isfinite`), mindestens 1; vorher ließen `nan` und `inf` die Mindestfrist aus, und `older_than_hours=48` aus Code wurde abgewiesen. Tests: Befehlszeile `0.5`, `nan`, `inf`, `0` → Fehler, Datei bleibt; aus Code `0.5`, `nan`, `inf`, `0`, `True`, `"48"` → Fehler; `48` (int) und `24.0` werden angenommen. Im Container (`-p twox-029`): ruff check `All checks passed!`, ruff format Exit 0, mypy `Success: no issues found in 112 source files`, `pytest tests/files` 185 passed, ganzer Lauf `594 passed, 4 deselected`; danach `down -v` Exit 0.
