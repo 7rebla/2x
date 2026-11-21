@@ -1,1 +1,10 @@
-{}
+{
+  "label": "Main navigation",
+  "structure": "Structure",
+  "device": "Device",
+  "document": "File",
+  "import": "Import",
+  "audit": "Change log",
+  "login": "Sign in",
+  "selftest": "Self-test"
+}

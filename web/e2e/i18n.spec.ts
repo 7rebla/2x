@@ -14,7 +14,7 @@ test("switching to German translates the page and sets <html lang>", async ({ pa
     consoleErrors.push(error.message);
   });
 
-  const response = await page.goto("/");
+  const response = await page.goto("/selftest");
   expect(response?.status()).toBe(200);
 
   await expect(page.getByTestId("database-heading")).toHaveText("Database");
