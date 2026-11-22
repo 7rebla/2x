@@ -1,6 +1,6 @@
 # Auftrag 123 – Zitatprüfung und feste Absage
 
-Meilenstein: M3 · Freigabestufe: B · Status: offen
+Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
 
 ## Ziel
 
@@ -154,7 +154,88 @@ Alle Befehle laufen in Git Bash im Wurzelverzeichnis des Arbeitsverzeichnisses, 
    - Empfehlung: (a) und (c). Lokale Modelle neigen dazu, Belege zu erfinden; eine Regel nur im Prompt reicht für die Kontrollfrage nicht. Bis zur Entscheidung gilt „entfernen und kennzeichnen“ (`drop_unsupported=True`, verworfene Sätze in `removed_sentences`). Variante (d) ließe sich im Dienst aus `removed_sentences` ableiten, ohne dieses Modul zu ändern.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+- **Was wurde gebaut?** `backend/twox/answers/citations.py` mit der verbindlichen Schnittstelle (`NO_EVIDENCE_TEXT`, `CONTRADICTION_PHRASE`, `VerdictStatus`, `IssueReason`, `SentenceIssue`, `Verdict`, `verify`) sowie den öffentlichen Konstanten `UNITS` und `ABBREVIATIONS`. Reine Funktion ohne Datenbank, Netz, Modell, Einstellung und Protokollausgabe. Satzzerlegung über Positionen im Original (je Zeile, Listenmarken nicht Teil des Satzes), Quellennummern `[n]`, `[n, m]`, `[n; m]`, `[n][m]` (höchstens sechs Ziffern), Prüfkennzeichen aus eigenen Ausdrücken (Zahl mit Einheit, Port, Version) und `find_identifiers` (IP, MAC, Typbezeichnungen; nur importiert). Vergleich auf vereinheitlichtem Text ohne Leerraum und `-`, wobei gemerkt wird, wo Leerraum oder `-` stand, damit die Grenzregeln (`192.168.0.5` ≠ `192.168.0.50`, `5 kg` ≠ `25 kg`) trotz Entfernen gelten. Kein Wert aus Antwort oder Quelle geht in ein Muster (Suche mit `str.find`). Die Regeln stehen auf Englisch im Modul-Docstring, einschließlich der Einheitenliste. Konstanten mit gleichem Wortlaut wie in 122 (`types.py`), dort als maßgeblich vorgesehen; beim Zusammenführen auf Import aus `types.py` umstellen.
+- **Wie wurde getestet?** `tests/answers/test_citations.py`, 94 Fälle, tabellengetrieben, ohne Datenbank, nur selbst geschriebene Texte zu einem erfundenen Greifer G-12. Abgedeckt: alle Fälle 2.1–2.12 der Akzeptanzkriterien, dazu Grenzfälle (IPv6, MAC, Port hinter Adresse, `24 V` gegen `24 VDC`, `V18` gegen `Version 18`, geschützte Bindestriche), Regex-Sonderzeichen als reiner Text, Docstring nennt jede Einheit, Laufzeit typisch ca. 4 ms und sechs ungünstige Eingaben mit je 20 000 Zeichen unter 50 ms. Im Container (`docker compose -p twox-123`, Port 18123): Build und `up --wait` Exit 0; `pytest tests/answers/test_citations.py -v` 94 bestanden; `pytest` 2486 bestanden, 0 fehlgeschlagen; `pytest -m worker` 6 bestanden; `ruff check .` „All checks passed!“; `ruff format --check .` Exit 0; `mypy .` „Success: no issues found in 197 source files“; `makemessages` Exit 0 ohne Unterschied unter `backend/locale`; `makemigrations --check --dry-run` „No changes detected“; `check-licenses.sh` Exit 0; `spectacular` Exit 0 ohne Unterschied unter `web/openapi`; `git diff --stat main...` nur die zwei neuen Dateien; `--profile dev down -v` Exit 0.
+- **Zweig und Arbeitsverzeichnis:** `worktree-agent-ae3973aba54a10337`, `.claude/worktrees/agent-ae3973aba54a10337`.
+- **Abweichungen und Auslegungen:**
+  1. Ein belegter Satz mit erfundener Nummer (`[2][9]`) bleibt im Text (ohne `[9]`) und steht trotzdem in `removed_sentences`, mit Grund `unknown_citation`, `invalid_numbers == (9,)` und (seit der Nachbesserung) `kept=True`. `removed_sentences=len(...)` in 126 zählt gekennzeichnete und verworfene Sätze, wie 122 es festlegt; `Verdict.dropped_count` zählt nur die verworfenen. Bei `no_evidence` enthält `removed_sentences` nur die verworfenen Sätze.
+  2. Als Ausnahme gilt der Absagesatz auch dann, wenn er Nummern trägt (`… Unterlagen [2].` zählt nicht als Beleg). Der Satz, der nur aus der Widerspruchs-Wendung besteht, ist nur ohne Nummer ausgenommen. Ausgenommene Sätze sind weder belegt noch gelistet. Eine Antwort nur aus der Widerspruchs-Wendung ergibt deshalb `no_evidence`.
+  3. `in` und `t` fehlen in der Einheitenliste (zu oft gewöhnliche Wörter). `24 V DC` wird als `24 V` geprüft, ein folgendes `AC`/`DC` in der Quelle verlängert den Wert nicht.
+  4. `usw.` und weitere Abkürzungen beenden nie einen Satz, auch nicht am echten Satzende; dann werden zwei Sätze gemeinsam geprüft.
+  5. `docs/ARCHITECTURE.md` nicht geändert (wie vorgegeben). Keine neue Abhängigkeit, keine offene Frage an a7.
+- **Nachbesserung (nach Prüfung der Leitstelle):** `identifiers.py` unverändert, nichts aus `types.py` importiert.
+  1. Keine still übersprungenen Werte: `find_identifiers` wird je Leerraum-Token aufgerufen (keine Zehnergrenze), ein führendes `-` wird vor der Einordnung entfernt. Tests: elf Adressen, die letzte erfunden, ergibt `unsupported_value`; `-K7` gegen eine Quelle mit `-K3` ergibt `unsupported_value`.
+  2. `_SENTENCE_END` ist linear (`(?<![.!?])[.!?]++…`, possessive Quantoren). Der Laufzeittest für die typische Antwort bleibt bei 50 ms. Für 14 ungünstige Eingaben (darunter `'.' * 20000 + 'x'`) gilt jetzt: Wachstum t(20000)/t(5000) < 8 (bester von drei Läufen, kleine Zeit mit 1 ms Untergrenze) und t(20000) < 1 s.
+  3. Eine Typbezeichnung mit unmittelbar folgendem, nur durch Leerraum getrenntem Ziffern-Token ist ein Wert (`S7 1500` ergibt `s71500`). Das gilt nicht, wenn die Ziffern eine Zahl mit Einheit beginnen; `Seite 34` und `Port 502` bleiben getrennt. Tests: `S7 1500 [1]` gegen `S7-1200` ergibt `unsupported_value`, `S7 1200` gegen `S7-1200` ist belegt. Die frühere Abweichung „S7 1200 nur als S7 geprüft“ entfällt.
+  4. `SentenceIssue.kept: bool` (neues Pflichtfeld am Ende) und die Eigenschaft `Verdict.dropped_count`, beide im Docstring beschrieben. `removed_sentences` ist unverändert.
+  5. `contradiction` gilt nur, wenn die Wendung am Anfang des ersten nicht verworfenen Satzes steht (nach führenden Satzzeichen oder Anführungszeichen) und danach bis zum Satzzeichen oder Satzende kein weiteres Wort folgt. Auslegung von „kein Buchstabe folgt“: Leerraum wird übersprungen, sonst würde `widersprechen sich nicht` weiter zählen. Folge: `Die Unterlagen widersprechen sich bei der Spannung …` ergibt ebenfalls kein `contradiction`. Tests: mit `nicht`, Wendung nicht im ersten Satz, Wendung in Anführungszeichen, erster Satz verworfen.
+  6. `S.`, `Nr.`, `No.`, `Abb.`, `Tab.`, `Kap.` und `Fig.` gelten nur großgeschrieben als Abkürzung. Test: `… 10 s. Der Greifer …` ergibt zwei Sätze.
+  7. Ein Minuszeichen gehört zur Zahl: `-20 °C` gegen `20 °C` ergibt `unsupported_value`, ebenso umgekehrt. Bereiche wie `2-5 kg` bleiben unberührt. Angehängte Wortteile mit mindestens vier Buchstaben werden abgeschnitten (`S7-1200-Steuerung` prüft `S7-1200`). Zahl und Einheit dürfen mit `-` verbunden sein (`24-V-Versorgung` prüft `24 V`). Je ein positiver und ein negativer Test.
+  8. Öffentliche Funktion `normalise_value(text: str) -> str` für 127, mit Test.
+  
+  Prüfungen nach der Nachbesserung (twox-123):
+  - Build und `up --wait` Exit 0.
+  - `pytest tests/answers/test_citations.py -v`: 129 bestanden.
+  - `pytest`: 2521 bestanden, 0 fehlgeschlagen. `pytest -m worker`: 6 bestanden.
+  - `ruff check .` „All checks passed!“, `ruff format --check .` Exit 0, `mypy .` „Success: no issues found in 197 source files“.
+  - `makemessages`, `check-licenses.sh` und `spectacular` Exit 0, ohne Unterschied unter `backend/locale` und `web/openapi`. `makemigrations --check` meldet „No changes detected“.
+  - `--profile dev down -v` Exit 0.
+- **Nachbesserung 2 (nach zweiter Prüfung der Leitstelle):**
+  1. Typbezeichnung und Ziffern werden nur zusammengezogen, wenn das Token nach Entfernen der führenden Zeichen genau die Bezeichnung ist: nichts abgeschnitten, kein nachgestelltes `,` `:` `;` `)`. Tests:
+     - `Die Steuerung S7-1200, 2 Erweiterungsmodule [1].` gegen eine wörtlich gleiche Quelle ergibt `answered`.
+     - `G-1, 2 Stück [1].` gegen eine Quelle mit `G-12` ergibt `unsupported_value`.
+     - `Typ G-12: 3 Finger [1].` wörtlich belegt ergibt `answered`.
+  2. Angehängte Wortteile werden vor `find_identifiers` abgeschnitten: `-` gefolgt von mindestens vier Buchstaben (Unicode, `str.isalpha`) am Tokenende, Satzzeichen danach bleiben. Die Laufzeit bleibt linear. Tests:
+     - `S7-1500-Ausführung` gegen `S7-1200` ergibt `unsupported_value`.
+     - `S7-1200-Gerät` gegen `S7-1200` ist belegt.
+     - `G-12-Baugröße` ist gegen `G-12` belegt, `G-14-Baugröße` nicht.
+  3. Kleines `s.` (siehe) gilt als Abkürzung, außer direkt nach einer Zahl (`10 s.` beendet den Satz). Test: `(s. Abb. 3) [1]` bleibt in einem Satz.
+  4. `_PORT_WORD`, `_CITATION`, `_CITATION_RUN`, `_SENTENCE_END` und `_VERSION_WORD` haben possessive Leerraum-Quantoren. `_CITATION_RUN` beginnt nur am Anfang eines Leerraumlaufs. Der neue Test `test_space_runs_in_checked_sentences_stay_linear` deckt `Port` + Leerraumlauf (mit und ohne Zahl) und Zitatläufe mit langen Leerräumen ab, mit und ohne folgende Klammer. Ein Zähler auf `_check_values` belegt, dass die Sätze geprüft werden. Bei Zitatläufen wird zusätzlich die bereinigte Fassung verglichen.
+  5. Absolute Grenze für ungünstige Eingaben: 1 s für 20 000 Zeichen, festgelegt von der Leitstelle. Dazu kommt das Wachstumsmaß t(20000)/t(5000) < 8.
+
+  Prüfungen nach Nachbesserung 2 (twox-123):
+  - Build und `up --wait` Exit 0.
+  - `test_citations.py`: 141 bestanden.
+  - `pytest`: 2533 bestanden, 0 fehlgeschlagen. `pytest -m worker`: 6 bestanden.
+  - `ruff check .` „All checks passed!“, `ruff format --check .` Exit 0, `mypy .` „Success: no issues found in 197 source files“.
+  - `makemessages`, `check-licenses.sh` und `spectacular` Exit 0, ohne Unterschied. `makemigrations --check` meldet „No changes detected“.
+  - `down -v` Exit 0.
+- **Nachbesserung 3 (nach dritter Prüfung der Leitstelle):** `main` zuerst konfliktfrei in den Zweig geführt (mit 120, 121, 124, 136). `.env` danach neu aus `.env.example` erzeugt.
+  1. Kleines `s.` gilt nur nach Leerraum oder `(` als Abkürzung, und nicht direkt nach einer Zahl. `10 s.`, `10s.`, `250 mm/s.` und `100 Mbit/s.` beenden den Satz. Tests: beide Einheitenfälle ergeben zwei Sätze, `(s. Abb. 3) [1]` bleibt ein Satz.
+  2. Wortteile werden nur abgeschnitten, wenn sie mindestens vier Buchstaben haben und Kleinbuchstaben enthalten. Großbuchstaben-Teile wie `-ENBT` bleiben. Bleiben nur Ziffern übrig, wird das ganze Token geprüft. Tests:
+     - `1756-ENBT` gegen `1756-EN2T` ergibt `unsupported_value`.
+     - `S7 1500-Steuerung` gegen `S7-1200` ergibt `unsupported_value`.
+  3. Markdown wird wie Leerraum behandelt: `*` und Backticks immer, `_` am Wortrand (`x86_64` bleibt). Ein abschließender Ergänzungsstrich wird verworfen (`G-12-`). Führende Wortteile in jeder Schrift werden abgeschnitten (`Schütz-K3` prüft `K3`). Tests:
+     - `**192.168.0.99**` gegen `192.168.0.100` ergibt `unsupported_value`.
+     - `` `S7-1500` `` und `_S7-1500_` gegen `S7-1200` ergeben `unsupported_value`.
+     - `Schütz-K3` gegen `-K7` ergibt `unsupported_value`.
+     - Zu jedem Fall gibt es einen positiven Gegentest.
+  4. Port-Schreibweisen `Port:`, `Port-Nr.`, `Port Nr.` und `Portnummer` werden geprüft, mit possessiven Quantoren. Es gibt negative und positive Tests. Der Wachstumstest deckt zusätzlich ab: `Port` mit langem `:-`-Lauf, lange Unterstrich-Läufe sowie lange Wortteil-Ketten am Tokenende und Tokenanfang.
+  5. Festgelegt und im Docstring genannt: `… 24 V. [1]. Weiter …` ergibt die Sätze `… 24 V. [1].` und `Weiter …`.
+  6. Neuer Docstring-Abschnitt „Limits“ mit dem, worauf sich 126 und 128 nicht stützen können:
+     - Wörter ohne Ziffern (Varianten wie Basic oder Comfort)
+     - Zahlen ohne Einheit
+     - Ports ohne das Wort „Port“
+     - Einheiten außerhalb der Liste und der Sinnzusammenhang
+     - Schreibvarianten derselben Adresse
+     - welche von mehreren zitierten Quellen einen Wert nennt
+
+  Die absolute Grenze von 1 s für ungünstige Eingaben bleibt (Festlegung der Leitstelle).
+
+  Prüfungen nach Nachbesserung 3 (twox-123): alle Prüfungen aus `ci.yml` grün; `test_citations.py` 167 bestanden, `pytest` 2787 bestanden, `pytest -m worker` 6 bestanden, `mypy` ohne Befund in 205 Dateien.
+- **Nachbesserung 4 (Regressionsprüfung von 7ecd861):** Bleibt nach dem Abschneiden der Wortteile nur ein Ziffernrest, wird nicht mehr das ganze Token geprüft.
+  - Steht direkt davor ein Token, das genau eine Typbezeichnung ist, werden die Ziffern mit ihr verbunden: `S7 1500-Ausführung` prüft `s71500`, unabhängig von der Schrift des abgeschnittenen Teils.
+  - Sonst sind die Ziffern eine reine Zahl ohne Einheit und werden nicht geprüft (wie unter „Limits“ dokumentiert). `6-Achs-Roboters` und `24-Volt-Versorgung` lösen keinen Fehlalarm mehr aus.
+  - Tests, jeweils positiv und negativ:
+    - `S7 1500-Ausführung`, `S7 1500-Gerät` und `S7 1500-Steuerung` gegen `S7-1200` ergeben `unsupported_value`, `S7 1200-Gerät` ist belegt.
+    - `6-Achs-Roboters … 5 kg` ist belegt, mit `7 kg` nicht.
+    - `24-Volt-Versorgung` ist belegt; mit falscher Stromstärke nicht.
+    - `G-13- und G-14-Ausführung` gegen `G-12 und G-14` ergibt `unsupported_value`.
+
+  Prüfungen nach Nachbesserung 4 (twox-123):
+  - Build und `up --wait` Exit 0.
+  - `test_citations.py`: 175 bestanden.
+  - `pytest`: 2795 bestanden, 0 fehlgeschlagen. `pytest -m worker`: 6 bestanden.
+  - `ruff check .` „All checks passed!“, `ruff format --check .` Exit 0, `mypy .` „Success: no issues found in 205 source files“.
+  - `makemessages`, `check-licenses.sh` und `spectacular` Exit 0, ohne Unterschied. `makemigrations --check` meldet „No changes detected“.
+  - `down -v` Exit 0.
