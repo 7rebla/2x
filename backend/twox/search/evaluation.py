@@ -14,7 +14,8 @@ Each probe is measured three ways, through the search interface:
   (``SearchRequest.keyword_only``), i.e. full-text and exact search with
   their own ranking; the model is not asked;
 * **vector:** the nearest sections only (:func:`~twox.search.postgres.embed_query`
-  and :func:`~twox.search.postgres.nearest_sections`), with the AI features on;
+  and :func:`~twox.search.postgres.nearest_sections_with_distance`), with the
+  AI features on;
 * **combined:** the search as users get it (:func:`~twox.search.interface.get_search_backend`).
 
 Without the AI features only the keyword search is measured; vector and
@@ -50,6 +51,18 @@ text of a section or a snippet. Without other cut-offs it is the same as
 before work order 120; asked for cut-offs (``evaluate(..., cutoffs=...)``),
 it also holds the counts and Recall per cut-off and the ranks per expected
 place.
+
+Asked for distances (``evaluate(..., distances=True)``, 124), the report
+also holds the cosine distances of the vector and the combined list (the
+keyword list has none): per probe the distance of the first correct entry,
+the smallest distance among the first :data:`DISTANCE_ENTRIES` entries and
+the rank of the first of them without a distance; per control probe the
+distances of its listed entries; and per kind the largest distance of a
+found place against the smallest of a control probe, the gap a threshold
+for "nothing found" would lie in. The vector list takes the distances from
+:func:`~twox.search.postgres.nearest_sections_with_distance`, the combined
+list from ``SearchHit.semantic_distance``. Without the AI features there are
+no distances, and the report says so.
 """
 
 import json
@@ -73,7 +86,11 @@ from twox.search.interface import (
     SearchResult,
     get_search_backend,
 )
-from twox.search.postgres import VECTOR_CANDIDATES, embed_query, nearest_sections
+from twox.search.postgres import (
+    VECTOR_CANDIDATES,
+    embed_query,
+    nearest_sections_with_distance,
+)
 
 #: Version of the probe list format.
 SCHEMA_VERSION = 1
@@ -83,6 +100,10 @@ DEPTH = VECTOR_CANDIDATES
 CUTOFFS = (5, 10)
 #: Entries per kind listed for a control probe.
 CONTROL_ENTRIES = 10
+#: Entries looked at for the smallest distance and the first entry without one.
+DISTANCE_ENTRIES = 10
+#: Decimal places of a cosine distance in the text output.
+DISTANCE_DIGITS = 4
 #: Id prefix of a control probe, the only kind of probe without expected places.
 CONTROL_PREFIX = "control-"
 #: Limits of a heading path in a probe list, so that no text extract lands there.
@@ -171,6 +192,10 @@ class Place:
     heading_path: tuple[str, ...] = ()
     section_id: int | None = None
     version_id: int | None = None
+    #: Cosine distance to the query (vector list: of this section; combined:
+    #: :attr:`~twox.search.interface.SearchHit.semantic_distance` of the hit);
+    #: ``None`` when not in the vector list.
+    distance: float | None = None
 
 
 #: One entry of a result list: the places it is stored at.
@@ -213,6 +238,13 @@ class KindResult:
     correct_in_top: dict[str, int] = field(default_factory=dict)
     #: The first rank per expected place.
     place_ranks: list[PlaceRank] = field(default_factory=list)
+    #: Cosine distance of the first correct entry; ``None`` without one or
+    #: when it is not in the vector list.
+    distance: float | None = None
+    #: The smallest distance among the first :data:`DISTANCE_ENTRIES` entries.
+    min_distance: float | None = None
+    #: Rank of the first of those entries without a distance (not in the vector list).
+    first_rank_without_distance: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -232,6 +264,8 @@ class ControlEntry:
 
     rank: int
     places: list[ControlPlace]
+    #: Cosine distance of the entry; ``None`` when it is not in the vector list.
+    distance: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -242,6 +276,8 @@ class ControlList:
     measured: bool
     note: str | None = None
     entries: list[ControlEntry] = field(default_factory=list)
+    #: The smallest distance of the listed entries.
+    min_distance: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -274,9 +310,34 @@ class KindSummary:
     recall_at: dict[str, float | None] = field(default_factory=dict)
 
 
+@dataclass(frozen=True, slots=True)
+class DistanceOverview:
+    """Per kind: the largest distance of a found expected place, the smallest of a control.
+
+    A threshold for "nothing found" would lie in the gap between both, when
+    there is one (``gap`` greater than 0).
+    """
+
+    kind: SearchKind
+    measured: bool
+    note: str | None = None
+    #: The largest distance of a first correct entry over all probes, and its probe.
+    largest_found: float | None = None
+    largest_found_probe: str | None = None
+    #: The smallest distance among the listed entries of a control probe, and its probe.
+    smallest_control: float | None = None
+    smallest_control_probe: str | None = None
+    #: ``smallest_control - largest_found``; greater than 0 when there is a gap.
+    gap: float | None = None
+
+
 #: Keys of the report that appear only when cut-offs were asked for.
 _EXTENDED_KIND_KEYS = ("correct_in_top", "place_ranks")
 _EXTENDED_SUMMARY_KEYS = ("recall_at",)
+#: Keys of the report that appear only when distances were asked for.
+_DISTANCE_KIND_KEYS = ("distance", "min_distance", "first_rank_without_distance")
+_DISTANCE_CONTROL_KEYS = ("min_distance",)
+_DISTANCE_ENTRY_KEYS = ("distance",)
 
 
 @dataclass(frozen=True, slots=True)
@@ -295,6 +356,11 @@ class Report:
     #: Whether cut-offs were asked for: then the report also holds counts and
     #: Recall per cut-off and the ranks per expected place.
     extended: bool = False
+    #: Whether distances were asked for: then the report also holds the cosine
+    #: distances of vector and combined and the overview of the gap.
+    distances: bool = False
+    #: Per kind (vector, combined), with distances only.
+    distance_overview: list[DistanceOverview] = field(default_factory=list)
 
     @property
     def not_ingested_count(self) -> int:
@@ -302,9 +368,12 @@ class Report:
         return sum(probe.status is ProbeStatus.NOT_INGESTED for probe in self.probes)
 
     def as_dict(self) -> dict[str, Any]:
-        """The report as plain data for JSON; without cut-offs as before work order 120."""
+        """The report as plain data for JSON; without cut-offs and distances as before 120."""
         data = asdict(self)
         del data["extended"]
+        del data["distances"]
+        if not self.distances:
+            del data["distance_overview"]
         if not self.extended:
             del data["cutoffs"]
             for summary in data["summaries"]:
@@ -313,10 +382,21 @@ class Report:
         for probe in data["probes"]:
             if not probe["controls"]:
                 del probe["controls"]
-            if not self.extended:
-                for kind in probe["kinds"]:
+            for kind in probe["kinds"]:
+                if not self.extended:
                     for key in _EXTENDED_KIND_KEYS:
                         del kind[key]
+                # The keyword list has no distances.
+                if not self.distances or kind["kind"] == SearchKind.KEYWORD:
+                    for key in _DISTANCE_KIND_KEYS:
+                        del kind[key]
+            for listed in probe.get("controls", []):
+                if not self.distances or listed["kind"] == SearchKind.KEYWORD:
+                    for key in _DISTANCE_CONTROL_KEYS:
+                        del listed[key]
+                    for entry in listed["entries"]:
+                        for key in _DISTANCE_ENTRY_KEYS:
+                            del entry[key]
         data["not_ingested_count"] = self.not_ingested_count
         return data
 
@@ -585,6 +665,11 @@ def _keys_covered(
     return [key for key in keys if key[1] is not None and place.page_start <= key[1] <= page_end]
 
 
+def entry_distance(entry: Entry) -> float | None:
+    """The smallest distance of the places of ``entry``, or ``None`` when none has one."""
+    return min((place.distance for place in entry if place.distance is not None), default=None)
+
+
 def judge(
     kind: SearchKind,
     entries: Sequence[Entry],
@@ -597,6 +682,9 @@ def judge(
 
     ``editions`` maps the manifest id of another language edition to the
     documented one, so that both count for the same place in the ranks per place.
+    Also the distance of the first correct entry, the smallest distance among
+    the first :data:`DISTANCE_ENTRIES` entries and the rank of the first of
+    them without a distance (all ``None`` for a list without distances).
     """
     editions = editions or {}
     first_rank: int | None = None
@@ -621,6 +709,7 @@ def judge(
             break
     top_5, top_10 = CUTOFFS
     places = dict.fromkeys(key for candidate in expected for key in _keys_of(candidate, editions))
+    top_distances = [entry_distance(entry) for entry in entries[:DISTANCE_ENTRIES]]
     return KindResult(
         kind=kind,
         measured=True,
@@ -643,6 +732,11 @@ def judge(
             )
             for manifest_id, page, heading_path in places
         ],
+        distance=None if first_rank is None else entry_distance(entries[first_rank - 1]),
+        min_distance=min((d for d in top_distances if d is not None), default=None),
+        first_rank_without_distance=next(
+            (rank for rank, d in enumerate(top_distances, start=1) if d is None), None
+        ),
     )
 
 
@@ -705,6 +799,7 @@ def hit_entries(result: SearchResult) -> list[list[Place]]:
                 heading_path=tuple(hit.heading_path),
                 section_id=location.section_id,
                 version_id=location.version_id,
+                distance=hit.semantic_distance,
             )
             for location in hit.locations
         ]
@@ -712,8 +807,14 @@ def hit_entries(result: SearchResult) -> list[list[Place]]:
     ]
 
 
-def vector_entries(nearest: Sequence[tuple[int, int]]) -> list[list[Place]]:
-    """The nearest sections as entries; sections of equal rank (same distance) are one entry."""
+def vector_entries(
+    nearest: Sequence[tuple[int, int]], distances: Mapping[int, float] | None = None
+) -> list[list[Place]]:
+    """The nearest sections as entries; sections of equal rank (same distance) are one entry.
+
+    ``distances`` maps a section ID to its cosine distance, if known.
+    """
+    distances = distances or {}
     rows = Section.objects.filter(pk__in=[section_id for section_id, _ in nearest]).values_list(
         "pk",
         "page_start",
@@ -732,6 +833,7 @@ def vector_entries(nearest: Sequence[tuple[int, int]]) -> list[list[Place]]:
             heading_path=tuple(headings or ()),
             section_id=pk,
             version_id=version_id,
+            distance=distances.get(pk),
         )
         for pk, start, end, headings, version_id, sha256, device_key in rows
     }
@@ -744,26 +846,31 @@ def vector_entries(nearest: Sequence[tuple[int, int]]) -> list[list[Place]]:
 
 
 def control_list(kind: SearchKind, entries: Sequence[Entry]) -> ControlList:
-    """The identifiers of the first :data:`CONTROL_ENTRIES` entries, no text."""
+    """The identifiers and distances of the first :data:`CONTROL_ENTRIES` entries, no text."""
+    listed = [
+        ControlEntry(
+            rank=rank,
+            places=[
+                ControlPlace(
+                    section_id=place.section_id,
+                    version_id=place.version_id,
+                    sha256=place.sha256,
+                    pages=_pages_text(place.page_start, place.page_end),
+                    device_key=place.device_key,
+                )
+                for place in entry
+            ],
+            distance=entry_distance(entry),
+        )
+        for rank, entry in enumerate(entries[:CONTROL_ENTRIES], start=1)
+    ]
     return ControlList(
         kind=kind,
         measured=True,
-        entries=[
-            ControlEntry(
-                rank=rank,
-                places=[
-                    ControlPlace(
-                        section_id=place.section_id,
-                        version_id=place.version_id,
-                        sha256=place.sha256,
-                        pages=_pages_text(place.page_start, place.page_end),
-                        device_key=place.device_key,
-                    )
-                    for place in entry
-                ],
-            )
-            for rank, entry in enumerate(entries[:CONTROL_ENTRIES], start=1)
-        ],
+        entries=listed,
+        min_distance=min(
+            (entry.distance for entry in listed if entry.distance is not None), default=None
+        ),
     )
 
 
@@ -795,8 +902,11 @@ class _Runner:
         model, vector = embedded
         self.model = model
         with connection.cursor() as cursor:
-            nearest = nearest_sections(cursor, request, model, vector)
-        return vector_entries(nearest)
+            nearest = nearest_sections_with_distance(cursor, request, model, vector)
+        return vector_entries(
+            [(section_id, rank) for section_id, rank, _ in nearest],
+            {section_id: distance for section_id, _, distance in nearest},
+        )
 
     def combined_entries(self, request: SearchRequest) -> list[list[Place]] | None:
         """The hits of the search; ``None`` when it fell back to the keyword search."""
@@ -877,16 +987,62 @@ class _Runner:
         return ProbeResult(probe_id=probe.id, status=ProbeStatus.CONTROL, controls=lists)
 
 
+#: The kinds with distances.
+_DISTANCE_KINDS = (SearchKind.VECTOR, SearchKind.COMBINED)
+
+
+def distance_overview(results: Sequence[ProbeResult], ai_enabled: bool) -> list[DistanceOverview]:
+    """Per kind with distances: largest distance of a found place, smallest of a control."""
+    if not ai_enabled:
+        return [
+            DistanceOverview(kind=kind, measured=False, note=AI_DISABLED_NOTE)
+            for kind in _DISTANCE_KINDS
+        ]
+    overview = []
+    for kind in _DISTANCE_KINDS:
+        found = [
+            (result.distance, probe.probe_id)
+            for probe in results
+            for result in probe.kinds
+            if result.kind is kind and result.measured and result.distance is not None
+        ]
+        controls = [
+            (listed.min_distance, probe.probe_id)
+            for probe in results
+            for listed in probe.controls
+            if listed.kind is kind and listed.measured and listed.min_distance is not None
+        ]
+        largest = max(found, key=lambda item: item[0], default=None)
+        smallest = min(controls, key=lambda item: item[0], default=None)
+        overview.append(
+            DistanceOverview(
+                kind=kind,
+                measured=True,
+                largest_found=None if largest is None else largest[0],
+                largest_found_probe=None if largest is None else largest[1],
+                smallest_control=None if smallest is None else smallest[0],
+                smallest_control_probe=None if smallest is None else smallest[1],
+                gap=None if largest is None or smallest is None else smallest[0] - largest[0],
+            )
+        )
+    return overview
+
+
 def evaluate(
     probes: Sequence[Probe],
     backend: SearchBackend | None = None,
     clock: Callable[[], float] = time.perf_counter,
     cutoffs: Sequence[int] | None = None,
+    distances: bool = False,
 ) -> Report:
     """Measure ``probes`` against the ingested documents.
 
     ``cutoffs`` (see :func:`parse_cutoffs`) replaces 5 and 10 and adds the
-    counts and Recall per cut-off and the ranks per expected place to the report.
+    counts and Recall per cut-off and the ranks per expected place to the
+    report. ``distances`` adds the cosine distances of the vector and the
+    combined list and the overview of the gap between found places and
+    control probes (with AI features on only; otherwise a note). The
+    measurement itself is the same either way.
     """
     used = tuple(cutoffs) if cutoffs is not None else CUTOFFS
     runner = _Runner(backend or get_search_backend(), clock, used)
@@ -905,6 +1061,8 @@ def evaluate(
         summaries=[summarise(kind, all_kinds, used) for kind in SearchKind],
         cutoffs=list(used),
         extended=cutoffs is not None,
+        distances=distances,
+        distance_overview=distance_overview(results, runner.ai_enabled) if distances else [],
     )
 
 
@@ -1080,6 +1238,127 @@ def _control_lines(report: Report) -> list[str]:
     ]
 
 
+#: Characters of a checksum shown in the table of control distances.
+_SHA256_PREFIX = 12
+
+
+def _distance(value: float | None) -> str:
+    return _number(value, DISTANCE_DIGITS)
+
+
+def _optional_rank(rank: int | None) -> str:
+    return "-" if rank is None else str(rank)
+
+
+def _padded(row: Sequence[str], width: int) -> list[str]:
+    return [*row, *[""] * (width - len(row))]
+
+
+def _distance_lines(report: Report) -> list[str]:
+    """The distances per probe, of the control probes and the gap (identifiers only)."""
+    if not report.ai_enabled:
+        return ["", f"Distances: not measured: {AI_DISABLED_NOTE}."]
+    rows: list[list[str]] = []
+    control_rows: list[list[str]] = []
+    for probe in report.probes:
+        for result in probe.kinds:
+            if result.kind not in _DISTANCE_KINDS:
+                continue
+            if not result.measured:
+                rows.append([probe.probe_id, result.kind, "-", f"not measured: {result.note}"])
+                continue
+            rows.append(
+                [
+                    probe.probe_id,
+                    result.kind,
+                    _optional_rank(result.first_rank),
+                    _distance(result.distance),
+                    _distance(result.min_distance),
+                    _optional_rank(result.first_rank_without_distance),
+                ]
+            )
+        for listed in probe.controls:
+            if listed.kind not in _DISTANCE_KINDS:
+                continue
+            if not listed.measured:
+                control_rows.append(
+                    [probe.probe_id, listed.kind, "-", f"not measured: {listed.note}"]
+                )
+                continue
+            for entry in listed.entries:
+                first = entry.places[0] if entry.places else None
+                control_rows.append(
+                    [
+                        probe.probe_id,
+                        listed.kind,
+                        str(entry.rank),
+                        _distance(entry.distance),
+                        "-" if first is None or first.section_id is None else str(first.section_id),
+                        "-" if first is None else first.sha256[:_SHA256_PREFIX],
+                        "-" if first is None else first.pages or "-",
+                        str(len(entry.places)),
+                    ]
+                )
+            control_rows.append(
+                [probe.probe_id, listed.kind, "min", _distance(listed.min_distance)]
+            )
+    header = [
+        "probe",
+        "kind",
+        "rank",
+        "distance",
+        f"min top {DISTANCE_ENTRIES}",
+        "first rank without distance",
+    ]
+    lines = [
+        "",
+        "Cosine distances (smaller is nearer; comparable for one embedding model only):",
+        *_table(header, [_padded(row, len(header)) for row in rows]),
+    ]
+    if control_rows:
+        control_header = [
+            "probe",
+            "kind",
+            "rank",
+            "distance",
+            "section",
+            "sha256",
+            "pages",
+            "places",
+        ]
+        lines += [
+            "",
+            f"Control probes: distances of the first {CONTROL_ENTRIES} entries, identifiers only:",
+            *_table(control_header, [_padded(row, len(control_header)) for row in control_rows]),
+        ]
+    overview_rows = []
+    for item in report.distance_overview:
+        if not item.measured:
+            overview_rows.append([item.kind, f"not measured: {item.note}", "", "", ""])
+            continue
+        verdict = "-"
+        if item.gap is not None:
+            verdict = "gap" if item.gap > 0 else "no gap"
+        overview_rows.append(
+            [
+                item.kind,
+                f"{_distance(item.largest_found)} ({item.largest_found_probe or '-'})",
+                f"{_distance(item.smallest_control)} ({item.smallest_control_probe or '-'})",
+                _distance(item.gap),
+                verdict,
+            ]
+        )
+    lines += [
+        "",
+        "Largest distance of a found expected place against the smallest of a control probe:",
+        *_table(
+            ["kind", "largest found (probe)", "smallest control (probe)", "difference", ""],
+            overview_rows,
+        ),
+    ]
+    return lines
+
+
 def format_table(report: Report) -> str:
     """The report as text tables: one row per probe and kind, then the totals."""
     ai = "on" if report.ai_enabled else "off"
@@ -1110,6 +1389,8 @@ def format_table(report: Report) -> str:
     if report.extended:
         lines += _place_rank_lines(report)
     lines += _control_lines(report)
+    if report.distances:
+        lines += _distance_lines(report)
     lines.append("")
     lines += _table(
         [
