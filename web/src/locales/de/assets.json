@@ -5,7 +5,11 @@
     "empty": "Es gibt noch keinen Standort.",
     "noMatch": "Nichts passt zur Suche.",
     "deviceCount_one": "{{count}} Gerät",
-    "deviceCount_other": "{{count}} Geräte"
+    "deviceCount_other": "{{count}} Geräte",
+    "matchCount_one": "{{count}} Gerät angezeigt",
+    "matchCount_other": "{{count}} Geräte angezeigt",
+    "toggleArea": "Inhalt von Bereich {{name}}",
+    "togglePlant": "Geräte von Anlage {{name}}"
   },
   "search": {
     "label": "Suche",

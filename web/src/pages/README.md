@@ -109,6 +109,25 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 - `StructurePage.tsx` (`/`) loads the four lists (`sites`, `areas`, `plants`, `devices`) and builds the tree
   site > area > plant > device in the browser (`structure/tree.ts`), with the number of devices on every level.
   The search filters that tree in the browser by name, key or IP address; it sends no request.
+  Below the search field a live region (`role="status"`) says how many devices the search shows, or that nothing
+  matches; without a search it is empty.
+- Tree layout (work order 083, E-65 point 4):
+  - A row of a site, area or plant has its describing parts (kind, name, key, device count) on the left, wrapping
+    on narrow screens, and the actions "Edit" and "New …" as icon buttons (pencil, plus; `Button` `ghost`, `sm`)
+    on the right. Their `aria-label` names action and item ("Edit plant …") and is also the tooltip. With a fine
+    pointer (mouse) the actions are transparent until the row is hovered or holds the focus; on touch screens they
+    always show. The fade is a transition, so it stops with reduced motion.
+  - The devices of a plant form one grid (rows are subgrids): class, name, key and IP address stand in the same
+    columns on every row. The class shows as icon plus text from 640 px (`sm`); below that as icon with the class
+    as tooltip and for screen readers, and key and address go to a second line under the name. From 1024 px (`lg`)
+    the class, key and address columns have a least width (11rem, 8rem, 8rem), so the rows of different plants line
+    up as well, as long as no value is longer.
+  - Areas and plants with children have a fold button before the row (`aria-expanded`, `aria-controls` while
+    open; "Contents of area …", "Devices of plant …"). Folded children are not rendered; the device count stays.
+    `structure/collapse.ts` keeps the folded branches per browser in `localStorage` (`twox.structure.collapsed`,
+    every access in `try/catch`; without a storage the tree starts unfolded). A search unfolds every hit without
+    changing the stored choice; folding during a search lasts for that search text only, unfolding is stored.
+    "New plant" and "New device" unfold their area or plant.
 - `DevicePage.tsx` (`/devices/:deviceId`) shows every field of one device, the chain as breadcrumb and
   `../components/DeviceFiles.tsx` (the files of the device, see "Files").
   An id that cannot be a device id, or a 404 of the API, shows `NotFound`.

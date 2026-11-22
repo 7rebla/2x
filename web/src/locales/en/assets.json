@@ -5,7 +5,11 @@
     "empty": "There are no sites yet.",
     "noMatch": "Nothing matches the search.",
     "deviceCount_one": "{{count}} device",
-    "deviceCount_other": "{{count}} devices"
+    "deviceCount_other": "{{count}} devices",
+    "matchCount_one": "{{count}} device shown",
+    "matchCount_other": "{{count}} devices shown",
+    "toggleArea": "Contents of area {{name}}",
+    "togglePlant": "Devices of plant {{name}}"
   },
   "search": {
     "label": "Search",

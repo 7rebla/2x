@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { changeLanguage } from "../i18n.ts";
 import { fakeApi, jsonResponse, manager, reader } from "../test/fakeApi.ts";
 import { renderApp } from "../test/renderApp.tsx";
+import { COLLAPSED_STORAGE_KEY } from "./structure/collapse.ts";
 import { fakeStructureApi } from "./structure/testData.ts";
 
 afterEach(async () => {
@@ -88,7 +89,8 @@ describe("structure tree", () => {
     const other = within(deviceRow("Test panel")).getByTestId("device-class");
     expect(other.textContent).toBe("Other");
     expect(iconOf(other)).toBe("device");
-    expect(iconOf(itemNamed("plant-item", "Test plant one"))).toBe("plant");
+    // The label of the kind, after the fold button of the row.
+    expect(iconOf(within(itemNamed("plant-item", "Test plant one")).getByText("Plant"))).toBe("plant");
   });
 
   it("shows the texts in German", async () => {
@@ -160,8 +162,265 @@ describe("search", () => {
   });
 });
 
+describe("search status", () => {
+  it("announces the number of shown devices in a live region, and nothing without a search", async () => {
+    fakeApi(reader, fakeStructureApi().handler);
+    renderApp("/");
+    await openTree();
+    const status = screen.getByTestId("structure-search-status");
+    expect(status.getAttribute("role")).toBe("status");
+    expect(status.textContent).toBe("");
+
+    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "192.0.2.1" } });
+    await waitFor(() => {
+      expect(status.textContent).toBe("2 devices shown");
+    });
+
+    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "Test drive" } });
+    await waitFor(() => {
+      expect(status.textContent).toBe("1 device shown");
+    });
+
+    // A plant that matches by name shows all its devices, here none.
+    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "test-plant-2" } });
+    await waitFor(() => {
+      expect(status.textContent).toBe("0 devices shown");
+    });
+
+    // "Nothing matches" is announced by the same region.
+    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "nothing like this" } });
+    await waitFor(() => {
+      expect(within(status).getByTestId("structure-no-match").textContent).toBe("Nothing matches the search.");
+    });
+    expect(screen.queryByTestId("structure-tree")).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "" } });
+    await waitFor(() => {
+      expect(status.textContent).toBe("");
+    });
+  });
+
+  it("counts in German", async () => {
+    await changeLanguage("de");
+    fakeApi(reader, fakeStructureApi().handler);
+    renderApp("/");
+    await openTree();
+
+    fireEvent.change(screen.getByLabelText("Suche"), { target: { value: "Test plant one" } });
+    await waitFor(() => {
+      expect(screen.getByTestId("structure-search-status").textContent).toBe("3 Geräte angezeigt");
+    });
+  });
+});
+
+describe("rows", () => {
+  it("puts class, name, key and address of every device in the columns of one grid per plant", async () => {
+    fakeApi(reader, fakeStructureApi().handler);
+    renderApp("/");
+    await openTree();
+
+    const list = within(itemNamed("plant-item", "Test plant one")).getByTestId("device-list");
+    expect(list.className).toContain("grid-cols-[auto_minmax(0,1fr)]");
+    expect(list.className).toContain("sm:grid-cols-[auto_minmax(0,1fr)_auto_auto]");
+    // From 1024 px least widths line up the columns of different plants.
+    expect(list.className).toContain("lg:grid-cols-[minmax(11rem,auto)_minmax(0,1fr)_minmax(8rem,auto)_minmax(8rem,auto)]");
+    const rows = within(list).getAllByTestId("device-item");
+    expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      // Each row is a subgrid with four cells, also without an address.
+      expect(row.className).toContain("grid-cols-subgrid");
+      const cells = [...row.children];
+      expect(cells[0]?.getAttribute("data-testid")).toBe("device-class");
+      expect(cells[1]?.tagName).toBe("A");
+      expect(cells[2]?.className).toContain("sm:contents");
+      expect(cells[2]?.children).toHaveLength(2);
+      expect(cells[2]?.children[0]?.getAttribute("data-testid")).toBe("device-key");
+    }
+    expect(within(list).getAllByTestId("device-ip")).toHaveLength(2);
+  });
+
+  it("names the device class as tooltip and for screen readers, shown as text from 640 px", async () => {
+    fakeApi(reader, fakeStructureApi().handler);
+    renderApp("/");
+    await openTree();
+
+    const [first] = screen.getAllByTestId("device-class");
+    expect(first?.getAttribute("title")).toBe(first?.textContent);
+    expect(first?.querySelector("span")?.className).toBe("sr-only sm:not-sr-only");
+  });
+
+  it("shows the actions of a manager as icon buttons named by action and item, on the right of the row", async () => {
+    fakeApi(manager, fakeStructureApi().handler);
+    renderApp("/");
+    await openTree();
+
+    const edit = screen.getByRole("button", { name: "Edit plant Test plant one" });
+    const create = screen.getByRole("button", { name: "New device in Test plant one" });
+    for (const button of [edit, create]) {
+      // No visible text, an icon, the label as tooltip.
+      expect(button.textContent).toBe("");
+      expect(button.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+      expect(button.getAttribute("title")).toBe(button.getAttribute("aria-label"));
+    }
+    expect(edit.querySelector("svg")?.getAttribute("data-icon")).toBe("edit");
+    expect(create.querySelector("svg")?.getAttribute("data-icon")).toBe("create");
+    // Both stand in the last part of the row, which fades in on hover or focus with a mouse.
+    const actions = edit.parentElement;
+    expect(actions?.lastElementChild).toBe(create);
+    expect(actions?.parentElement?.lastElementChild).toBe(actions);
+    expect(actions?.className).toContain("pointer-fine:opacity-0");
+    expect(actions?.className).toContain("pointer-fine:group-hover:opacity-100");
+    expect(actions?.className).toContain("pointer-fine:group-focus-within:opacity-100");
+    expect(actions?.parentElement?.className).toContain("group");
+  });
+});
+
+describe("folding", () => {
+  function toggle(name: string): HTMLElement {
+    return screen.getByRole("button", { name });
+  }
+
+  it("folds areas and plants with a button that says whether it is open", async () => {
+    fakeApi(reader, fakeStructureApi().handler);
+    renderApp("/");
+    await openTree();
+
+    const area = toggle("Contents of area Test area A1");
+    expect(area.getAttribute("aria-expanded")).toBe("true");
+    const plantList = itemNamed("area-item", "Test area A1").querySelector("ul");
+    expect(area.getAttribute("aria-controls")).toBe(plantList?.id);
+
+    fireEvent.click(area);
+    expect(area.getAttribute("aria-expanded")).toBe("false");
+    expect(area.getAttribute("aria-controls")).toBeNull();
+    expect(screen.getAllByTestId("plant-name").map((element) => element.textContent)).toEqual(["Test plant three"]);
+    // The count of the folded area stays.
+    expect(countOf(itemNamed("area-item", "Test area A1"))).toBe("3 devices");
+
+    fireEvent.click(toggle("Devices of plant Test plant three"));
+    expect(screen.queryAllByTestId("device-item")).toHaveLength(0);
+    expect(toggle("Devices of plant Test plant three").getAttribute("aria-expanded")).toBe("false");
+
+    fireEvent.click(area);
+    expect(screen.getAllByTestId("device-item")).toHaveLength(3);
+  });
+
+  it("has no fold button for an area or plant without children", async () => {
+    fakeApi(reader, fakeStructureApi().handler);
+    renderApp("/");
+    await openTree();
+
+    expect(screen.queryByRole("button", { name: "Devices of plant Test plant two" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Devices of plant Test plant one" })).toBeDefined();
+  });
+
+  it("keeps the folded branches in this browser", async () => {
+    fakeApi(reader, fakeStructureApi().handler);
+    renderApp("/");
+    await openTree();
+    fireEvent.click(toggle("Contents of area Test area A2"));
+    fireEvent.click(toggle("Devices of plant Test plant one"));
+    expect(JSON.parse(window.localStorage.getItem(COLLAPSED_STORAGE_KEY) ?? "null")).toEqual([
+      "area:11",
+      "plant:100",
+    ]);
+    cleanup();
+
+    renderApp("/");
+    await openTree();
+    expect(toggle("Contents of area Test area A2").getAttribute("aria-expanded")).toBe("false");
+    expect(toggle("Devices of plant Test plant one").getAttribute("aria-expanded")).toBe("false");
+    expect(toggle("Contents of area Test area A1").getAttribute("aria-expanded")).toBe("true");
+    expect(screen.queryAllByTestId("device-item")).toHaveLength(0);
+
+    fireEvent.click(toggle("Contents of area Test area A2"));
+    fireEvent.click(toggle("Devices of plant Test plant one"));
+    expect(window.localStorage.getItem(COLLAPSED_STORAGE_KEY)).toBeNull();
+  });
+
+  it("unfolds the hits of a search and folds them again when the search is cleared", async () => {
+    window.localStorage.setItem(COLLAPSED_STORAGE_KEY, JSON.stringify(["area:10", "plant:102"]));
+    fakeApi(reader, fakeStructureApi().handler);
+    renderApp("/");
+    await openTree();
+    expect(screen.queryAllByTestId("device-item")).toHaveLength(0);
+    const search = screen.getByLabelText("Search");
+
+    // Every plant key matches, so every plant shows with all its devices.
+    fireEvent.change(search, { target: { value: "test-plant" } });
+    await waitFor(() => {
+      expect(screen.getAllByTestId("device-item")).toHaveLength(4);
+    });
+    expect(toggle("Contents of area Test area A1").getAttribute("aria-expanded")).toBe("true");
+
+    // Folding during a search lasts for this search text only and is not stored.
+    fireEvent.click(toggle("Devices of plant Test plant three"));
+    expect(screen.getAllByTestId("device-item")).toHaveLength(3);
+    expect(JSON.parse(window.localStorage.getItem(COLLAPSED_STORAGE_KEY) ?? "null")).toEqual(["area:10", "plant:102"]);
+    fireEvent.change(search, { target: { value: "test-plant-" } });
+    await waitFor(() => {
+      expect(screen.getAllByTestId("device-item")).toHaveLength(4);
+    });
+
+    // Unfolding during a search is stored.
+    fireEvent.change(search, { target: { value: "Test area A1" } });
+    await waitFor(() => {
+      expect(screen.getAllByTestId("area-item")).toHaveLength(1);
+    });
+    fireEvent.click(toggle("Contents of area Test area A1"));
+    fireEvent.click(toggle("Contents of area Test area A1"));
+    expect(JSON.parse(window.localStorage.getItem(COLLAPSED_STORAGE_KEY) ?? "null")).toEqual(["plant:102"]);
+
+    fireEvent.change(search, { target: { value: "" } });
+    await waitFor(() => {
+      expect(screen.getAllByTestId("area-item")).toHaveLength(2);
+    });
+    expect(toggle("Contents of area Test area A1").getAttribute("aria-expanded")).toBe("true");
+    expect(toggle("Devices of plant Test plant three").getAttribute("aria-expanded")).toBe("false");
+    expect(screen.getAllByTestId("device-item")).toHaveLength(3);
+  });
+
+  it("unfolds a plant when a device is added to it", async () => {
+    window.localStorage.setItem(COLLAPSED_STORAGE_KEY, JSON.stringify(["plant:100"]));
+    fakeApi(manager, fakeStructureApi().handler);
+    renderApp("/");
+    await openTree();
+
+    fireEvent.click(screen.getByRole("button", { name: "New device in Test plant one" }));
+    expect(toggle("Devices of plant Test plant one").getAttribute("aria-expanded")).toBe("true");
+    expect(form("New device")).toBeDefined();
+    expect(window.localStorage.getItem(COLLAPSED_STORAGE_KEY)).toBeNull();
+  });
+
+  it("works without a usable storage, unfolded at the start", async () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    fakeApi(reader, fakeStructureApi().handler);
+    renderApp("/");
+    await openTree();
+    expect(screen.getAllByTestId("device-item")).toHaveLength(4);
+
+    fireEvent.click(toggle("Devices of plant Test plant one"));
+    expect(screen.getAllByTestId("device-item")).toHaveLength(1);
+  });
+
+  it("names the fold buttons in German", async () => {
+    await changeLanguage("de");
+    fakeApi(reader, fakeStructureApi().handler);
+    renderApp("/");
+    await openTree();
+
+    expect(screen.getByRole("button", { name: "Inhalt von Bereich Test area A1" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Geräte von Anlage Test plant one" })).toBeDefined();
+  });
+});
+
 describe("buttons per role", () => {
-  it("a reader sees no button to create or edit", async () => {
+  it("a reader sees no button to create or edit, but can fold", async () => {
     fakeApi(reader, fakeStructureApi().handler);
     renderApp("/");
     await openTree();
@@ -169,6 +428,7 @@ describe("buttons per role", () => {
     expect(screen.queryByRole("button", { name: "New site" })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Edit/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /^New/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Contents of area Test area A1" })).toBeDefined();
   });
 
   it("a manager sees create and edit buttons on every level", async () => {
