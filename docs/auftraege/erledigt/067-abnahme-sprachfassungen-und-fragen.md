@@ -1,6 +1,6 @@
 # Auftrag 067 – Sprachfassungen in der Abnahme, keine exakte Liste bei Fragen
 
-Meilenstein: M2 · Freigabestufe: C (entschieden mit E-61) · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: C (entschieden mit E-61) · Status: erledigt
 
 Voraussetzung: E-61; 063 und 058 sind auf `main`.
 

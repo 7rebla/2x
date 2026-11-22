@@ -212,7 +212,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 064 | Filter „nur neuester Auftrag je Version“ | B | 055 | erledigt |
 | 065 | Frist, wenn Docling eine Aufgabe nie startet | B | 048, 049 | erledigt |
 | 066 | Speichergrenze für Docling (E-60) | C (entschieden) | E-60 | erledigt |
-| 067 | Sprachfassungen in der Abnahme, keine exakte Liste bei Fragen (E-61) | C (entschieden) | E-61 | in Arbeit |
+| 067 | Sprachfassungen in der Abnahme, keine exakte Liste bei Fragen (E-61) | C (entschieden) | E-61 | erledigt |
 | 068 | Eigenes Feld für Teilumwandlungen (E-62) | C (entschieden) | E-62 | in Arbeit |
 | 069 | Zugriffsprotokoll ohne Client-Adresse (E-62) | C (entschieden) | E-62 | in Arbeit |
 | 075 | Swap-Grenze für Docling (E-62) | C (entschieden) | E-62 | in Arbeit |
@@ -246,4 +246,5 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 - 059: README, ARCHITECTURE und Seiten-README für M2 (Einlesen, Suche, Befehle, Variablen, Warteschlangen, Logging, Messwerte aus 057, Abnahme von Hand aus 058). Offene Stufe-C-Punkte als „Vorgabe bis zur Entscheidung durch a7“. Beim Prüfen gefunden: Zugriffsprotokoll enthält die Client-Adresse (Doku berichtigt, Frage 13 an a7); Aufträge ohne Docling-Start haben keine Frist → 065.
 - 065: Bleibt eine Docling-Aufgabe `pending`, endet der Einlese-Auftrag nach `TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS` (neu, Vorgabe 24 h, ab `started_at`) mit `timeout`; Startprüfung verlangt QUEUE ≥ INGEST. Die abgelaufene Docling-Aufgabe wird nicht abgebrochen (Doku). `--stuck`-Hilfe an 048 angepasst.
 - 066: Docling mit `mem_limit: ${TWOX_DOCLING_MEM_LIMIT:-8g}` (E-60). Versuch mit 1 GiB: Container wird bei Speichermangel beendet und von Docker neu gestartet, der Auftrag endet nach fünf Versuchen mit `docling_unavailable`; der Grund (Speicher) steht nicht im Auftrag, nur in `docker events`. Wartende Aufgaben in Docling gehen dabei verloren. Swap-Frage an a7 (Punkt 15).
+- 067: Beide Sprachfassungen der APS-Dokumentation zählen in Probe und Abnahmetest; bei Fragen in Satzform keine eigene Liste für exakte Treffer mehr (E-61). Nachmessung mit den Handbüchern: question-9 12 → 1, ip-ccu 4 → 2, kombiniert Recall@5 0,571, Recall@10 0,857, MRR 0,535. Bekannt: `test_m2` (ai-on) wackelt gelegentlich, wenn Such- und Abnahmetests zusammen laufen (HNSW mit gleich weit entfernten Testvektoren).
 - 074: Acht eigene Icons (Anlage, Gerät, sechs Gerätetypen) unter `web/src/icons/industrial/`, Zuordnung nur in `deviceClass.ts` (Rückfall: generisches Gerät). Typ als Text im Baum, als Feld „Gerätetyp“ auf der Geräteseite, als Tooltip auf der Karte. Notwendig mitgeändert: `graph.ts`, `MapPage.tsx`, `map.json`. Nicht von Hand bei 16 px gesichtet.
