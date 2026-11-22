@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { notifyManager, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -14,6 +14,11 @@ import { openUserMenu, renderApp } from "./test/renderApp.tsx";
 const SESSION = "/_allauth/browser/v1/auth/session";
 const ME = "/api/v1/me/";
 const SELFTEST = "/api/v1/selftest/";
+
+/** The scheduler TanStack Query uses by default for telling components about changes. */
+function defaultScheduler(callback: () => void): void {
+  setTimeout(callback, 0);
+}
 
 afterEach(async () => {
   cleanup();
@@ -211,6 +216,48 @@ describe("sign-out", () => {
     const [request] = api.requestsTo(SESSION);
     expect(request?.method).toBe("DELETE");
     expect(request?.headers.get("X-CSRFToken")).toBe("csrf-sign-out");
+  });
+
+  // Regression test for a flaky run (work order 062): TanStack Query tells the
+  // components about the forgotten session in a timer, React Router renders a
+  // new address in a transition. If the timer came first, the session guard of
+  // the old page sent the browser to /login?next=%2Fselftest. Here the timer
+  // fires exactly when the router has moved to /login, before React could
+  // render a transition, which made the old order fail every time.
+  it("leads to /login even if the session guard hears of the sign-out at the same moment", async () => {
+    const api = fakeApi(manager, () => {
+      api.setMe(null);
+      return jsonResponse({ status: 401, meta: { is_authenticated: false } }, 401);
+    });
+    const { router } = renderApp("/selftest");
+    await openUserMenu();
+    const signOutButton = await screen.findByRole("button", { name: "Sign out" });
+
+    const held: (() => void)[] = [];
+    notifyManager.setScheduler((callback) => {
+      held.push(callback);
+    });
+    const unsubscribe = router.subscribe((state) => {
+      if (state.location.pathname === "/login") {
+        unsubscribe();
+        notifyManager.setScheduler(defaultScheduler);
+        held.splice(0).forEach((callback) => {
+          callback();
+        });
+      }
+    });
+    try {
+      fireEvent.click(signOutButton);
+
+      expect(await screen.findByTestId("login-form")).toBeDefined();
+      expect(`${router.state.location.pathname}${router.state.location.search}`).toBe("/login");
+    } finally {
+      unsubscribe();
+      notifyManager.setScheduler(defaultScheduler);
+      held.splice(0).forEach((callback) => {
+        callback();
+      });
+    }
   });
 
   it("stays signed in and says so when signing out fails", async () => {

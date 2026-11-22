@@ -62,8 +62,12 @@ export function UserMenu({ user }: { user: Me }): ReactElement {
     }
     // Signed out on the server: forget the user first, so that the sign-in
     // page does not send the browser straight back, then drop the old data.
+    // flushSync shows the sign-in page as soon as the router has moved there.
+    // Without it the router renders the new address in a transition, and the
+    // session guard of the old page may see "signed out" first and send the
+    // browser to /login?next=<old page> instead (work order 062).
     forgetSession(queryClient);
-    await navigate(LOGIN_PAGE_PATH, { replace: true });
+    await navigate(LOGIN_PAGE_PATH, { replace: true, flushSync: true });
     dropUserData(queryClient);
   };
 
