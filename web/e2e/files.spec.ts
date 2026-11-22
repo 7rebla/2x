@@ -97,6 +97,14 @@ test("upload a file and a second version, download version 1, same content again
   await expect(row.getByTestId("file-version")).toHaveText("1");
   await expect(row.getByTestId("file-user")).toHaveText(process.env.TWOX_E2E_USERNAME ?? "");
   await expect(row.getByTestId("checksum-short")).toHaveText(/^[0-9a-f]{12}…$/);
+  // The checksum is a quiet detail below the title; a click shows all of it.
+  await expect(row.getByTestId("checksum-full")).toBeHidden();
+  await row.getByTestId("checksum-short").click();
+  await expect(row.getByTestId("checksum-full")).toHaveText(/^[0-9a-f]{64}$/);
+  // Download as an icon button: no visible text, the name as tooltip.
+  const rowDownload = row.getByRole("link", { name: "Download version 1" });
+  await expect(rowDownload).toHaveText("");
+  await expect(rowDownload).toHaveAttribute("title", "Download version 1");
 
   // File page: version 2 with changed content.
   await row.getByRole("link", { name: title }).click();
@@ -112,6 +120,7 @@ test("upload a file and a second version, download version 1, same content again
   const versions = page.getByTestId("document-version");
   await expect(versions.getByTestId("version-number")).toHaveText(["2", "1"]);
   await expect(versions.getByTestId("version-filename")).toHaveText([fileName, fileName]);
+  await expect(versions.getByTestId("version-filename").first()).toHaveAttribute("title", fileName);
 
   // Download version 1: a plain link, the API sends it as an attachment.
   const link = page.getByRole("link", { name: "Download version 1" });

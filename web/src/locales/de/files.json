@@ -22,7 +22,8 @@
   "system": "System",
   "noVersion": "Keine Version",
   "checksum": {
-    "show": "Vollständige Prüfsumme anzeigen"
+    "show": "Vollständige Prüfsumme anzeigen",
+    "label": "SHA-256"
   },
   "download": {
     "link": "Herunterladen",

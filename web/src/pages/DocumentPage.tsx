@@ -15,7 +15,16 @@ import {
   IngestStatusBadge,
   ingestPollInterval,
 } from "../components/files/IngestStatus.tsx";
-import { Checksum, DateTime, DownloadLink, KindLabel, Size, UserName } from "../components/files/parts.tsx";
+import {
+  Checksum,
+  DateTime,
+  DownloadIconLink,
+  FileName,
+  KindLabel,
+  Size,
+  UploadedBy,
+  UserName,
+} from "../components/files/parts.tsx";
 import { NewVersionForm } from "../components/files/UploadForm.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { NotFound } from "../components/NotFound.tsx";
@@ -127,6 +136,11 @@ function DocumentView({ document, error }: { document: DocumentDetail; error: un
   );
 }
 
+/*
+ * Version table (work order 079): the user stands below the upload time, the
+ * checksum below the file name; version, date, size and user never wrap. The
+ * download is an icon button whose column has a heading for screen readers only.
+ */
 function VersionTable({
   versions,
   canIngest,
@@ -136,18 +150,19 @@ function VersionTable({
 }): ReactElement {
   const { t } = useTranslation("files");
   return (
-    <div className="overflow-x-auto">
+    // relative: the screen-reader texts (absolute) stay inside the scroll box.
+    <div className="relative overflow-x-auto">
       <table aria-label={t("document.versionsLabel")} data-testid="document-versions" className="w-full text-left text-sm tabular-nums">
         <thead>
           <tr className="border-b border-line text-fg-muted">
-            <th className="py-2 pr-4 font-normal">{t("columns.version")}</th>
-            <th className="py-2 pr-4 font-normal">{t("columns.date")}</th>
-            <th className="py-2 pr-4 font-normal">{t("columns.size")}</th>
-            <th className="py-2 pr-4 font-normal">{t("columns.user")}</th>
+            <th className="py-2 pr-4 font-normal whitespace-nowrap">{t("columns.version")}</th>
+            <th className="py-2 pr-4 font-normal whitespace-nowrap">{t("columns.date")}</th>
+            <th className="py-2 pr-4 font-normal whitespace-nowrap">{t("columns.size")}</th>
             <th className="py-2 pr-4 font-normal">{t("columns.filename")}</th>
-            <th className="py-2 pr-4 font-normal">{t("columns.checksum")}</th>
-            <th className="py-2 pr-4 font-normal">{t("columns.download")}</th>
-            <th className="py-2 font-normal">{t("columns.ingest")}</th>
+            <th className="py-2 pr-4 font-normal">{t("columns.ingest")}</th>
+            <th className="py-2 font-normal">
+              <span className="sr-only">{t("columns.download")}</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -157,28 +172,26 @@ function VersionTable({
                 <Icon name="version" className="mr-1 text-fg-muted" decorative />
                 {version.number}
               </td>
-              <td data-testid="version-date" className="py-2 pr-4">
-                <DateTime iso={version.created_at} />
+              <td className="py-2 pr-4 whitespace-nowrap">
+                <span data-testid="version-date" className="block">
+                  <DateTime iso={version.created_at} />
+                </span>
+                <UploadedBy name={version.uploaded_by} testId="version-user" />
               </td>
-              <td data-testid="version-size" className="py-2 pr-4">
+              <td data-testid="version-size" className="py-2 pr-4 whitespace-nowrap">
                 <Size bytes={version.size} />
               </td>
-              <td data-testid="version-user" className="py-2 pr-4">
-                <UserName name={version.uploaded_by} />
-              </td>
-              <td data-testid="version-filename" className="py-2 pr-4 break-all">
-                {version.original_filename}
-              </td>
-              <td className="py-2 pr-4">
+              <td className="min-w-40 py-2 pr-4">
+                <FileName name={version.original_filename} testId="version-filename" />
                 <Checksum sha256={version.sha256} />
               </td>
-              <td className="py-2 pr-4">
-                <DownloadLink versionId={version.id} number={version.number} />
-              </td>
-              <td data-testid="version-ingest" className="min-w-48 space-y-1 py-2">
+              <td data-testid="version-ingest" className="min-w-48 space-y-1 py-2 pr-4">
                 <IngestStatusBadge job={version.ingest} />
                 <IngestError job={version.ingest} />
                 {canIngest ? <IngestRetryButton version={version} /> : null}
+              </td>
+              <td className="py-2">
+                <DownloadIconLink versionId={version.id} number={version.number} />
               </td>
             </tr>
           ))}

@@ -94,6 +94,41 @@ describe("file page", () => {
     );
   });
 
+  it("keeps version, date, size and user on one line, wraps file names at words and puts the checksum below", async () => {
+    await openDocument(reader);
+
+    expect(
+      within(screen.getByTestId("document-versions"))
+        .getAllByRole("columnheader")
+        .map((header) => header.textContent),
+    ).toEqual(["Version", "Uploaded", "Size", "File name", "Ingestion", "Download"]);
+    // Positioned scroll box: the texts for screen readers do not widen the page.
+    expect(screen.getByTestId("document-versions").parentElement?.className).toContain("relative");
+    const [, first] = versionRows();
+    if (first === undefined) {
+      throw new Error("row missing");
+    }
+    for (const name of ["version-number", "version-size"]) {
+      expect(within(first).getByTestId(name).className).toContain("whitespace-nowrap");
+    }
+    const uploaded = within(first).getByTestId("version-date").closest("td");
+    expect(uploaded?.className).toContain("whitespace-nowrap");
+    expect(uploaded === null ? null : within(uploaded).getByTestId("version-user").textContent).toBe("test-manager");
+    // The file name: whole words, cut after two lines, the full name as tooltip.
+    const filename = within(first).getByTestId("version-filename");
+    expect(filename.getAttribute("title")).toBe("test-file-1.txt");
+    expect(filename.className).toContain("break-words");
+    expect(filename.className).toContain("line-clamp-2");
+    expect(filename.className).not.toContain("break-all");
+    const filenameCell = filename.closest("td");
+    expect(filenameCell === null ? null : within(filenameCell).getByTestId("checksum-full").textContent).toBe(
+      fakeChecksum("content 70"),
+    );
+    const download = within(first).getByRole("link", { name: "Download version 1" });
+    expect(download.textContent).toBe("");
+    expect(download.getAttribute("title")).toBe("Download version 1");
+  });
+
   it("an unknown file shows NotFound", async () => {
     serve(reader);
     renderApp("/documents/999");

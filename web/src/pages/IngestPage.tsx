@@ -366,10 +366,15 @@ function IngestJobRow({ job, canManage }: { job: IngestJob; canManage: boolean }
           <Icon name="document" className="mr-1" decorative />
           {job.document.title}
         </Link>
-        <span className="block text-xs text-fg-muted" data-testid="ingest-job-version">
-          {t("version", { number: job.version.number })}
+        {/* The file name wraps at word boundaries and is cut after two lines; the tooltip has all of it (079). */}
+        <span
+          className="line-clamp-2 max-w-xs text-xs break-words text-fg-muted"
+          title={job.version.original_filename}
+          data-testid="ingest-job-version"
+        >
+          <span className="whitespace-nowrap">{t("version", { number: job.version.number })}</span>
           {" · "}
-          <span className="break-all">{job.version.original_filename}</span>
+          {job.version.original_filename}
         </span>
       </td>
       <td className="min-w-56 space-y-1 p-2" data-testid="ingest-job-status">

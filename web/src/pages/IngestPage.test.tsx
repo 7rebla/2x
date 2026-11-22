@@ -455,6 +455,23 @@ describe("table", () => {
     expect(within(row(13)).getByTestId("ingest-status").textContent).toBe("Queued");
   });
 
+  it("wraps file names only at words, cuts them after two lines with the full name as tooltip, and keeps times on one line", async () => {
+    const longName = "test-acceptance-protocol-of-the-controller-with-a-very-long-file-name-v2.pdf";
+    const api = fakeIngestApi([job(21, "failed", { version: { id: 72, number: 3, original_filename: longName } })]);
+    await openOverview(manager, "/ingest", api);
+    await rows();
+
+    const line = within(row(21)).getByTestId("ingest-job-version");
+    expect(line.textContent).toBe(`Version 3 · ${longName}`);
+    expect(line.getAttribute("title")).toBe(longName);
+    expect(line.className).toContain("break-words");
+    expect(line.className).toContain("line-clamp-2");
+    expect(line.querySelector(".break-all")).toBeNull();
+    expect(within(line).getByText("Version 3").className).toContain("whitespace-nowrap");
+    expect(within(row(21)).getByTestId("ingest-job-times").className).toContain("whitespace-nowrap");
+    expect(within(row(21)).getByTestId("ingest-job-requested-by").className).toContain("whitespace-nowrap");
+  });
+
   it("a click on the file opens the file page", async () => {
     const { router } = await openOverview(reader);
     await rows();
