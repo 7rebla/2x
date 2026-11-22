@@ -26,7 +26,37 @@ HEADER = [
     "address_source",
     "protocols",
     "notes",
+    "device_class",
 ]
+
+# The values the device list of the application accepts in device_class (E-53).
+ALLOWED_DEVICE_CLASSES = {
+    "plc",
+    "controller",
+    "computer",
+    "router",
+    "firewall",
+    "robot",
+    "other",
+}
+
+# Class of every device, derived from its model and role in this file and in
+# network-plan.md (work order 073 gives the reason for each).
+DEVICE_CLASSES = {
+    "dps-plc": "plc",
+    "hbw-plc": "plc",
+    "drill-plc": "plc",
+    "mill-plc": "plc",
+    "aiqs-plc": "plc",
+    "dps-txt": "controller",
+    "aiqs-txt": "controller",
+    "agv-txt": "controller",
+    "cgw-txt": "controller",
+    "ccu-rpi": "computer",
+    "aps-router": "router",
+    "ur5e": "robot",
+    "opnsense-fw": "firewall",
+}
 
 SITE = "Testfabrik"
 AREAS = {"Fertigungslinie", "Roboterzelle", "Netzübergang"}
@@ -143,6 +173,7 @@ class DeviceListContentTest(unittest.TestCase):
             "software_version",
             "ip_address",
             "protocols",
+            "device_class",
         ]
         for row in self.rows:
             if row["device_id"]:
@@ -155,6 +186,14 @@ class DeviceListContentTest(unittest.TestCase):
         for row in self.devices:
             for column in ("device_name", "manufacturer", "model"):
                 self.assertTrue(row[column], f"{row['device_id']}: {column}")
+
+    def test_every_device_has_its_class(self) -> None:
+        self.assertEqual(set(DEVICE_CLASSES), DEVICE_IDS)
+        self.assertLessEqual(set(DEVICE_CLASSES.values()), ALLOWED_DEVICE_CLASSES)
+        for row in self.devices:
+            self.assertEqual(
+                row["device_class"], DEVICE_CLASSES[row["device_id"]], row["device_id"]
+            )
 
     def test_addresses_are_valid_and_have_a_source(self) -> None:
         for row in self.rows:

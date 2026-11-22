@@ -91,6 +91,22 @@ class Plant(TimestampedModel):
         return f"{self.name} ({self.key})"
 
 
+class DeviceClass(models.TextChoices):
+    """The kind of a device, a fixed choice (E-53); the web UI picks its icon by it."""
+
+    PLC = "plc", _("PLC")
+    CONTROLLER = "controller", _("Controller / embedded")
+    COMPUTER = "computer", _("Computer / edge")
+    ROUTER = "router", _("Router")
+    FIREWALL = "firewall", _("Firewall")
+    ROBOT = "robot", _("Robot")
+    OTHER = "other", _("Other")
+
+
+#: Longest value of :class:`DeviceClass`, with room for a few more.
+DEVICE_CLASS_MAX_LENGTH = 20
+
+
 class Device(TimestampedModel):
     """A device of a plant, for example a PLC or a controller."""
 
@@ -102,6 +118,12 @@ class Device(TimestampedModel):
     )
     key = models.CharField(_("key"), max_length=KEY_MAX_LENGTH, validators=[validate_key])
     name = models.CharField(_("name"), max_length=NAME_MAX_LENGTH)
+    device_class = models.CharField(
+        _("device class"),
+        max_length=DEVICE_CLASS_MAX_LENGTH,
+        choices=DeviceClass.choices,
+        default=DeviceClass.OTHER,
+    )
     manufacturer = models.TextField(_("manufacturer"), blank=True)
     model = models.TextField(_("model"), blank=True)
     software_version = models.TextField(_("software version"), blank=True)

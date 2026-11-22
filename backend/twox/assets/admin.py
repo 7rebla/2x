@@ -48,8 +48,16 @@ class PlantAdmin(PlantAdminBase):
 
 @admin.register(Device)
 class DeviceAdmin(DeviceAdminBase):
-    list_display = ("key", "name", "plant", "manufacturer", "ip_address", "updated_at")
-    list_filter = ("plant__area__site", "plant__area", "plant")
+    list_display = (
+        "key",
+        "name",
+        "device_class",
+        "plant",
+        "manufacturer",
+        "ip_address",
+        "updated_at",
+    )
+    list_filter = ("device_class", "plant__area__site", "plant__area", "plant")
     list_select_related = ("plant",)
     search_fields = ("key", "name", "ip_address")
     readonly_fields = ("created_at", "updated_at")

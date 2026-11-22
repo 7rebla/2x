@@ -87,6 +87,7 @@ class PlantSerializer(serializers.ModelSerializer[Plant]):
 DEVICE_FIELDS = (
     "key",
     "name",
+    "device_class",
     "manufacturer",
     "model",
     "software_version",
@@ -183,8 +184,8 @@ class DeviceImportFormSerializer(serializers.Serializer[Any]):
 
     file = UploadFileField(
         help_text=(
-            "The device list as CSV: UTF-8, comma, the 13 columns of format version 1;"
-            " at most TWOX_UPLOAD_MAX_BYTES bytes."
+            "The device list as CSV: UTF-8, comma, the 13 columns of format version 1,"
+            " optionally followed by device_class; at most TWOX_UPLOAD_MAX_BYTES bytes."
         )
     )
     dry_run = FormBooleanField(

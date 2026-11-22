@@ -1,12 +1,15 @@
 """The structure in the admin: lists, search and filters, for superusers only (E-39, E-41)."""
 
 import pytest
+from auditlog.models import LogEntry
 from django.contrib import admin
+from django.contrib.contenttypes.models import ContentType
 from django.test import Client
 
 from tests.accounts.users import make_user
 from tests.assets.conftest import Structure
-from twox.assets.models import Area, Device, Plant, Site
+from twox.assets.admin import DeviceAdmin
+from twox.assets.models import Area, Device, DeviceClass, Plant, Site
 
 PAGES = ["site", "area", "plant", "device"]
 
@@ -108,6 +111,74 @@ def test_lists_filter_by_parent(structure: Structure, superuser_client: Client) 
         "Paint shop (paint)"
     ]
     assert listed(superuser_client, "area", {"site__id__exact": south}) == ["Line 1"]
+
+
+def test_device_list_filters_and_shows_the_device_class(
+    structure: Structure, superuser_client: Client
+) -> None:
+    Device.objects.filter(pk=structure.welder_plc.pk).update(device_class=DeviceClass.PLC)
+    Device.objects.filter(pk=structure.paint_plc.pk).update(device_class=DeviceClass.PLC)
+    Device.objects.filter(pk=structure.press_hmi.pk).update(device_class=DeviceClass.COMPUTER)
+
+    assert "device_class" in DeviceAdmin.list_display
+    assert listed(superuser_client, "device", {"device_class__exact": "plc"}) == [
+        "Paint PLC (paint-plc)",
+        "Welder PLC (welder-plc)",
+    ]
+    assert listed(superuser_client, "device", {"device_class__exact": "computer"}) == [
+        "Press HMI (press-hmi)"
+    ]
+    assert listed(superuser_client, "device", {"device_class__exact": "other"}) == [
+        "Press PLC (press-plc)"
+    ]
+    page = superuser_client.get("/admin/assets/device/")
+    assert "?device_class__exact=robot" in page.content.decode()
+
+
+def test_superuser_changes_the_device_class_with_a_log_entry(
+    structure: Structure, superuser_client: Client
+) -> None:
+    device = structure.press_plc
+    form = {
+        "plant": device.plant_id,
+        "key": device.key,
+        "name": device.name,
+        "device_class": "robot",
+        "manufacturer": device.manufacturer,
+        "model": device.model,
+        "software_version": device.software_version,
+        "ip_address": device.ip_address or "",
+        "address_source": device.address_source,
+        "protocols": device.protocols,
+        "notes": device.notes,
+    }
+
+    response = superuser_client.post(f"/admin/assets/device/{device.pk}/change/", form)
+
+    assert response.status_code == 302
+    assert Device.objects.get(pk=device.pk).device_class == DeviceClass.ROBOT
+    entry = LogEntry.objects.get(
+        content_type=ContentType.objects.get_for_model(Device),
+        object_id=device.pk,
+        action=LogEntry.Action.UPDATE,
+    )
+    assert entry.changes == {"device_class": ["other", "robot"]}
+
+
+def test_admin_rejects_an_unknown_device_class(
+    structure: Structure, superuser_client: Client
+) -> None:
+    device = structure.press_plc
+
+    response = superuser_client.post(
+        f"/admin/assets/device/{device.pk}/change/",
+        {"plant": device.plant_id, "key": device.key, "name": device.name, "device_class": "sps"},
+    )
+
+    assert response.status_code == 200
+    assert response.context is not None
+    assert "device_class" in response.context["adminform"].form.errors
+    assert Device.objects.get(pk=device.pk).device_class == DeviceClass.OTHER
 
 
 def test_superuser_cannot_delete_a_site_with_areas(
