@@ -1,6 +1,6 @@
 # Auftrag 133 – Eingrenzen auf Gerät und Anlage
 
-Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 132 (Seite Auskunft mit Quellenanzeige) ist auf `main`. Damit gibt es auch 130 (API mit `device` und `plant` im POST-Body) und 131 (`useAnswerStream`).
 

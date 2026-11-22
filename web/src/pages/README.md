@@ -17,9 +17,9 @@ so each address can be opened directly or reloaded.
 | `/import` | `ImportPage.tsx` | on demand (`lazyPage()`) | 035 |
 | `/audit` | `AuditPage.tsx` | on demand (`lazyPage()`) | 033 |
 | `/login` | `LoginPage.tsx` | main bundle | 030 |
-| `/selftest` | `SelftestPage.tsx` | on demand (`lazyPage()`) | (done, M0) |
+| `/selftest` | `SelftestPage.tsx` (from the user menu since work order 134, role `read`) | on demand (`lazyPage()`) | (done, M0) |
 | `/settings` | `SettingsPage.tsx` (from the user menu, role `read`) | on demand (`lazyPage()`) | 070 |
-| `/ask` | `AnswerPage.tsx` (no navigation entry before work order 134, role `read`) | on demand (`lazyPage()`) | 132 |
+| `/ask` | `AnswerPage.tsx` (navigation entry since work order 134, role `read`) | on demand (`lazyPage()`) | 132 |
 | anything else | `../components/NotFound.tsx` | main bundle | – |
 
 A work order that builds a page replaces only its file here (and fills its own catalog, see `../locales/README.md`).
