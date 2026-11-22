@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createQueryClient } from "./api/queryClient.ts";
+import { NoPermission } from "./components/SessionGuards.tsx";
 import { changeLanguage } from "./i18n.ts";
 import enNav from "./locales/en/nav.json";
 import { navigation, requiredRole, visibleNavigation } from "./navigation.ts";
@@ -152,6 +153,30 @@ describe("navigation and role", () => {
     expect(screen.queryByTestId("page-placeholder")).toBeNull();
     expect(router.state.location.pathname).toBe(path);
     expect(api.requestsTo(SESSION)).toHaveLength(0);
+    expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual(["No permission"]);
+    expect(document.title).toBe("No permission – 2x");
+  });
+
+  it("the page without permission has a heading and a title in German", async () => {
+    await changeLanguage("de");
+    fakeApi(reader);
+    renderApp("/audit");
+
+    expect((await screen.findByTestId("no-permission")).textContent).toBe(
+      "Sie haben keine Berechtigung für diese Seite oder Aktion.",
+    );
+    expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual(["Keine Berechtigung"]);
+    expect(document.title).toBe("Keine Berechtigung – 2x");
+  });
+
+  it("the notice inside a page has neither heading nor title of its own", () => {
+    render(<NoPermission />);
+
+    expect(screen.getByTestId("no-permission").textContent).toBe(
+      "You do not have permission for this page or action.",
+    );
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(document.title).not.toContain("No permission");
   });
 
   it("an account without a role sees a hint, no navigation and no page", async () => {

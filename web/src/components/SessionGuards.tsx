@@ -4,8 +4,10 @@ import { Navigate, Outlet, useLocation } from "react-router";
 
 import { Icon } from "../icons/Icon.tsx";
 import { hasRole, loginPathFor, type Role, useRole, useSession } from "../session.ts";
+import { usePageTitle } from "../hooks/usePageTitle.ts";
 import { ErrorMessage } from "./ErrorMessage.tsx";
 import { Loading } from "./Loading.tsx";
+import { AnimatedHeading } from "./TextMotion.tsx";
 
 /**
  * Route element around every page except /login: without a session it sends
@@ -36,10 +38,25 @@ export function RequireRole({ role, children }: { role: Role; children: ReactNod
   if (hasRole(access.role, role)) {
     return <>{children}</>;
   }
-  return <NoPermission />;
+  return <NoPermissionPage />;
 }
 
-/** Notice for a page or action the signed-in user's role does not allow. */
+/**
+ * `RequireRole` replacing a whole page (work order 091): browser title and the
+ * h1 of the page like every other page, above the notice.
+ */
+export function NoPermissionPage(): ReactElement {
+  const { t } = useTranslation("auth");
+  usePageTitle(t("noPermissionHeading"));
+  return (
+    <section data-testid="no-permission-page" className="space-y-4">
+      <AnimatedHeading text={t("noPermissionHeading")} />
+      <NoPermission />
+    </section>
+  );
+}
+
+/** Notice (no heading, no title) for a part of a page or an action the signed-in user's role does not allow. */
 export function NoPermission(): ReactElement {
   const { t } = useTranslation("auth");
   return (
