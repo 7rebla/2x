@@ -127,8 +127,9 @@ function useErrorMessage(): (code: string) => string {
 
 /**
  * Why a job failed or was skipped, in words, with the technical text of the
- * API to unfold; for a job that was converted only in part, that hint. Nothing
- * for other jobs.
+ * API to unfold; for a job that was converted only in part (`partly_converted`),
+ * that hint, whatever its state (below the error of a failed embedding).
+ * Nothing for other jobs.
  */
 export function IngestError({ job }: { job: IngestJobSummary | null }): ReactElement | null {
   const { t } = useTranslation("files");
@@ -137,27 +138,32 @@ export function IngestError({ job }: { job: IngestJobSummary | null }): ReactEle
     return null;
   }
 
-  let message: string;
-  let tone: string;
-  if (job.status === "failed") {
-    message = errorMessage(job.error_code);
-    tone = "text-danger";
-  } else if (job.status === "skipped") {
-    message = errorMessage(job.error_code);
-    tone = "text-fg-muted";
-  } else if (job.status === "done" && job.partly_converted) {
-    message = t("ingest.partlyConverted");
-    tone = "text-warning";
-  } else {
+  // Failed and skipped jobs have a message; a job of a version that was
+  // converted only in part says so in every state (also when its embedding
+  // failed or is still waiting or running, work order 089).
+  const message =
+    job.status === "failed"
+      ? { text: errorMessage(job.error_code), tone: "text-danger" }
+      : job.status === "skipped"
+        ? { text: errorMessage(job.error_code), tone: "text-fg-muted" }
+        : null;
+  if (message === null && !job.partly_converted) {
     return null;
   }
 
   return (
     <div data-testid="ingest-error" data-code={job.error_code} className="space-y-1 text-xs">
-      <p data-testid="ingest-error-message" className={tone}>
-        {job.status === "done" ? <Icon name="warning" className="mr-1" decorative /> : null}
-        {message}
-      </p>
+      {message === null ? null : (
+        <p data-testid="ingest-error-message" className={message.tone}>
+          {message.text}
+        </p>
+      )}
+      {job.partly_converted ? (
+        <p data-testid="ingest-partly-converted" className="text-warning">
+          <Icon name="warning" className="mr-1" decorative />
+          {t("ingest.partlyConverted")}
+        </p>
+      ) : null}
       {job.error_detail === "" ? null : (
         <details data-testid="ingest-error-details">
           <summary className="cursor-pointer text-fg-muted">{t("ingest.technical")}</summary>
