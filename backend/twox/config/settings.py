@@ -384,19 +384,25 @@ TWOX_UPLOAD_MAX_BYTES = env_positive_int("TWOX_UPLOAD_MAX_BYTES", 200 * 1000 * 1
 # Messages of the project's own code (for example failed sign-ins) go to the
 # server log on stderr; Django's own logging stays as it is.
 # uvicorn.access: the access log of uvicorn without query strings, so that no
-# search text lands in it (052, E-57). Django configures logging after uvicorn
-# did, and configuring a logger here replaces its handlers; the handler
-# "access" is therefore uvicorn's own (same formatter, standard output). Its
-# level stays as uvicorn set it. uvicorn's --no-access-log no longer silences
-# it; to switch the access log off, remove its handler here.
+# search text lands in it (052, E-57), and without the client address (069,
+# E-62): the format leaves it out, and a filter replaces it in the record with
+# "-" for any other formatter or handler. Method, path and status stay.
+# Django configures logging after uvicorn did, and configuring a logger here
+# replaces its handlers; the handler "uvicorn_access" is therefore uvicorn's own
+# (same formatter class, standard output). Its level stays as uvicorn set it.
+# uvicorn's --no-access-log no longer silences it; to switch the access log
+# off, remove its handler here.
 LOGGING: dict[str, Any] = {
     "version": 1,
     "disable_existing_loggers": False,
-    "filters": {"drop_query_string": {"()": "twox.config.logging.DropQueryString"}},
+    "filters": {
+        "drop_client_address": {"()": "twox.config.logging.DropClientAddress"},
+        "drop_query_string": {"()": "twox.config.logging.DropQueryString"},
+    },
     "formatters": {
         "uvicorn_access": {
             "()": "uvicorn.logging.AccessFormatter",
-            "fmt": '%(levelprefix)s %(client_addr)s - "%(request_line)s" %(status_code)s',
+            "fmt": '%(levelprefix)s "%(request_line)s" %(status_code)s',
         },
     },
     "handlers": {
@@ -411,7 +417,7 @@ LOGGING: dict[str, Any] = {
         "twox": {"handlers": ["console"], "level": "INFO"},
         "uvicorn.access": {
             "handlers": ["uvicorn_access"],
-            "filters": ["drop_query_string"],
+            "filters": ["drop_client_address", "drop_query_string"],
             "propagate": False,
         },
     },
