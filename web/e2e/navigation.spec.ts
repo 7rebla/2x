@@ -93,7 +93,7 @@ async function headerLayout(page: Page): Promise<{ header: number; tops: number[
 test("every navigation entry shows a hidden icon and a readable text", async ({ page }) => {
   await page.goto("/");
   const links = page.getByRole("navigation", { name: "Main navigation" }).getByRole("link");
-  await expect(links).toHaveText(["Structure", "Map", "Import", "Change log", "Self-test"]);
+  await expect(links).toHaveText(["Structure", "Map", "Search", "Import", "Change log", "Self-test"]);
   for (const link of await links.all()) {
     const icon = link.locator("svg");
     await expect(icon).toBeVisible();
@@ -112,13 +112,13 @@ for (const viewport of [
     const navigation = page.getByRole("navigation", { name: "Main navigation" });
     await expect(navigation.getByRole("link", { name: "Self-test" })).toBeVisible();
     const english = await headerLayout(page);
-    expect(english.labels).toEqual(["Structure", "Map", "Import", "Change log", "Self-test"]);
+    expect(english.labels).toEqual(["Structure", "Map", "Search", "Import", "Change log", "Self-test"]);
 
     await page.getByTestId("user-menu-button").click();
     await page.getByTestId("language-switch").selectOption("de");
     await expect(page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("link", { name: "Selbsttest" })).toBeVisible();
     const german = await headerLayout(page);
-    expect(german.labels).toEqual(["Struktur", "Landkarte", "Import", "Änderungsprotokoll", "Selbsttest"]);
+    expect(german.labels).toEqual(["Struktur", "Landkarte", "Suche", "Import", "Änderungsprotokoll", "Selbsttest"]);
 
     for (const layout of [english, german]) {
       // All entries on the same line, all texts visible, nothing to scroll.
