@@ -350,6 +350,110 @@
   }
 }
 
+/*
+ * E: the name in the header types itself like on a console (work order 076,
+ * E-64), rendered by TypedText in components/TextMotion.tsx once per run and
+ * browser session. The name itself (.tx-type-text) keeps its full width and
+ * stays the accessible name, but is not drawn; the layer on top of it
+ * (aria-hidden) draws one character after the other from data-char, hard and
+ * without fading. A narrow cursor in the brand colour waits before the first
+ * character, follows each typed character, blinks three times after the last
+ * one and disappears. Only opacity moves; the layer is absolute, so nothing
+ * around the name moves. Works for names of any length (--tx-char per
+ * character).
+ */
+@layer components {
+  .tx-type {
+    --tx-type-start: 300ms;
+    --tx-type-step: 120ms;
+    position: relative;
+    display: inline-block;
+    white-space: pre;
+  }
+
+  .tx-type-text {
+    opacity: 0;
+  }
+
+  .tx-type-layer {
+    position: absolute;
+    inset: 0;
+    white-space: pre;
+  }
+
+  .tx-type-char {
+    position: relative;
+    animation: tx-type-char 1ms step-end both;
+    animation-delay: calc(var(--tx-type-start) + var(--tx-char, 0) * var(--tx-type-step));
+  }
+
+  .tx-type-char::before {
+    content: attr(data-char);
+  }
+
+  /* The cursor: before the first character (::before of the layer), then behind each typed character. */
+  .tx-type-layer::before,
+  .tx-type-char::after {
+    content: "";
+    position: absolute;
+    top: 0.16em;
+    bottom: 0.1em;
+    width: max(2px, 0.07em);
+    background: var(--twox-brand);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .tx-type-layer::before {
+    left: 0;
+    animation: tx-type-cursor var(--tx-type-start) step-end;
+  }
+
+  .tx-type-char::after {
+    left: calc(100% + 0.04em);
+    animation: tx-type-cursor var(--tx-type-step) step-end;
+    animation-delay: calc(var(--tx-type-start) + var(--tx-char, 0) * var(--tx-type-step));
+  }
+
+  .tx-type-char:last-child::after {
+    animation: tx-type-blink 1.8s step-end;
+    animation-delay: calc(var(--tx-type-start) + var(--tx-char, 0) * var(--tx-type-step));
+  }
+}
+
+@keyframes tx-type-char {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tx-type-cursor {
+  0%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Three times on and off (300 ms each) behind the last character, then gone. */
+@keyframes tx-type-blink {
+  0%,
+  33.333%,
+  66.667% {
+    opacity: 1;
+  }
+
+  16.667%,
+  50%,
+  83.333%,
+  100% {
+    opacity: 0;
+  }
+}
+
 /* Reduced motion (operating system or settings page): no animation, no transition. */
 @media (prefers-reduced-motion: reduce) {
   *,

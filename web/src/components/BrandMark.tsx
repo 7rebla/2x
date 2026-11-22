@@ -6,6 +6,8 @@ import { Link } from "react-router";
 // master on a 64 grid and a small form on a 16 grid, both in currentColor.
 import smallFormSvg from "../assets/brand/bildmarke-16.svg?raw";
 import masterSvg from "../assets/brand/bildmarke.svg?raw";
+import type { Session } from "../session.ts";
+import { TypedText, type TypingRun } from "./TextMotion.tsx";
 
 /** Below this size (px) the master loses detail; the small form takes over. */
 export const MASTER_MIN_SIZE = 24;
@@ -40,17 +42,37 @@ export function nameGap(size: number): number {
   return ((NAME_DISTANCE - GRID_PADDING) * size) / GRID;
 }
 
+/**
+ * Which run of the typing name (pattern E, E-64) belongs to a state of the
+ * session: the sign-in page while signed out (or when the session cannot be
+ * loaded), the first page after signing in, and "pending" while loading.
+ */
+export function typingRunFor(status: Session["status"]): TypingRun | "pending" {
+  switch (status) {
+    case "loading":
+      return "pending";
+    case "signed-in":
+      return "app";
+    case "signed-out":
+    case "error":
+      return "sign-in";
+  }
+}
+
 interface BrandMarkProps {
   /** Edge length of the mark in px. */
   readonly size?: number;
+  /** Lets the name type itself once per run and browser session (header only); without it the name stands still. */
+  readonly typing?: TypingRun | "pending";
 }
 
 /**
  * Link to the start page with the brand mark and the name "2x" next to it.
  * The mark is decorative (aria-hidden); the visible name is the link's
- * accessible name. Its colour comes from the token "brand" (index.css).
+ * accessible name. Its colour comes from the token "brand" (index.css). The
+ * mark is visible from the start; only the name types (pattern E).
  */
-export function BrandMark({ size = HEADER_BRAND_SIZE }: BrandMarkProps): ReactElement {
+export function BrandMark({ size = HEADER_BRAND_SIZE, typing }: BrandMarkProps): ReactElement {
   const { t } = useTranslation("common");
   const prefix = `brand${useId().replace(/[^\w-]/g, "")}`;
   const form = brandForm(size);
@@ -67,7 +89,7 @@ export function BrandMark({ size = HEADER_BRAND_SIZE }: BrandMarkProps): ReactEl
         // The SVG is a file of this repository (src/assets/brand), not user content.
         dangerouslySetInnerHTML={{ __html: svg }}
       />
-      <span>{t("appTitle")}</span>
+      {typing === undefined ? <span>{t("appTitle")}</span> : <TypedText text={t("appTitle")} run={typing} />}
     </Link>
   );
 }

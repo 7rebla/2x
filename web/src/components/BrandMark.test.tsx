@@ -1,15 +1,86 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it } from "vitest";
 
 import smallFormSvg from "../assets/brand/bildmarke-16.svg?raw";
 import masterSvg from "../assets/brand/bildmarke.svg?raw";
 import { changeLanguage } from "../i18n.ts";
-import { BrandMark, brandForm, HEADER_BRAND_SIZE, MASTER_MIN_SIZE, nameGap, withUniqueIds } from "./BrandMark.tsx";
+import { refreshDisplay, updateDisplaySettings } from "../theme/store.ts";
+import {
+  BrandMark,
+  brandForm,
+  HEADER_BRAND_SIZE,
+  MASTER_MIN_SIZE,
+  nameGap,
+  typingRunFor,
+  withUniqueIds,
+} from "./BrandMark.tsx";
 
 afterEach(async () => {
   cleanup();
+  window.sessionStorage.clear();
+  window.localStorage.clear();
+  refreshDisplay();
   await changeLanguage("en");
+});
+
+describe("typingRunFor", () => {
+  it.each([
+    ["loading", "pending"],
+    ["signed-out", "sign-in"],
+    ["error", "sign-in"],
+    ["signed-in", "app"],
+  ] as const)("maps the session state %s to the run %s", (status, run) => {
+    expect(typingRunFor(status)).toBe(run);
+  });
+});
+
+describe("BrandMark with the typing name", () => {
+  function renderTyping(): HTMLElement {
+    render(
+      <MemoryRouter>
+        <BrandMark typing="sign-in" />
+      </MemoryRouter>,
+    );
+    return screen.getByRole("link", { name: "2x" });
+  }
+
+  it("keeps 2x as the accessible name and the only text of the link", () => {
+    const link = renderTyping();
+    expect(link.textContent.trim()).toBe("2x");
+    expect(within(link).getByTestId("typed-text").dataset.typing).toBe("type");
+    expect(link.querySelector(".tx-type-layer")?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("types only the name; the mark is there from the start", () => {
+    const link = renderTyping();
+    const mark = within(link).getByTestId("brand-mark");
+    expect(mark.closest(".tx-type")).toBeNull();
+    expect(mark.className).not.toMatch(/tx-/);
+    expect([...link.querySelectorAll(".tx-type-char")].map((char) => char.getAttribute("data-char"))).toEqual([
+      "2",
+      "x",
+    ]);
+  });
+
+  it("shows the name at once with reduced motion", () => {
+    act(() => {
+      updateDisplaySettings({ reduceMotion: true });
+    });
+    const link = renderTyping();
+    expect(link.querySelector(".tx-type")).toBeNull();
+    expect(link.textContent.trim()).toBe("2x");
+  });
+
+  it("does not type without the typing property", () => {
+    render(
+      <MemoryRouter>
+        <BrandMark />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("link", { name: "2x" }).querySelector(".tx-type")).toBeNull();
+    expect(window.sessionStorage.getItem("twox.typed")).toBeNull();
+  });
 });
 
 function renderMark(size?: number): void {
