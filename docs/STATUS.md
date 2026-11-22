@@ -215,7 +215,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 065 | Frist, wenn Docling eine Aufgabe nie startet | B | 048, 049 | erledigt |
 | 066 | Speichergrenze für Docling (E-60) | C (entschieden) | E-60 | erledigt |
 | 067 | Sprachfassungen in der Abnahme, keine exakte Liste bei Fragen (E-61) | C (entschieden) | E-61 | erledigt |
-| 068 | Eigenes Feld für Teilumwandlungen (E-62) | C (entschieden) | E-62 | in Arbeit |
+| 068 | Eigenes Feld für Teilumwandlungen (E-62) | C (entschieden) | E-62 | erledigt |
 | 069 | Zugriffsprotokoll ohne Client-Adresse (E-62) | C (entschieden) | E-62 | erledigt |
 | 075 | Swap-Grenze für Docling (E-62) | C (entschieden) | E-62 | erledigt |
 - 073: Feld `device_class` (plc, controller, computer, router, firewall, robot, other) in Modell, API, Admin, Protokoll und Formular; CSV mit optionaler 14. Spalte; Testfabrik: 5 SPS, 4 Controller, je 1 Rechner, Router, Roboter, Firewall. Die Geräteseite zeigt den Typ noch nur im Bearbeiten-Formular (für 074).
@@ -254,5 +254,6 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 - 076: Schriftzug tippt sich einmal je Sitzung (Anmeldeseite und erstes Öffnen nach der Anmeldung), Muster E in `TextMotion.tsx`, Name nur einmal im DOM; Rückfall auf Codepunkte ohne `Intl.Segmenter` (Leitstelle). Randfall: nach Abmelden und Neuladen kann der Name kurz stehen und dann tippen.
 - 077: UI-Bausteine `Button`, `Input`, `Select`, `Textarea` unter `web/src/components/ui/` (md 36 px, sm 28 px), alle Seiten umgestellt, Quelltextprüfung `sourceControls.test.ts`.
 - 090: Lokaler Abnahmetest M2 prüft das ROADMAP-Kriterium (IP, Prüffrage 9); Prüffrage 10 nur noch als Rang gemeldet (E-67).
+- 068: Feld `conversion_error_count` am Einlese-Auftrag (Migration `ingest.0003`, übernimmt alte Hinweise; Teilumwandlung mindestens 1), `partly_converted` und Wiederverwendung richten sich nach dem Feld, `embed_sections` übernimmt es; `PARTIAL_DETAIL_PREFIX` entfällt. Anzeige nach gescheitertem Einbetten → 089.
 - Hinweis Prüfumgebung: Der Landkarten-Browsertest kann scheitern, wenn sich in einer Umgebung viele Testgeräte aus früheren Läufen angesammelt haben (Einpassen auf viele Treffer); in frischer Umgebung grün. Kandidat für einen Test-Folgeauftrag.
 - 074: Acht eigene Icons (Anlage, Gerät, sechs Gerätetypen) unter `web/src/icons/industrial/`, Zuordnung nur in `deviceClass.ts` (Rückfall: generisches Gerät). Typ als Text im Baum, als Feld „Gerätetyp“ auf der Geräteseite, als Tooltip auf der Karte. Notwendig mitgeändert: `graph.ts`, `MapPage.tsx`, `map.json`. Nicht von Hand bei 16 px gesichtet.

@@ -1,6 +1,6 @@
 # Auftrag 068 – Eigenes Feld für Teilumwandlungen
 
-Meilenstein: M2 · Freigabestufe: C (entschieden mit E-62) · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: C (entschieden mit E-62) · Status: erledigt
 
 Voraussetzung: E-62; 048, 051, 061 sind auf `main`.
 
