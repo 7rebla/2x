@@ -1,6 +1,6 @@
 # Auftrag 129 – Selbsttest und check_llm für Chat
 
-Meilenstein: M3 · Freigabestufe: B · Status: offen
+Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
 
 ## Ziel
 
@@ -151,7 +151,82 @@ Alle Befehle laufen in Git Bash im Wurzelverzeichnis des Arbeitsverzeichnisses, 
 Keine.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Was wurde gebaut?** In fünf Commits:
+
+1. Selbsttest (`config/selftest.py`): `AiCheck`/`AiCheckSerializer` mit den optionalen Feldern `chat_model`, `chat_ok`, `chat_error` (nur bei KI an). `check_ai()` teilt sich in `check_embedding()` und `check_chat()`. `check_chat()` startet keine Erzeugung. Es prüft den Namen (`is_cloud_model_name`) und wertet dann die Antwort von `/api/tags` mit `llm_guard.find_local_model` und `model_capabilities` aus (Prüfung auf `completion`). Fehler werden auf die Klassen `Chat*Error` abgebildet und mit `sanitize_error_detail` bereinigt. Unerwartete Fehler ergeben den festen Text `chat model check failed`. Ist `TWOX_CHAT_MODEL` leer, wird nichts angefragt und `chat model not configured` gemeldet.
+   - **Zeitbudget:** Die neue Unterklasse `SelftestEmbedder` (in `selftest.py`, `embeddings.py` bleibt unverändert) merkt sich die Antwort oder den Fehler ihrer eigenen `/api/tags`-Anfrage. `check_chat()` nutzt diese Antwort mit. Nur wenn die Einbettungsprüfung `/api/tags` nicht abgefragt hat (Dimensionsfehler, Cloud-Name beim Einbettungsmodell, unerwarteter Fehler), fragt die Chat-Prüfung die Liste selbst ab. Damit gilt: höchstens einmal `/api/tags` und höchstens zwei Anfragen im Teil `ai` (`AI_MAX_REQUESTS`). Schlechtester Fall: 5 + 2 × 4 = 13 s.
+2. `check_llm --chat`:
+   - schließt sich gegenseitig mit `--embed` aus (argparse-Gruppe);
+   - Ablauf: `DISABLED:` → `WARNING:` → `chat.get_chat_model()` → `stream()` mit `CHAT_TEST_PROMPT`, `CHAT_TEST_MAX_TOKENS = 32`, Temperatur 0 und `CHAT_TEST_SEED = 129`;
+   - Strom und Modell werden in `finally` geschlossen;
+   - Ausgabe: `OK: chat with <model>: first token after x.xxs, n chunks in y.yys (z.z chunks/s)`, `FAILED: <Klasse>: <Meldung>` oder `FAILED: invalid configuration: TWOX_CHAT_MODEL is empty`;
+   - zusätzlich `FAILED: empty answer: …`, falls das Modell innerhalb der 32 Tokens keinen Text liefert;
+   - die Antwort wird nur gezählt, nie ausgegeben oder protokolliert.
+3. Schema und Client neu erzeugt (`web/openapi/schema.yml`, `web/src/api/generated/types.gen.ts`).
+4. Testseite:
+   - `AiCard` mit den Zeilen „Chat-Modell“ (Name oder „nicht festgelegt“) und „Status Chat-Modell“ („bereit“) bzw. `CheckError` mit der Beschriftung „Fehler Chat-Modell“ (`CheckError` hat dafür eine optionale `label`-Eigenschaft);
+   - der ruhige Hinweis „Chat-Modell noch nicht festgelegt …“ steht als `note` der Karte, ohne `role="alert"`;
+   - Ton „Fehlgeschlagen“ bei Fehler der Einbettung oder wenn ein eingetragenes Chat-Modell nicht bereit ist; sonst „OK“;
+   - Texte de/en unter `ai.*`.
+5. README: Unterabschnitt „Chat model for answers“ (Platzhalter `ollama pull <chat model>`, `TWOX_CHAT_MODEL`, `OLLAMA_CONTEXT_LENGTH`, `OLLAMA_NUM_PARALLEL`, `OLLAMA_KEEP_ALIVE` ohne Werte, Hinweis zum Log des Hosts), `--chat` im Abschnitt `check_llm`, Selbsttest-Satz bei Schritt 7. `docs/ARCHITECTURE.md`: nur die Zeile `/api/v1/selftest/`.
+
+**Wie wurde getestet?** `D` = `docker compose -p twox-129`, `.env` aus `.env.example` mit `TWOX_API_PORT=18129`.
+
+| Kriterium | Ergebnis |
+| --- | --- |
+| 0 | Docker 29.9.3, Compose v5.7.0, Exit 0 – erfüllt |
+| 1 | `test_chat_fields_are_missing_and_nothing_is_contacted_when_ai_is_off` (Socket gesperrt, `{"enabled": false}`) und der bestehende Test für KI aus – erfüllt |
+| 2 | Tests in `backend/tests/config/test_selftest.py`: Modell mit `completion`, leer (ohne Anfrage), nicht geladen, Cloud über Namen (2 Namen, 0 Anfragen) und über `remote_host`/`remote_model`, ohne `completion` (`bge-m3`), nicht erreichbar. Zusätzlich: ohne `capabilities`, Server ohne `/api/tags` und unerwarteter Fehler. Auffällige Adresse und Marker: `test_chat_error_never_names_address_or_answer_text` sowie HTTP 500 und eine kaputte Liste mit URL im Antworttext – erfüllt |
+| 3 | `chat_requests == []` in den Selbsttest-Tests – erfüllt |
+| 4 | `test_ai_part_asks_the_model_list_at_most_once` (6 Fälle, je genau 1 × `/api/tags`, ≤ 2 Anfragen); nicht erreichbarer Port mit 1 Verbindungsversuch; stiller Port: der ganze Teil `ai` < 2 × Zeitgrenze; `WORKER + AI_MAX_REQUESTS × AI_TIMEOUT < 15` – erfüllt |
+| 5 | `backend/tests/answers/test_check_llm_chat.py` (neue Datei, `test_check_llm.py` unverändert): aus, Erfolg (ohne Antwort und Prompt in Ausgabe und Log, Parameter 32/0/Seed), Modell fehlt, ohne `completion`, Cloud (Name, `remote_host`), leer, ungültige Adresse, Zeitüberschreitung (`TWOX_CHAT_TIMEOUT_SECONDS`, Server sieht den Abbruch), leere Antwort, `--chat --embed` abgewiesen, `WARNING:` zuerst, `close()` von Strom und Modell bei Fehler im Strom, bei Fehler beim Aufruf und bei Erfolg – erfüllt |
+| 6 | Vitest: neue Fälle für aus (kein Chat-Feld), Chat bereit, ohne Chat-Modell (OK, Hinweis, kein `alert`), Chat-Fehler, de. 47 Dateien, 962 Tests grün; `i18n.test.ts` grün – erfüllt |
+| 7 | build/up Exit 0; ruff „All checks passed!“; format Exit 0; mypy „Success: no issues found in 203 source files“; pytest 2631 passed, 0 failed, 0 skipped (6 deselected = Marker `worker`); `-m worker` 6 passed; Katalog ohne Unterschied; „No changes detected“; „License check passed.“; Schema eingecheckt, nur die neuen Felder und der Docstring – erfüllt |
+| 8 | `npm ci`, lint, typecheck, test, build, licenses Exit 0; `api:generate` danach ohne weiteren Unterschied – erfüllt |
+| 9 | e2e mit `--profile e2e`: 82 passed, 1 skipped (der lokale Teil der M2-Abnahme, wie in der CI), `selftest.spec.ts` grün – erfüllt |
+| 10 | siehe unten – erfüllt |
+| 11 | siehe unten – erfüllt |
+| 12 | `git diff main -- backend/pyproject.toml backend/uv.lock web/package.json web/package-lock.json` leer – erfüllt |
+| 13 | `D --profile dev --profile e2e down -v` und `docker compose -p twox-129-web … down -v` Exit 0; `git status` sauber – erfüllt |
+
+**Kriterium 10 (Ollama am Host, nur lesend, kein pull):**
+
+- `check_llm --chat` mit leerem `TWOX_CHAT_MODEL`: `FAILED: invalid configuration: TWOX_CHAT_MODEL is empty` (Exit 1).
+- `check_llm --chat` mit `-e TWOX_AI_ENABLED=false`: `DISABLED: AI features are not enabled …` (Exit 0).
+- `check_llm --chat` mit `TWOX_CHAT_MODEL=qwen3.8:27b-q4_K_M` (nur in der ungetrackten `.env`, danach wieder geleert):
+  - erster Aufruf mit Laden des Modells: `OK: chat with qwen3.8:27b-q4_K_M: first token after 30.14s, 13 chunks in 30.47s (0.4 chunks/s)`;
+  - zweiter Aufruf, Modell geladen: `OK: … first token after 0.16s, 13 chunks in 0.48s (26.8 chunks/s)`.
+  - Die Rate rechnet über die ganze Zeit einschließlich der Zeit bis zum ersten Stück; sie ist kein Messwert für 128.
+- Selbsttest im `api`-Container über `SelftestView` (`APIRequestFactory` mit `force_authenticate`, ohne Sitzung), Teil `ai`:
+  - leer: `chat_model ""`, `chat_ok false`, `chat model not configured` (0,07 s);
+  - qwen gesetzt: `chat_ok true` (3,1 s; die Einbettung musste neu laden);
+  - mit `-e TWOX_CHAT_MODEL=bge-m3`: „cannot generate text (no capability 'completion') …“;
+  - mit `-e TWOX_CHAT_MODEL=not-there-chat:1b`: „not loaded … ollama pull …“;
+  - mit `-e TWOX_CHAT_MODEL=gpt-oss:120b-cloud`: „is an Ollama cloud model …“ ohne Anfrage.
+- gemma4 wurde nicht aufgerufen.
+
+**Kriterium 11 (Sichtprüfung im eingebauten Browser, Testkonto aus `.env`):**
+
+- **KI an, ohne Chat-Modell:**
+  - Die Karte „KI-Funktionen“/„AI features“ ist grün mit „OK“.
+  - Darunter steht der graue Hinweis „Chat-Modell noch nicht festgelegt. Antworten auf Fragen sind erst danach möglich, alles andere funktioniert.“ bzw. der englische Text, dann Modell, Dimensionen und „Chat-Modell: nicht festgelegt“ / „Chat model: not set“.
+  - Bei 375 px steht alles in einer Spalte; bei 1280 px in drei Spalten, die KI-Karte rechts.
+  - `scrollWidth` ist gleich der Fensterbreite (375 bzw. 1280), die Karte läuft nicht über.
+  - Kein rotes Element, kein `alert`.
+- **KI aus:** unverändert neutral (grau, Info-Symbol, „Nicht aktiviert“/„Not enabled“, Hinweistext), ohne Chat-Zeilen, in de/en bei 375 und 1280 px ohne Überlauf.
+- Danach Sprache und Größe zurückgesetzt, `.env` wieder mit KI an.
+
+**Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-acf4663787b0c7e02`, Arbeitsverzeichnis `.claude/worktrees/agent-acf4663787b0c7e02`.
+
+**Abweichungen:**
+
+- Die Tests für `--chat` stehen in der neuen Datei `backend/tests/answers/test_check_llm_chat.py`, damit `test_check_llm.py` unverändert bleibt (Kriterium 5). Sie nutzen deren Hilfsfunktionen.
+- `fake_ollama.py` musste nicht erweitert werden; 121 hatte schon alles Nötige.
+- In `test_selftest.py` erwarten drei bestehende Tests jetzt zusätzlich die Chat-Felder (Gleichheitsprüfung des ganzen `ai`-Objekts und Schema-Felder). Die autouse-Fixture setzt `TWOX_CHAT_MODEL = ""`.
+- Die Chat-Prüfung im Selbsttest fragt **nie** `POST /api/show` (Budget, eine Anfrage). Nennt `/api/tags` keine `capabilities`, gilt das Modell nach der Listenprüfung als bereit (wird protokolliert). Bei Ollama 0.40.17 sind sie immer vorhanden (Kurzbericht 121).
+- Die Bewertung von `/api/tags` für den Chat (`check_chat_model_list`) bildet die Schritte aus `OpenAICompatibleChat._ensure_local_model` mit den Bausteinen aus `llm_guard` nach, weil `chat.py` dafür keine öffentliche Funktion hat. Der Text „cannot generate text …“ ist deshalb doppelt. Vorschlag für später: eine Funktion `check_chat_entry` in `llm_guard`, die beide nutzen.
+- `SelftestEmbedder` überschreibt die geschützte Methode `_request` von `OpenAICompatibleEmbedder`, um die Antwort auf die Modellliste mitzunutzen, ohne `embeddings.py` zu ändern.
+- Zusätzliche Ergebniszeile `FAILED: empty answer: …` (siehe oben).
+
+Offene Fragen: keine.
