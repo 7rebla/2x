@@ -287,12 +287,12 @@ test("M1 acceptance: device list of the test factory, a file with two versions, 
         await expectCreatedBy(row, username);
       }
       const plc = page.getByTestId("audit-entry").filter({ has: page.getByTestId("audit-object").getByText("(dps-plc)") });
-      await expect(plc.getByTestId("audit-change").filter({ hasText: /^ip_address: / })).toHaveText(
-        "ip_address: (empty) → 192.168.0.90",
+      await expect(plc.getByTestId("audit-change").filter({ hasText: /^IP address: / })).toHaveText(
+        "IP address: (empty) → 192.168.0.90",
       );
       // The device class of the test factory's list (E-53).
-      await expect(plc.getByTestId("audit-change").filter({ hasText: /^device_class: / })).toHaveText(
-        "device_class: (empty) → plc",
+      await expect(plc.getByTestId("audit-change").filter({ hasText: /^Device class: / })).toHaveText(
+        "Device class: (empty) → plc",
       );
     });
   }
