@@ -97,3 +97,14 @@ Voraussetzung: 057, 058 und 059 sind nach `main` zusammengeführt bzw. abgeschlo
 **Laufzeiten:** Einlesen insgesamt aus 057 (21 min für 1 099 Seiten); Fehlerprobe Docling aus 224 s, beschädigte PDF wenige Sekunden; lokaler Abnahmetest 2,6 min bis zum Abbruch.
 
 **Offen:** Entscheidung zu den Befunden 1 und 2 (STATUS „Wartet auf a7“, Punkt 14); danach den lokalen Teil erneut laufen lassen.
+
+### Wiederholung nach 067 (22.11.2026, 13:11–13:15)
+
+Stand `main` nach 067 und 075, Testumgebung neu gebaut, Testkonto aktualisiert, lokaler Teil wie oben.
+
+- **Bestanden:** kein Auftrag offen; alle 21 Pflicht-Handbücher eingelesen; IP-Adresse `192.168.0.100` unter den ersten 3 (Rang 2, englische APS-Dokumentation S. 38); Prüffrage 9 (Traglast, eigene Formulierung des Tests) unter den ersten 5 (Rang 1).
+- **Nicht bestanden:** Prüffrage 10 in der Formulierung des Tests („Wie gibt man den UR5e wieder frei, wenn eine Schutzeinrichtung ihn angehalten hat?“) – die richtige Fundstelle (Software-Handbuch S. 46) steht erst auf Rang 10, verlangt sind die ersten 5. In der Formulierung der Probe (`m2.json`, mit „Safeguard Stop“) steht dieselbe Stelle auf Rang 1. Die Treffer hängen also stark von der Wortwahl ab.
+- **Nicht erreicht:** Der letzte Schritt (absichtlich gescheiterter Auftrag mit Meldung) lief wegen des Abbruchs nicht; ihn hat die Leitstelle im ersten Lauf in Chrome geprüft (Kriterium 3).
+- **`evaluate_search`:** kombiniert Recall@5 0,571, Recall@10 0,857, MRR 0,535 (Ränge: ip-ccu 2, ip-drill-plc 10, question-1 1, question-3 –, question-7 7, question-9 1, question-10 1).
+
+**Bewertung der Leitstelle:** Das Abnahmekriterium der ROADMAP („die Suche findet eine IP-Adresse und eine sinngemäß gestellte Frage“) ist erfüllt (IP Rang 2, Prüffrage 9 Rang 1); der Abnahmetest verlangt zusätzlich Prüffrage 10 in einer zweiten Formulierung. Entscheidung über die Abnahme von M2 bei a7 (STATUS „Wartet auf a7“, Punkt 16).
