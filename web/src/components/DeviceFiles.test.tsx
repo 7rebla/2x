@@ -375,10 +375,54 @@ describe("upload of a new file", () => {
     const { files } = await openDevice(manager);
     const form = uploadForm();
 
-    fireEvent.click(within(form).getByRole("button", { name: "Upload" }));
+    // The button waits for a file and says so next to it (work order 088).
+    const submit = within(form).getByRole("button", { name: "Upload" });
+    expect(submit).toHaveProperty("disabled", true);
+    const hint = within(form).getByTestId("upload-choose-first");
+    expect(hint.textContent).toBe("Choose a file first.");
+    expect(submit.getAttribute("aria-describedby")).toBe(hint.id);
+    expect(within(form).getByTestId("file-input-name").textContent).toBe("No file chosen");
 
+    // Submitted by other means, the form still refuses without calling the API.
+    fireEvent.submit(form);
     expect((await within(form).findByTestId("upload-error-file")).textContent).toBe("Please choose a file.");
     expect(files.uploads).toHaveLength(0);
+
+    chooseFile(form, testFile("content"));
+    expect(within(uploadForm()).getByRole("button", { name: "Upload" })).toHaveProperty("disabled", false);
+    expect(within(uploadForm()).queryByTestId("upload-choose-first")).toBeNull();
+    expect(within(uploadForm()).getByTestId("file-input-name").textContent).toBe("test-upload.txt");
+  });
+
+  it("shows the file chooser in German", async () => {
+    await changeLanguage("de");
+    await openDevice(manager);
+    const form = within(filesArea()).getByRole("form", { name: "Neue Datei hochladen" });
+
+    expect(within(form).getByText("Datei wählen …")).toBeDefined();
+    expect(within(form).getByTestId("file-input-name").textContent).toBe("Keine Datei gewählt");
+    expect(within(form).getByTestId("upload-choose-first").textContent).toBe("Erst eine Datei wählen.");
+    expect(within(form).getByRole("button", { name: "Hochladen" })).toHaveProperty("disabled", true);
+  });
+
+  it("takes a dropped file", async () => {
+    const { files } = await openDevice(manager);
+    const form = uploadForm();
+    const zone = within(form).getByLabelText("File").parentElement;
+    if (zone === null) {
+      throw new Error("no drop zone");
+    }
+
+    fireEvent.drop(zone, { dataTransfer: { files: [testFile("dropped content", "dropped.txt")] } });
+    expect(within(form).getByTestId("file-input-name").textContent).toBe("dropped.txt");
+    fireEvent.click(within(form).getByRole("button", { name: "Upload" }));
+
+    expect((await within(form).findByTestId("upload-success")).textContent).toBe("Uploaded as version 1.");
+    expect(files.uploads).toHaveLength(1);
+    expect(files.uploads[0]?.form.get("file")).toEqual({ value: "dropped content", filename: "dropped.txt" });
+    // The chooser is empty again and the button waits for the next file.
+    expect(within(form).getByTestId("file-input-name").textContent).toBe("No file chosen");
+    expect(within(form).getByRole("button", { name: "Upload" })).toHaveProperty("disabled", true);
   });
 
   it("shows a 403 as missing permission", async () => {

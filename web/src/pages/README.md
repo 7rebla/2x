@@ -152,6 +152,10 @@ if (query.isError) return <ErrorMessage error={query.error} />;
   its own that keeps a copy of 400, 409 and 413 answers: field errors appear at their fields, 409 names the version
   with the same content, 413 the limit (read from the API's message), and the duplicates of a successful upload
   appear with links to the device and the file. There is no progress display (the client reports none).
+- Both upload forms choose the file with `FileInput` (`../components/ui/FileInput.tsx`, work order 088): a button,
+  the chosen name, dropping a file on the frame. "Upload" stays disabled with the hint "Choose a file first." until a
+  file is chosen; after each submission the chooser is empty again. A submission without a file by other means still
+  shows "Please choose a file." at the field and calls no API.
 - File names, titles and user names are rendered as text, never through the interpolation of i18next.
 - Tests fake the file API with `../components/files/testData.ts`. Under jsdom, Node's Request cannot read
   jsdom files, so tests use `textFile()` and `fakeUploadApi()`, which send forms as multipart text.
@@ -163,6 +167,8 @@ if (query.isError) return <ErrorMessage error={query.error} />;
   13 columns (`deviceListColumns`, the order of E-44) and the optional 14th column `device_class`
   (`deviceListOptionalColumn`, E-53) with its values (`deviceClasses` from `structure/deviceClass.ts`, which the
   device form uses for its choice as well; labels under `deviceClass` in `assets.json`).
+- The CSV file is chosen or dropped with `FileInput` (work order 088); "Start dry run" stays disabled with the hint
+  "Choose a file first." until there is one.
 - Step 1 sends the file with `dry_run=true`. The answer is always a report (200, `../components/ImportReportView.tsx`):
   counts per level (created, changed, unchanged) or, if the file has errors, every error with line, column and
   the message of the API. Values from the file and messages are shown as text.

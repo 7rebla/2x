@@ -66,6 +66,36 @@ export function fieldClasses(size: ControlSize, extra?: string): string {
   return joinClasses(FIELD_BASE, FIELD_SIZE[size], extra);
 }
 
+/*
+ * The visible "Choose file" button of FileInput is a span next to the hidden
+ * native input (the peer): it looks like a secondary md button, shows the
+ * focus ring of the input and its disabled state.
+ */
+const FILE_BUTTON = [
+  "inline-flex min-h-9 shrink-0 cursor-pointer items-center justify-center gap-2 rounded border",
+  "border-line-strong bg-surface px-4 py-1 text-center text-base text-fg hover:bg-surface-muted",
+  "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus",
+  "peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-disabled:hover:bg-surface",
+].join(" ");
+
+/** Classes of the visible button of a file chooser. */
+export function fileButtonClasses(): string {
+  return FILE_BUTTON;
+}
+
+/** Frame of a file chooser: a dashed border a file can be dropped on; accent while a file is dragged over it. */
+const FILE_DROP_BASE =
+  "group flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-dashed p-2 text-base text-fg has-[input[aria-invalid=true]]:border-danger";
+
+/** Classes of the frame of a file chooser; `extra` is for layout only. */
+export function fileDropClasses(dragging: boolean, extra?: string): string {
+  return joinClasses(
+    FILE_DROP_BASE,
+    dragging ? "border-accent bg-accent-soft" : "border-line-strong bg-surface",
+    extra,
+  );
+}
+
 /** Classes of a text area: the border and text of an md field, the height from its rows. */
 export function textareaClasses(extra?: string): string {
   return joinClasses(FIELD_BASE, "min-h-9 px-3 py-1.5 text-base", extra);

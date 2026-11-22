@@ -6,7 +6,8 @@ Work order 077. Every button, one-line text field, drop-down choice and text are
 | --- | --- |
 | `Button.tsx` | `Button` |
 | `fields.tsx` | `Input`, `Select`, `Textarea` |
-| `classes.ts` | the classes behind them (`buttonClasses`, `fieldClasses`, `textareaClasses`), `CONTROL_HEIGHT_PX`, `joinClasses` |
+| `FileInput.tsx` | `FileInput` (work order 088) |
+| `classes.ts` | the classes behind them (`buttonClasses`, `fieldClasses`, `textareaClasses`, `fileButtonClasses`, `fileDropClasses`), `CONTROL_HEIGHT_PX`, `joinClasses` |
 
 ## Sizes
 
@@ -64,8 +65,28 @@ import { Input, Select, Textarea } from "../components/ui/fields.tsx";
 - **Label, hint and error list stay with the caller** and are tied to the field by `id`, `htmlFor` and `aria-describedby`.
 - **Error state:** `invalid` sets `aria-invalid` (`true`, or `false` for a checked field), which colours the border with `danger`. The message itself stands next to the field in text, never by colour alone.
 - **Size:** `size="md"` (default) or `"sm"`; it replaces the native `size` attribute. `Select` allows one value (no `multiple`).
-- **`Input` types:** only one-line text types (`text` by default, `search`, `password`, `email`, `url`, `tel`, `number`). Check boxes, radio buttons and file choosers stay native `<input>` elements with their own look; they are the only native inputs outside this folder.
+- **`Input` types:** only one-line text types (`text` by default, `search`, `password`, `email`, `url`, `tel`, `number`). Check boxes and radio buttons stay native `<input>` elements with their own look; they are the only native inputs outside this folder. Files are chosen with `FileInput`.
 - `className` is for layout only (width, `tabular-nums slashed-zero` for identifiers).
+
+## File chooser
+
+```tsx
+import { FileInput } from "../components/ui/FileInput.tsx";
+
+const [file, setFile] = useState<File | null>(null);
+
+<label htmlFor={id}>{t("import:file.label")}</label>
+<FileInput id={id} name="file" accept=".csv,text/csv" file={file} onFileChange={setFile} disabled={running} />
+
+<Button type="submit" variant="primary" disabled={file === null} aria-describedby={file === null ? hintId : undefined}>…</Button>
+{file === null ? <p id={hintId} className="text-sm text-fg-muted">{t("common:fileInput.chooseFirst")}</p> : null}
+```
+
+- **One control, the native one:** the `<input type="file">` stays in the page, visually hidden (`sr-only`) but focusable. The caller's label names it; keyboard (Tab, Space), screen readers, form data and the e2e tests (`setInputFiles` on the label) use it as before. Every other attribute (`name`, `accept`, `data-testid`, `aria-describedby` …) goes to it.
+- **What shows:** a frame with a dashed border (`line-strong`, `danger` with `invalid`), in it a button that looks like a secondary `md` button ("Choose file…", icon `document`), the chosen file name (or "No file chosen"; at least 160 px wide, so on a phone it moves below the button; a longer name is cut off with an ellipsis, full name as tooltip) and, from 640 px, the hint "or drop it here". The button is a decorative `span` (`aria-hidden`) that opens the input on click and shows the input's focus ring (`peer-focus-visible`) and disabled state (`peer-disabled`).
+- **Drag and drop:** a file dropped on the frame becomes the choice (the first one if several); the frame turns `accent` on `accent-soft` while a file is over it, secondary text then uses `fg` (measured on `accent-soft`). No animation. Disabled, the frame takes no drop.
+- **Controlled:** the caller keeps the file (`file`, `onFileChange`); `onFileChange(null)` when the choice is cleared. A dropped file is put into the input as well, so the form data holds it; where that is not possible (jsdom) only the callback has it.
+- **A primary button waits for the file:** disabled while `file` is null, with the hint `common:fileInput.chooseFirst` ("Choose a file first.") next to it, tied by `aria-describedby`. Texts live in `locales/*/common.json` under `fileInput`.
 
 ## Contrast
 
@@ -73,4 +94,4 @@ import { Input, Select, Textarea } from "../components/ui/fields.tsx";
 
 ## Tests
 
-`Button.test.tsx` (variants, sizes, icon, disabled, loading, ref and attributes), `fields.test.tsx` (sizes, error state, types, disabled, heights shared with the buttons) and `sourceControls.test.ts` (no native button, select or text area outside this folder, native inputs only for check boxes, radio buttons and files, no copies of the old button classes).
+`Button.test.tsx` (variants, sizes, icon, disabled, loading, ref and attributes), `fields.test.tsx` (sizes, error state, types, disabled, heights shared with the buttons), `FileInput.test.tsx` (hidden but labelled and focusable input, visible button, chosen name, drop, disabled, error state, German) and `sourceControls.test.ts` (no native button, select or text area outside this folder, native inputs only for check boxes and radio buttons, files only through `FileInput`, no copies of the old button classes).

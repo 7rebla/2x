@@ -4,7 +4,7 @@
 // version with other places of the same content, a 409 (same content as the
 // newest version), a 413 (larger than the limit), field errors of a 400.
 import { useQueryClient } from "@tanstack/react-query";
-import { type ChangeEvent, type ReactElement, type ReactNode, useActionState, useId, useRef } from "react";
+import { type ReactElement, type ReactNode, useActionState, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
@@ -14,6 +14,7 @@ import { reloadAfterSave } from "../../pages/structure/save.ts";
 import { ErrorMessage } from "../ErrorMessage.tsx";
 import { Button } from "../ui/Button.tsx";
 import { Input, Select } from "../ui/fields.tsx";
+import { FileInput } from "../ui/FileInput.tsx";
 import { devicePath, documentPath, formatDateTime, formatSize } from "./format.ts";
 import { DownloadLink } from "./parts.tsx";
 import { type UploadOutcome, uploadDocument, uploadVersion } from "./upload.ts";
@@ -44,37 +45,44 @@ interface UploadAction {
   readonly state: UploadState;
   readonly action: (formData: FormData) => void;
   readonly pending: boolean;
+  /** The file chosen or dropped in the file field; null until one is chosen and after each submission. */
+  readonly file: File | null;
   /** Change handler of the file field: remembers the chosen file. */
-  readonly onFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  readonly onFileChange: (file: File | null) => void;
 }
 
 function useUploadAction(send: (formData: FormData, file: File) => Promise<UploadOutcome>): UploadAction {
   const queryClient = useQueryClient();
-  // The file as chosen in the field. The form data holds it as well; the
-  // field's own list is the fallback for environments whose FormData does not
-  // see a file set by script (jsdom in the tests).
+  // The file as chosen in the field. The form data holds it as well; this is
+  // the fallback for environments whose FormData does not see a file set by
+  // script or dropped (jsdom in the tests). The state drives the display and
+  // the submit button, the ref is what the action reads.
+  const [file, setFile] = useState<File | null>(null);
   const chosen = useRef<File | null>(null);
-  const onFileChange = (event: ChangeEvent<HTMLInputElement>): void => {
-    chosen.current = event.target.files?.[0] ?? null;
+  const onFileChange = (next: File | null): void => {
+    chosen.current = next;
+    setFile(next);
   };
   const [state, action, pending] = useActionState<UploadState, FormData>(async (previous, formData) => {
     const attempt = previous.attempt + 1;
     const titleValue = formData.get("title");
     const title = typeof titleValue === "string" ? titleValue : "";
-    const file = chosenFile(formData) ?? chosen.current;
+    const sent = chosenFile(formData) ?? chosen.current;
     // The fields are rebuilt empty after every submission (see UploadState.attempt).
     chosen.current = null;
-    if (file === null) {
+    setFile(null);
+    // The submit button waits for a file; this guards a submission by other means.
+    if (sent === null) {
       return { outcome: null, noFile: true, title, attempt };
     }
-    const outcome = await send(formData, file);
+    const outcome = await send(formData, sent);
     if (outcome.kind === "uploaded") {
       await reloadAfterSave(queryClient);
       return { outcome, noFile: false, title: "", attempt };
     }
     return { outcome, noFile: false, title, attempt };
   }, initialState);
-  return { state, action, pending, onFileChange };
+  return { state, action, pending, file, onFileChange };
 }
 
 function fieldErrors(state: UploadState, field: UploadField): readonly string[] {
@@ -128,14 +136,14 @@ function FileField({ upload }: { upload: UploadAction }): ReactElement {
   return (
     <FieldFrame label={t("upload.file")} name="file" errors={errors}>
       {({ id, invalid, describedBy }) => (
-        <input
+        <FileInput
           id={id}
           name="file"
-          type="file"
-          onChange={upload.onFileChange}
-          aria-invalid={invalid}
+          file={upload.file}
+          onFileChange={upload.onFileChange}
+          invalid={invalid}
           aria-describedby={describedBy}
-          className="block w-full text-sm"
+          className="w-full"
         />
       )}
     </FieldFrame>
@@ -265,9 +273,11 @@ function UploadShell({
   configurationDocument?: boolean;
   children: ReactNode;
 }): ReactElement {
-  const { t } = useTranslation("files");
+  const { t } = useTranslation(["files", "common"]);
   const titleId = useId();
-  const { state, action, pending } = upload;
+  const hintId = useId();
+  const { state, action, pending, file } = upload;
+  const waitsForFile = file === null && !pending;
   return (
     <form
       action={action}
@@ -285,9 +295,23 @@ function UploadShell({
       <div key={state.attempt} className="space-y-3">
         {children}
       </div>
-      <Button type="submit" variant="primary" icon="upload" loading={pending}>
-        {pending ? t("upload.submitting") : t("upload.submit")}
-      </Button>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Button
+          type="submit"
+          variant="primary"
+          icon="upload"
+          loading={pending}
+          disabled={waitsForFile}
+          aria-describedby={waitsForFile ? hintId : undefined}
+        >
+          {pending ? t("upload.submitting") : t("upload.submit")}
+        </Button>
+        {waitsForFile ? (
+          <p id={hintId} data-testid="upload-choose-first" className="text-sm text-fg-muted">
+            {t("common:fileInput.chooseFirst")}
+          </p>
+        ) : null}
+      </div>
     </form>
   );
 }

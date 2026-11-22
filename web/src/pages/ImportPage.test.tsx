@@ -145,9 +145,40 @@ describe("import page", () => {
     const checkButton = screen.getByRole("button", { name: "Start dry run" });
     expect(checkButton).toHaveProperty("disabled", true);
     expect(screen.queryByRole("button", { name: "Apply" })).toBeNull();
+    // The disabled button says why (work order 088).
+    const hint = screen.getByTestId("import-choose-first");
+    expect(hint.textContent).toBe("Choose a file first.");
+    expect(checkButton.getAttribute("aria-describedby")).toBe(hint.id);
+    expect(screen.getByTestId("file-input-name").textContent).toBe("No file chosen");
+    expect(screen.getByTestId("import-file").getAttribute("accept")).toBe(".csv,text/csv");
 
     chooseFile();
     expect(checkButton).toHaveProperty("disabled", false);
+    expect(checkButton.getAttribute("aria-describedby")).toBeNull();
+    expect(screen.queryByTestId("import-choose-first")).toBeNull();
+    expect(screen.getByTestId("file-input-name").textContent).toBe("devices.csv");
+  });
+
+  it("takes a dropped CSV file for the dry run", async () => {
+    const api = fakeImport(() => jsonResponse(report()));
+    fakeApi(manager, api.handler);
+    renderApp("/import");
+    await openPage();
+    const zone = screen.getByLabelText("CSV file").parentElement;
+    if (zone === null) {
+      throw new Error("no drop zone");
+    }
+    const file = csvFile(CSV, "dropped.csv");
+
+    fireEvent.drop(zone, { dataTransfer: { files: [file] } });
+    expect(screen.getByTestId("file-input-name").textContent).toBe("dropped.csv");
+    fireEvent.click(screen.getByRole("button", { name: "Start dry run" }));
+
+    await waitFor(() => {
+      expect(api.sent).toHaveLength(1);
+    });
+    expect(api.sent[0]?.file).toBe(file);
+    expect(api.sent[0]?.dryRun).toBe("true");
   });
 
   it("runs the dry run, shows the counts, then applies the same file", async () => {
