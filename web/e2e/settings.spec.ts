@@ -133,8 +133,8 @@ test.describe("settings", () => {
       nav.getByRole("link").evaluateAll((links) => links.map((link) => link.getBoundingClientRect().width));
     await expect(nav.getByRole("link", { name: "Structure" })).toHaveAttribute("aria-current", "page");
     const onStructure = await widths();
-    await nav.getByRole("link", { name: "Self-test" }).click();
-    await expect(nav.getByRole("link", { name: "Self-test" })).toHaveAttribute("aria-current", "page");
+    await nav.getByRole("link", { name: "Ask" }).click();
+    await expect(nav.getByRole("link", { name: "Ask" })).toHaveAttribute("aria-current", "page");
     expect(await widths()).toEqual(onStructure);
   });
 });

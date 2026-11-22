@@ -43,14 +43,18 @@ loaded when it is opened (work order 062): `routes.tsx` wraps it with `lazyPage(
 
 - `../components/Layout.tsx` draws the header (name, navigation, user menu) around every page, always on one line
   and 76 px high at every width. Every navigation entry has an icon (`../navigation.ts`, `../icons/README.md`).
+  Seven entries for `manage` (five for `read`): Structure, Map, Search, Ask, Ingestion, Import, Change log. "Ask"
+  (`/ask`, icon `answer`) follows "Search", as both lead into the documents (work order 134, E-69). The self-test is
+  an operations page and no entry of the bar: like the settings it is a link in the user menu (`UserMenuContent`,
+  after the settings, role `read`), so it also shows in the panel below 768 px. `/selftest` still opens directly.
   Three forms (E-65 point 3, work order 082):
-  - From 1280 px (`xl`) icon and text side by side; the seven entries of M2 fit on one line in German and English
+  - From 1280 px (`xl`) icon and text side by side; the seven entries fit on one line in German and English
     (work order 055), a navigation that is still too wide scrolls on its own.
   - From 768 to 1279 px the icon above a short text (metadata size `text-meta`, 13 px, on a 16 px line, E-65 point 5; `nav:short.*` in
     `locales/*/nav.json`, at most ten characters and part of the full text). The full text stays the link's text,
     accessible name and tooltip; the short text is drawn by CSS (`.nav-short` in `../index.css`) inside an
     `aria-hidden` element. Where it fits, the short text is a whole word of the full name (English: the full names,
-    "Log" for "Change log"). Two German compounds are cut to their last part, because the whole word does not fit
+    "Log" for "Change log"; "Auskunft" and "Ask" are the full names). Two German compounds are cut to their last part, because the whole word does not fit
     at 768 px next to a user name as wide as its button: "Karte" for "Landkarte" (29 px more) and "Protokoll" for
     "Änderungsprotokoll". If the entries still do not fit, the navigation scrolls on its own instead of covering
     the user menu or widening the page; the focus ring of an entry is then drawn inside it (`-outline-offset-2`), so
@@ -62,7 +66,9 @@ loaded when it is opened (work order 062): `routes.tsx` wraps it with `lazyPage(
     focus stays where it went, WAI-ARIA disclosure navigation), on a click outside, on a choice (focus on the button, then on the new page's heading) and when the window
     grows to 768 px.
   `../../e2e/navigation.spec.ts` checks one line at 768, 1024 and 1280 px in German and English, 768 px in German
-  with a long user name, and the menu at 375 px, also with the keyboard alone.
+  and English with a long user name (button 192 px), and the menu at 375 px, also with the keyboard alone. Free
+  width after the last entry at 768 px with that long name (work order 134): 40 px in German, 92 px in English
+  (before, with "Selbsttest" as last entry: 25 px in German).
 - Page grid (work order 080, E-65 point 1): header and page content share one grid, `PAGE_GRID` in
   `../components/Layout.tsx` (`max-w-7xl`, at most 1280 px, `px-4`), so the brand mark and the page heading start on
   the same line at every width (`../../e2e/layout.spec.ts` measures 375, 1024 and 1600 px). Tables, cards and the map

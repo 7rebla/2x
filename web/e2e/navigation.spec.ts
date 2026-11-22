@@ -22,7 +22,7 @@ function collectConsoleErrors(page: Page): string[] {
   return errors;
 }
 
-test("a click in the navigation leads from / to the self-test page", async ({ page }) => {
+test("a click in the user menu leads from / to the self-test page", async ({ page }) => {
   const consoleErrors = collectConsoleErrors(page);
 
   const response = await page.goto("/");
@@ -31,10 +31,14 @@ test("a click in the navigation leads from / to the self-test page", async ({ pa
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Structure");
   await expect(navigation.getByRole("link", { name: "Structure" })).toHaveAttribute("aria-current", "page");
 
-  await navigation.getByRole("link", { name: "Self-test" }).click();
+  // The self-test is an operations page in the user menu, not an entry of the bar (work order 134).
+  await page.getByTestId("user-menu-button").click();
+  await page.getByTestId("user-menu").getByRole("link", { name: "Self-test" }).click();
 
   await expect(page).toHaveURL(/\/selftest$/);
-  await expect(navigation.getByRole("link", { name: "Self-test" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByTestId("user-menu")).toBeHidden();
+  await expect(page.getByTestId("selftest-link")).toHaveAttribute("aria-current", "page");
+  await expect(navigation.locator('[aria-current="page"]')).toHaveCount(0);
   await expect(page.getByTestId("worker-result")).toHaveText("pong");
   await expect(page.getByTestId("database-version")).toHaveText(/\d+\.\d+/);
 
@@ -75,11 +79,16 @@ test("an address with a parameter opens directly", async ({ page }) => {
 // a short text below each icon, with the full text as accessible name and
 // tooltip; below 768 px a button "Menu" opens a list with every entry and the
 // user menu (work order 082, E-65 point 3; seven entries since work order 055).
+// Since work order 134 (E-69) "Ask" follows "Search", and the self-test sits in
+// the user menu instead of the bar; the bar keeps seven entries.
 
-const ENGLISH_ENTRIES = ["Structure", "Map", "Search", "Ingestion", "Import", "Change log", "Self-test"];
-const GERMAN_ENTRIES = ["Struktur", "Landkarte", "Suche", "Einlesen", "Import", "Änderungsprotokoll", "Selbsttest"];
-const ENGLISH_SHORT = ["Structure", "Map", "Search", "Ingestion", "Import", "Log", "Self-test"];
-const GERMAN_SHORT = ["Struktur", "Karte", "Suche", "Einlesen", "Import", "Protokoll", "Selbsttest"];
+const ENGLISH_ENTRIES = ["Structure", "Map", "Search", "Ask", "Ingestion", "Import", "Change log"];
+const GERMAN_ENTRIES = ["Struktur", "Landkarte", "Suche", "Auskunft", "Einlesen", "Import", "Änderungsprotokoll"];
+const ENGLISH_SHORT = ["Structure", "Map", "Search", "Ask", "Ingestion", "Import", "Log"];
+const GERMAN_SHORT = ["Struktur", "Karte", "Suche", "Auskunft", "Einlesen", "Import", "Protokoll"];
+/** The last entry of the bar (for a manager): once it shows, the whole bar is there. */
+const ENGLISH_LAST = ENGLISH_ENTRIES[ENGLISH_ENTRIES.length - 1] ?? "";
+const GERMAN_LAST = GERMAN_ENTRIES[GERMAN_ENTRIES.length - 1] ?? "";
 
 interface HeaderLayout {
   readonly header: number;
@@ -156,7 +165,7 @@ for (const { viewport, texts } of [
     await page.setViewportSize(viewport);
     await page.goto("/");
     const navigation = page.getByRole("navigation", { name: "Main navigation" });
-    await expect(navigation.getByRole("link", { name: "Self-test" })).toBeVisible();
+    await expect(navigation.getByRole("link", { name: ENGLISH_LAST })).toBeVisible();
     await expect(page.getByTestId("navigation-menu-button")).toHaveCount(0);
     const english = await headerLayout(page);
     expect(english.labels).toEqual(ENGLISH_ENTRIES);
@@ -164,7 +173,7 @@ for (const { viewport, texts } of [
 
     await page.getByTestId("user-menu-button").click();
     await page.getByTestId("language-switch").selectOption("de");
-    await expect(page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("link", { name: "Selbsttest" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("link", { name: GERMAN_LAST })).toBeVisible();
     const german = await headerLayout(page);
     expect(german.labels).toEqual(GERMAN_ENTRIES);
     expect(german.titles).toEqual(GERMAN_ENTRIES);
@@ -208,44 +217,92 @@ for (const { viewport, texts } of [
   });
 }
 
-test("at 768 px in German a user name as wide as its button covers nothing and widens nothing", async ({ page }) => {
-  // The answer of /api/v1/me/ gets a user name longer than the button can show (max-w-48, cut off with an
-  // ellipsis). The real answer is read in the browser (only the browser reaches the API under "localhost").
+for (const { language, navigationName, menuName, last, shorts } of [
+  { language: "de", navigationName: "Hauptnavigation", menuName: "Benutzermenü", last: GERMAN_LAST, shorts: GERMAN_SHORT },
+  { language: "en", navigationName: "Main navigation", menuName: "Account menu", last: ENGLISH_LAST, shorts: ENGLISH_SHORT },
+]) {
+  test(`at 768 px in ${language} a user name as wide as its button covers nothing and widens nothing`, async ({ page }) => {
+    // The answer of /api/v1/me/ gets a user name longer than the button can show (max-w-48, cut off with an
+    // ellipsis). The real answer is read in the browser (only the browser reaches the API under "localhost").
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto("/");
+    const me = await page.evaluate(async () => (await fetch("/api/v1/me/")).json() as Promise<Record<string, unknown>>);
+    await page.route(
+      (url) => url.pathname === "/api/v1/me/",
+      async (route) => {
+        await route.fulfill({ json: { ...me, username: "e2e-manager-with-a-very-long-user-name" } });
+      },
+    );
+    await page.reload();
+    await page.getByTestId("user-menu-button").click();
+    await page.getByTestId("language-switch").selectOption(language);
+    await page.getByTestId("user-menu-button").click();
+    await expect(page.getByTestId("user-menu")).toBeHidden();
+    const navigation = page.getByRole("navigation", { name: navigationName });
+    await expect(navigation.getByRole("link", { name: last })).toBeVisible();
+    const button = page.getByTestId("user-menu-button");
+    await expect(button).toHaveAccessibleName(`${menuName}: e2e-manager-with-a-very-long-user-name`);
+
+    const layout = await headerLayout(page);
+    const [navBox, buttonBox, headerBox] = await Promise.all([
+      navigation.boundingBox(),
+      button.boundingBox(),
+      page.getByRole("banner").boundingBox(),
+    ]);
+    // Seven entries with "Ask" instead of the self-test (work order 134).
+    expect(layout.shorts).toEqual(shorts);
+    // The button is as wide as it may be (192 px); the navigation ends before it and does not scroll.
+    expect(Math.round(buttonBox?.width ?? 0)).toBe(192);
+    expect((navBox?.x ?? 0) + (navBox?.width ?? 0)).toBeLessThanOrEqual(buttonBox?.x ?? 0);
+    expect(layout.overflow).toBeLessThanOrEqual(0);
+    expect(layout.free).toBeGreaterThanOrEqual(0);
+    expect(new Set(layout.tops).size).toBe(1);
+    // Same header height as everywhere (76 px), and the page does not scroll sideways.
+    expect(Math.round(headerBox?.height ?? 0)).toBe(76);
+    expect(await pageOverflows(page)).toBe(false);
+    test.info().annotations.push({
+      type: "free width",
+      description: `${language}, long user name: ${String(layout.free)} px at 768 px`,
+    });
+    // Back to English, for the other tests of this browser context.
+    await page.getByTestId("user-menu-button").click();
+    await page.getByTestId("language-switch").selectOption("en");
+  });
+}
+
+test("from 768 px the user menu holds the self-test; it opens /selftest and closes", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.goto("/");
-  const me = await page.evaluate(async () => (await fetch("/api/v1/me/")).json() as Promise<Record<string, unknown>>);
-  await page.route(
-    (url) => url.pathname === "/api/v1/me/",
-    async (route) => {
-      await route.fulfill({ json: { ...me, username: "e2e-manager-with-a-very-long-user-name" } });
-    },
-  );
-  await page.reload();
-  await page.getByTestId("user-menu-button").click();
-  await page.getByTestId("language-switch").selectOption("de");
-  await page.getByTestId("user-menu-button").click();
-  const navigation = page.getByRole("navigation", { name: "Hauptnavigation" });
-  await expect(navigation.getByRole("link", { name: "Selbsttest" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Structure");
+  const navigation = page.getByRole("navigation", { name: "Main navigation" });
+  await expect(navigation.getByRole("link", { name: "Self-test" })).toHaveCount(0);
   const button = page.getByTestId("user-menu-button");
-  await expect(button).toHaveAccessibleName("Benutzermenü: e2e-manager-with-a-very-long-user-name");
+  const menu = page.getByTestId("user-menu");
+  await button.click();
+  await expect(menu).toBeVisible();
+  // Settings first, then the self-test, both with icon and full text.
+  await expect(menu.getByRole("link")).toHaveText(["Settings", "Self-test"]);
+  const link = menu.getByRole("link", { name: "Self-test" });
+  await expect(link.locator("svg")).toHaveAttribute("aria-hidden", "true");
+  await link.click();
+  await expect(page).toHaveURL(/\/selftest$/);
+  await expect(menu).toBeHidden();
+  await expect(button).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("heading", { level: 1, name: "Self-test" })).toBeFocused();
+  await button.click();
+  await expect(link).toHaveAttribute("aria-current", "page");
+});
 
-  const layout = await headerLayout(page);
-  const [navBox, buttonBox, headerBox] = await Promise.all([
-    navigation.boundingBox(),
-    button.boundingBox(),
-    page.getByRole("banner").boundingBox(),
-  ]);
-  // The button is as wide as it may be (192 px); the navigation ends before it and does not scroll.
-  expect(Math.round(buttonBox?.width ?? 0)).toBe(192);
-  expect((navBox?.x ?? 0) + (navBox?.width ?? 0)).toBeLessThanOrEqual(buttonBox?.x ?? 0);
-  expect(layout.overflow).toBeLessThanOrEqual(0);
-  expect(layout.free).toBeGreaterThanOrEqual(0);
-  expect(new Set(layout.tops).size).toBe(1);
-  expect(layout.shorts).toEqual(GERMAN_SHORT);
-  // Same header height as everywhere (76 px), and the page does not scroll sideways.
-  expect(Math.round(headerBox?.height ?? 0)).toBe(76);
-  expect(await pageOverflows(page)).toBe(false);
-  test.info().annotations.push({ type: "free width", description: `de, long user name: ${String(layout.free)} px at 768 px` });
+test("the entry 'Ask' opens /ask, is marked current and the focus moves to the heading", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Structure");
+  const entry = page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Ask" });
+  await expect(entry.locator("svg")).toHaveAttribute("aria-hidden", "true");
+  await entry.click();
+  await expect(page).toHaveURL(/\/ask$/);
+  await expect(entry).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("heading", { level: 1, name: "Ask" })).toBeFocused();
+  await expect(page).toHaveTitle("Ask – 2x");
 });
 
 test("at 1024 px the icon of an entry opens its page and keeps its name", async ({ page }) => {
@@ -312,13 +369,26 @@ test.describe("on a phone", () => {
     expect(await pageOverflows(page)).toBe(false);
 
     // A choice closes the menu and opens the page; the focus moves on to its heading.
-    await navigation.getByRole("link", { name: "Self-test" }).click();
-    await expect(page).toHaveURL(/\/selftest$/);
+    await navigation.getByRole("link", { name: "Ask" }).click();
+    await expect(page).toHaveURL(/\/ask$/);
     await expect(panel).toBeHidden();
     await expect(button).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByRole("heading", { level: 1, name: "Ask" })).toBeFocused();
+    await button.click();
+    await expect(navigation.getByRole("link", { name: "Ask" })).toHaveAttribute("aria-current", "page");
+
+    // The self-test sits in the user part of the panel, after the settings (work order 134).
+    const selftest = panel.getByTestId("selftest-link");
+    await expect(navigation.getByRole("link", { name: "Self-test" })).toHaveCount(0);
+    await expect(selftest).toHaveAccessibleName("Self-test");
+    await expect(selftest).toBeVisible();
+    await selftest.click();
+    await expect(page).toHaveURL(/\/selftest$/);
+    await expect(panel).toBeHidden();
     await expect(page.getByRole("heading", { level: 1, name: "Self-test" })).toBeFocused();
     await button.click();
-    await expect(panel.getByRole("link", { name: "Self-test" })).toHaveAttribute("aria-current", "page");
+    await expect(selftest).toHaveAttribute("aria-current", "page");
+    expect(await pageOverflows(page)).toBe(false);
   });
 
   test("the menu works with the keyboard alone", async ({ page }) => {
