@@ -49,6 +49,12 @@ print(json.dumps({
     "media_root_type": type(settings.TWOX_MEDIA_ROOT).__name__,
     "upload_max_bytes": settings.TWOX_UPLOAD_MAX_BYTES,
     "media_url_set": settings.is_overridden("MEDIA_URL"),
+    "ai_enabled": settings.TWOX_AI_ENABLED,
+    "embed_model": settings.TWOX_EMBED_MODEL,
+    "embed_dimensions": settings.TWOX_EMBED_DIMENSIONS,
+    "embed_batch_size": settings.TWOX_EMBED_BATCH_SIZE,
+    "embed_query_prefix": settings.TWOX_EMBED_QUERY_PREFIX,
+    "embed_timeout_seconds": settings.TWOX_EMBED_TIMEOUT_SECONDS,
 }))
 """
 
@@ -105,6 +111,13 @@ def test_settings_import_without_running_database() -> None:
     assert values["upload_max_bytes"] == 200_000_000
     # Files leave the server through the API only.
     assert values["media_url_set"] is False
+    # E-59: AI features are off unless switched on; E-56: bge-m3, 1024 values.
+    assert values["ai_enabled"] is False
+    assert values["embed_model"] == "bge-m3"
+    assert values["embed_dimensions"] == 1024
+    assert values["embed_batch_size"] == 16
+    assert values["embed_query_prefix"] == ""
+    assert values["embed_timeout_seconds"] == 120
 
 
 def test_settings_read_twox_variables() -> None:
@@ -121,11 +134,24 @@ def test_settings_read_twox_variables() -> None:
             "TWOX_CACHE_URL": "redis://cache.test:6379/5",
             "TWOX_MEDIA_ROOT": "/srv/files",
             "TWOX_UPLOAD_MAX_BYTES": "1024",
+            "TWOX_AI_ENABLED": "true",
+            "TWOX_EMBED_MODEL": "qwen3-embedding:0.6b",
+            "TWOX_EMBED_DIMENSIONS": "768",
+            "TWOX_EMBED_BATCH_SIZE": "4",
+            "TWOX_EMBED_QUERY_PREFIX": "Query: ",
+            "TWOX_EMBED_TIMEOUT_SECONDS": "30",
         },
     )
 
     assert result.returncode == 0, result.stderr
     values = json.loads(result.stdout)
+    assert values["ai_enabled"] is True
+    assert values["embed_model"] == "qwen3-embedding:0.6b"
+    assert values["embed_dimensions"] == 768
+    assert values["embed_batch_size"] == 4
+    # Kept as written, trailing space included.
+    assert values["embed_query_prefix"] == "Query: "
+    assert values["embed_timeout_seconds"] == 30
     assert values["debug"] is True
     assert values["allowed_hosts"] == ["localhost", "example.test"]
     assert values["db"]["PORT"] == "6543"
@@ -172,6 +198,32 @@ def test_settings_reject_invalid_upload_limit(value: str) -> None:
 
     assert result.returncode != 0
     assert "TWOX_UPLOAD_MAX_BYTES must be a whole number greater than zero" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "name", ["TWOX_EMBED_DIMENSIONS", "TWOX_EMBED_BATCH_SIZE", "TWOX_EMBED_TIMEOUT_SECONDS"]
+)
+@pytest.mark.parametrize("value", ["0", "-1", "1.5", "many"])
+def test_settings_reject_invalid_embedding_numbers(name: str, value: str) -> None:
+    result = run_python(DUMP_SETTINGS, {name: value})
+
+    assert result.returncode != 0
+    assert f"{name} must be a whole number greater than zero" in result.stderr
+
+
+@pytest.mark.parametrize(("value", "expected"), [("false", False), ("0", False), ("on", True)])
+def test_ai_switch_reads_booleans(value: str, expected: bool) -> None:
+    result = run_python(DUMP_SETTINGS, {"TWOX_AI_ENABLED": value})
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["ai_enabled"] is expected
+
+
+def test_settings_reject_invalid_ai_switch() -> None:
+    result = run_python(DUMP_SETTINGS, {"TWOX_AI_ENABLED": "sometimes"})
+
+    assert result.returncode != 0
+    assert "TWOX_AI_ENABLED must be true or false" in result.stderr
 
 
 @pytest.mark.parametrize("value", ["data/media", "./media"])

@@ -18,9 +18,18 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from pytest_django import Settings
 
+from tests.answers.fake_ollama import FakeOllama, fake_ollama
+from twox.answers.management.commands.check_llm import DISABLED_LINE, remote_host_warning
+
 MODEL_LIST = json.dumps(
     {"object": "list", "data": [{"id": "model-a"}, {"id": "model-b"}, {"id": "model-c"}]}
 ).encode()
+
+
+@pytest.fixture(autouse=True)
+def ai_enabled(settings: Settings) -> None:
+    """AI features on, unless a test switches them off (E-59: both states are tested)."""
+    settings.TWOX_AI_ENABLED = True
 
 
 class StubHandler(BaseHTTPRequestHandler):
@@ -225,3 +234,203 @@ def test_default_timeout_is_five_seconds(
 def test_timeout_must_be_a_positive_number(value: str) -> None:
     with pytest.raises(CommandError):
         call_command("check_llm", "--timeout", value, stdout=StringIO())
+
+
+# --- AI switched off (E-59) --------------------------------------------------
+
+
+def forbid_network(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Make every attempt to resolve or connect fail loudly; returns the attempts."""
+    attempts: list[str] = []
+
+    def refuse(*args: object, **kwargs: object) -> object:
+        attempts.append(repr(args))
+        raise AssertionError("the model service must not be contacted")
+
+    monkeypatch.setattr(socket, "getaddrinfo", refuse)
+    monkeypatch.setattr(socket, "create_connection", refuse)
+    return attempts
+
+
+@pytest.mark.parametrize("args", [(), ("--embed",)])
+def test_disabled_is_a_neutral_state_and_contacts_nothing(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch, args: tuple[str, ...]
+) -> None:
+    settings.TWOX_AI_ENABLED = False
+    with stub_server() as (base_url, paths):
+        settings.TWOX_LLM_BASE_URL = base_url
+        attempts = forbid_network(monkeypatch)
+        code, output = run_check(*args)
+
+    assert code == 0
+    assert single_line(output) == DISABLED_LINE
+    assert DISABLED_LINE.startswith("DISABLED: ")
+    assert "FAILED" not in output
+    assert "WARNING" not in output
+    assert paths == []
+    assert attempts == []
+
+
+# --- --embed -----------------------------------------------------------------
+
+
+@pytest.fixture
+def embed_settings(settings: Settings) -> Settings:
+    settings.TWOX_EMBED_MODEL = "bge-m3"
+    settings.TWOX_EMBED_DIMENSIONS = 4
+    settings.TWOX_EMBED_BATCH_SIZE = 16
+    settings.TWOX_EMBED_QUERY_PREFIX = ""
+    settings.TWOX_EMBED_TIMEOUT_SECONDS = 5
+    return settings
+
+
+def test_embed_ok_names_model_dimensions_and_duration(embed_settings: Settings) -> None:
+    with fake_ollama() as (base_url, fake):
+        embed_settings.TWOX_LLM_BASE_URL = base_url
+        code, output = run_check("--embed")
+
+    line = single_line(output)
+    assert code == 0
+    assert line.startswith("OK: embedded a test sentence with bge-m3 ")
+    assert f"{base_url}/embeddings" in line
+    assert ": 4 dimensions in " in line
+    assert line.endswith("s")
+    # Only the model list and one embedding request; no reachability steps.
+    assert [(request.method, request.path) for request in fake.requests] == [
+        ("GET", "/api/tags"),
+        ("POST", "/v1/embeddings"),
+    ]
+    (request,) = fake.embed_requests
+    assert set(request.body) == {"model", "input"}
+    assert len(request.body["input"]) == 1
+
+
+@pytest.mark.parametrize(
+    ("change", "error"),
+    [
+        ({"models": []}, "FAILED: EmbeddingRejectedError: "),
+        ({"embed_status": 404}, "FAILED: EmbeddingRejectedError: "),
+        ({"embed_status": 503}, "FAILED: EmbeddingUnavailableError: "),
+        ({"dimensions": 3}, "FAILED: EmbeddingDimensionError: "),
+    ],
+)
+def test_embed_failed_names_the_kind_of_error(
+    embed_settings: Settings, change: dict[str, object], error: str
+) -> None:
+    fake = FakeOllama()
+    for name, value in change.items():
+        setattr(fake, name, value)
+    with fake_ollama(fake) as (base_url, _fake):
+        embed_settings.TWOX_LLM_BASE_URL = base_url
+        code, output = run_check("--embed")
+
+    line = single_line(output)
+    assert code == 1
+    assert line.startswith(error)
+
+
+@pytest.mark.parametrize("change", [{"models": []}, {"embed_status": 404}])
+def test_embed_missing_model_names_ollama_pull(
+    embed_settings: Settings, change: dict[str, object]
+) -> None:
+    fake = FakeOllama()
+    for name, value in change.items():
+        setattr(fake, name, value)
+    with fake_ollama(fake) as (base_url, _fake):
+        embed_settings.TWOX_LLM_BASE_URL = base_url
+        _code, output = run_check("--embed")
+
+    assert "ollama pull bge-m3" in single_line(output)
+
+
+def test_embed_refuses_a_cloud_model(embed_settings: Settings) -> None:
+    embed_settings.TWOX_EMBED_MODEL = "gpt-oss:120b-cloud"
+    with fake_ollama() as (base_url, fake):
+        embed_settings.TWOX_LLM_BASE_URL = base_url
+        code, output = run_check("--embed")
+
+    assert code == 1
+    assert single_line(output).startswith("FAILED: EmbeddingRemoteModelError: ")
+    assert fake.requests == []
+
+
+def test_embed_connection_refused(embed_settings: Settings) -> None:
+    embed_settings.TWOX_LLM_BASE_URL = f"http://127.0.0.1:{unused_port()}/v1"
+    code, output = run_check("--embed")
+
+    assert code == 1
+    assert single_line(output).startswith("FAILED: EmbeddingUnavailableError: ")
+
+
+def test_embed_timeout(embed_settings: Settings) -> None:
+    embed_settings.TWOX_EMBED_TIMEOUT_SECONDS = 1
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as silent:
+        silent.bind(("127.0.0.1", 0))
+        silent.listen(1)
+        embed_settings.TWOX_LLM_BASE_URL = f"http://127.0.0.1:{silent.getsockname()[1]}/v1"
+        code, output = run_check("--embed")
+
+    assert code == 1
+    line = single_line(output)
+    assert line.startswith("FAILED: EmbeddingUnavailableError: ")
+    assert "within 1s" in line
+
+
+def test_embed_invalid_address(embed_settings: Settings) -> None:
+    embed_settings.TWOX_LLM_BASE_URL = "host.docker.internal:11434"
+    code, output = run_check("--embed")
+
+    assert code == 1
+    assert single_line(output).startswith("FAILED: invalid configuration: ")
+
+
+def test_embed_warns_when_the_model_service_is_not_on_this_machine(
+    embed_settings: Settings,
+) -> None:
+    # 127.0.0.2 is a loopback address, but not one of the names the command
+    # treats as "this machine": the check goes by the configured name.
+    with fake_ollama(host="127.0.0.2") as (base_url, _fake):
+        embed_settings.TWOX_LLM_BASE_URL = base_url
+        code, output = run_check("--embed")
+
+    warning, result, *rest = output.splitlines()
+    assert code == 0
+    assert warning.startswith("WARNING: TWOX_LLM_BASE_URL points to '127.0.0.2'")
+    assert "own network" in warning
+    assert result.startswith("OK: ")
+    assert rest == []
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "http://host.docker.internal:11434/v1",
+        "http://HOST.DOCKER.INTERNAL:11434/v1",
+        "http://localhost:11434/v1",
+        "http://127.0.0.1:11434/v1",
+        "http://[::1]:11434/v1",
+    ],
+)
+def test_no_warning_for_this_machine(base_url: str) -> None:
+    assert remote_host_warning(base_url) is None
+
+
+@pytest.mark.parametrize(
+    "base_url", ["http://ollama.example.test:11434/v1", "http://10.0.0.5:11434/v1"]
+)
+def test_warning_for_other_hosts(base_url: str) -> None:
+    warning = remote_host_warning(base_url)
+
+    assert warning is not None
+    assert warning.startswith("WARNING: ")
+
+
+def test_without_embed_no_embedding_request_and_no_warning(settings: Settings) -> None:
+    # Without --embed the reachability check stays as it was.
+    with stub_server() as (base_url, paths):
+        settings.TWOX_LLM_BASE_URL = base_url
+        code, output = run_check()
+
+    assert code == 0
+    assert single_line(output).startswith("OK: ")
+    assert paths == ["/v1/models"]
