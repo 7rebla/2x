@@ -16,7 +16,7 @@ afterEach(async () => {
 });
 
 async function deviceHeading(name: string): Promise<HTMLElement> {
-  return screen.findByRole("heading", { level: 2, name });
+  return screen.findByRole("heading", { level: 1, name });
 }
 
 function field(name: string): string | null {
@@ -92,7 +92,7 @@ describe("device page", () => {
     ]);
 
     const files = screen.getByTestId("device-files");
-    expect(within(files).getByRole("heading", { level: 3 }).textContent).toBe("Files");
+    expect(within(files).getByRole("heading", { level: 2 }).textContent).toBe("Files");
     expect(files.getAttribute("data-device-id")).toBe("1000");
   });
 
@@ -285,6 +285,6 @@ describe("device page", () => {
     renderApp("/devices/1000");
 
     expect((await screen.findByTestId("error-summary")).textContent).toBe("The API answered with HTTP status 500.");
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Device");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Device");
   });
 });

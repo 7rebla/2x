@@ -36,9 +36,9 @@ export function DeviceFiles({ deviceId }: { deviceId: number }): ReactElement {
       data-device-id={deviceId}
       className="space-y-3 rounded border border-line bg-surface p-4"
     >
-      <h3 id={headingId} className="font-semibold">
+      <h2 id={headingId} className="font-semibold">
         {t("heading")}
-      </h3>
+      </h2>
       {query.error === null ? null : <ErrorMessage error={query.error} />}
       {query.data === undefined ? (
         query.isError ? null : (

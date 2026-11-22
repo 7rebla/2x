@@ -130,7 +130,7 @@ describe("import page", () => {
     renderApp("/import");
     await openPage();
 
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Import");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Import");
     expect(deviceListColumns).toHaveLength(13);
     expect(screen.getByTestId("import-columns").textContent).toBe(
       "site,area,plant_id,plant_name,device_id,device_name,manufacturer,model,software_version,ip_address,address_source,protocols,notes",
@@ -343,7 +343,7 @@ describe("import page", () => {
     renderApp("/import");
     await openPage();
 
-    expect(screen.getByRole("heading", { level: 3, name: "Erwartetes Format" })).toBeDefined();
+    expect(screen.getByRole("heading", { level: 2, name: "Erwartetes Format" })).toBeDefined();
     expect(screen.getByTestId("import-format").textContent).toContain("Am Ende darf eine 14. Spalte folgen");
     expect(screen.getByTestId("import-format").textContent).toContain("Sie enthält den Gerätetyp");
     fireEvent.change(screen.getByLabelText("CSV-Datei"), { target: { files: [csvFile()] } });

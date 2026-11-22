@@ -66,7 +66,7 @@ describe("file page", () => {
   it("shows the file and all versions, newest first, with download links", async () => {
     await openDocument(reader);
 
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Test manual");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Test manual");
     expect(screen.getByTestId("document-kind").textContent).toBe("Document");
     expect(screen.getByTestId("document-created-by").textContent).toBe("test-manager");
     const device = within(screen.getByTestId("document-device")).getByRole("link");
@@ -114,7 +114,7 @@ describe("file page", () => {
     renderApp("/documents/7");
 
     expect((await screen.findByTestId("error-summary")).textContent).toBe("The API answered with HTTP status 500.");
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("File");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("File");
   });
 
   it("shows the texts in German", async () => {
@@ -122,10 +122,10 @@ describe("file page", () => {
     await openDocument(manager);
 
     expect(screen.getByTestId("document-kind").textContent).toBe("Dokument");
-    expect(screen.getByRole("heading", { level: 3, name: "Versionen" })).toBeDefined();
+    expect(screen.getByRole("heading", { level: 2, name: "Versionen" })).toBeDefined();
     expect(screen.getByRole("link", { name: "Version 1 herunterladen" })).toBeDefined();
     expect(screen.getByRole("form", { name: "Neue Version hochladen" })).toBeDefined();
-    expect(screen.getByRole("heading", { level: 3, name: "Protokoll der Datei" })).toBeDefined();
+    expect(screen.getByRole("heading", { level: 2, name: "Protokoll der Datei" })).toBeDefined();
   });
 });
 
@@ -144,7 +144,7 @@ describe("visibility per role", () => {
 
     expect(versionForm()).toBeDefined();
     const history = screen.getByTestId("document-history");
-    expect(within(history).getByRole("heading", { level: 3 }).textContent).toBe("Change log of the file");
+    expect(within(history).getByRole("heading", { level: 2 }).textContent).toBe("Change log of the file");
     await waitFor(() => {
       expect(api.requestsTo(AUDIT_PATH)).toHaveLength(1);
     });

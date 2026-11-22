@@ -22,6 +22,7 @@ import { NotFound } from "../components/NotFound.tsx";
 import { Icon } from "../icons/Icon.tsx";
 import { useRole } from "../session.ts";
 import { AnimatedHeading, MaskedTitle } from "../components/TextMotion.tsx";
+import { usePageTitle } from "../hooks/usePageTitle.ts";
 
 /** One file with all its versions (address /documents/:documentId). */
 export function DocumentPage(): ReactElement {
@@ -41,6 +42,10 @@ function DocumentDetails({ id }: { id: number }): ReactElement {
     ...documentRetrieveOptions({ path: { document_id: id } }),
     refetchInterval: (current) => ingestPollInterval(current.state.data?.versions),
   });
+  // The browser title names the file once it is loaded; an unknown file leaves it to NotFound.
+  usePageTitle(
+    query.data?.title ?? (query.error instanceof ApiError && query.error.status === 404 ? null : t("document.heading")),
+  );
 
   if (query.data !== undefined) {
     return <DocumentView document={query.data} error={query.error} />;
@@ -110,7 +115,7 @@ function DocumentView({ document, error }: { document: DocumentDetail; error: un
       </dl>
 
       <section className="space-y-3 rounded border border-line bg-surface p-4">
-        <h3 className="font-semibold">{t("document.versions")}</h3>
+        <h2 className="font-semibold">{t("document.versions")}</h2>
         {/* Configurations are not ingested (the API answers 400), so they get no button. */}
         <VersionTable versions={versions} canIngest={canManage && document.kind === "document"} />
         {canManage ? <NewVersionForm documentId={document.id} kind={document.kind} /> : null}
@@ -119,7 +124,7 @@ function DocumentView({ document, error }: { document: DocumentDetail; error: un
       {/* The change log is readable for managers only (E-43). */}
       {canManage ? (
         <section className="space-y-3" data-testid="document-history">
-          <h3 className="font-semibold">{t("document.history")}</h3>
+          <h2 className="font-semibold">{t("document.history")}</h2>
           <AuditTrail objectType="files.document" objectId={document.id} label={t("document.history")} />
         </section>
       ) : null}

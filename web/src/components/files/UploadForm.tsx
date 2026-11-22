@@ -277,9 +277,9 @@ function UploadShell({
       data-testid={testId}
       className="space-y-3 rounded border border-line bg-surface p-4"
     >
-      <h4 id={titleId} className="font-semibold">
+      <h3 id={titleId} className="font-semibold">
         {title}
-      </h4>
+      </h3>
       <OutcomeMessage state={state} knownFields={knownFields} configurationDocument={configurationDocument} />
       {/* Fresh fields per submission, see UploadState.attempt. */}
       <div key={state.attempt} className="space-y-3">

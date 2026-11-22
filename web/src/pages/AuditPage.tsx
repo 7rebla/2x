@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { AuditTrail, auditObjectTypes } from "../components/AuditTrail.tsx";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
+import { usePageTitle } from "../hooks/usePageTitle.ts";
 import { Button } from "../components/ui/Button.tsx";
 import { Input, Select } from "../components/ui/fields.tsx";
 
@@ -21,6 +22,7 @@ interface AuditFilter {
  */
 export function AuditPage(): ReactElement {
   const { t } = useTranslation("audit");
+  usePageTitle(t("heading"));
   const [objectType, setObjectType] = useState("");
   const [actor, setActor] = useState("");
   const [filter, setFilter] = useState<AuditFilter>({});

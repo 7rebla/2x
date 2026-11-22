@@ -97,7 +97,7 @@ describe("structure tree", () => {
     renderApp("/");
     await openTree();
 
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Struktur");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Struktur");
     expect(countOf(itemNamed("site-item", "Test site A"))).toBe("4 Geräte");
     expect(countOf(itemNamed("area-item", "Test area A2"))).toBe("1 Gerät");
     expect(screen.getByLabelText("Suche")).toBeDefined();

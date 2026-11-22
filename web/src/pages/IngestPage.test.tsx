@@ -234,7 +234,7 @@ describe("filter", () => {
   it("lists failed, running and queued jobs of all devices without a filter", async () => {
     const { api } = await openOverview(reader);
 
-    expect((await screen.findByRole("heading", { level: 2 })).textContent).toBe("Ingestion");
+    expect((await screen.findByRole("heading", { level: 1 })).textContent).toBe("Ingestion");
     expect(await rows()).toHaveLength(3);
     expect(lastList(api).getAll("status")).toEqual(["failed", "running", "queued"]);
     expect(lastList(api).get("device")).toBeNull();
@@ -490,7 +490,7 @@ describe("table", () => {
     await openOverview(manager);
     await rows();
 
-    expect((await screen.findByRole("heading", { level: 2 })).textContent).toBe("Einlesen");
+    expect((await screen.findByRole("heading", { level: 1 })).textContent).toBe("Einlesen");
     expect(screen.getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
       "Gerät",
       "Datei",

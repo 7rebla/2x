@@ -56,7 +56,7 @@ describe("change log page", () => {
     const api = auditApi(() => listOf([deviceChange]));
     renderApp("/audit");
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Change log" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Change log" })).toBeDefined();
     expect((await screen.findByTestId("audit-changes")).textContent).toBe("name: test-device-old → test-device");
     expect(screen.getByTestId("audit-actor").textContent).toBe(manager.username);
     expect(lastQuery(api)).toEqual({});
@@ -119,7 +119,7 @@ describe("change log page", () => {
       expect(api.requestsTo(SESSION).length).toBeGreaterThanOrEqual(2);
     });
     expect(router.state.location.pathname).toBe("/audit");
-    expect(screen.getByRole("heading", { level: 2, name: "Change log" })).toBeDefined();
+    expect(screen.getByRole("heading", { level: 1, name: "Change log" })).toBeDefined();
     expect(screen.getByTestId("user-name").textContent).toBe(manager.username);
   });
 
@@ -136,7 +136,7 @@ describe("change log page", () => {
     auditApi(() => listOf([deviceChange]));
     renderApp("/audit");
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Änderungsprotokoll" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Änderungsprotokoll" })).toBeDefined();
     expect(screen.getByLabelText("Objektart")).toBeDefined();
     expect(screen.getByLabelText("Benutzer")).toBeDefined();
     expect(screen.getByRole("button", { name: "Filter anwenden" })).toBeDefined();

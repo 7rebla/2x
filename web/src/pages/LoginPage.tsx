@@ -11,6 +11,7 @@ import { Button } from "../components/ui/Button.tsx";
 import { Input } from "../components/ui/fields.tsx";
 import { isServerPage, refreshSession, safeNextPath, useSession } from "../session.ts";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
+import { usePageTitle } from "../hooks/usePageTitle.ts";
 
 /** Why the last sign-in did not work; "missing-input" is checked before anything is sent. */
 type Failure = Exclude<SignInResult, { kind: "signed-in" }> | { kind: "missing-input" };
@@ -22,6 +23,7 @@ type Failure = Exclude<SignInResult, { kind: "signed-in" }> | { kind: "missing-i
  */
 export function LoginPage(): ReactElement {
   const { t } = useTranslation("auth");
+  usePageTitle(t("heading"));
   const session = useSession();
   const [searchParams] = useSearchParams();
   const next = safeNextPath(searchParams.get("next"));

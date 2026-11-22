@@ -51,7 +51,18 @@ loaded when it is opened (work order 062): `routes.tsx` wraps it with `lazyPage(
 - `../navigation.ts` lists the navigation entries as data: path, key of the text in `nav.json` and the role
   that may see the entry (`requires`). `Layout` shows only the entries the user's role allows;
   `/import` and `/audit` need `manage`, the others `read`. Pages with a parameter and the sign-in page are not listed.
-- Page headings are `<h2>`, written with `AnimatedHeading` (`MaskedTitle` for the device and file title, `../components/TextMotion.tsx`); the `<h1>` is the name in the header.
+- Headings (work order 078): the page heading is the only `<h1>` of the page, written with `AnimatedHeading`
+  (`MaskedTitle` for the device and file title, `../components/TextMotion.tsx`; both default to level 1). Sections of a
+  page are `<h2>`, parts inside them `<h3>`. The name in the header is a link to `/`, not a heading.
+- Browser title (WCAG 2.4.2): every page calls `usePageTitle(<text of its heading>)` from `../hooks/usePageTitle.ts`
+  before any early return, which sets "Structure – 2x" (page, en dash, `common:appTitle`). The device and file pages
+  pass the name once it is loaded and `null` for a 404, so `NotFound` names the page. Without a page the title is the
+  name of the application.
+- Skip link and focus (WCAG 2.4.1, 2.4.3): the first stop of the keyboard is the link "Skip to content" / "Zum Inhalt";
+  it focuses `<main id="inhalt" tabIndex={-1}>` without writing a fragment into the address. After a change of page
+  (another path; not a change of the query, not the first load, not a redirect before the user has done anything)
+  `Layout` moves the focus to the `<h1>` of the new page, also when it arrives later (loaded on demand, data still
+  loading), but never takes the focus back from an element the user moved to.
 - Colours only through the theme tokens (`bg-surface`, `text-fg-muted`, `border-line` …), never Tailwind's palette; see `../theme/README.md`.
 - Buttons, text fields and choices only through the building blocks `Button`, `Input`, `Select` and `Textarea`
   (`../components/ui/README.md`): one height per size (36 px, 28 px), one disabled and one loading state.
