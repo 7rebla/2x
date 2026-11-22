@@ -1,6 +1,6 @@
 # Auftrag 052 – Such-API
 
-Meilenstein: M2 · Freigabestufe: C · Status: offen
+Meilenstein: M2 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -85,7 +85,50 @@ Voraussetzung: 050 und 051 sind nach `main` zusammengeführt (051 wegen `urls.py
    Empfehlung: (b). Verlinkbare Suchergebnisse bleiben möglich, und auch andere Abfrageteile (Filter) landen nicht mehr im Protokoll.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+### Was wurde gebaut?
+
+- **Endpunkt** `GET /api/v1/search/` (`backend/twox/search/api.py`, `urls.py`, eingebunden in `config/urls.py`), Rechte `CanRead`: anonym und ohne Rolle 403, `read`, `manage` und Superuser 200; andere Methoden 405. Parameter: `q` Pflicht, 1–500 Zeichen nach dem Kürzen; `device` und `plant` als IDs, je wiederholbar, höchstens 100 Werte; `limit` 1–50, Vorgabe 20. Ungültige Werte: 400 mit Fehler am Feld (DRF-Meldungen, deutsch übersetzt durch DRF).
+- **Antwort:** `{"semantic": "used" | "disabled" | "unavailable", "hits": [...]}`, je Treffer `section_id`, `score`, `match_kinds` (`exact`/`keyword`/`semantic`), `snippet` (reiner Text), `highlights` als Liste von `{start, end}` (Positionen in Unicode-Codepoints des Ausschnitts), `page_start`, `page_end`, `heading_path`, `locations` mit `document {id, title}`, `version {id, number, original_filename, is_latest}`, `device {id, key, name}`, `plant {id, key, name}`. Die View ruft nur `get_search_backend()` auf, keine eigene SQL.
+- **Logfilter** (`backend/twox/config/logging.py`, `DropQueryString`): schneidet in jedem Datensatz von `uvicorn.access` den Abfrageteil vom Pfad ab. `LOGGING` definiert dafür den Logger `uvicorn.access` mit uvicorns eigenem `AccessFormatter` (stdout) und dem Filter.
+- **Nachtrag (1)** `HitLocation.version_filename` aus `files_documentversion.original_filename`; API liefert es als `version.original_filename`.
+- **Nachtrag (2)** Ausschlüsse gelten für alle Treffer: Die negierten Teile werden aus dem von PostgreSQL erzeugten `tsquery`-Text gelesen (`negated_parts`, `!'wort'`, `!( 'a' <-> 'b' )`; doppelte Negation `--wort` schließt nichts aus) und als `NOT (…)` auf alle Kandidaten angewandt (exakt, Stichwort, Vektor); bei Phrasen mit der Nachprüfung je Konfiguration wie im Stichwortzweig. Die Vektorsuche lässt solche Abschnitte schon vor dem Nehmen der 50 nächsten weg, die Liste bleibt voll.
+- **Nachtrag (3)** `SearchResult.semantic` vom Typ `SemanticState` (`used`, `disabled`, `unavailable`); `semantic_used` bleibt als Eigenschaft.
+- **Nachtrag (4)** Neue Einstellung `TWOX_SEARCH_EMBED_TIMEOUT_SECONDS` (Vorgabe 20; `settings.py`, `.env.example`, `deploy/compose/compose.yaml`). `embeddings.get_query_embedder()` liefert je Prozess eine Instanz (neu bei geänderten Einstellungen); die Prüfung gegen `/api/tags` gilt 300 s (`QUERY_MODEL_CHECK_SECONDS`), eine gescheiterte Prüfung wird nicht gemerkt; die Namensprüfung auf Cloud-Modelle läuft vor jeder Anfrage. Die Einlese-Seite (`get_embedder`, 120 s) ist unverändert.
+- **Nachtrag (5)** `SearchRequest.keyword_only`; `evaluation.py` nutzt `replace(request, keyword_only=True)` statt `override_settings`.
+
+### Wie wurde getestet?
+
+Neue Tests: `tests/search/test_api.py` (Rechte, Methoden, 15 ungültige Parameterfälle, Länge nach Kürzen, deutsche Feldmeldung, Antwortform mit Attrappe für alle drei Zustände, Ausschnitt mit Markup bleibt Text, IP-Suche mit Seite und Gerät, gleicher Inhalt an zwei Geräten = ein Treffer mit zwei Fundorten und eigenen Dateinamen, Filter Anlage, Grenze `limit`, `semantic` disabled/used/unavailable, Suchtext nicht im Log, Schema), `tests/config/test_logging.py` (Filter, andere Datensätze unverändert, Reihenfolge uvicorn-dann-Django-Konfiguration ergibt Zugriffsprotokoll ohne Abfrageteil). Erweitert: `test_keyword_search.py` (Dateiname, „Kennung -Wort“ für IP, `PLC-01`, `E1234`, Wortformen, Phrase, doppelte Negation, Parser, Zustände bei AI an/aus, `keyword_only`), `test_vector_search.py` („Frage -Wort“ mit Vektortreffer, volle Vektorliste trotz Ausschluss, Zustände, Zeitgrenze, Modellliste einmal für mehrere Suchen, erneut nach 300 s mit inzwischen Cloud-Modell, gescheiterte Prüfung nicht gemerkt, hängender Dienst: Rückfall nach 1 s), `test_evaluation.py` (Stichwortliste mit `keyword_only`, Schalter bleibt an), `test_settings.py` (neue Variable). Kein Test spricht ein echtes Ollama an.
+
+| Kriterium | Ergebnis |
+| --- | --- |
+| 0 | erfüllt: Docker 29.9.3, Compose v5.7.0 |
+| 1 | erfüllt: Build und `up -d --wait` Exit 0 |
+| 2 | erfüllt: `tests/search tests/config` 669 bestanden (vor den Ergänzungen in `test_settings.py`; diese danach mit `test_logging.py` 170 bestanden); `pytest` 2262 bestanden, 0 fehlgeschlagen, 0 übersprungen (6 abgewählt, Marker `worker`); `pytest -m worker` 6 bestanden |
+| 3 | erfüllt: `All checks passed!`, Format ohne Änderung, mypy `Success: no issues found in 191 source files` |
+| 4 | erfüllt: `makemessages` ohne Unterschied (keine neuen eigenen Meldungen; Fehlermeldungen kommen übersetzt aus DRF), keine Migration, Lizenzprüfung bestanden, Schema neu erzeugt und eingecheckt (keine Warnungen) |
+| 5 | erfüllt: lint, typecheck, test (571 bestanden), build, licenses Exit 0; `api:generate` erzeugt den eingecheckten Stand |
+| 6 | erfüllt: Testkonto wie in `ci.yml`, Playwright 41 bestanden |
+| 7 | erfüllt: zwei anonyme Aufrufe (403) und angemeldete Aufrufe (200) mit `?q=zzprobe…`: `D logs api` enthält `zzprobe` 0-mal, aber `"GET /api/v1/search/ HTTP/1.1" 403 Forbidden` bzw. `200 OK`; auch in den Protokollen aller Dienste 0 Treffer. Django-`LOGGING` erreicht `uvicorn.access` nach dem Start von uvicorn. |
+| 8 | teilweise, siehe Abweichung 1: BetrSichV.pdf über die Datei-API hochgeladen, Einlesen startete selbst, `done` nach 295 s, 60 Seiten, 140 Abschnitte, alle eingebettet (Ollama am Host). Über HTTP durch uvicorn mit Sitzung von `e2e-manager`: `q=Prüfung` 200, 70 ms (erste Suche, mit Modellprüfung), `semantic: used`, erster Treffer S. 30–31, `keyword`+`semantic`, hervorgehoben „Prüfung“; `q=Wer darf Arbeitsmittel prüfen?` 54 ms, S. 12; `q=Explosionsgefährdung -Aufzug` 42 ms, S. 30–31 |
+| 9 | erfüllt: beide `down -v` Exit 0 |
+
+### Zweig und Arbeitsverzeichnis
+
+Zweig `worktree-agent-abd2a4320ac3ec085`, Arbeitsverzeichnis `.claude/worktrees/agent-abd2a4320ac3ec085`. Commits: `c09aa07` (Such-Schnittstelle: Nachträge 1–5), `3974ed4` (API, Logfilter, Tests), `6d68964` (Schema und Client), dazu dieser Kurzbericht. Nicht gepusht, nichts zusammengeführt.
+
+### Abweichungen
+
+1. **Kriterium 8 nicht im Browser:** Ich habe kein Kennwort in eine Browseroberfläche eingegeben. Stattdessen wurde im `api`-Container eine Sitzung für `e2e-manager` serverseitig angelegt und `/api/v1/search/` über echtes HTTP durch uvicorn aufgerufen (Werte oben). Der Blick im Browser steht für a7 oder die Leitstelle aus.
+2. **`plant.id` in der Antwort** zusätzlich zu `key` und `name`: Der Filter `plant` nimmt IDs (wie `SearchRequest.plant_ids` und `device`), daher braucht die Oberfläche die ID. Bei Bedarf leicht zu entfernen.
+3. **`highlights` als Objekte `{start, end}`** statt Zahlenpaaren; besser typisiert im erzeugten Client. Positionen sind Unicode-Codepoints (Python), nicht UTF-16-Einheiten: 054 sollte mit `Array.from(snippet)` schneiden, sonst verrutschen Hervorhebungen nach Zeichen außerhalb der BMP.
+4. **`semantic` dreiwertig statt bool** (Nachtrag 3). Für eine Anfrage ganz ohne Suchbares (nur Sonderzeichen) gilt bei KI an `used` (Modell nicht nötig), bei aus `disabled`. `keyword_only` meldet ebenfalls `disabled`; die API setzt es nie.
+5. **Außerhalb der genannten Bereiche, notwendig:** `deploy/compose/compose.yaml` (eine Zeile, damit `TWOX_SEARCH_EMBED_TIMEOUT_SECONDS` den Container erreicht), `backend/tests/search/conftest.py` und `fake_embedder.py` (Attrappe auch für `get_query_embedder`, Zwischenspeicher je Test leeren), `backend/tests/config/test_settings.py` (Test der neuen Variable).
+6. **`uvicorn --no-access-log`** würde das Zugriffsprotokoll nicht mehr abschalten, weil Django den Logger danach neu mit Handler konfiguriert (Kommentar in `settings.py`). Der Dienst nutzt den Schalter nicht; Abschalten ginge über `LOGGING`.
+7. Die Suchanfrage wird samt `-Wort` eingebettet; das ausgeschlossene Wort beeinflusst den Anfragevektor leicht. Die Ausschlussregel selbst gilt trotzdem für alle Treffer.
+8. README/ARCHITECTURE nicht ergänzt (gehört zu 059): neuer Endpunkt, neue Variable `TWOX_SEARCH_EMBED_TIMEOUT_SECONDS`, Logfilter.
+
+### Fragen an a7
+
+Keine blockierenden.
