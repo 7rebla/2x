@@ -21,7 +21,8 @@ The newest job of a version is its ingest state in the files API (051). So
 that an embedding job does not hide the result of the conversion, each new
 job takes over ``page_count`` and a note on a partial conversion
 (``error_detail`` starting with ``PARTIAL_DETAIL_PREFIX``) from the newest
-finished conversion of the version (work order 061).
+finished conversion of the version, also one whose embedding failed (work
+order 061).
 
 The AI features are optional (E-59): with them off, the command says so
 (``DISABLED:``, exit code 0) and creates nothing.
@@ -33,7 +34,7 @@ from dataclasses import dataclass
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from django.db import IntegrityError, transaction
-from django.db.models import Exists, OuterRef, QuerySet
+from django.db.models import Exists, OuterRef, Q, QuerySet
 
 from twox.accounts.models import User
 from twox.accounts.roles import MANAGE, user_role
@@ -97,12 +98,16 @@ class ConversionState:
 def conversion_state(version: DocumentVersion) -> ConversionState:
     """Page count and partial-conversion note of the newest finished conversion of ``version``.
 
-    A conversion job is ``done`` and has a stored Docling answer (its own or
-    one it reused); an embedding job has none. Without such a job the state is
-    empty. Any other detail of the conversion is not taken over.
+    A finished conversion has a stored Docling answer (its own or one it
+    reused; an embedding job has none) and is ``done``, or ``failed`` in the
+    step ``embed``: its sections were written, only the embedding failed, and
+    ``_fail`` of the pipeline leaves page count and answer in place. Without
+    such a job the state is empty. Any other detail is not taken over, so
+    neither is the error text of a failed embedding.
     """
     conversion = (
-        IngestJob.objects.filter(document_version=version, status=IngestStatus.DONE)
+        IngestJob.objects.filter(document_version=version)
+        .filter(Q(status=IngestStatus.DONE) | Q(status=IngestStatus.FAILED, step=IngestStep.EMBED))
         .exclude(result_blob_key="")
         .order_by("-created_at", "-pk")
         .only("page_count", "error_detail")
