@@ -1,0 +1,421 @@
+"""Vector search in PostgreSQL and its fallback to the keyword search (050).
+
+The model interface is always a stand-in (:mod:`tests.search.fake_embedder`
+or the HTTP stand-in of 044); no test talks to a real model service. All
+texts are written for these tests; none comes from a manufacturer's manual.
+"""
+
+import logging
+from collections.abc import Sequence
+
+import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
+from pytest_django.fixtures import Settings
+
+from tests.answers.fake_ollama import FakeOllama, fake_ollama, vector_for
+from tests.search.fake_embedder import (
+    FAKE_MODEL,
+    FakeEmbedder,
+    at_angle,
+    cosine_distance,
+    embed,
+    unit,
+)
+from tests.search.test_keyword_search import (
+    add_sections,
+    add_version,
+    make_device,
+    make_document,
+    make_plant,
+    search,
+    sha256_of,
+)
+from twox.answers import embeddings
+from twox.answers.embeddings import (
+    EmbeddingDimensionError,
+    EmbeddingError,
+    EmbeddingRejectedError,
+    EmbeddingRemoteModelError,
+    EmbeddingUnavailableError,
+)
+from twox.assets.models import Device, Plant
+from twox.files.models import DocumentKind, DocumentVersion
+from twox.ingest.models import EMBEDDING_DIMENSIONS
+from twox.search.interface import MAX_LIMIT, MatchKind
+from twox.search.postgres import (
+    HNSW_EF_SEARCH,
+    HNSW_ITERATIVE_SCAN,
+    VECTOR_CANDIDATES,
+    vector_literal,
+)
+
+pytestmark = pytest.mark.django_db
+
+#: A question that shares no word with the section that answers it.
+QUESTION = "How do I change the lubricant?"
+ANSWER = "Replace the oil of the gearbox every 500 hours."
+
+
+@pytest.fixture
+def plant() -> Plant:
+    return make_plant()
+
+
+@pytest.fixture
+def device(plant: Plant) -> Device:
+    return make_device(plant, "plc-01")
+
+
+@pytest.fixture
+def version(device: Device) -> DocumentVersion:
+    return make_document(device)
+
+
+def section_ids(
+    query: str, device_ids: Sequence[int] = (), plant_ids: Sequence[int] = ()
+) -> list[int]:
+    result = search(query, device_ids=device_ids, plant_ids=plant_ids)
+    return [hit.section_id for hit in result.hits]
+
+
+# --- Found by meaning ---------------------------------------------------------
+
+
+def test_question_without_common_words_is_found_by_vector_only(
+    settings: Settings, version: DocumentVersion, fake_embedder: FakeEmbedder
+) -> None:
+    answer, unrelated = add_sections(version, ANSWER, "The lamp turns green when ready.")
+    embed(answer, at_angle(15))
+    embed(unrelated, at_angle(80))
+
+    result = search(QUESTION)
+
+    assert result.semantic_used is True
+    assert [hit.section_id for hit in result.hits] == [answer.pk, unrelated.pk]
+    assert result.hits[0].match_kinds == [MatchKind.SEMANTIC]
+    # The snippet is the start of the text, without highlights.
+    assert result.hits[0].snippet == ANSWER
+    assert result.hits[0].highlights == []
+    assert fake_embedder.calls == [QUESTION]
+
+    # The keyword search alone does not find it.
+    settings.TWOX_AI_ENABLED = False
+    keyword_only = search(QUESTION)
+    assert keyword_only.hits == []
+    assert keyword_only.semantic_used is False
+
+
+def test_vector_list_holds_the_50_nearest_sections(
+    version: DocumentVersion, fake_embedder: FakeEmbedder
+) -> None:
+    sections = add_sections(version, *(f"Spare part number {index}." for index in range(60)))
+    for index, section in enumerate(sections):
+        embed(section, at_angle(1 + index))
+
+    hits = search("which spare is nearest", limit=MAX_LIMIT).hits
+
+    assert VECTOR_CANDIDATES == 50
+    assert [hit.section_id for hit in hits] == [s.pk for s in sections[:VECTOR_CANDIDATES]]
+
+
+def test_query_goes_through_the_embedding_interface_with_its_prefix(
+    settings: Settings, version: DocumentVersion
+) -> None:
+    # The real client of 044 against the HTTP stand-in: prefix and model as set.
+    settings.TWOX_AI_ENABLED = True
+    settings.TWOX_EMBED_DIMENSIONS = EMBEDDING_DIMENSIONS
+    settings.TWOX_EMBED_MODEL = "bge-m3"
+    settings.TWOX_EMBED_QUERY_PREFIX = "query: "
+    (section,) = add_sections(version, ANSWER)
+    embed(section, vector_for("query: " + QUESTION, EMBEDDING_DIMENSIONS), model="bge-m3")
+
+    with fake_ollama(FakeOllama(dimensions=EMBEDDING_DIMENSIONS)) as (base_url, stand_in):
+        settings.TWOX_LLM_BASE_URL = base_url
+        result = search(QUESTION)
+
+    assert [request.body["input"] for request in stand_in.embed_requests] == [
+        ["query: " + QUESTION]
+    ]
+    assert result.semantic_used is True
+    assert [hit.section_id for hit in result.hits] == [section.pk]
+    assert result.hits[0].match_kinds == [MatchKind.SEMANTIC]
+
+
+# --- Model service fails -------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        EmbeddingUnavailableError("the model service refused the connection"),
+        EmbeddingRejectedError("model 'bge-m3' is not loaded in Ollama"),
+        EmbeddingRemoteModelError("model 'x:cloud' is an Ollama cloud model"),
+        EmbeddingDimensionError("model 'bge-m3' returned 768 values, expected 1024"),
+    ],
+    ids=lambda error: type(error).__name__,
+)
+def test_failing_model_gives_keyword_hits_only(
+    version: DocumentVersion,
+    fake_embedder: FakeEmbedder,
+    caplog: pytest.LogCaptureFixture,
+    error: EmbeddingError,
+) -> None:
+    query = "secret gearbox question 4711"
+    keyword, semantic = add_sections(version, "The gearbox runs.", "Replace the oil.")
+    embed(semantic, at_angle(0))
+    fake_embedder.error = error
+    caplog.set_level(logging.WARNING, logger="twox.search.postgres")
+
+    result = search(query.replace("secret ", "").replace(" question 4711", ""))
+    search(query)
+
+    assert result.semantic_used is False
+    assert [hit.section_id for hit in result.hits] == [keyword.pk]
+    assert result.hits[0].match_kinds == [MatchKind.KEYWORD]
+    records = [r for r in caplog.records if r.name == "twox.search.postgres"]
+    assert len(records) == 2
+    assert all(record.levelno == logging.WARNING for record in records)
+    assert type(error).__name__ in records[0].getMessage()
+    assert "keyword search only" in records[0].getMessage()
+    # Never the query in the server log.
+    assert "secret" not in caplog.text
+    assert "4711" not in caplog.text
+    assert "gearbox" not in caplog.text
+
+
+def test_unreachable_model_service_gives_keyword_hits_only(
+    settings: Settings, version: DocumentVersion, caplog: pytest.LogCaptureFixture
+) -> None:
+    # The real client of 044 against a closed port: connection refused.
+    settings.TWOX_AI_ENABLED = True
+    (section,) = add_sections(version, "The gearbox runs.")
+    caplog.set_level(logging.WARNING, logger="twox.search.postgres")
+
+    result = search("gearbox")
+
+    assert result.semantic_used is False
+    assert [hit.section_id for hit in result.hits] == [section.pk]
+    assert "EmbeddingUnavailableError" in caplog.text
+    assert "gearbox" not in caplog.text
+
+
+def test_vector_of_wrong_length_gives_keyword_hits_only(
+    version: DocumentVersion, fake_embedder: FakeEmbedder, caplog: pytest.LogCaptureFixture
+) -> None:
+    (section,) = add_sections(version, "The gearbox runs.")
+    fake_embedder.queries["gearbox"] = [1.0, 0.0, 0.0]
+    caplog.set_level(logging.WARNING, logger="twox.search.postgres")
+
+    result = search("gearbox")
+
+    assert result.semantic_used is False
+    assert [hit.section_id for hit in result.hits] == [section.pk]
+    assert "returned 3 values" in caplog.text
+
+
+# --- AI features off (E-59) -----------------------------------------------------
+
+
+def test_ai_off_never_asks_the_model(
+    monkeypatch: pytest.MonkeyPatch, version: DocumentVersion, caplog: pytest.LogCaptureFixture
+) -> None:
+    def refuse() -> None:
+        raise AssertionError("the search asked for an embedder with AI features off")
+
+    monkeypatch.setattr(embeddings, "get_embedder", refuse)
+    answer, keyword = add_sections(version, ANSWER, "The pump runs.")
+    embed(answer, at_angle(0))
+    caplog.set_level(logging.DEBUG, logger="twox.search.postgres")
+
+    assert search(QUESTION).hits == []
+    result = search("pump")
+
+    assert result.semantic_used is False
+    assert [hit.section_id for hit in result.hits] == [keyword.pk]
+    # Off is a normal state, not an error: the search logs nothing.
+    assert [r for r in caplog.records if r.name == "twox.search.postgres"] == []
+
+
+# --- Which sections take part -----------------------------------------------------
+
+
+def test_sections_without_embedding_or_of_another_model_come_by_keyword_only(
+    version: DocumentVersion, fake_embedder: FakeEmbedder
+) -> None:
+    current, other_model, without = add_sections(
+        version,
+        "The gearbox of the current model.",
+        "The gearbox of another model.",
+        "The gearbox without embedding.",
+    )
+    embed(current, at_angle(40))
+    embed(other_model, at_angle(0), model="other-embed")
+
+    hits = {hit.section_id: hit for hit in search("gearbox").hits}
+    nearest = search("unrelated words here").hits
+
+    assert hits[current.pk].match_kinds == [MatchKind.KEYWORD, MatchKind.SEMANTIC]
+    assert hits[other_model.pk].match_kinds == [MatchKind.KEYWORD]
+    assert hits[without.pk].match_kinds == [MatchKind.KEYWORD]
+    assert [hit.section_id for hit in nearest] == [current.pk]
+
+
+def test_filters_work_in_the_vector_list(plant: Plant, fake_embedder: FakeEmbedder) -> None:
+    other_plant = make_plant("line-b")
+    first = make_device(plant, "plc-01")
+    second = make_device(plant, "plc-02")
+    third = make_device(other_plant, "plc-03")
+    found: dict[str, int] = {}
+    for degrees, device in ((10, first), (20, second), (30, third)):
+        (section,) = add_sections(make_document(device), f"Notes for {device.key}.")
+        embed(section, at_angle(degrees))
+        found[device.key] = section.pk
+
+    def keys(device_ids: Sequence[int] = (), plant_ids: Sequence[int] = ()) -> list[str]:
+        by_id = {pk: key for key, pk in found.items()}
+        return [by_id[pk] for pk in section_ids(QUESTION, device_ids, plant_ids)]
+
+    assert keys() == ["plc-01", "plc-02", "plc-03"]
+    assert keys(device_ids=[second.pk]) == ["plc-02"]
+    assert keys(device_ids=[third.pk, first.pk]) == ["plc-01", "plc-03"]
+    assert keys(plant_ids=[other_plant.pk]) == ["plc-03"]
+    assert keys(plant_ids=[plant.pk], device_ids=[third.pk]) == []
+
+
+def test_configuration_documents_are_not_in_the_vector_list(
+    device: Device, fake_embedder: FakeEmbedder
+) -> None:
+    (config,) = add_sections(
+        make_document(device, title="Backup", kind=DocumentKind.CONFIGURATION), "hostname plc"
+    )
+    (manual,) = add_sections(make_document(device), "The pump starts.")
+    embed(config, at_angle(0))
+    embed(manual, at_angle(45))
+
+    assert section_ids(QUESTION) == [manual.pk]
+
+
+def test_version_rule_works_in_the_vector_list(
+    version: DocumentVersion, fake_embedder: FakeEmbedder
+) -> None:
+    (old,) = add_sections(version, "Old wording of the oil change.")
+    embed(old, at_angle(0))
+
+    # The newer version has sections, not embedded yet: the old one is not
+    # searched any more, neither by keyword nor by vector.
+    newer = add_version(version.document)
+    (new,) = add_sections(newer, "New wording of the oil change.")
+    assert section_ids(QUESTION) == []
+    assert section_ids("wording") == [new.pk]
+
+    embed(new, at_angle(30))
+    hits = search(QUESTION).hits
+    assert [hit.section_id for hit in hits] == [new.pk]
+    assert hits[0].locations[0].version_number == 2
+    assert hits[0].locations[0].is_latest_version is True
+
+
+def test_older_version_by_vector_while_the_newer_has_no_sections(
+    version: DocumentVersion, fake_embedder: FakeEmbedder
+) -> None:
+    (old,) = add_sections(version, "Old wording of the oil change.")
+    embed(old, at_angle(0))
+    add_version(version.document)
+
+    (hit,) = search(QUESTION).hits
+
+    assert hit.section_id == old.pk
+    assert hit.locations[0].is_latest_version is False
+
+
+def test_same_content_on_two_devices_is_one_semantic_hit(
+    plant: Plant, fake_embedder: FakeEmbedder
+) -> None:
+    first = make_device(plant, "plc-01")
+    second = make_device(plant, "plc-02")
+    shared = sha256_of("shared manual")
+    (one,) = add_sections(make_document(first, sha256=shared), ANSWER)
+    (two,) = add_sections(make_document(second, sha256=shared), ANSWER)
+    embed(one, at_angle(10))
+    embed(two, at_angle(10))
+
+    (hit,) = search(QUESTION).hits
+    (filtered,) = search(QUESTION, device_ids=[second.pk]).hits
+
+    assert hit.match_kinds == [MatchKind.SEMANTIC]
+    assert [location.device_key for location in hit.locations] == ["plc-01", "plc-02"]
+    assert [location.device_key for location in filtered.locations] == ["plc-02"]
+    assert filtered.section_id == two.pk
+
+
+# --- Database side --------------------------------------------------------------
+
+
+def test_vector_query_sets_the_hnsw_options_first(
+    version: DocumentVersion, fake_embedder: FakeEmbedder
+) -> None:
+    (section,) = add_sections(version, ANSWER)
+    embed(section, at_angle(0))
+
+    with CaptureQueriesContext(connection) as queries:
+        assert section_ids(QUESTION) == [section.pk]
+
+    statements = [query["sql"] for query in queries.captured_queries]
+    settings_at = next(i for i, sql in enumerate(statements) if "set_config" in sql)
+    vector_at = next(i for i, sql in enumerate(statements) if "<=>" in sql)
+    assert settings_at < vector_at
+    assert "'hnsw.iterative_scan', 'relaxed_order', true" in statements[settings_at]
+    assert f"'hnsw.ef_search', '{HNSW_EF_SEARCH}', true" in statements[settings_at]
+    assert HNSW_ITERATIVE_SCAN == "relaxed_order"
+    assert HNSW_EF_SEARCH >= VECTOR_CANDIDATES
+
+
+@pytest.mark.django_db(transaction=True)
+def test_hnsw_options_end_with_the_vector_query(
+    version: DocumentVersion, fake_embedder: FakeEmbedder
+) -> None:
+    (section,) = add_sections(version, ANSWER)
+    embed(section, at_angle(0))
+
+    assert section_ids(QUESTION) == [section.pk]
+
+    with connection.cursor() as cursor:
+        cursor.execute("SHOW hnsw.ef_search")
+        assert cursor.fetchone() == ("40",)
+        cursor.execute("SHOW hnsw.iterative_scan")
+        assert cursor.fetchone() == ("off",)
+
+
+def test_distance_is_the_cosine_distance(version: DocumentVersion) -> None:
+    (section,) = add_sections(version, ANSWER)
+    embed(section, at_angle(60))
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT embedding <=> %s::vector FROM ingest_section WHERE id = %s",
+            [vector_literal(unit(0)), section.pk],
+        )
+        (distance,) = cursor.fetchone() or (None,)
+
+    assert distance == pytest.approx(cosine_distance(60))
+
+
+def test_vector_literal_is_the_text_form_of_pgvector() -> None:
+    assert vector_literal([1, 0.5, -2.25e-7]) == "[1.0,0.5,-2.25e-07]"
+
+
+def test_search_with_vector_needs_five_queries_and_a_savepoint(
+    version: DocumentVersion, fake_embedder: FakeEmbedder
+) -> None:
+    add_sections(version, *(f"The chi belt {index} runs." for index in range(10)))
+
+    with CaptureQueriesContext(connection) as queries:
+        assert len(search("chi belt").hits) == 10
+
+    statements = [query["sql"] for query in queries.captured_queries]
+    work = [sql for sql in statements if "SAVEPOINT" not in sql]
+    # Parse, HNSW options, vector search, search, highlights.
+    assert len(work) == 5
+    assert len(statements) - len(work) == 2
+    assert FAKE_MODEL in statements[statements.index(work[2])]

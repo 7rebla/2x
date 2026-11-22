@@ -16,6 +16,7 @@ from django.db import connection
 from pytest_django import DjangoAssertNumQueries
 from pytest_django.fixtures import Settings
 
+from tests.search.fake_embedder import FakeEmbedder, install
 from twox.assets.models import Area, Device, Plant, Site
 from twox.files.models import Document, DocumentKind, DocumentVersion
 from twox.files.storage import key_for_sha256
@@ -721,17 +722,22 @@ def no_network(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.parametrize("ai_enabled", [False, True])
 def test_keyword_search_works_with_and_without_ai(
-    settings: Settings, version: DocumentVersion, no_network: None, ai_enabled: bool
+    monkeypatch: pytest.MonkeyPatch,
+    settings: Settings,
+    version: DocumentVersion,
+    no_network: None,
+    ai_enabled: bool,
 ) -> None:
-    settings.TWOX_AI_ENABLED = ai_enabled
+    # "On" with the stand-in embedder (050); the section has no embedding.
+    if ai_enabled:
+        install(monkeypatch, settings, FakeEmbedder())
     (section,) = add_sections(version, "The psi pump at 192.168.0.5 is ready.")
 
     result = search("psi 192.168.0.5")
 
     assert [hit.section_id for hit in result.hits] == [section.pk]
     assert result.hits[0].match_kinds == [MatchKind.EXACT, MatchKind.KEYWORD]
-    # The vector search comes with 050; this backend never uses it.
-    assert result.semantic_used is False
+    assert result.semantic_used is ai_enabled
 
 
 def test_search_needs_three_queries(
