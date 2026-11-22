@@ -146,4 +146,4 @@ Hinweise aus Welle 1:
 - 039: Landkarte unter `/map` (React Flow 13.0.2, per `lazy()` geladen). Mit den Testfabrik-Daten 28 Knoten, 7 Netzkanten. Grenzen: gleiche private Netze an verschiedenen Standorten werden zu einem Netzknoten zusammengelegt; IPv4-gemappte IPv6-Adressen landen in `::/64`; Netzkanten laufen über die Gruppe „Netzübergang“. Die React-Flow-Namensnennung bleibt sichtbar. Version 13 ist sehr jung (13.0.0 vom 16.11.2026), aber mit Herkunftsnachweis und ohne Installationsskripte veröffentlicht; Rückwechsel auf 12.x wäre ein kleiner Auftrag.
 - 037: Nachweis der M1-Abnahme als Browser-Test `web/e2e/m1-acceptance.spec.ts` und Backend-Test `backend/tests/acceptance/test_m1.py` (Geräteliste der Testfabrik per CSV, eine Datei mit zwei Versionen, Protokoll). Auf frischer Datenbank und im zweiten Lauf grün (20/20). Lücke für später: Die Strukturseite zeigt die Notiz einer Anlage nicht an.
 
-**M1 ist bereit zur Abnahme durch a7.** Alle Aufträge 016–039 sind auf `main`.
+**M1 ist abgenommen (E-49, 22.11.2026).**

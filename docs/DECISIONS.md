@@ -56,6 +56,7 @@ Quelle der Einträge E-01 bis E-13: `STARTUNTERLAGE.md`, Entwurf 2 vom 21.11.202
 | E-46 | GNU gettext (GPL) ist als Werkzeug im Dev-Image und in einer Bau-Stufe zugelassen, nicht im Laufzeit-Image und nicht eingebunden; `.mo`-Dateien kommen nie ins Repository (F-33) | ✔ | 21.11.2026 |
 | E-47 | Font Awesome Free 6.7.2 (CC-BY-4.0) ist als benannte Ausnahme zugelassen, nur als Teil des unveränderten Django-Admins (`admin/img/*.svg`); die Namensnennung liefert die mitgelieferte `admin/img/README.md` | ✔ | 21.11.2026 |
 | E-48 | Eine vereinfachte, **interaktive** Landkarte wird als Vorschau auf M7 vorgezogen (M1b, Auftrag 039): Struktur und Geräte als Knoten, zusätzlich IP-Netze der Geräte; keine abgeleiteten Verbindungen vor M5/M7. Darstellung mit React Flow (`@xyflow/react`, MIT) als neue Abhängigkeit; Lizenz und Version prüft der Bearbeiter an der Quelle | ✔ | 22.11.2026 |
+| E-49 | Meilenstein M1 ist abgenommen (mit der vorgezogenen Landkarten-Vorschau M1b); bekannte Grenzen stehen in `docs/ARCHITECTURE.md`, „Limits and known gaps" | ✔ | 22.11.2026 |
 
 ## Begründungen
 
