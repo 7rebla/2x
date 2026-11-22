@@ -18,5 +18,11 @@
     "heading": "Page not found",
     "text": "There is no page at this address.",
     "home": "Go to the structure"
+  },
+  "pageLoad": {
+    "loading": "Loading page…",
+    "failed": "This page could not be loaded.",
+    "failedHint": "The application may have been updated in the meantime, or the connection to the server was interrupted. Reloading usually helps.",
+    "reload": "Reload"
   }
 }

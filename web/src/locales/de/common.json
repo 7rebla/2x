@@ -18,5 +18,11 @@
     "heading": "Seite nicht gefunden",
     "text": "Unter dieser Adresse gibt es keine Seite.",
     "home": "Zur Struktur"
+  },
+  "pageLoad": {
+    "loading": "Seite wird geladen…",
+    "failed": "Diese Seite konnte nicht geladen werden.",
+    "failedHint": "Vermutlich wurde die Anwendung inzwischen aktualisiert oder die Verbindung zum Server war unterbrochen. Neu laden hilft meist.",
+    "reload": "Neu laden"
   }
 }
