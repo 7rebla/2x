@@ -1,6 +1,6 @@
 # Auftrag 131 – Oberfläche: Antwortstrom und Hook
 
-Meilenstein: M3 · Freigabestufe: B · Status: offen
+Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
 
 Voraussetzung: 130 (Antwort-API mit SSE und Status) ist auf `main`; `web/openapi/schema.yml` und `web/src/api/generated/**` enthalten damit `POST /api/v1/answers/` (Antwort `text/event-stream`) und `GET /api/v1/answers/status/`. Den Ereignisvertrag (Typen `sources`, `delta`, `done`, `error`, Statuswerte, Fehlercodes) legt 122 fest; er steht in `docs/ARCHITECTURE.md`, Abschnitt `answers`.
 
@@ -113,7 +113,33 @@ Eine Sichtprüfung im Browser entfällt, weil der Auftrag keine Oberfläche baut
 Keine. Die einschlägigen Vorgaben D7 (nichts speichern), D9 (Streaming mit Prüfung am Ende) und D10 (keine Antwort bei ausgeschalteter KI) gelten nach Empfehlung bzw. Entscheidung zu 130.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Was wurde gebaut?**
+
+- **Generator (Umfang 1):** hey-api 0.99 erzeugt `answer()` in `sdk.gen.ts` als `client.sse.post` (Rückgabe `ServerSentEventsResult<AnswerResponses>`). Diese Funktion wird genutzt; generierte Dateien unverändert, `api:generate` ohne Unterschied.
+- **`web/src/api/answers.ts`:** `streamAnswer(request, { signal, onEvent }): Promise<AnswerStreamOutcome>`. Ruft `answer()` immer mit `sseMaxRetryAttempts: 1`, eigenem `AbortController` (am äußeren `signal` hängend) und eigener `fetch`-Hülle auf. Die Hülle ruft `fetch` zur Laufzeit, meldet jede Antwort an `reportForbidden`, liest bei Status außerhalb 2xx den Body vor dem generierten Code (`detail` nach den Regeln von `toApiError`/`errorDetail`, Klartext nur bei `text/plain`, gekürzt auf `MAX_DETAIL_LENGTH`, dazu `code`), macht aus Netzfehlern `ApiError("network")` und aus einem 2xx ohne `text/event-stream` `ApiError("invalid-answer")`. Die Hilfen aus `errors.ts` sind lokal nachgebaut (`errors.ts` bleibt unverändert; `errorDetail` ist dort nicht exportiert). Fehler aus `onSseError` werden festgehalten und nach der Schleife ausgewertet. Jedes Ereignis geht durch `parseAnswerEvent` und eine Reihenfolgeprüfung (`sources` zuerst und nur einmal, dann `delta`/`done`; `error` jederzeit); Verstoß → `invalid-answer`, Verbindung wird beendet. Nach `done`/`error` wird nicht weitergelesen.
+  - Ergebnisarten: `completed` · `stream-error` (`code`, `detail`) · `ai-disabled` (409 `ai_disabled` oder Ereignis mit diesem Code) · `aborted` · `interrupted` (Ende ohne `done`/`error`, auch Lesefehler) · `failed` (`error: ApiError`, `code`: bekannter Absage-Code oder null).
+  - `answersStatusQueryOptions()`: generierte `answerStatusOptions()` mit `staleTime` 15 s (Server hält 30 s).
+- **`web/src/pages/answer/events.ts`:** Ereignistypen aus `types.gen.ts` abgeleitet, mit eigenen Literal-Vereinigungen `AnswerResultStatus` (answered, no_evidence, contradiction; bewusst nicht `AnswerStatus`), `AnswerErrorCode` (Liste aus `backend/twox/answers/types.py`) und `AnswerRefusalCode` (ai_disabled, answer_in_progress, chat_not_configured). `parseAnswerEvent(data: unknown): AnswerEvent | null` prüft alle Felder bis in die Fundorte (mind. ein Fundort, `n` ≥ 1, ganze Zahlen). Für 132: `toSearchLocation(location)` bildet die flache Form aus `source_ref_to_json()` auf `SearchLocation` der Suche ab (getestet).
+- **`web/src/pages/answer/useAnswerStream.ts`:** `useReducer`, Zustände `idle | streaming | done | error`, Felder `sources`, `text`, `verified` (nur in `done` true; `text` ist dort `final_text`). `error.failure.cause`: `ai-disabled`, `forbidden`, `http` (mit `ApiError` und Absage-Code), `network`, `invalid-answer`, `interrupted`, `stream` (Code und `detail`). Reducer `answerStreamReducer` exportiert. `ask()` nur ohne laufenden Strom; Ereignisse alter oder abgebrochener Ströme werden verworfen (Abgleich des Controllers), nach Unmount kein `dispatch`.
+  - **Wahl bei `cancel()`:** zurück nach `idle` mit `cancelled: true`; Text und Quellen bis dahin bleiben, `verified: false`. Begründung: Abbruch ist kein Fehler (keine Fehlermeldung), das Formular ist sofort wieder frei, und 132 kann „abgebrochen“ samt ungeprüftem Text anzeigen, ohne einen fünften Zustand zu kennen.
+- **Test-Helfer:** `web/src/test/fakeApi.ts` um `sseEvent()` und `fakeEventStream()` ergänzt (steuerbarer `ReadableStream`, Text- und Byte-Stücke, Schließen, Abreißen; Abbruch des Request-Signals bricht den Body wie ein echter `fetch` ab). Neu `web/src/pages/answer/testData.ts` mit erfundenen Testereignissen (nicht im Auftrag genannt, analog `search/testData.ts`).
+- **Doku:** `web/src/pages/README.md`, Abschnitt „Fetching data“, ein Absatz.
+
+**Wie wurde getestet?** (Compose-Projekte `twox-131-web` und `twox-131`, API-Port 18131)
+
+- Kriterium 0: `docker version`, `docker compose version` Exit 0.
+- Kriterium 1: `lint`, `typecheck`, `test` (50 Dateien, 1039 Tests), `build`, `licenses`, `api:generate` – alle Exit 0; `git diff` auf `web/openapi`, `web/src/api`, `package.json`, `package-lock.json` leer.
+- Kriterium 2: Backend-Job vollständig grün (ruff, format, mypy, pytest 3398 passed, pytest -m worker 6 passed, makemessages ohne Unterschied, makemigrations, Lizenzen, spectacular ohne Unterschied). e2e: 82 passed, 1 skipped.
+- Kriterium 3 (Vitest, jsdom, `fetch`-Stub mit `ReadableStream`): 3.1 Zustandsfolge mit Quellen und Status; 3.2 `cancel()` und Unmount: Strom gestoppt, genau ein `fetch`, Zustand unverändert; 3.3 Netzfehler, 503, Strom ohne `done`, abgerissener Strom: genau ein `fetch` (die Tests würden bei unbegrenztem Neuversuch hängen und scheitern); 3.4 403 → `onForbidden`, Ursache `forbidden`; 3.5 400 → `ApiError` mit Status und Text; 3.6 409 `ai_disabled` und Ereignis `ai_disabled` → `ai-disabled`; 3.7 `final_text` ersetzt Text; 3.8 `<img …>` bleibt String; 3.9 falscher Typ, unbekannter Status, kein JSON, falsche Reihenfolge → `invalid-answer`; 3.10 POST auf `/api/v1/answers/`, `X-CSRFToken`, `Accept-Language`, kein `Last-Event-ID`, Frage nur im Body; 3.11 zweites `ask()` ohne zweiten `fetch`. Dazu Stücke mitten in Zeilen, zwischen CR und LF und mitten im UTF-8-Zeichen.
+- `TextDecoderStream` ist in der jsdom-Umgebung von Vitest vorhanden; keine Testeinrichtung nötig.
+- Kriterium 4: `tsc` und `eslint` ohne Fehler, kein `any`, kein `eslint-disable`. Kriterium 5: keine neue Abhängigkeit. Kriterium 6: `down -v` beider Projekte Exit 0.
+
+**Zweig und Arbeitsverzeichnis:** `worktree-agent-aa013d300ea97afe1`, `.claude/worktrees/agent-aa013d300ea97afe1`.
+
+**Abweichungen und Hinweise**
+
+- Unbekannte Fehlercodes im `error`-Ereignis werden nach der Festlegung der Leitstelle zu `internal`, nicht abgelehnt; unbekannte `status`-Werte in `done` werden abgelehnt (`invalid-answer`, Kriterium 3.9).
+- `api/answers.ts` importiert die Typen und den Wächter aus `pages/answer/events.ts` (Ort laut Auftrag vorgegeben).
+- 409 `answer_in_progress`, 429 und 503 `chat_not_configured` landen als Ursache `http` mit `ApiError` und Code; 132 kann daran eigene Texte hängen.
+- Die ungetrackte `.env` des Arbeitsverzeichnisses war älter als `.env.example` (ohne E2E-Zeilen); ergänzt um Port und die beiden E2E-Zeilen. Der Backend-Lauf lief daher mit den Standardwerten aus `compose.yaml` für die fehlenden `TWOX_ANSWER_*`-Zeilen; grün.
