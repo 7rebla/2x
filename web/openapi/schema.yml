@@ -1729,12 +1729,20 @@ components:
           type: string
           readOnly: true
           description: Technical detail in English. Set for failed and skipped jobs,
-            and for a done job that was converted only in part (then it starts with
-            'converted with ').
+            and as a note for a job that was converted only in part.
         partly_converted:
           type: boolean
           readOnly: true
-          description: True for a done job that was converted only in part; see error_detail.
+          description: True if Docling converted the document only in part (conversion_error_count
+            above 0), also when the embedding failed afterwards.
+        conversion_error_count:
+          type: integer
+          minimum: 0
+          readOnly: true
+          description: Errors Docling reported for a conversion it finished only in
+            part; 0 for a complete conversion and for a job that has not converted
+            anything yet. An embedding job carries the count of the conversion before
+            it.
         section_count:
           type: integer
           readOnly: true
@@ -1776,6 +1784,7 @@ components:
           description: Whether this is the newest job of its version (the job in the
             field ingest of the version); false for an older attempt.
       required:
+      - conversion_error_count
       - created_at
       - device
       - document
@@ -1870,12 +1879,20 @@ components:
           type: string
           readOnly: true
           description: Technical detail in English. Set for failed and skipped jobs,
-            and for a done job that was converted only in part (then it starts with
-            'converted with ').
+            and as a note for a job that was converted only in part.
         partly_converted:
           type: boolean
           readOnly: true
-          description: True for a done job that was converted only in part; see error_detail.
+          description: True if Docling converted the document only in part (conversion_error_count
+            above 0), also when the embedding failed afterwards.
+        conversion_error_count:
+          type: integer
+          minimum: 0
+          readOnly: true
+          description: Errors Docling reported for a conversion it finished only in
+            part; 0 for a complete conversion and for a job that has not converted
+            anything yet. An embedding job carries the count of the conversion before
+            it.
         section_count:
           type: integer
           readOnly: true
@@ -1894,6 +1911,7 @@ components:
           readOnly: true
           nullable: true
       required:
+      - conversion_error_count
       - created_at
       - error_code
       - error_detail

@@ -33,7 +33,6 @@ from twox.answers.embeddings import EmbeddingUnavailableError
 from twox.files.models import DocumentVersion
 from twox.files.storage import key_for_sha256
 from twox.ingest import pipeline, tasks
-from twox.ingest.docling import ConversionErrorItem
 from twox.ingest.models import IngestErrorCode, IngestJob, IngestStatus, IngestStep, Section
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("isolated_services")]
@@ -336,13 +335,19 @@ def test_all_computes_again_for_two_versions_of_the_same_content(
 
 # --- the field ingest of the files API after an embedding job (work order 061) ---
 
+#: Conversion errors of the partial conversions below.
+PARTIAL_ERRORS = 2
 #: A partial-conversion note exactly as the ingest flow writes it (046).
-PARTIAL_NOTE = pipeline._partial_detail(
-    (ConversionErrorItem(component_type="model", module_name="ocr", error_message="x", page_no=3),)
-)
+PARTIAL_NOTE = pipeline.partial_detail(PARTIAL_ERRORS, [3, 5])
 
 #: Fields of ``ingest`` in which an embedding job shows its conversion as before.
-CONVERSION_FIELDS = ("partly_converted", "page_count", "section_count", "error_detail")
+CONVERSION_FIELDS = (
+    "partly_converted",
+    "conversion_error_count",
+    "page_count",
+    "section_count",
+    "error_detail",
+)
 
 
 @pytest.fixture(params=[True, False], ids=["ai_on", "ai_off"])
@@ -363,7 +368,8 @@ def converted(
 ) -> IngestJob:
     """A finished conversion of ``version`` with a stored answer, as the ingest flow leaves it.
 
-    With ``sections=0`` the version keeps the sections it has.
+    With ``detail`` it is a partial conversion with :data:`PARTIAL_ERRORS`
+    errors. With ``sections=0`` the version keeps the sections it has.
     """
     if sections:
         job = add_sections(version, sections)
@@ -374,6 +380,7 @@ def converted(
     IngestJob.objects.filter(pk=job.pk).update(
         page_count=pages,
         error_detail=detail,
+        conversion_error_count=PARTIAL_ERRORS if detail else 0,
         section_count=Section.objects.filter(document_version=version).count(),
         result_blob_key=key_for_sha256(version.sha256),
     )
@@ -444,11 +451,13 @@ def test_embedding_after_a_partial_conversion_keeps_the_note_and_the_pages(
         return
     [job] = embed_jobs()
     assert (job.page_count, job.error_detail) == (60, PARTIAL_NOTE)
+    assert job.conversion_error_count == PARTIAL_ERRORS
     assert (queued["id"], queued["status"], queued["step"]) == (job.pk, "queued", "embed")
     assert (queued["page_count"], queued["error_detail"]) == (60, PARTIAL_NOTE)
+    assert same_conversion(queued, before)
     assert (done["id"], done["status"], done["step"]) == (job.pk, "done", "embed")
     assert same_conversion(done, before)
-    assert done["partly_converted"] is True
+    assert (done["partly_converted"], done["conversion_error_count"]) == (True, PARTIAL_ERRORS)
     assert len(embedder.texts) == 3
 
 
@@ -561,8 +570,51 @@ def test_embedding_after_a_failed_embedding_keeps_the_partial_note(
     [job_id] = sent
     job = IngestJob.objects.get(pk=job_id)
     assert (job.page_count, job.error_detail) == (60, PARTIAL_NOTE)
+    assert job.conversion_error_count == PARTIAL_ERRORS
     assert (done["id"], done["status"]) == (job.pk, "done")
     assert (done["partly_converted"], done["page_count"]) == (True, 60)
+
+
+def test_embedding_after_a_partial_conversion_whose_embedding_failed_keeps_the_count(
+    embedder: FakeEmbedder | None,
+    manager: User,
+    sent: SentEmbeds,
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+) -> None:
+    # E-62, the gap of 061: the conversion was partial, then its embedding
+    # failed and the error text replaced the note. The field kept the count;
+    # the new embedding job takes it over and writes a note from it.
+    version = make_version(b"partly converted, then the embedding failed")
+    failed = converted(version, pages=60, detail=PARTIAL_NOTE)
+    IngestJob.objects.filter(pk=failed.pk).update(
+        status=IngestStatus.FAILED,
+        step=IngestStep.EMBED,
+        error_code=IngestErrorCode.EMBEDDING_UNAVAILABLE,
+        error_detail="no answer from the model service (gave up after 5 retries)",
+    )
+    client = client_for("read")
+    before = ingest_state(client, version)
+    assert (before["status"], before["partly_converted"]) == ("failed", True)
+
+    queued, done = embed_with_command(
+        client, version, manager, sent, django_capture_on_commit_callbacks, ai=embedder is not None
+    )
+
+    if embedder is None:
+        assert queued == done == before
+        return
+    [job_id] = sent
+    job = IngestJob.objects.get(pk=job_id)
+    note = pipeline.partial_detail(PARTIAL_ERRORS)
+    assert (job.page_count, job.conversion_error_count, job.error_detail) == (
+        60,
+        PARTIAL_ERRORS,
+        note,
+    )
+    assert (queued["status"], queued["partly_converted"]) == ("queued", True)
+    assert (done["id"], done["status"], done["error_code"]) == (job.pk, "done", "")
+    assert (done["partly_converted"], done["conversion_error_count"]) == (True, PARTIAL_ERRORS)
+    assert (done["error_detail"], done["page_count"]) == (note, 60)
 
 
 def test_failed_embedding_shows_as_failed_embedding_with_its_sections(
@@ -593,7 +645,8 @@ def test_failed_embedding_shows_as_failed_embedding_with_its_sections(
     assert (done["status"], done["step"]) == ("failed", "embed")
     assert done["error_code"] == "embedding_unavailable"
     assert "gave up after" in done["error_detail"]
-    assert done["partly_converted"] is False
+    # E-62: the error text replaced the note, the count of the conversion stays.
+    assert (done["partly_converted"], done["conversion_error_count"]) == (True, PARTIAL_ERRORS)
     # The sections are there; the keyword search keeps working (E-59).
     assert (done["section_count"], done["page_count"]) == (3, 60)
     assert Section.objects.filter(document_version=version).count() == 3

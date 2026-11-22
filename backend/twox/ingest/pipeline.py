@@ -109,10 +109,6 @@ from twox.ingest.models import (
     Section,
     section_rows,
 )
-
-# Re-exported: the start of the detail of a partly converted document; such an
-# answer is never reused (work order 061 moved it to the models).
-from twox.ingest.models import PARTIAL_DETAIL_PREFIX as PARTIAL_DETAIL_PREFIX
 from twox.ingest.sections import UnsupportedDocumentError, build_sections
 
 logger = logging.getLogger(__name__)
@@ -348,7 +344,11 @@ def _update(job: IngestJob, **fields: object) -> bool:
 
 
 def _fail(job: IngestJob, code: IngestErrorCode, detail: str) -> StepResult:
-    """End the job as ``failed``; ``detail`` must already be clean."""
+    """End the job as ``failed``; ``detail`` must already be clean.
+
+    ``conversion_error_count`` stays: a partial conversion whose embedding
+    fails is still shown as partly converted (E-62).
+    """
     now = timezone.now()
     IngestJob.objects.filter(pk=job.pk, status=IngestStatus.RUNNING).update(
         status=IngestStatus.FAILED,
@@ -533,16 +533,18 @@ def _reusable_job(job: IngestJob, storage: BlobStorage) -> IngestJob | None:
     Only a job that is ``done`` counts: its answer gave sections. An answer
     that could not be read (``conversion_failed``) is never reused, so a new
     attempt asks Docling again. Neither is a partial answer (``partial_success``,
-    for example after Docling's ``document_timeout``): only a complete
-    conversion is reused; the next job of the same content asks Docling again.
+    for example after Docling's ``document_timeout``; ``conversion_error_count``
+    above 0): only a complete conversion is reused; the next job of the same
+    content asks Docling again.
     """
     candidates = (
         IngestJob.objects.filter(
-            document_version__sha256=job.document_version.sha256, status=IngestStatus.DONE
+            document_version__sha256=job.document_version.sha256,
+            status=IngestStatus.DONE,
+            conversion_error_count=0,
         )
         .exclude(pk=job.pk)
         .exclude(result_blob_key="")
-        .exclude(error_detail__startswith=PARTIAL_DETAIL_PREFIX)
         .order_by("-pk")
     )
     for candidate in candidates:
@@ -662,12 +664,25 @@ def _page_count(document: dict[str, Any]) -> int | None:
     return len(pages) if isinstance(pages, dict) and pages else None
 
 
-def _partial_detail(errors: tuple[ConversionErrorItem, ...]) -> str:
-    """A short note for a partly converted document: number of errors and their pages."""
-    pages = sorted({error.page_no for error in errors if error.page_no is not None})
-    text = f"{PARTIAL_DETAIL_PREFIX}{len(errors)} errors"
-    if pages:
-        text += f" on pages {', '.join(str(page) for page in pages[:20])}"
+def conversion_error_count(errors: Sequence[ConversionErrorItem]) -> int:
+    """``conversion_error_count`` of a partial conversion: its errors, at least 1.
+
+    Docling may answer ``partial_success`` without listing an error; the
+    conversion is still partial, so the count is never 0 for it.
+    """
+    return max(len(errors), 1)
+
+
+def partial_detail(count: int, pages: Iterable[int] = ()) -> str:
+    """A short note for people on a partly converted document: number of errors and their pages.
+
+    Only text for ``error_detail``; whether a job is partly converted is
+    :attr:`IngestJob.conversion_error_count` (E-62).
+    """
+    text = f"converted with {count} errors"
+    numbers = sorted(set(pages))
+    if numbers:
+        text += f" on pages {', '.join(str(page) for page in numbers[:20])}"
     return text
 
 
@@ -682,11 +697,14 @@ def _finish(job: IngestJob, storage: BlobStorage) -> StepResult:
         result = load_result(cast(BinaryIO, stream))
     drafts = build_sections(result.document, max_chars=settings.TWOX_SECTION_MAX_CHARS)
     detail = ""
+    error_count = 0
     if result.status == TaskStatus.PARTIAL_SUCCESS:
         logger.warning("ingest: job %s, partial conversion: %s", job.pk, result.errors)
-        # Built from numbers only; not cleaned, so that the prefix stays
-        # recognisable (see _reusable_job).
-        detail = _partial_detail(result.errors)
+        error_count = conversion_error_count(result.errors)
+        # Built from numbers only, so there is nothing to clean.
+        detail = partial_detail(
+            error_count, (error.page_no for error in result.errors if error.page_no is not None)
+        )
     ai_enabled = bool(settings.TWOX_AI_ENABLED)
 
     with transaction.atomic():
@@ -710,6 +728,9 @@ def _finish(job: IngestJob, storage: BlobStorage) -> StepResult:
             "page_count": _page_count(result.document),
             "error_code": "",
             "error_detail": detail[:ERROR_DETAIL_MAX_LENGTH],
+            # Also for a reused answer: it is read again here (always complete,
+            # see _reusable_job). A failed embedding later leaves it in place.
+            "conversion_error_count": error_count,
             "updated_at": now,
         }
         if ai_enabled:

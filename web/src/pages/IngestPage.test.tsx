@@ -42,6 +42,7 @@ function job(id: number, status: IngestStatusEnum, more: Partial<IngestJob> = {}
     error_code: "",
     error_detail: "",
     partly_converted: false,
+    conversion_error_count: 0,
     section_count: null,
     page_count: null,
     created_at: new Date(Date.UTC(2026, 10, 1, 8, 0, id)).toISOString(),

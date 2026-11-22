@@ -329,7 +329,7 @@ def test_partial_answer_is_not_reused() -> None:
     first = make_job(make_version(device="dps-plc"))
     run_job(first, FakeConverter(statuses=[TaskStatus.PARTIAL_SUCCESS], answer=partial))
     assert first.status == IngestStatus.DONE
-    assert first.error_detail.startswith(pipeline.PARTIAL_DETAIL_PREFIX)
+    assert first.conversion_error_count == 1
     second = make_job(make_version(device="hbw-plc"))
     converter = FakeConverter()
 
@@ -340,6 +340,7 @@ def test_partial_answer_is_not_reused() -> None:
         None,
         "",
     )
+    assert second.conversion_error_count == 0
     assert len(converter.submissions) == 1
     # The complete answer of the second job is reused by a third.
     third = make_job(make_version(device="vgr-plc"))
@@ -349,13 +350,14 @@ def test_partial_answer_is_not_reused() -> None:
 
 def test_partial_note_survives_a_file_name_like_its_words() -> None:
     # The note is built from numbers only and is not cleaned: a file named
-    # like a word of it must not hide the prefix that excludes it from reuse.
+    # like a word of it does not change it. Docling listed no error here; the
+    # conversion is partial all the same, so the count is 1.
     partial = result_answer(fixture_document(), status="partial_success", errors=[])
     job = make_job(make_version(filename="converted.pdf"))
 
     run_job(job, FakeConverter(statuses=[TaskStatus.PARTIAL_SUCCESS], answer=partial))
 
-    assert job.error_detail == "converted with 0 errors"
+    assert (job.error_detail, job.conversion_error_count) == ("converted with 1 errors", 1)
 
 
 # --- Errors ------------------------------------------------------------------------
@@ -567,6 +569,7 @@ def test_partial_success_ends_done_with_a_note() -> None:
 
     assert (job.status, job.error_code) == ("done", "")
     assert job.error_detail == "converted with 1 errors on pages 3"
+    assert job.conversion_error_count == 1
     assert job.section_count and job.section_count > 0
 
 

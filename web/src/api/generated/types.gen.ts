@@ -378,13 +378,17 @@ export type IngestJob = {
      */
     error_code: ErrorCodeEnum | BlankEnum;
     /**
-     * Technical detail in English. Set for failed and skipped jobs, and for a done job that was converted only in part (then it starts with 'converted with ').
+     * Technical detail in English. Set for failed and skipped jobs, and as a note for a job that was converted only in part.
      */
     readonly error_detail: string;
     /**
-     * True for a done job that was converted only in part; see error_detail.
+     * True if Docling converted the document only in part (conversion_error_count above 0), also when the embedding failed afterwards.
      */
     readonly partly_converted: boolean;
+    /**
+     * Errors Docling reported for a conversion it finished only in part; 0 for a complete conversion and for a job that has not converted anything yet. An embedding job carries the count of the conversion before it.
+     */
+    readonly conversion_error_count: number;
     readonly section_count: number | null;
     readonly page_count: number | null;
     readonly created_at: string;
@@ -453,13 +457,17 @@ export type IngestJobSummary = {
      */
     error_code: ErrorCodeEnum | BlankEnum;
     /**
-     * Technical detail in English. Set for failed and skipped jobs, and for a done job that was converted only in part (then it starts with 'converted with ').
+     * Technical detail in English. Set for failed and skipped jobs, and as a note for a job that was converted only in part.
      */
     readonly error_detail: string;
     /**
-     * True for a done job that was converted only in part; see error_detail.
+     * True if Docling converted the document only in part (conversion_error_count above 0), also when the embedding failed afterwards.
      */
     readonly partly_converted: boolean;
+    /**
+     * Errors Docling reported for a conversion it finished only in part; 0 for a complete conversion and for a job that has not converted anything yet. An embedding job carries the count of the conversion before it.
+     */
+    readonly conversion_error_count: number;
     readonly section_count: number | null;
     readonly page_count: number | null;
     readonly created_at: string;

@@ -57,6 +57,7 @@ export function ingestJob(status: IngestStatusEnum, more: Partial<Omit<IngestJob
     error_code: "",
     error_detail: "",
     partly_converted: false,
+    conversion_error_count: 0,
     section_count: status === "done" ? 40 : null,
     page_count: status === "done" ? 12 : null,
     created_at: STAMP,

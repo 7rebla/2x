@@ -19,10 +19,10 @@ version that already has a queued or running job is skipped and counted.
 
 The newest job of a version is its ingest state in the files API (051). So
 that an embedding job does not hide the result of the conversion, each new
-job takes over ``page_count`` and a note on a partial conversion
-(``error_detail`` starting with ``PARTIAL_DETAIL_PREFIX``) from the newest
+job takes over ``page_count`` and ``conversion_error_count`` from the newest
 finished conversion of the version, also one whose embedding failed (work
-order 061).
+orders 061 and 068), together with a note on a partial conversion in
+``error_detail`` for people.
 
 The AI features are optional (E-59): with them off, the command says so
 (``DISABLED:``, exit code 0) and creates nothing.
@@ -42,13 +42,12 @@ from twox.files.models import DocumentVersion
 from twox.ingest import tasks
 from twox.ingest.models import (
     ACTIVE_STATUSES,
-    PARTIAL_DETAIL_PREFIX,
     IngestJob,
     IngestStatus,
     IngestStep,
     Section,
 )
-from twox.ingest.pipeline import needs_embedding
+from twox.ingest.pipeline import needs_embedding, partial_detail
 from twox.ingest.services import SEND_RETRY_POLICY
 
 logger = logging.getLogger(__name__)
@@ -92,33 +91,43 @@ class ConversionState:
     """What an embedding job takes over from the conversion of its version."""
 
     page_count: int | None = None
+    conversion_error_count: int = 0
     error_detail: str = ""
 
 
 def conversion_state(version: DocumentVersion) -> ConversionState:
-    """Page count and partial-conversion note of the newest finished conversion of ``version``.
+    """Page count and conversion errors of the newest finished conversion of ``version``.
 
     A finished conversion has a stored Docling answer (its own or one it
     reused; an embedding job has none) and is ``done``, or ``failed`` in the
     step ``embed``: its sections were written, only the embedding failed, and
-    ``_fail`` of the pipeline leaves page count and answer in place. Without
-    such a job the state is empty. Any other detail is not taken over, so
-    neither is the error text of a failed embedding.
+    ``_fail`` of the pipeline leaves page count, ``conversion_error_count``
+    and answer in place. Without such a job the state is empty.
+
+    ``error_detail`` is the note for people on a partial conversion only: of
+    a ``done`` conversion its own note; of a failed one, whose detail is the
+    embedding error, a note built from the count. Of a complete conversion
+    nothing is taken over.
     """
     conversion = (
         IngestJob.objects.filter(document_version=version)
         .filter(Q(status=IngestStatus.DONE) | Q(status=IngestStatus.FAILED, step=IngestStep.EMBED))
         .exclude(result_blob_key="")
         .order_by("-created_at", "-pk")
-        .only("page_count", "error_detail")
+        .only("status", "page_count", "conversion_error_count", "error_detail")
         .first()
     )
     if conversion is None:
         return ConversionState()
-    detail = conversion.error_detail
+    count = conversion.conversion_error_count
+    if count == 0:
+        detail = ""
+    elif conversion.status == IngestStatus.DONE:
+        detail = conversion.error_detail
+    else:
+        detail = partial_detail(count)
     return ConversionState(
-        page_count=conversion.page_count,
-        error_detail=detail if detail.startswith(PARTIAL_DETAIL_PREFIX) else "",
+        page_count=conversion.page_count, conversion_error_count=count, error_detail=detail
     )
 
 
@@ -242,6 +251,7 @@ class Command(BaseCommand):
                             requested_by=user,
                             section_count=Section.objects.filter(document_version=version).count(),
                             page_count=state.page_count,
+                            conversion_error_count=state.conversion_error_count,
                             error_detail=state.error_detail,
                         )
                 except IntegrityError:

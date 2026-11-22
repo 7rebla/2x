@@ -541,6 +541,10 @@ msgid "section count"
 msgstr "Zahl der Abschnitte"
 
 #: twox/ingest/models.py
+msgid "conversion errors"
+msgstr "Umwandlungsfehler"
+
+#: twox/ingest/models.py
 msgid "started at"
 msgstr "begonnen am"
 
