@@ -206,3 +206,25 @@ Keine, die den Auftrag aufhalten. Umgesetzt werden die Vorgaben nach Empfehlung:
 7. Lokal bleiben die Images `twox-126-*`; die ignorierte `.env` hat `TWOX_API_PORT=18126` und ein leeres `TWOX_CHAT_MODEL`.
 
 Offene Fragen an a7: keine.
+
+### Nachbesserung (nach Prüfung der Leitstelle)
+
+1. **Rückgabetyp:** `answer()` liefert `Generator[AnswerEvent, None, None]`, damit Aufrufer (130) `close()` typgerecht aufrufen können. Der Docstring sagt: Wer den Strom nicht zu Ende liest, ruft `close()` (oder nutzt `contextlib.closing`); sonst bleibt der Strom bis zur Speicherbereinigung offen. Die `type: ignore` an `close()` in den Tests sind entfallen.
+   - Tests:
+     - `test_closing_after_the_first_delta_closes_the_stream` prüft jetzt bei abgeschalteter Speicherbereinigung (`gc.disable()`): `close()` selbst schließt den `ChatStream`.
+     - Neu `test_closing_after_the_sources_opens_no_stream`: Der `ChatStream` wird erst nach dem Ereignis `sources` geöffnet. Ein `close()` direkt danach (bei abgeschalteter Speicherbereinigung) hat also keinen Strom zu schließen. Es fragt kein Modell: `stream()` und `get_chat_model()` werden nicht gerufen, und der Generator ist sofort beendet. Ein Strom, der nach `sources` schon offen ist, wird von `close()` sofort geschlossen; das zeigt der Test nach dem ersten `delta`.
+     - Neu `test_contextlib_closing_closes_the_stream`.
+2. **Fehlercode für fehlende Modelle:** `ChatRejectedError` unterscheidet die Fälle nicht selbst, wohl aber über `__cause__` (aus 121, `chat.py` unverändert):
+   - `llm_guard.ModelNotLoadedError` (nicht in `/api/tags`) oder `urllib.error.HTTPError` mit 404 ergeben `model_unavailable`.
+   - Ohne diese Ursache gilt `ChatRejectedError` als ausdrückliche Abweisung und ergibt `model_rejected`. Das sind die fehlende Fähigkeit `completion` (ohne Ursache) und andere HTTP-4xx-Fehler.
+   - `ChatRemoteModelError` ergibt `model_rejected`.
+   - Tests:
+     - Die Zuordnungstabelle hat neue Fälle mit Ursache.
+     - Neu `test_errors_of_the_real_chat_client_map_to_their_codes` mit dem echten `OpenAICompatibleChat` gegen `fake_ollama`. Nicht geladen und HTTP 404 ergeben `model_unavailable`. HTTP 400, Einbettungsmodell und Cloud-Modell ergeben `model_rejected`.
+   - Docstring und `docs/ARCHITECTURE.md` sind angepasst. Abweichung 3 oben gilt entsprechend.
+3. **Prüfungen (twox-126):**
+   - `ruff check .`, `ruff format --check .` und `mypy .` sind grün.
+   - `pytest`: 3241 passed, 6 deselected, 0 fehlgeschlagen, 0 übersprungen. `pytest -m worker`: 6 passed.
+   - `makemessages` und `spectacular` ohne Unterschied; „No changes detected“; „License check passed.“
+   - `ask "Testfrage"` im `api`-Container: `status: no_evidence …`, Exit 0.
+   - `down -v` Exit 0.

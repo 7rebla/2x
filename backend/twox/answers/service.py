@@ -57,8 +57,10 @@ and recordings (work order 135) can replace them with ``monkeypatch``.
 """
 
 import logging
-from collections.abc import Iterator, Sequence
+import urllib.error
+from collections.abc import Generator, Sequence
 from dataclasses import dataclass
+from http import HTTPStatus
 from time import monotonic
 
 from django.conf import settings
@@ -66,7 +68,7 @@ from django.conf import settings
 from twox.answers import chat as chat_module
 from twox.answers import citations, context, prompt, types
 from twox.answers.chat import ChatModel, ChatStream
-from twox.answers.llm_guard import is_timeout
+from twox.answers.llm_guard import ModelNotLoadedError, is_timeout
 from twox.answers.types import (
     AnswerEvent,
     AnswerStatus,
@@ -87,11 +89,30 @@ NO_MODEL = "-"
 _FAILURES = frozenset(code.value for code in ErrorCode if code is not ErrorCode.AI_DISABLED)
 
 
+def _is_missing_model(error: chat_module.ChatRejectedError) -> bool:
+    """Whether a refusal means "no such model": not in ``/api/tags`` or HTTP 404.
+
+    :mod:`twox.answers.chat` raises :class:`~twox.answers.chat.ChatRejectedError`
+    for both a missing model and an explicit refusal; the cause tells them apart.
+    """
+    cause = error.__cause__
+    if isinstance(cause, ModelNotLoadedError):
+        return True
+    return isinstance(cause, urllib.error.HTTPError) and cause.code == HTTPStatus.NOT_FOUND
+
+
 def chat_error_code(error: BaseException) -> ErrorCode:
-    """The fixed code for an exception of the chat model (or of getting it)."""
+    """The fixed code for an exception of the chat model (or of getting it).
+
+    A model that is missing (not loaded, HTTP 404) is ``model_unavailable``;
+    ``model_rejected`` is left for models refused on purpose (a cloud model,
+    no capability ``completion``, another HTTP 4xx).
+    """
     match error:
         case chat_module.ChatDisabledError():
             return ErrorCode.AI_DISABLED
+        case chat_module.ChatRejectedError() if _is_missing_model(error):
+            return ErrorCode.MODEL_UNAVAILABLE
         case chat_module.ChatRejectedError() | chat_module.ChatRemoteModelError():
             return ErrorCode.MODEL_REJECTED
         case chat_module.ChatError():
@@ -164,7 +185,7 @@ def answer(
     plant_ids: Sequence[int] = (),
     chat: ChatModel | None = None,
     seed: int | None = None,
-) -> Iterator[AnswerEvent]:
+) -> Generator[AnswerEvent]:
     """The events of the answer to ``question``, within the devices and plants given.
 
     Returns a generator: ``sources``, then ``delta`` pieces, then ``done``;
@@ -178,8 +199,12 @@ def answer(
     :meth:`~twox.answers.chat.ChatModel.stream` unchanged; ``None`` sends none.
 
     Raises :class:`ValueError` at once for an empty question (with the AI
-    features on). Close the generator when it is not read to its end; that
-    closes the stream of the model.
+    features on).
+
+    A caller that does not read the events to their end must call
+    ``close()`` on the generator (or use :func:`contextlib.closing`): that
+    closes the stream of the model at once, and a model fetched here.
+    Without it the stream stays open until the generator is garbage-collected.
     """
     if settings.TWOX_AI_ENABLED and not question.strip():
         raise ValueError("the question must not be empty")
@@ -199,7 +224,7 @@ def _events(
     plant_ids: tuple[int, ...],
     chat: ChatModel | None,
     seed: int | None,
-) -> Iterator[AnswerEvent]:
+) -> Generator[AnswerEvent]:
     outcome = _Outcome(started=monotonic())
     model: ChatModel | None = None
     owned = False

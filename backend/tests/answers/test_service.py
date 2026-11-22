@@ -7,18 +7,22 @@ stand-in put in place with ``monkeypatch`` where only the flow matters. All
 texts are written for these tests (an invented gripper G-12).
 """
 
+import contextlib
+import gc
 import json
 import logging
 import socket
 import urllib.error
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from email.message import Message
 
 import pytest
 from django.db import DatabaseError, connection
 from django.test.utils import CaptureQueriesContext
 from pytest_django.fixtures import Settings
 
+from tests.answers.fake_ollama import CHAT_MODEL, EMBEDDING_ONLY_MODEL, FakeOllama, fake_ollama
 from tests.search.fake_embedder import FakeEmbedder, at_angle, embed
 from tests.search.test_keyword_search import (
     add_sections,
@@ -38,8 +42,10 @@ from twox.answers.chat import (
     ChatStream,
     ChatUnavailableError,
     FakeChatModel,
+    OpenAICompatibleChat,
 )
 from twox.answers.context import ContextSelection
+from twox.answers.llm_guard import ModelNotLoadedError
 from twox.answers.service import answer
 from twox.answers.types import (
     CONTRADICTION_PHRASE,
@@ -400,11 +406,23 @@ def with_cause(error: ChatError, cause: BaseException) -> ChatError:
     return error
 
 
+def http_error(code: int) -> urllib.error.HTTPError:
+    return urllib.error.HTTPError("http://10.9.8.7:11434/v1", code, SECRET, Message(), None)
+
+
 CHAT_ERRORS: list[tuple[BaseException, ErrorCode]] = [
     (ChatDisabledError(SECRET), ErrorCode.AI_DISABLED),
     (ChatUnavailableError(SECRET), ErrorCode.MODEL_UNAVAILABLE),
+    # A model refused on purpose (no capability completion: raised without a cause).
     (ChatRejectedError(SECRET), ErrorCode.MODEL_REJECTED),
     (ChatRemoteModelError(SECRET), ErrorCode.MODEL_REJECTED),
+    (with_cause(ChatRejectedError(SECRET), http_error(400)), ErrorCode.MODEL_REJECTED),
+    # A missing model: not in /api/tags, or HTTP 404 from /chat/completions.
+    (
+        with_cause(ChatRejectedError(SECRET), ModelNotLoadedError(SECRET)),
+        ErrorCode.MODEL_UNAVAILABLE,
+    ),
+    (with_cause(ChatRejectedError(SECRET), http_error(404)), ErrorCode.MODEL_UNAVAILABLE),
     (with_cause(ChatUnavailableError(SECRET), TimeoutError(SECRET)), ErrorCode.TIMEOUT),
     (
         with_cause(ChatUnavailableError(SECRET), urllib.error.URLError(TimeoutError(SECRET))),
@@ -422,6 +440,49 @@ CHAT_ERRORS: list[tuple[BaseException, ErrorCode]] = [
 @pytest.mark.parametrize(("error", "code"), CHAT_ERRORS)
 def test_chat_errors_map_to_fixed_codes(error: BaseException, code: ErrorCode) -> None:
     assert service.chat_error_code(error) is code
+
+
+@pytest.mark.parametrize(
+    ("model", "models", "chat_status", "code"),
+    [
+        # Not in /api/tags: missing, not refused.
+        ("other-chat", [CHAT_MODEL], 200, ErrorCode.MODEL_UNAVAILABLE),
+        # HTTP 404 from /chat/completions: missing as well.
+        ("local-chat", [CHAT_MODEL], 404, ErrorCode.MODEL_UNAVAILABLE),
+        # Refused on purpose: another HTTP 4xx, no capability completion, a cloud model.
+        ("local-chat", [CHAT_MODEL], 400, ErrorCode.MODEL_REJECTED),
+        ("bge-m3", [EMBEDDING_ONLY_MODEL], 200, ErrorCode.MODEL_REJECTED),
+        (
+            "big",
+            [{"name": "big:latest", "model": "big:latest", "remote_host": "x"}],
+            200,
+            ErrorCode.MODEL_REJECTED,
+        ),
+    ],
+)
+@pytest.mark.usefixtures("ai_on")
+def test_errors_of_the_real_chat_client_map_to_their_codes(
+    monkeypatch: pytest.MonkeyPatch,
+    model: str,
+    models: list[dict[str, object]],
+    chat_status: int,
+    code: ErrorCode,
+) -> None:
+    use_context(monkeypatch)
+    with fake_ollama(FakeOllama(models=[dict(entry) for entry in models])) as (base_url, fake):
+        fake.chat_status = chat_status
+        client = OpenAICompatibleChat(
+            base_url=base_url,
+            model=model,
+            timeout=5.0,
+            max_tokens=64,
+            temperature=0.0,
+            reasoning_effort="none",
+        )
+        events = list(answer(QUESTION, chat=client))
+
+    assert types_of(events) == ["sources", "error"]
+    assert events[-1] == ErrorEvent(code=code)
 
 
 @pytest.mark.parametrize(("error", "code"), CHAT_ERRORS)
@@ -541,11 +602,51 @@ def test_closing_after_the_first_delta_closes_the_stream(monkeypatch: pytest.Mon
     assert isinstance(next(events), SourcesEvent)
     assert next(events) == DeltaEvent(text="Der Greifer ")
     assert not chat.streams[0].closed
-    events.close()  # type: ignore[attr-defined]
+    # close() itself frees the stream, not the garbage collector.
+    gc.disable()
+    try:
+        events.close()
+        assert chat.streams[0].closed
+    finally:
+        gc.enable()
 
-    assert chat.streams[0].closed
     assert chat.close_count == 0  # a model passed in is not closed, only its stream
     assert list(events) == []
+
+
+@pytest.mark.usefixtures("ai_on")
+def test_closing_after_the_sources_opens_no_stream(monkeypatch: pytest.MonkeyPatch) -> None:
+    use_context(monkeypatch)
+    passed_in = RecordingChat(["G-12 hält 5 kg [1]."])
+    attempts = forbid_chat_model(monkeypatch)
+
+    for events in (answer(QUESTION, chat=passed_in), answer(QUESTION)):
+        assert isinstance(next(events), SourcesEvent)
+        gc.disable()
+        try:
+            events.close()
+        finally:
+            gc.enable()
+        assert list(events) == []
+
+    # The stream is opened only after the sources event; closing there asks no model.
+    assert passed_in.calls == []
+    assert passed_in.streams == []
+    assert attempts == []
+
+
+@pytest.mark.usefixtures("ai_on")
+def test_contextlib_closing_closes_the_stream(monkeypatch: pytest.MonkeyPatch) -> None:
+    use_context(monkeypatch)
+    chat = RecordingChat(["Der Greifer ", "hält ", "5 kg [1]."])
+
+    with contextlib.closing(answer(QUESTION, chat=chat)) as events:
+        for event in events:
+            if isinstance(event, DeltaEvent):
+                break
+        assert not chat.streams[0].closed
+
+    assert chat.streams[0].closed
 
 
 @pytest.mark.usefixtures("ai_on")
@@ -559,7 +660,7 @@ def test_a_model_fetched_by_the_service_is_closed(monkeypatch: pytest.MonkeyPatc
     events = answer(QUESTION)
     next(events)
     next(events)
-    events.close()  # type: ignore[attr-defined]
+    events.close()
     complete = list(answer(QUESTION))
 
     assert cancelled.streams[0].closed
@@ -785,7 +886,7 @@ def test_logs_hold_no_question_text_title_or_filename(
     if close_early:
         next(events)
         next(events)
-        events.close()  # type: ignore[attr-defined]
+        events.close()
     else:
         list(events)
 
