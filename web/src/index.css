@@ -54,6 +54,7 @@
   --color-info: var(--twox-info);
   --color-info-soft: var(--twox-info-soft);
   --color-info-line: var(--twox-info-line);
+  --color-brand: var(--twox-brand);
 }
 
 /* Neutral colours and status colours (independent of the accent). */
@@ -78,6 +79,8 @@
   --twox-info: #24508f;
   --twox-info-soft: #eef3fb;
   --twox-info-line: #bdd0ee;
+  /* Colour of the brand mark (work order 072), fixed whatever the accent. */
+  --twox-brand: #765477;
 }
 
 :root[data-theme="dark"] {
@@ -101,6 +104,8 @@
   --twox-info: #a9c7f5;
   --twox-info-soft: #1d2532;
   --twox-info-line: #34496b;
+  /* Never the light brand colour on a dark background (2.80:1 only). */
+  --twox-brand: #b496b8;
 }
 
 /*

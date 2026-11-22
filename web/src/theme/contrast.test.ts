@@ -45,6 +45,8 @@ const pairs: readonly Pair[] = [
   ["danger", "surface", TEXT, "field errors on cards"],
   ["info", "info-soft", TEXT, "information message"],
   ["info", "surface", TEXT, "information text on cards"],
+  ["brand", "surface", NON_TEXT, "brand mark in the header"],
+  ["brand", "canvas", NON_TEXT, "brand mark on the page"],
 ];
 
 const modes: readonly ResolvedTheme[] = ["light", "dark"];
@@ -77,6 +79,7 @@ describe("theme tokens in index.css", () => {
         "accent",
         "accent-soft",
         "accent-strong",
+        "brand",
         "canvas",
         "danger",
         "danger-line",
@@ -129,6 +132,15 @@ describe("theme tokens in index.css", () => {
           .map(([name, value]) => `${name}=${value}`);
       for (const accent of accents) {
         expect(statusOf(accent)).toEqual(statusOf("aubergine"));
+      }
+    }
+  });
+
+  it("keeps the brand colour fixed: #765477 in light mode, #b496b8 in dark mode, for every accent", () => {
+    const expected: Record<ResolvedTheme, string> = { light: "#765477", dark: "#b496b8" };
+    for (const mode of modes) {
+      for (const accent of accents) {
+        expect(resolveColours(tokens, mode, accent).get("brand"), `${mode}/${accent}`).toBe(expected[mode]);
       }
     }
   });
