@@ -227,7 +227,7 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 121 | Schnittstelle Sprachmodell | B | – | in Arbeit |
 | 122 | Antworttypen und Prompt mit Injektionsschutz | B | – | in Arbeit |
 | 123 | Zitatprüfung und feste Absage | B | – | in Arbeit |
-| 124 | Abstand und Volltext im Suchtreffer | C | 120 | offen |
+| 124 | Abstand und Volltext im Suchtreffer | C | 120 | in Arbeit |
 | 125 | Kontextauswahl für Antworten | B | 121, 122, 124 | offen |
 | 126 | Antwortdienst und Befehl ask | B | 121, 122, 123, 125 | offen |
 | 127 | Messwerkzeug evaluate_answers | B | 120, 126 | offen |
@@ -239,7 +239,7 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 133 | Eingrenzen auf Gerät und Anlage | B | 132 | offen |
 | 134 | Navigation Auskunft | C | 132 | offen |
 | 135 | Prüffragen in der CI mit Aufzeichnungen | C | 126, 127 | offen |
-| 136 | Beleg für Prüffrage 8 | C | 120 | offen |
+| 136 | Beleg für Prüffrage 8 | C | 120 | in Arbeit |
 | 137 | Abnahmetests M3 und Browserfluss | B | 127, 130, 133, 134 | offen |
 | 138 | Abnahmelauf M3 | C | 128, 135, 136, 137 | offen |
 
