@@ -37,11 +37,12 @@
     "open": "Nichts offen: Kein Auftrag ist gescheitert, keiner läuft oder wartet.",
     "filtered": "Kein Einlese-Auftrag passt zu diesem Filter."
   },
+  "resultCount_one": "{{count, number}} Auftrag gefunden",
+  "resultCount_other": "{{count, number}} Aufträge gefunden",
   "pagination": {
     "label": "Seiten der Einlese-Aufträge",
     "previous": "Vorherige Seite",
     "next": "Nächste Seite",
-    "status": "Seite {{page}} von {{pages}}",
-    "total": "Aufträge: {{count, number}}"
+    "status": "Seite {{page}} von {{pages}}"
   }
 }

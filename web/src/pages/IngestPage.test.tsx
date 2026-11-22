@@ -526,7 +526,7 @@ describe("table", () => {
     expect(within(row(14)).getByTestId("ingest-job-times").textContent).toContain("Beendet: noch nicht");
     expect(within(row(14)).getByTestId("ingest-job-requested-by").textContent).toBe("System");
     expect(screen.getByTestId("ingest-page-status").textContent).toBe("Seite 1 von 1");
-    expect(screen.getByTestId("ingest-total").textContent).toBe("Aufträge: 3");
+    expect(screen.getByTestId("ingest-total").textContent).toBe("3 Aufträge gefunden");
   });
 });
 
@@ -579,7 +579,7 @@ describe("pages", () => {
     const { api } = await openOverview(reader, "/ingest", fakeIngestApi(manyJobs(120)));
     expect(await rows()).toHaveLength(50);
     expect(screen.getByTestId("ingest-page-status").textContent).toBe("Page 1 of 3");
-    expect(screen.getByTestId("ingest-total").textContent).toBe("Jobs: 120");
+    expect(screen.getByTestId("ingest-total").textContent).toBe("120 jobs found");
     expect(screen.getByTestId<HTMLButtonElement>("ingest-previous").disabled).toBe(true);
 
     fireEvent.click(screen.getByTestId("ingest-next"));
@@ -616,6 +616,35 @@ describe("pages", () => {
     });
     expect(lastList(api).get("page")).toBeNull();
     expect(lastList(api).getAll("status")).toEqual(["failed"]);
+  });
+
+  it("announces the number of jobs in one live region that stays for every filter (work order 089)", async () => {
+    await openOverview(reader, "/ingest", fakeIngestApi(manyJobs(120)));
+    const region = screen.getByTestId("ingest-result-count");
+    expect(region.getAttribute("role")).toBe("status");
+    await rows();
+    expect(region.textContent).toBe("120 jobs found");
+    // Above the list, not in the pagination.
+    const pagination = screen.getByRole("navigation", { name: "Pages of the ingest jobs" });
+    expect(pagination.contains(region)).toBe(false);
+    expect(region.compareDocumentPosition(screen.getByTestId("ingest-jobs")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.change(screen.getByTestId("ingest-filter-status"), { target: { value: "skipped" } });
+    expect(await within(region).findByTestId("ingest-empty")).toBeDefined();
+    expect(region.textContent).toBe("No ingest job matches this filter.");
+    expect(screen.getByTestId("ingest-result-count")).toBe(region);
+
+    fireEvent.change(screen.getByTestId("ingest-filter-status"), { target: { value: "failed" } });
+    await waitFor(() => {
+      expect(region.textContent).toBe("120 jobs found");
+    });
+    expect(screen.getByTestId("ingest-result-count")).toBe(region);
+  });
+
+  it("counts one job in the singular", async () => {
+    await openOverview(reader, "/ingest?status=skipped");
+    await rows();
+    expect(screen.getByTestId("ingest-result-count").textContent).toBe("1 job found");
   });
 });
 

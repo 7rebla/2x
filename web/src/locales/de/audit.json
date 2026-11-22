@@ -83,11 +83,12 @@
     "delete": "entfernt"
   },
   "empty": "Keine Einträge gefunden.",
+  "resultCount_one": "{{count, number}} Eintrag gefunden",
+  "resultCount_other": "{{count, number}} Einträge gefunden",
   "pagination": {
     "label": "Seiten des Änderungsprotokolls",
     "previous": "Vorherige Seite",
     "next": "Nächste Seite",
-    "status": "Seite {{page}} von {{pages}}",
-    "total": "Einträge: {{count, number}}"
+    "status": "Seite {{page}} von {{pages}}"
   }
 }

@@ -7,6 +7,7 @@ import type { AuditLogEntry, AuditLogListData } from "../api/generated";
 import { ErrorMessage } from "./ErrorMessage.tsx";
 import { shortChecksum } from "./files/format.ts";
 import { Loading } from "./Loading.tsx";
+import { type CountReport, ResultCount, useReportCount, useResultCount } from "./ResultCount.tsx";
 import { Button } from "./ui/Button.tsx";
 import { ResponsiveTable, type TableColumn } from "./ui/ResponsiveTable.tsx";
 
@@ -56,8 +57,24 @@ export interface AuditTrailProps {
  * Changing a filter starts again on page 1.
  */
 export function AuditTrail(props: AuditTrailProps): ReactElement {
+  const { t } = useTranslation("audit");
   const filterKey = JSON.stringify([props.objectType ?? null, props.objectId ?? null, props.actor ?? null]);
-  return <AuditTrailPages key={filterKey} {...props} />;
+  // The number of entries stays outside the pages, which a new filter mounts
+  // afresh: the live region remains and announces the new number (work order 089).
+  const [count, reportCount] = useResultCount(filterKey);
+  return (
+    <div className="space-y-3">
+      <ResultCount
+        count={count}
+        text={(entries) => t("resultCount", { count: entries })}
+        empty={t("empty")}
+        testId="audit-result-count"
+        countTestId="audit-total"
+        emptyTestId="audit-empty"
+      />
+      <AuditTrailPages key={filterKey} {...props} filterKey={filterKey} reportCount={reportCount} />
+    </div>
+  );
 }
 
 function queryFor(props: AuditTrailProps, page: number): NonNullable<AuditLogListData["query"]> {
@@ -77,7 +94,9 @@ function queryFor(props: AuditTrailProps, page: number): NonNullable<AuditLogLis
   return query;
 }
 
-function AuditTrailPages(props: AuditTrailProps): ReactElement {
+function AuditTrailPages(
+  props: AuditTrailProps & { filterKey: string; reportCount: (report: CountReport) => void },
+): ReactElement {
   const { t } = useTranslation("audit");
   const [page, setPage] = useState(1);
   const query = useQuery({
@@ -85,6 +104,8 @@ function AuditTrailPages(props: AuditTrailProps): ReactElement {
     // Keep the shown page while the next one loads, so the table does not jump.
     placeholderData: keepPreviousData,
   });
+  // The number of entries goes to the live region of AuditTrail.
+  useReportCount(props.filterKey, query.data?.count, props.reportCount);
   // The page whose entries are shown: while the next page loads, the table
   // (and the page number) still show the previous one.
   const [shownPage, setShownPage] = useState(page);
@@ -105,11 +126,8 @@ function AuditTrailPages(props: AuditTrailProps): ReactElement {
 
   return (
     <div data-testid="audit-trail" className="space-y-3" aria-busy={busy}>
-      {results.length === 0 ? (
-        <p data-testid="audit-empty" className="text-fg-muted">
-          {t("empty")}
-        </p>
-      ) : (
+      {/* No entries: the result count above says so. */}
+      {results.length === 0 ? null : (
         <AuditTable
           entries={results}
           label={props.label ?? t("tableLabel")}
@@ -139,9 +157,6 @@ function AuditTrailPages(props: AuditTrailProps): ReactElement {
         >
           {t("pagination.next")}
         </Button>
-        <span data-testid="audit-total" className="text-fg-muted">
-          {t("pagination.total", { count })}
-        </span>
       </nav>
     </div>
   );

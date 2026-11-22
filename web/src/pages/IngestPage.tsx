@@ -37,6 +37,7 @@ import {
 } from "../components/files/IngestStatus.tsx";
 import { DateTime } from "../components/files/parts.tsx";
 import { Loading } from "../components/Loading.tsx";
+import { type CountReport, ResultCount, useReportCount, useResultCount } from "../components/ResultCount.tsx";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
 import { usePageTitle } from "../hooks/usePageTitle.ts";
 import { Button } from "../components/ui/Button.tsx";
@@ -240,7 +241,15 @@ function IngestFilter({
 }
 
 /** One page of jobs at a time, with "previous" and "next"; a new filter starts on page 1 (key in IngestPage). */
-function IngestJobs({ address }: { address: IngestAddress }): ReactElement {
+function IngestJobs({
+  address,
+  filterKey,
+  reportCount,
+}: {
+  address: IngestAddress;
+  filterKey: string;
+  reportCount: (report: CountReport) => void;
+}): ReactElement {
   const { t } = useTranslation("ingest");
   const { canManage } = useRole();
   const [page, setPage] = useState(1);
@@ -252,6 +261,9 @@ function IngestJobs({ address }: { address: IngestAddress }): ReactElement {
     refetchInterval: (current) =>
       current.state.data?.results.some((job) => isIngestActive(job)) === true ? INGEST_POLL_INTERVAL_MS : false,
   });
+  // The number of jobs goes to the live region of the page; polling with an
+  // unchanged number changes nothing there.
+  useReportCount(filterKey, query.data?.count, reportCount);
   // The page whose jobs are shown: while the next page loads, the table still shows the previous one.
   const [shownPage, setShownPage] = useState(page);
   if (query.isSuccess && !query.isPlaceholderData && shownPage !== page) {
@@ -276,13 +288,8 @@ function IngestJobs({ address }: { address: IngestAddress }): ReactElement {
           {t("polling")}
         </p>
       ) : null}
-      {results.length === 0 ? (
-        <p role="status" data-testid="ingest-empty" className="text-fg-muted">
-          {address.status === "open" && address.device === null ? t("empty.open") : t("empty.filtered")}
-        </p>
-      ) : (
-        <IngestJobTable jobs={results} canManage={canManage} />
-      )}
+      {/* No jobs: the result count above says so. */}
+      {results.length === 0 ? null : <IngestJobTable jobs={results} canManage={canManage} />}
       <nav aria-label={t("pagination.label")} className="flex flex-wrap items-center gap-3">
         <Button
           type="button"
@@ -308,9 +315,6 @@ function IngestJobs({ address }: { address: IngestAddress }): ReactElement {
         >
           {t("pagination.next")}
         </Button>
-        <span data-testid="ingest-total" className="text-fg-muted">
-          {t("pagination.total", { count })}
-        </span>
       </nav>
     </div>
   );
@@ -473,6 +477,9 @@ export function IngestPage(): ReactElement {
   const address = readIngestAddress(params);
   // A new filter (a choice, Back, a link) starts again on page 1.
   const filterKey = ingestAddressParams(address).toString();
+  // The number of jobs stays outside IngestJobs, which a new filter mounts
+  // afresh: the live region remains and announces the new number (work order 089).
+  const [count, reportCount] = useResultCount(filterKey);
 
   return (
     <section className="space-y-4">
@@ -484,7 +491,15 @@ export function IngestPage(): ReactElement {
           setParams(ingestAddressParams(next));
         }}
       />
-      <IngestJobs key={filterKey} address={address} />
+      <ResultCount
+        count={count}
+        text={(jobs) => t("ingest:resultCount", { count: jobs })}
+        empty={address.status === "open" && address.device === null ? t("ingest:empty.open") : t("ingest:empty.filtered")}
+        testId="ingest-result-count"
+        countTestId="ingest-total"
+        emptyTestId="ingest-empty"
+      />
+      <IngestJobs key={filterKey} address={address} filterKey={filterKey} reportCount={reportCount} />
     </section>
   );
 }
