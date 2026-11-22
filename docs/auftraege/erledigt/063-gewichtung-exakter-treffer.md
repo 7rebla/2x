@@ -1,6 +1,6 @@
 # Auftrag 063 – Gewichtung exakter Treffer in der kombinierten Suche
 
-Meilenstein: M2 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 052 ist nach `main` zusammengeführt.
 
