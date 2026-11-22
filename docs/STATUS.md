@@ -174,7 +174,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 082 | Navigation unter 1280 px (E-65) | C (entschieden) | 080 | offen |
 | 083 | Strukturbaum entrümpeln (E-65) | C (entschieden) | 077 | in Arbeit |
 | 084 | Schriftgröße der Metadaten (E-65) | C (entschieden) | 077, 079, 083 | offen |
-| 085 | Überschriften-Animation zurücknehmen (E-65) | C (entschieden) | 076 | offen |
+| 085 | Überschriften-Animation zurücknehmen (E-65) | C (entschieden) | 076 | in Arbeit |
 | 086 | Anmeldeseite als zentrierte Karte (E-65) | C (entschieden) | 077, 080 | offen |
 | 087 | Suchtreffer kompakter | B | 077 | in Arbeit |
 | 088 | Einheitliche Dateiauswahl | B | 077 | in Arbeit |
