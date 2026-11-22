@@ -15,7 +15,9 @@ Sentences
     line break. A list item (``-``, ``*``, ``•``, ``1.`` or ``1)`` at the start
     of a line) is a sentence of its own; the marker is not part of it. There
     is no sentence end after the abbreviations in :data:`ABBREVIATIONS`
-    (``z. B.``, ``S. 34``, ``Nr.`` ...), inside numbers, IP addresses and
+    (``z. B.``, ``S. 34``, ``Nr.`` ...; ``S.``, ``Nr.``, ``No.``, ``Abb.``,
+    ``Tab.``, ``Kap.`` and ``Fig.`` only as written, so ``10 s.`` ends a
+    sentence, the others in any case), inside numbers, IP addresses and
     versions (``1.5``, ``192.168.0.5``, ``V2.3.1``: the full stop is not
     followed by white space), nor after an ordinal number (``3.``) followed by
     a digit or a lower-case letter. Source numbers right after the
@@ -37,7 +39,16 @@ Check values
     ``Version 4.1``, ``Firmware 5.12``), compared without the ``v`` so that
     ``Version 18`` and ``V18`` match; type designations and other tokens of
     letters and digits (``S7-1200``, ``1512SP``, ``UR5e``, ``1.5``). Addresses
-    and type designations come from :func:`twox.search.identifiers.find_identifiers`.
+    and type designations come from :func:`twox.search.identifiers.find_identifiers`,
+    called for each white-space token on its own, so that no value is skipped:
+    there is no limit of ten, and a leading ``-`` (``-K7``) is removed before
+    the token is classified. A type designation directly followed by a token
+    of digits only is one value (``S7 1500`` gives ``s71500``), unless the
+    digits start a number with a unit; ``Seite 34`` and ``Port 502`` are not
+    joined. Trailing ``-`` parts of a type designation that are words of at
+    least four letters are cut off (``S7-1200-Steuerung`` checks ``S7-1200``);
+    a number and unit may be joined by ``-`` (``24-V-Versorgung`` checks
+    ``24 V``). A minus sign belongs to the number (``-20 °C``).
     Source numbers are no check values. The units are: V, mV, kV, A, mA,
     kA, µA, W, kW, MW, VA, kVA, Hz, kHz, MHz, GHz, Ω, kΩ, MΩ, Ohm, bar,
     mbar, Pa, hPa, kPa, MPa, psi, N, kN, Nm, µm, mm, cm, dm, m, km, mg, g,
@@ -49,9 +60,12 @@ Check values
 Normalisation
     Sentence values and source texts are normalised alike: Unicode NFKC,
     ``casefold``, every dash variant to ``-`` and non-breaking spaces to
-    spaces, a decimal comma between two digits to a full stop, then white
-    space and ``-`` removed. ``5 kg``/``5kg``, ``S7-1200``/``S7 1200`` and
-    ``0,5 bar``/``0.5 bar`` are therefore equal. A value is found if it occurs
+    spaces, a decimal comma between two digits to a full stop, a minus sign
+    (``-`` before a digit, not joining it to a word or number) to U+2212,
+    then white space and ``-`` removed (:func:`normalise_value`). A minus sign
+    before an occurrence lengthens it: ``20 °C`` and ``-20 °C`` differ.
+    ``5 kg``/``5kg``, ``S7-1200``/``S7 1200`` and ``0,5 bar``/``0.5 bar``
+    are therefore equal. A value is found if it occurs
     in the normalised text of at least one source that the same sentence
     cites validly, and the occurrence is not lengthened: no letter or digit
     directly before or after it, nor a ``.`` (and for IPv6 and MAC addresses
@@ -68,7 +82,10 @@ Sentence verdict
     otherwise. Invalid numbers in a supported sentence (``[2][9]`` with five
     sources) are removed from it; the sentence stays and is listed in
     ``removed_sentences`` with reason ``unknown_citation`` and the numbers in
-    ``invalid_numbers``. The refusal sentence never needs a number; a
+    ``invalid_numbers`` and ``kept=True``; unsupported sentences have
+    ``kept=False``. ``len(removed_sentences)`` counts both (flagged or
+    dropped, the count for the event ``done``), ``Verdict.dropped_count`` only
+    the unsupported ones. The refusal sentence never needs a number; a
     sentence that consists only of :data:`CONTRADICTION_PHRASE` needs none
     either. Both are neither supported nor listed.
 
@@ -84,8 +101,11 @@ Overall verdict
     ``no_evidence`` if the answer is empty, is only the refusal (compared
     without punctuation and quotes) or has no supported sentence: ``cited`` is
     empty and ``cleaned_text`` is :data:`NO_EVIDENCE_TEXT`. ``contradiction``
-    if the answer contains :data:`CONTRADICTION_PHRASE` and the supported
-    sentences cite at least two different valid numbers. ``answered``
+    if the first sentence that is not unsupported starts with
+    :data:`CONTRADICTION_PHRASE` (compared normalised, after leading
+    punctuation) and no further word follows it before punctuation or the
+    end (not ``... widersprechen sich nicht``), and the supported sentences
+    cite at least two different valid numbers. ``answered``
     otherwise; a refusal sentence next to supported sentences (a partial
     answer) stays in the text.
 """
@@ -145,18 +165,40 @@ _CIT: Final = r"\[[ \t]*\d{1,6}(?:[ \t]*[,;][ \t]*\d{1,6})*[ \t]*\]"
 _CITATION: Final = re.compile(_CIT)
 _CITATION_RUN: Final = re.compile(rf"[ \t]*{_CIT}(?:[ \t]*{_CIT})*")
 _NUMBER: Final = re.compile(r"\d+")
-_SENTENCE_END: Final = re.compile(rf"[.!?]+[{re.escape(_QUOTE_CHARS)})]*(?:[ \t]*{_CIT})*(?=\s|$)")
-_LIST_MARKER: Final = re.compile(rf"[ \t]*(?:[-*{_BULLET}]|\d{{1,3}}[.)])[ \t]+")
-_ABBREVIATION: Final = re.compile(
-    r"(?<!\w)(?:" + "|".join(re.escape(a).replace(r"\ ", r"\s?") for a in ABBREVIATIONS) + r")",
-    re.IGNORECASE,
+#: A run of sentence punctuation is only tried where it starts, and possessive
+#: quantifiers keep the scan linear (``"." * 20000 + "x"``).
+_SENTENCE_END: Final = re.compile(
+    rf"(?<![.!?])[.!?]++[{re.escape(_QUOTE_CHARS)})]*+(?:[ \t]*{_CIT})*(?=\s|$)"
 )
+_LIST_MARKER: Final = re.compile(rf"[ \t]*(?:[-*{_BULLET}]|\d{{1,3}}[.)])[ \t]+")
+#: These abbreviations count only as written (``s.`` after a unit ends a sentence).
+_CASE_SENSITIVE_ABBREVIATIONS: Final = frozenset(
+    {"S.", "Nr.", "No.", "Abb.", "Tab.", "Kap.", "Fig."}
+)
+
+
+def _abbreviation_pattern(abbreviation: str) -> str:
+    pattern = re.escape(abbreviation).replace(r"\ ", r"\s?")
+    return pattern if abbreviation in _CASE_SENSITIVE_ABBREVIATIONS else f"(?i:{pattern})"
+
+
+_ABBREVIATION: Final = re.compile(
+    r"(?<!\w)(?:" + "|".join(_abbreviation_pattern(a) for a in ABBREVIATIONS) + r")"
+)
+#: A minus sign: ``-`` before a digit that does not join it to a word or number.
+_MINUS: Final = re.compile(r"(?<![\w.,])-(?=\d)")
+#: Stands for a minus sign in normalised text, so that removing ``-`` keeps it.
+_MINUS_MARK: Final = chr(0x2212)
+_TOKEN: Final = re.compile(r"\S+")
+_DIGITS_TOKEN: Final = re.compile(r"\d+[.,;:!?)\]]*")
+#: Leading characters removed from a token before it is classified.
+_TOKEN_LEAD: Final = "\"'([{<"
 _NEXT_CHAR: Final = re.compile(r"[ \t]*(\S)")
 _DECIMAL_COMMA: Final = re.compile(r"(?<=\d),(?=\d)")
 _NOT_ALNUM: Final = re.compile(r"[\W_]+")
 
 _UNIT_VALUE: Final = re.compile(
-    r"(?<![\w.,])\d{1,9}(?:[.,]\d{1,9})?[ \t]?(?:"
+    r"(?<![\w.,])-?\d{1,9}(?:[.,]\d{1,9})?[ \t-]?(?:"
     + "|".join(
         re.escape(unit)
         for unit in sorted({unicodedata.normalize("NFKC", u) for u in UNITS}, key=len, reverse=True)
@@ -183,16 +225,28 @@ class SentenceIssue:
     reason: IssueReason
     values: tuple[str, ...]  # check values not found (only for unsupported_value)
     invalid_numbers: tuple[int, ...]  # cited numbers outside the source set
+    kept: bool  # supported sentence that stays (only invalid numbers removed)
 
 
 @dataclass(frozen=True, slots=True)
 class Verdict:
-    """The result of :func:`verify`."""
+    """The result of :func:`verify`.
+
+    ``removed_sentences`` lists every flagged sentence: unsupported ones
+    (``kept`` false) and supported ones whose invalid numbers were removed
+    (``kept`` true). ``len(removed_sentences)`` is the count for the event
+    ``done``; :attr:`dropped_count` counts the unsupported ones only.
+    """
 
     status: VerdictStatus
     cited: tuple[int, ...]  # valid source numbers used in kept sentences, ascending, unique
     removed_sentences: tuple[SentenceIssue, ...]  # dropped or flagged sentences
     cleaned_text: str  # final text for done.final_text
+
+    @property
+    def dropped_count(self) -> int:
+        """Number of unsupported sentences (removed with ``drop_unsupported=True``)."""
+        return sum(1 for issue in self.removed_sentences if not issue.kept)
 
 
 @dataclass(frozen=True, slots=True)
@@ -231,7 +285,17 @@ class _Compact:
 def _normalise(text: str) -> str:
     """NFKC, casefold, dashes to ``-``, odd spaces to spaces, decimal comma to point."""
     folded = unicodedata.normalize("NFKC", text).casefold().translate(_DASHES)
-    return _DECIMAL_COMMA.sub(".", folded)
+    return _MINUS.sub(_MINUS_MARK, _DECIMAL_COMMA.sub(".", folded))
+
+
+def normalise_value(text: str) -> str:
+    """``text`` normalised as check values are compared (see the module docstring).
+
+    NFKC, casefold, dashes unified, decimal comma to point, a minus sign kept
+    as U+2212, then white space and ``-`` removed: ``"S7 1200"`` and
+    ``"S7-1200"`` both give ``"s71200"``, ``"0,5 bar"`` gives ``"0.5bar"``.
+    """
+    return _compact(text).text
 
 
 def _compact(text: str) -> _Compact:
@@ -265,6 +329,8 @@ def _bounded(source: _Compact, start: int, end: int, value: _Value) -> bool:
     joiners = ".:" if value.colon_joins else "."
     if start > 0 and not gap[start]:
         before = text[start - 1]
+        if before == _MINUS_MARK:
+            return False
         if _is_word(before):
             prefix_ok = (
                 value.version
@@ -376,8 +442,10 @@ def _check_values(sentence: str) -> list[_Value]:
         if key and key not in found:
             found[key] = _Value(display=display, key=key, **flags)
 
+    unit_starts: set[int] = set()
     for match in _UNIT_VALUE.finditer(text):
         add(match.group(), unit=True)
+        unit_starts.add(match.start())
     for match in _PORT_WORD.finditer(text):
         add(match.group(1))
     for match in _IPV4_PORT.finditer(text):
@@ -386,16 +454,55 @@ def _check_values(sentence: str) -> list[_Value]:
         add(match.group(1), version=True)
     for match in _VERSION_TOKEN.finditer(text):
         add(match.group(1), version=True)
-    for identifier in find_identifiers(_IPV4_PORT.sub(r"\1 \2", text)):
-        if identifier.kind is IdentifierKind.GENERIC and _VERSION_IDENTIFIER.fullmatch(
-            identifier.value
-        ):
+    tokens = list(_TOKEN.finditer(_IPV4_PORT.sub(r"\1 \2", text)))
+    skip_next = False
+    for position, token in enumerate(tokens):
+        if skip_next:
+            skip_next = False
             continue
-        add(
-            identifier.value,
-            colon_joins=identifier.kind in {IdentifierKind.IPV6, IdentifierKind.MAC},
-        )
+        # One token at a time: find_identifiers stops after ten identifiers and
+        # skips tokens with a leading "-" (an exclusion in the search syntax).
+        identifiers = find_identifiers(token.group().lstrip(_TOKEN_LEAD).lstrip("-"))
+        if not identifiers:
+            continue
+        identifier = identifiers[0]
+        if identifier.kind is not IdentifierKind.GENERIC:
+            add(
+                identifier.value,
+                colon_joins=identifier.kind in {IdentifierKind.IPV6, IdentifierKind.MAC},
+            )
+            continue
+        if _VERSION_IDENTIFIER.fullmatch(identifier.value):
+            continue
+        value = _trim_compound(identifier.value)
+        if value.isdigit():
+            continue
+        following = tokens[position + 1] if position + 1 < len(tokens) else None
+        if (
+            following is not None
+            and any(char.isalpha() for char in value)
+            and value == identifier.value
+            and _DIGITS_TOKEN.fullmatch(following.group())
+            and following.start() not in unit_starts
+        ):
+            digits = following.group().rstrip(".,;:!?)]")
+            add(f"{value} {digits}")
+            skip_next = True
+            continue
+        add(value)
     return list(found.values())
+
+
+def _trim_compound(value: str) -> str:
+    """``value`` without trailing ``-`` parts that are words (``S7-1200-Steuerung``).
+
+    A trailing part of at least four letters is a word joined to the
+    identifier, not part of it; shorter letter parts (``G-12-A``) stay.
+    """
+    parts = value.split("-")
+    while len(parts) > 1 and len(parts[-1]) >= 4 and parts[-1].isalpha():
+        parts.pop()
+    return "-".join(parts)
 
 
 def _strip_invalid(sentence: str, valid: Mapping[int, str]) -> str:
@@ -454,6 +561,16 @@ def _cleaned(
     return re.sub(r"\n[ \t\r]*\n(?:[ \t\r]*\n)+", "\n\n", text).strip()
 
 
+def _contradiction_pattern() -> re.Pattern[str]:
+    """:data:`CONTRADICTION_PHRASE` at the start of a normalised sentence, no letter after it.
+
+    Built from the constant only (never from answer or source text); ``re``
+    caches the compiled expression.
+    """
+    words = _normalise(CONTRADICTION_PHRASE).split()
+    return re.compile(r"[\W_]*" + r"\s+".join(map(re.escape, words)) + r"(?!\s*[^\W\d_])")
+
+
 def verify(
     answer_text: str,
     sources: Mapping[int, str],
@@ -492,7 +609,9 @@ def verify(
         if not numbers or not valid:
             reason: IssueReason = "no_citation" if not numbers else "unknown_citation"
             issues.append(
-                SentenceIssue(index=index, reason=reason, values=(), invalid_numbers=invalid)
+                SentenceIssue(
+                    index=index, reason=reason, values=(), invalid_numbers=invalid, kept=False
+                )
             )
             dropped.add(index)
             continue
@@ -507,7 +626,11 @@ def verify(
         if missing:
             issues.append(
                 SentenceIssue(
-                    index=index, reason="unsupported_value", values=missing, invalid_numbers=invalid
+                    index=index,
+                    reason="unsupported_value",
+                    values=missing,
+                    invalid_numbers=invalid,
+                    kept=False,
                 )
             )
             dropped.add(index)
@@ -517,7 +640,11 @@ def verify(
         if invalid:
             issues.append(
                 SentenceIssue(
-                    index=index, reason="unknown_citation", values=(), invalid_numbers=invalid
+                    index=index,
+                    reason="unknown_citation",
+                    values=(),
+                    invalid_numbers=invalid,
+                    kept=True,
                 )
             )
             replaced[index] = _strip_invalid(text, sources)
@@ -532,9 +659,12 @@ def verify(
         )
 
     cleaned = _cleaned(lines, sentences, dropped if drop_unsupported else set(), replaced)
-    status: VerdictStatus = (
-        "contradiction" if contradiction in answer_bare and len(cited) >= 2 else "answered"
+    first = next(span for index, span in enumerate(sentences) if index not in dropped)
+    opens_with_phrase = (
+        _contradiction_pattern().match(_normalise(lines[first.line][first.start : first.end]))
+        is not None
     )
+    status: VerdictStatus = "contradiction" if opens_with_phrase and len(cited) >= 2 else "answered"
     return Verdict(
         status=status,
         cited=tuple(sorted(cited)),

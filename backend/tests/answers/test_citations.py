@@ -16,6 +16,7 @@ from twox.answers.citations import (
     SentenceIssue,
     Verdict,
     _split_sentences,
+    normalise_value,
     verify,
 )
 
@@ -48,7 +49,9 @@ def test_sentence_with_only_an_invented_number_is_unknown_citation() -> None:
     assert verdict.status == "no_evidence"
     assert verdict.cited == ()
     assert verdict.removed_sentences == (
-        SentenceIssue(index=0, reason="unknown_citation", values=(), invalid_numbers=(9,)),
+        SentenceIssue(
+            index=0, reason="unknown_citation", values=(), invalid_numbers=(9,), kept=False
+        ),
     )
     assert verdict.cleaned_text == NO_EVIDENCE_TEXT
 
@@ -70,12 +73,105 @@ def test_invented_number_is_removed_from_a_supported_sentence(sentence: str, kep
     assert verdict.cited == (2,)
     assert verdict.cleaned_text == kept
     assert verdict.removed_sentences == (
-        SentenceIssue(index=0, reason="unknown_citation", values=(), invalid_numbers=(9,)),
-        SentenceIssue(index=1, reason="unknown_citation", values=(), invalid_numbers=(9,)),
+        SentenceIssue(
+            index=0, reason="unknown_citation", values=(), invalid_numbers=(9,), kept=True
+        ),
+        SentenceIssue(
+            index=1, reason="unknown_citation", values=(), invalid_numbers=(9,), kept=False
+        ),
     )
+    assert len(verdict.removed_sentences) == 2
+    assert verdict.dropped_count == 1
+
+
+def test_dropped_count_counts_unsupported_sentences_only() -> None:
+    answer = "Die Adresse ist 10.0.0.7 [2][9]. Er wiegt 7 kg [1]. Er ist blau."
+    for drop in (True, False):
+        verdict = verify(answer, SOURCES, drop_unsupported=drop)
+        assert [issue.kept for issue in verdict.removed_sentences] == [True, False, False]
+        assert verdict.dropped_count == 2
 
 
 # 2. Values that are not in a cited source
+
+
+def test_no_identifier_is_skipped_after_ten() -> None:
+    addresses = [f"10.0.1.{n}" for n in range(1, 12)]
+    source = "Adressen: " + ", ".join(addresses[:10])
+    answer = "Die Adressen sind " + ", ".join(addresses) + " [1]."
+    verdict = verify(answer, {1: source}, drop_unsupported=True)
+    assert verdict.status == "no_evidence"
+    assert verdict.removed_sentences == (
+        SentenceIssue(
+            index=0,
+            reason="unsupported_value",
+            values=("10.0.1.11",),
+            invalid_numbers=(),
+            kept=False,
+        ),
+    )
+
+
+def test_identifier_with_leading_dash_is_checked() -> None:
+    verdict = verify(
+        "Das Relais -K7 schaltet [1].", {1: "Das Relais -K3 schaltet."}, drop_unsupported=True
+    )
+    assert verdict.status == "no_evidence"
+    assert verdict.removed_sentences[0].values == ("K7",)
+    supported = verify(
+        "Das Relais -K3 schaltet [1].", {1: "Das Relais -K3 schaltet."}, drop_unsupported=True
+    )
+    assert supported.status == "answered"
+
+
+@pytest.mark.parametrize(
+    ("answer", "source", "status"),
+    [
+        ("Vorgesehen ist S7 1500 [1].", "Das Modul S7-1200 ist vorgesehen.", "no_evidence"),
+        ("Vorgesehen ist S7 1200 [1].", "Das Modul S7-1200 ist vorgesehen.", "answered"),
+        ("Vorgesehen ist S7 1200. [1]", "Das Modul S7 1200 ist vorgesehen.", "answered"),
+        # Words before a number are not joined with it.
+        ("Siehe Seite 34 und Port 502 [1].", "Port 502 laut Handbuch.", "answered"),
+        # Digits that start a number with a unit stay apart.
+        ("Der Greifer G-12 traegt 5 kg [1].", "Greifer G-12, Last 5 kg.", "answered"),
+        ("Greifer G-12 5 kg zulaessig [1].", "Greifer G-12, Last 5 kg.", "answered"),
+    ],
+)
+def test_type_designation_with_separate_digits_is_one_value(
+    answer: str, source: str, status: str
+) -> None:
+    assert verify(answer, {1: source}, drop_unsupported=True).status == status
+
+
+@pytest.mark.parametrize(
+    ("answer", "source", "status"),
+    [
+        ("Die Temperatur betraegt -20 °C [1].", "Die Temperatur betraegt 20 °C.", "no_evidence"),
+        ("Die Temperatur betraegt 20 °C [1].", "Die Temperatur betraegt -20 °C.", "no_evidence"),
+        ("Die Temperatur betraegt -20 °C [1].", "Die Temperatur betraegt -20 °C.", "answered"),
+        ("Der Bereich ist 2-5 kg [1].", "Last 2-5 kg.", "answered"),
+        ("Die S7-1200-Steuerung ist vorgesehen [1].", "Modul S7-1200.", "answered"),
+        ("Die S7-1500-Steuerung ist vorgesehen [1].", "Modul S7-1200.", "no_evidence"),
+        ("Die 24-V-Versorgung ist vorgesehen [1].", "Versorgung 24 V DC.", "answered"),
+        ("Die 48-V-Versorgung ist vorgesehen [1].", "Versorgung 24 V DC.", "no_evidence"),
+    ],
+)
+def test_signs_and_compound_words(answer: str, source: str, status: str) -> None:
+    assert verify(answer, {1: source}, drop_unsupported=True).status == status
+
+
+@pytest.mark.parametrize(
+    ("text", "key"),
+    [
+        ("S7 1200", "s71200"),
+        ("S7-1200", "s71200"),
+        ("0,5 bar", "0.5bar"),
+        ("5 KG", "5kg"),
+        ("-20 °C", chr(0x2212) + "20°c"),
+    ],
+)
+def test_normalise_value(text: str, key: str) -> None:
+    assert normalise_value(text) == key
 
 
 @pytest.mark.parametrize(
@@ -97,7 +193,9 @@ def test_value_missing_from_the_cited_sources_is_unsupported(
     verdict = verify(answer, SOURCES, drop_unsupported=True)
     assert verdict.status == "no_evidence"
     assert verdict.removed_sentences == (
-        SentenceIssue(index=0, reason="unsupported_value", values=missing, invalid_numbers=()),
+        SentenceIssue(
+            index=0, reason="unsupported_value", values=missing, invalid_numbers=(), kept=False
+        ),
     )
 
 
@@ -233,10 +331,16 @@ def test_all_sentences_unsupported_lists_every_sentence_with_its_reason() -> Non
     assert verdict.cited == ()
     assert verdict.cleaned_text == NO_EVIDENCE_TEXT
     assert verdict.removed_sentences == (
-        SentenceIssue(index=0, reason="no_citation", values=(), invalid_numbers=()),
-        SentenceIssue(index=1, reason="unknown_citation", values=(), invalid_numbers=(9,)),
+        SentenceIssue(index=0, reason="no_citation", values=(), invalid_numbers=(), kept=False),
         SentenceIssue(
-            index=2, reason="unsupported_value", values=("10.0.0.9",), invalid_numbers=()
+            index=1, reason="unknown_citation", values=(), invalid_numbers=(9,), kept=False
+        ),
+        SentenceIssue(
+            index=2,
+            reason="unsupported_value",
+            values=("10.0.0.9",),
+            invalid_numbers=(),
+            kept=False,
         ),
     )
 
@@ -262,6 +366,27 @@ def test_all_sentences_unsupported_lists_every_sentence_with_its_reason() -> Non
         ("Die Unterlagen widersprechen sich: 24 V [1], 5 kg [1].", "answered", (1,)),
         ("Die Unterlagen widersprechen sich: 24 V [1], 96 V [5].", "no_evidence", ()),
         ("Blatt A nennt 24 V [1], Blatt B nennt 48 V [5].", "answered", (1, 5)),
+        (
+            "Die Unterlagen widersprechen sich nicht: 24 V [1] und 48 V [5].",
+            "answered",
+            (1, 5),
+        ),
+        (
+            "Blatt A nennt 24 V [1]. Die Unterlagen widersprechen sich, Blatt B nennt 48 V [5].",
+            "answered",
+            (1, 5),
+        ),
+        (
+            f"{OPENING_QUOTE}Die Unterlagen widersprechen sich{CLOSING_QUOTE}: 24 V [1], 48 V [5].",
+            "contradiction",
+            (1, 5),
+        ),
+        # The first sentence is unsupported and dropped; the phrase opens the next one.
+        (
+            "Der Greifer wiegt 9 kg [1]. Die Unterlagen widersprechen sich: 24 V [1], 48 V [5].",
+            "contradiction",
+            (1, 5),
+        ),
     ],
 )
 def test_contradiction_needs_the_phrase_and_two_different_numbers(
@@ -359,6 +484,10 @@ def test_supported_sentences_stay_verbatim() -> None:
         ),
         ("Erste Zeile\nzweite Zeile\n\n[2]\n  \n...", ["Erste Zeile", "zweite Zeile"]),
         ('Er sagte "Ja." Dann ging er.', ['Er sagte "Ja."', "Dann ging er."]),
+        (
+            "Die Zykluszeit betraegt 10 s. Der Greifer schliesst danach [1].",
+            ["Die Zykluszeit betraegt 10 s.", "Der Greifer schliesst danach [1]."],
+        ),
     ],
 )
 def test_sentence_splitting(text: str, expected: list[str]) -> None:
@@ -425,18 +554,43 @@ def test_verify_is_fast_for_a_typical_answer() -> None:
     assert _timed_mean(answer, sources) < 0.050
 
 
+def _best_time(answer: str, sources: dict[int, str], runs: int = 3) -> float:
+    best = float("inf")
+    for _ in range(runs):
+        start = time.perf_counter()
+        verify(answer, sources, drop_unsupported=True)
+        best = min(best, time.perf_counter() - start)
+    return best
+
+
 @pytest.mark.parametrize(
-    "answer",
+    ("pattern", "tail"),
     [
-        "wort " * 4000,
-        "1. " * 6700,
-        "[1 " * 6700,
-        "z. " * 6700,
-        "5" * 20000,
-        "a." * 10000,
+        ("wort ", ""),
+        ("1. ", ""),
+        ("[1 ", ""),
+        ("[1][", ""),
+        ("z. ", ""),
+        ("5", ""),
+        ("a.", ""),
+        (".", "x"),
+        ("!?", "x"),
+        ("1.1.", ""),
+        ("S7 1 ", ""),
+        ("-", "5 kg [1]"),
+        ("10.0.0.7 ", "[1]"),
+        ("G-12 5 kg [1]. ", ""),
     ],
 )
-def test_verify_stays_fast_for_unfavourable_input(answer: str) -> None:
+def test_verify_grows_linearly_for_unfavourable_input(pattern: str, tail: str) -> None:
     sources = dict.fromkeys(range(1, 9), "Der Greifer G-12 wiegt 5 kg. " * 70)
-    assert len(answer) >= 20000
-    assert _timed_mean(answer, sources, runs=3) < 0.050
+
+    def answer(length: int) -> str:
+        return (pattern * (length // len(pattern) + 1))[:length] + tail
+
+    small = _best_time(answer(5000), sources)
+    large = _best_time(answer(20000), sources)
+    assert large < 1.0
+    # Four times the input may take at most eight times as long (linear with
+    # room for noise); below one millisecond the clock is too coarse to compare.
+    assert large / max(small, 0.001) < 8
