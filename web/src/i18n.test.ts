@@ -138,7 +138,7 @@ describe("catalogs", () => {
       .flatMap((language) => namespaces.map((ns) => `./locales/${language}/${ns}.json`))
       .sort();
     expect(Object.keys(catalogFiles).sort()).toEqual(expected);
-    expect(namespaces).toHaveLength(9);
+    expect(namespaces).toHaveLength(10);
   });
 
   it.each(namespaces)("namespace %s has the same keys in German and English", (ns) => {

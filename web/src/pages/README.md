@@ -16,6 +16,7 @@ so each address can be opened directly or reloaded.
 | `/audit` | `AuditPage.tsx` | 033 |
 | `/login` | `LoginPage.tsx` | 030 |
 | `/selftest` | `SelftestPage.tsx` | (done, M0) |
+| `/settings` | `SettingsPage.tsx` (from the user menu, role `read`) | 070 |
 | anything else | `../components/NotFound.tsx` | – |
 
 A work order that builds a page replaces only its file here (and fills its own catalog, see `../locales/README.md`).
@@ -24,12 +25,13 @@ Routes, the frame (`../components/Layout.tsx`) and the navigation stay as they a
 ## Frame and navigation
 
 - `../components/Layout.tsx` draws the header (name, navigation, language switch, user area) around every page.
-  The user area shows the signed-in user, the role and "Sign out" (`../components/UserMenu.tsx`).
+  The user area shows the signed-in user, the role, the link to the settings and "Sign out" (`../components/UserMenu.tsx`).
   An account without a role sees a hint above the page.
 - `../navigation.ts` lists the navigation entries as data: path, key of the text in `nav.json` and the role
   that may see the entry (`requires`). `Layout` shows only the entries the user's role allows;
   `/import` and `/audit` need `manage`, the others `read`. Pages with a parameter and the sign-in page are not listed.
-- Page headings are `<h2>`; the `<h1>` is the name in the header.
+- Page headings are `<h2>`, written with `AnimatedHeading` (`MaskedTitle` for the device and file title, `../components/TextMotion.tsx`); the `<h1>` is the name in the header.
+- Colours only through the theme tokens (`bg-surface`, `text-fg-muted`, `border-line` …), never Tailwind's palette; see `../theme/README.md`.
 - A page that throws while rendering shows `ErrorMessage` inside the frame (`../components/RouteError.tsx`).
 
 ## Sign-in and roles

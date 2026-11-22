@@ -7,5 +7,6 @@
   "import": "Import",
   "audit": "Change log",
   "login": "Sign in",
-  "selftest": "Self-test"
+  "selftest": "Self-test",
+  "settings": "Settings"
 }

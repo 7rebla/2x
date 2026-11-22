@@ -8,16 +8,16 @@ import { useTranslation } from "react-i18next";
 import type { DeviceNode, GroupKind, GroupNode, NetworkNode } from "./graph.ts";
 
 const GROUP_STYLE: Record<GroupKind, string> = {
-  site: "border-slate-400 bg-slate-100/70",
-  area: "border-slate-300 bg-white/80",
-  plant: "border-slate-300 bg-slate-50",
+  site: "border-line-strong bg-surface-muted",
+  area: "border-line bg-surface",
+  plant: "border-line bg-canvas",
 };
 
 // Handles only anchor the network edges; nobody can draw connections.
 const HIDDEN_HANDLE = "!h-1 !w-1 !min-h-0 !min-w-0 !border-0 !bg-transparent";
 
 function matchRing(match: boolean | undefined): string {
-  return match === true ? "ring-4 ring-amber-400" : "";
+  return match === true ? "ring-4 ring-accent" : "";
 }
 
 function GroupNodeView({ data }: NodeProps<GroupNode>): ReactElement {
@@ -29,12 +29,12 @@ function GroupNodeView({ data }: NodeProps<GroupNode>): ReactElement {
       className={`h-full w-full rounded-lg border-2 ${GROUP_STYLE[data.kind]} ${matchRing(data.match)}`}
     >
       <div className="px-4 pt-2">
-        <div className="text-xs uppercase tracking-wide text-slate-500">{t(`kind.${data.kind}`)}</div>
-        <div className="truncate font-semibold text-slate-900" title={data.name}>
+        <div className="text-xs uppercase tracking-wide text-fg-muted">{t(`kind.${data.kind}`)}</div>
+        <div className="truncate font-semibold text-fg" title={data.name}>
           {data.name}
         </div>
         {data.key === null ? null : (
-          <div className="truncate font-mono text-xs text-slate-600" title={data.key}>
+          <div className="truncate text-xs tabular-nums slashed-zero text-fg-muted" title={data.key}>
             {data.key}
           </div>
         )}
@@ -50,23 +50,23 @@ function DeviceNodeView({ data, selected }: NodeProps<DeviceNode>): ReactElement
       data-testid="map-device"
       data-match={data.match === true ? "true" : undefined}
       data-highlighted={active ? "true" : undefined}
-      className={`flex h-full w-full cursor-pointer flex-col justify-center rounded-md border bg-white px-3 py-2 shadow-sm ${
-        active ? "border-slate-900 border-2" : "border-slate-300"
+      className={`flex h-full w-full cursor-pointer flex-col justify-center rounded-md border bg-surface px-3 py-2 shadow-sm ${
+        active ? "border-fg border-2" : "border-line-strong"
       } ${matchRing(data.match)}`}
     >
-      <div className="truncate font-semibold text-slate-900" title={data.name}>
+      <div className="truncate font-semibold text-fg" title={data.name}>
         {data.name}
       </div>
-      <div className="truncate font-mono text-xs text-slate-600" title={data.key}>
+      <div className="truncate text-xs tabular-nums slashed-zero text-fg-muted" title={data.key}>
         {data.key}
       </div>
       {data.ip === null ? null : (
-        <div className="truncate font-mono text-xs text-slate-700" title={data.ip}>
+        <div className="truncate text-xs tabular-nums slashed-zero text-fg" title={data.ip}>
           {data.ip}
         </div>
       )}
       {data.model === "" ? null : (
-        <div className="truncate text-xs text-slate-500" title={data.model}>
+        <div className="truncate text-xs text-fg-muted" title={data.model}>
           {data.model}
         </div>
       )}
@@ -83,13 +83,13 @@ function NetworkNodeView({ data }: NodeProps<NetworkNode>): ReactElement {
       data-testid="map-network"
       data-match={data.match === true ? "true" : undefined}
       data-highlighted={active ? "true" : undefined}
-      className={`flex h-full w-full flex-col justify-center rounded-full border-2 border-dashed bg-sky-50 px-5 ${
-        active ? "border-slate-900" : "border-sky-400"
+      className={`flex h-full w-full flex-col justify-center rounded-full border-2 border-dashed bg-surface-muted px-5 ${
+        active ? "border-fg" : "border-line-strong"
       } ${matchRing(data.match)}`}
     >
       <Handle type="target" position={Position.Left} isConnectable={false} className={HIDDEN_HANDLE} />
-      <div className="text-xs uppercase tracking-wide text-sky-800">{t("kind.network")}</div>
-      <div className="truncate font-mono text-sm font-semibold text-slate-900" title={data.cidr}>
+      <div className="text-xs uppercase tracking-wide text-fg-muted">{t("kind.network")}</div>
+      <div className="truncate text-sm tabular-nums slashed-zero font-semibold text-fg" title={data.cidr}>
         {data.cidr}
       </div>
     </div>

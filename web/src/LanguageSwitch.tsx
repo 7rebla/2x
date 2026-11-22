@@ -17,13 +17,13 @@ export function LanguageSwitch(): ReactElement {
   };
 
   return (
-    <label className="flex items-center gap-2 text-sm text-slate-600">
+    <label className="flex items-center gap-2 text-sm text-fg-muted">
       {t("language.label")}
       <select
         value={language}
         onChange={onChange}
         data-testid="language-switch"
-        className="rounded border border-slate-300 bg-white px-2 py-1 text-slate-900"
+        className="rounded border border-line-strong bg-surface px-2 py-1 text-fg"
       >
         {supportedLanguages.map((option) => (
           <option key={option} value={option} lang={option}>

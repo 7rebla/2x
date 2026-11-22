@@ -97,14 +97,14 @@ function AuditTrailPages(props: AuditTrailProps): ReactElement {
   return (
     <div data-testid="audit-trail" className="space-y-3" aria-busy={busy}>
       {results.length === 0 ? (
-        <p data-testid="audit-empty" className="text-slate-600">
+        <p data-testid="audit-empty" className="text-fg-muted">
           {t("empty")}
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table aria-label={props.label ?? t("tableLabel")} className="w-full border-collapse text-left text-sm">
+          <table aria-label={props.label ?? t("tableLabel")} className="w-full border-collapse text-left text-sm tabular-nums">
             <thead>
-              <tr className="border-b border-slate-300">
+              <tr className="border-b border-line">
                 <th scope="col" className="p-2 font-semibold">
                   {t("column.timestamp")}
                 </th>
@@ -136,7 +136,7 @@ function AuditTrailPages(props: AuditTrailProps): ReactElement {
       <nav aria-label={t("pagination.label")} className="flex flex-wrap items-center gap-3">
         <button
           type="button"
-          className="rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
+          className="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
           disabled={busy || shownPage <= 1}
           onClick={() => {
             setPage(shownPage - 1);
@@ -147,7 +147,7 @@ function AuditTrailPages(props: AuditTrailProps): ReactElement {
         <span data-testid="audit-page-status">{t("pagination.status", { page: shownPage, pages })}</span>
         <button
           type="button"
-          className="rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
+          className="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
           disabled={busy || next === null || next === undefined}
           onClick={() => {
             setPage(shownPage + 1);
@@ -155,7 +155,7 @@ function AuditTrailPages(props: AuditTrailProps): ReactElement {
         >
           {t("pagination.next")}
         </button>
-        <span data-testid="audit-total" className="text-slate-600">
+        <span data-testid="audit-total" className="text-fg-muted">
           {t("pagination.total", { count })}
         </span>
       </nav>
@@ -169,12 +169,12 @@ function AuditRow({ entry }: { entry: AuditLogEntry }): ReactElement {
   const action = isKnownAction(entry.action) ? t(`action.${entry.action}`) : entry.action;
 
   return (
-    <tr data-testid="audit-entry" className="border-b border-slate-200 align-top">
+    <tr data-testid="audit-entry" className="border-b border-line align-top">
       <td className="p-2 whitespace-nowrap" data-testid="audit-timestamp">
         <DateTime value={entry.timestamp} />
       </td>
       <td className="p-2" data-testid="audit-actor">
-        {entry.actor ?? <span className="text-slate-600 italic">{t("noActor")}</span>}
+        {entry.actor ?? <span className="text-fg-muted italic">{t("noActor")}</span>}
       </td>
       <td className="p-2" data-testid="audit-action">
         {action}
@@ -185,7 +185,7 @@ function AuditRow({ entry }: { entry: AuditLogEntry }): ReactElement {
       <td className="p-2" data-testid="audit-object">
         <span>{entry.object_repr}</span>
         {entry.object_id === null ? null : (
-          <span className="block text-xs text-slate-600">{t("objectId", { id: entry.object_id })}</span>
+          <span className="block text-xs text-fg-muted">{t("objectId", { id: entry.object_id })}</span>
         )}
       </td>
       <td className="p-2" data-testid="audit-changes">
@@ -207,13 +207,13 @@ function Changes({ changes }: { changes: AuditLogEntry["changes"] }): ReactEleme
   // every field that was left empty appears as [null, ""].
   const shown = Object.entries(changes).filter(([, change]) => !isEmptyPair(change));
   if (shown.length === 0) {
-    return <span className="text-slate-600">{t("noFieldChanges")}</span>;
+    return <span className="text-fg-muted">{t("noFieldChanges")}</span>;
   }
   return (
     <ul className="space-y-1">
       {shown.map(([field, change]) => (
         <li key={field} data-testid="audit-change">
-          <code className="font-mono text-xs" data-testid="audit-change-field">
+          <code className="font-sans text-xs tabular-nums slashed-zero" data-testid="audit-change-field">
             {field}
           </code>
           {": "}
@@ -279,7 +279,7 @@ const UTC_WITHOUT_ZONE = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?)
 function Value({ value }: { value: unknown }): ReactNode {
   const { t } = useTranslation("audit");
   if (isEmptyValue(value)) {
-    return <span className="text-slate-600 italic">{t("emptyValue")}</span>;
+    return <span className="text-fg-muted italic">{t("emptyValue")}</span>;
   }
   if (typeof value === "string") {
     const time = UTC_WITHOUT_ZONE.exec(value);

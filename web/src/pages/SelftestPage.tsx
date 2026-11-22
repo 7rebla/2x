@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import type { DatabaseCheck, WorkerCheck } from "../api/generated";
 import { loadSelftest, type SelftestOutcome } from "../api/selftest.ts";
+import { AnimatedHeading, LoadingText } from "../components/TextMotion.tsx";
 
 type PageState = { kind: "loading" } | SelftestOutcome;
 
@@ -38,17 +39,17 @@ export function SelftestPage(): ReactElement {
   return (
     <section className="w-full max-w-xl space-y-4" aria-busy={loading}>
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold">{t("heading")}</h2>
+        <AnimatedHeading text={t("heading")} />
         <button
           type="button"
           onClick={recheck}
           disabled={loading}
-          className="rounded bg-slate-800 px-4 py-2 text-white disabled:opacity-50"
+          className="rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong disabled:opacity-50"
         >
           {loading ? t("checking") : t("recheck")}
         </button>
       </div>
-      <p className="text-slate-600">{t("intro")}</p>
+      <p className="text-fg-muted">{t("intro")}</p>
       <SelftestBody state={state} />
     </section>
   );
@@ -60,7 +61,7 @@ function SelftestBody({ state }: { state: PageState }): ReactElement {
     case "loading":
       return (
         <p role="status" data-testid="selftest-loading">
-          {t("checking")}
+          <LoadingText text={t("checking")} />
         </p>
       );
     case "unreachable":
@@ -92,7 +93,7 @@ function ApiError({ message }: { message: string }): ReactElement {
     <p
       role="alert"
       data-testid="selftest-error"
-      className="rounded border border-red-300 bg-red-50 p-4 text-red-800"
+      className="rounded border border-danger-line bg-danger-soft p-4 text-danger"
     >
       {message}
     </p>
@@ -149,11 +150,11 @@ function Card({
   return (
     <article
       data-testid={`${testId}-check`}
-      className={`rounded border p-4 ${ok ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50"}`}
+      className={`rounded border p-4 ${ok ? "border-success-line bg-success-soft" : "border-danger-line bg-danger-soft"}`}
     >
       <h3 className="flex items-center justify-between font-semibold">
         <span data-testid={`${testId}-heading`}>{heading}</span>
-        <span data-testid={`${testId}-status`} className={ok ? "text-green-800" : "text-red-800"}>
+        <span data-testid={`${testId}-status`} className={ok ? "text-success" : "text-danger"}>
           {ok ? t("statusOk") : t("statusFailed")}
         </span>
       </h3>
@@ -165,7 +166,7 @@ function Card({
 function Field({ label, children }: { label: string; children: ReactNode }): ReactElement {
   return (
     <div className="flex gap-2">
-      <dt className="text-slate-600">{label}:</dt>
+      <dt className="text-fg-muted">{label}:</dt>
       <dd>{children}</dd>
     </div>
   );
@@ -175,7 +176,7 @@ function CheckError({ message, testId }: { message: string; testId: string }): R
   const { t } = useTranslation("selftest");
   return (
     <Field label={t("errorLabel")}>
-      <span role="alert" data-testid={testId} className="text-red-800">
+      <span role="alert" data-testid={testId} className="text-danger">
         {message}
       </span>
     </Field>

@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import { expect, test, testIp, testName } from "./fixtures";
 
@@ -27,6 +27,20 @@ async function create(page: Page, path: string, body: Record<string, unknown>): 
       return (await response.json()) as { id: number };
     },
     { url: path, payload: body, csrfToken: token },
+  );
+}
+
+/** Whether the element lies completely inside the box of another one (for example a node inside the map). */
+async function insideBox(inner: Locator, outer: Locator): Promise<boolean> {
+  const [innerBox, outerBox] = await Promise.all([inner.boundingBox(), outer.boundingBox()]);
+  if (innerBox === null || outerBox === null) {
+    return false;
+  }
+  return (
+    innerBox.x >= outerBox.x &&
+    innerBox.y >= outerBox.y &&
+    innerBox.x + innerBox.width <= outerBox.x + outerBox.width &&
+    innerBox.y + innerBox.height <= outerBox.y + outerBox.height
   );
 }
 
@@ -92,7 +106,10 @@ test("the map shows a device and its network, finds it and opens its page", asyn
   await expect(canvas.locator(".react-flow__edge.map-membership-active")).toHaveCount(0);
 
   await search.fill(ip);
-  await expect(deviceNode).toBeInViewport();
+  // The address may also match longer addresses of other devices (192.0.2.24 and
+  // 192.0.2.242); the view then fits all matches, so the node is inside the map,
+  // though not necessarily inside the browser window.
+  await expect.poll(() => insideBox(deviceNode, canvas)).toBe(true);
   await expect(deviceNode.getByTestId("map-device")).toHaveAttribute("data-match", "true");
 
   // Hiding the networks removes the network node and the lines.

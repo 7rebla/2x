@@ -1,6 +1,8 @@
 import type { ReactElement, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { AnimatedHeading } from "./TextMotion.tsx";
+
 /** Stand-in for a page that a later work order builds. */
 export function PagePlaceholder({
   heading,
@@ -12,9 +14,9 @@ export function PagePlaceholder({
   const { t } = useTranslation("common");
   return (
     <section data-testid="page-placeholder" className="space-y-4">
-      <h2 className="text-2xl font-semibold">{heading}</h2>
+      <AnimatedHeading text={heading} />
       {children}
-      <p className="text-slate-600">{t("placeholder")}</p>
+      <p className="text-fg-muted">{t("placeholder")}</p>
     </section>
   );
 }

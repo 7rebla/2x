@@ -8,6 +8,7 @@ import { openServerPage } from "../browserLocation.ts";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { isServerPage, refreshSession, safeNextPath, useSession } from "../session.ts";
+import { AnimatedHeading } from "../components/TextMotion.tsx";
 
 /** Why the last sign-in did not work; "missing-input" is checked before anything is sent. */
 type Failure = Exclude<SignInResult, { kind: "signed-in" }> | { kind: "missing-input" };
@@ -31,8 +32,8 @@ export function LoginPage(): ReactElement {
   }
   return (
     <section className="w-full max-w-sm space-y-4">
-      <h2 className="text-2xl font-semibold">{t("heading")}</h2>
-      <p className="text-slate-600">{t("intro")}</p>
+      <AnimatedHeading text={t("heading")} />
+      <p className="text-fg-muted">{t("intro")}</p>
       {session.status === "error" ? <ErrorMessage error={session.error} /> : null}
       <LoginForm />
     </section>
@@ -95,7 +96,7 @@ function LoginForm(): ReactElement {
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4" data-testid="login-form">
       <label className="block space-y-1">
-        <span className="text-sm text-slate-600">{t("username")}</span>
+        <span className="text-sm text-fg-muted">{t("username")}</span>
         <input
           name="username"
           autoComplete="username"
@@ -106,11 +107,11 @@ function LoginForm(): ReactElement {
           onChange={(event) => {
             setUsername(event.target.value);
           }}
-          className="w-full rounded border border-slate-300 bg-white px-3 py-2"
+          className="w-full rounded border border-line-strong bg-surface px-3 py-2"
         />
       </label>
       <label className="block space-y-1">
-        <span className="text-sm text-slate-600">{t("password")}</span>
+        <span className="text-sm text-fg-muted">{t("password")}</span>
         <input
           name="password"
           type="password"
@@ -120,14 +121,14 @@ function LoginForm(): ReactElement {
           onChange={(event) => {
             setPassword(event.target.value);
           }}
-          className="w-full rounded border border-slate-300 bg-white px-3 py-2"
+          className="w-full rounded border border-line-strong bg-surface px-3 py-2"
         />
       </label>
       {failure === null ? null : <SignInError failure={failure} />}
       <button
         type="submit"
         disabled={pending}
-        className="rounded bg-slate-800 px-4 py-2 text-white disabled:opacity-50"
+        className="rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong disabled:opacity-50"
       >
         {pending ? t("submitting") : t("submit")}
       </button>
@@ -141,7 +142,7 @@ function SignInError({ failure }: { failure: Failure }): ReactElement {
       role="alert"
       data-testid="login-error"
       data-reason={failure.kind}
-      className="rounded border border-red-300 bg-red-50 p-3 text-red-800"
+      className="rounded border border-danger-line bg-danger-soft p-3 text-danger"
     >
       <FailureText failure={failure} />
     </p>

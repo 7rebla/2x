@@ -1,0 +1,36 @@
+{
+  "intro": "Diese Einstellungen gelten nur in diesem Browser. Sie werden hier gespeichert und wirken sofort.",
+  "appearance": {
+    "legend": "Darstellung",
+    "system": "Wie im System",
+    "light": "Hell",
+    "dark": "Dunkel",
+    "systemCurrent": {
+      "light": "Ihr System nutzt gerade die helle Darstellung.",
+      "dark": "Ihr System nutzt gerade die dunkle Darstellung."
+    }
+  },
+  "accent": {
+    "legend": "Akzentfarbe",
+    "hint": "Für Schaltflächen, Links, den gewählten Navigationspunkt und den Fokusrahmen. Die Statusfarben (Erfolg, Warnung, Fehler) bleiben gleich.",
+    "default": "{{name}} (Standard)",
+    "names": {
+      "aubergine": "Aubergine",
+      "indigo": "Indigo",
+      "berry": "Beere",
+      "umber": "Umbra",
+      "graphite": "Graphit"
+    }
+  },
+  "language": {
+    "legend": "Sprache",
+    "label": "Sprache der Oberfläche",
+    "hint": "Der Sprachumschalter im Kopf ändert dieselbe Einstellung."
+  },
+  "motion": {
+    "legend": "Bewegung",
+    "label": "Bewegung reduzieren",
+    "hint": "Schaltet Text-Animationen und Übergänge ab.",
+    "system": "Ihr System verlangt bereits reduzierte Bewegung, deshalb bleiben Animationen aus."
+  }
+}

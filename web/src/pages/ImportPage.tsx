@@ -10,6 +10,7 @@ import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { ImportReportView } from "../components/ImportReportView.tsx";
 import { deviceClasses } from "./structure/deviceClass.ts";
 import { reloadAfterSave, save } from "./structure/save.ts";
+import { AnimatedHeading } from "../components/TextMotion.tsx";
 
 /** The 13 columns of the device list, in the order the first line must name them (E-44). */
 export const deviceListColumns = [
@@ -104,13 +105,13 @@ export function ImportPage(): ReactElement {
 
   return (
     <section className="space-y-6">
-      <h2 className="text-2xl font-semibold">{t("nav:import")}</h2>
-      <p className="text-slate-600">{t("import:intro")}</p>
+      <AnimatedHeading text={t("nav:import")} />
+      <p className="text-fg-muted">{t("import:intro")}</p>
 
-      <section data-testid="import-format" className="space-y-2 rounded border border-slate-200 p-4 text-sm">
+      <section data-testid="import-format" className="space-y-2 rounded border border-line p-4 text-sm">
         <h3 className="font-semibold">{t("import:format.heading")}</h3>
         <p>{t("import:format.header")}</p>
-        <code data-testid="import-columns" className="block font-mono break-words">
+        <code data-testid="import-columns" className="block font-sans tabular-nums slashed-zero break-words">
           {deviceListColumns.join(",")}
         </code>
         <p>{t("import:format.optionalColumn")}</p>
@@ -149,7 +150,7 @@ export function ImportPage(): ReactElement {
           type="submit"
           data-testid="import-check"
           disabled={file === null || running !== null}
-          className="rounded bg-slate-800 px-3 py-1 text-white disabled:opacity-50"
+          className="rounded bg-accent px-3 py-1 text-on-accent hover:bg-accent-strong disabled:opacity-50"
         >
           {running === "check" ? t("import:file.checking") : t("import:file.check")}
         </button>
@@ -167,7 +168,7 @@ export function ImportPage(): ReactElement {
               type="button"
               data-testid="import-apply"
               disabled={file === null || running !== null}
-              className="rounded bg-green-700 px-3 py-1 text-white disabled:opacity-50"
+              className="rounded bg-accent px-3 py-1 text-on-accent hover:bg-accent-strong disabled:opacity-50"
               onClick={() => {
                 if (file !== null && running === null) {
                   void run("save", file);
@@ -193,7 +194,7 @@ function OutcomeView({ outcome }: { outcome: Outcome }): ReactElement {
         <div
           role="alert"
           data-testid="import-invalid"
-          className="space-y-1 rounded border border-red-300 bg-red-50 p-4 text-red-800"
+          className="space-y-1 rounded border border-danger-line bg-danger-soft p-4 text-danger"
         >
           <p>{t("problem.invalid")}</p>
           {outcome.messages.length === 0 ? null : (
@@ -213,7 +214,7 @@ function OutcomeView({ outcome }: { outcome: Outcome }): ReactElement {
         <div
           role="alert"
           data-testid="import-too-large"
-          className="space-y-1 rounded border border-red-300 bg-red-50 p-4 text-red-800"
+          className="space-y-1 rounded border border-danger-line bg-danger-soft p-4 text-danger"
         >
           <p>{t("problem.tooLarge")}</p>
           {outcome.detail === null ? null : (
@@ -237,7 +238,7 @@ function NextStep({ report }: { report: ImportReport }): ReactElement | null {
   if (report.saved) {
     return (
       <p data-testid="import-next">
-        <Link to="/" className="text-blue-700 underline">
+        <Link to="/" className="text-accent underline hover:text-accent-strong">
           {t("report.toStructure")}
         </Link>
       </p>

@@ -5,7 +5,7 @@ The web UI shows every text in German or English (i18next with react-i18next).
 ## Layout
 
 - One JSON file per language and namespace: `<de|en>/<namespace>.json`.
-- Namespaces of milestone M1: `common`, `nav`, `selftest`, `auth`, `assets`, `audit`, `import`, `files`; `map` for the map (work order 039). Unused ones hold `{}`.
+- Namespaces of milestone M1: `common`, `nav`, `selftest`, `auth`, `assets`, `audit`, `import`, `files`; `map` for the map (work order 039); `settings` for the settings page (work order 070). Unused ones hold `{}`.
 - `../i18n.ts` registers all namespaces and sets up i18next; `../i18next.d.ts` derives the key types from the English files.
 - The catalogs are bundled with the build. Nothing is loaded over the network.
 

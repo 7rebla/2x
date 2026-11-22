@@ -74,7 +74,7 @@ function useUploadAction(send: (formData: FormData, file: File) => Promise<Uploa
   return { state, action, pending, onFileChange };
 }
 
-const inputClass = "w-full rounded border border-slate-300 bg-white px-3 py-2 aria-[invalid=true]:border-red-500";
+const inputClass = "w-full rounded border border-line-strong bg-surface px-3 py-2 aria-[invalid=true]:border-danger";
 
 function fieldErrors(state: UploadState, field: UploadField): readonly string[] {
   return state.outcome?.kind === "invalid" ? (state.outcome.fieldErrors[field] ?? []) : [];
@@ -100,17 +100,17 @@ function FieldFrame({
   const describedBy = [invalid ? errorId : null, hint === undefined ? null : hintId].filter((item) => item !== null);
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="block text-sm text-slate-600">
+      <label htmlFor={id} className="block text-sm text-fg-muted">
         {label}
       </label>
       {children({ id, invalid, describedBy: describedBy.length > 0 ? describedBy.join(" ") : undefined })}
       {hint === undefined ? null : (
-        <p id={hintId} className="text-sm text-slate-600">
+        <p id={hintId} className="text-sm text-fg-muted">
           {hint}
         </p>
       )}
       {invalid ? (
-        <ul id={errorId} data-testid={`upload-error-${name}`} className="text-sm text-red-800">
+        <ul id={errorId} data-testid={`upload-error-${name}`} className="text-sm text-danger">
           {errors.map((message) => (
             <li key={message}>{message}</li>
           ))}
@@ -150,12 +150,12 @@ export function DuplicateList({ duplicates }: { duplicates: readonly Duplicate[]
       <ul className="list-disc pl-5">
         {duplicates.map((item) => (
           <li key={item.version} data-testid="upload-duplicate">
-            <Link to={devicePath(item.device)} className="underline">
+            <Link to={devicePath(item.device)} className="text-accent underline hover:text-accent-strong">
               {item.device_name}
             </Link>{" "}
-            <span className="font-mono">({item.device_key})</span>
+            <span className="tabular-nums slashed-zero">({item.device_key})</span>
             {": "}
-            <Link to={documentPath(item.document)} className="underline">
+            <Link to={documentPath(item.document)} className="text-accent underline hover:text-accent-strong">
               {item.document_title}
             </Link>
             {", "}
@@ -185,14 +185,14 @@ function OutcomeMessage({
   switch (outcome.kind) {
     case "uploaded":
       return (
-        <div role="status" data-testid="upload-success" className="space-y-1 rounded border border-green-300 bg-green-50 p-3 text-green-900">
+        <div role="status" data-testid="upload-success" className="space-y-1 rounded border border-success-line bg-success-soft p-3 text-success">
           <p>{t("upload.uploaded", { number: outcome.result.version.number })}</p>
           {outcome.result.duplicates.length > 0 ? <DuplicateList duplicates={outcome.result.duplicates} /> : null}
         </div>
       );
     case "sameAsLatest":
       return (
-        <div role="alert" data-testid="upload-same-content" className="space-y-1 rounded border border-amber-300 bg-amber-50 p-3 text-amber-900">
+        <div role="alert" data-testid="upload-same-content" className="space-y-1 rounded border border-warning-line bg-warning-soft p-3 text-warning">
           <p>{t("upload.sameAsLatest", { number: outcome.existing.number })}</p>
           <p className="text-sm">
             {t("upload.sameAsLatestFrom", {
@@ -205,7 +205,7 @@ function OutcomeMessage({
       );
     case "tooLarge":
       return (
-        <div role="alert" data-testid="upload-too-large" className="rounded border border-red-300 bg-red-50 p-3 text-red-800">
+        <div role="alert" data-testid="upload-too-large" className="rounded border border-danger-line bg-danger-soft p-3 text-danger">
           {outcome.limitBytes === null
             ? t("upload.tooLargeUnknown")
             : t("upload.tooLarge", { limit: formatSize(outcome.limitBytes, i18n.resolvedLanguage) })}
@@ -221,7 +221,7 @@ function OutcomeMessage({
       const configuration =
         "kind" in outcome.fieldErrors || (configurationDocument && "non_field_errors" in outcome.fieldErrors);
       return (
-        <div role="alert" data-testid="upload-invalid" className="space-y-1 rounded border border-red-300 bg-red-50 p-3 text-red-800">
+        <div role="alert" data-testid="upload-invalid" className="space-y-1 rounded border border-danger-line bg-danger-soft p-3 text-danger">
           <p>{t("upload.invalid")}</p>
           {configuration ? <p data-testid="upload-configuration-rejected">{t("upload.configurationRejected")}</p> : null}
           {otherErrors.length > 0 ? (
@@ -264,7 +264,7 @@ function UploadShell({
       aria-labelledby={titleId}
       aria-busy={pending}
       data-testid={testId}
-      className="space-y-3 rounded border border-slate-300 bg-white p-4"
+      className="space-y-3 rounded border border-line bg-surface p-4"
     >
       <h4 id={titleId} className="font-semibold">
         {title}
@@ -274,7 +274,7 @@ function UploadShell({
       <div key={state.attempt} className="space-y-3">
         {children}
       </div>
-      <button type="submit" disabled={pending} className="rounded bg-slate-800 px-4 py-2 text-white disabled:opacity-50">
+      <button type="submit" disabled={pending} className="rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong disabled:opacity-50">
         {pending ? t("upload.submitting") : t("upload.submit")}
       </button>
     </form>
