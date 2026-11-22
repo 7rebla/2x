@@ -164,6 +164,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 072 | Marke: Bildmarke im Kopf, Favicon | C | 070 (E-52) | erledigt |
 | 073 | Gerätetyp als Feld, API, Admin, CSV-Spalte, Testfabrik | C | – (E-53) | erledigt |
 | 074 | Eigene Geräte-Icons in Baum, Geräteseite, Landkarte | B | 071, 073 | erledigt |
+| 076 | Schriftzug in der Kopfzeile tippt sich (E-64) | C (entschieden) | 070, 072 | in Arbeit |
 
 ## M2 – Einlesen und Suche (freigegeben 22.11.2026, E-54)
 
