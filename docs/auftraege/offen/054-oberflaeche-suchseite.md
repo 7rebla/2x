@@ -49,6 +49,8 @@ Alle Befehle laufen in Git Bash im Wurzelverzeichnis des Arbeitsverzeichnisses, 
 
 ## Vorgaben und Hinweise
 
+- **Nachtrag der Leitstelle (aus 071):** `navigation.ts` verlangt je Eintrag ein Pflichtfeld `icon` (Name aus `web/src/icons/names.ts`, jeder Eintrag ein eigenes Icon, `Layout.test.tsx` prüft das). Neue Icon-Namen in `names.ts` ergänzen (gehört zu diesem Auftrag) und `web/e2e/navigation.spec.ts` anpassen (Liste der Einträge; Kopfzeile bleibt bei 1024 px einzeilig in Deutsch und Englisch).
+
 - **Nachtrag der Leitstelle (E-59, KI optional):** Einbettungen, Vektorsuche und alles, was ein Modell braucht, sind eine aktivierbare Zusatzfunktion. Schalter `TWOX_AI_ENABLED` (Einstellung in `settings.py`, Standard `False`; `.env.example` mit Kommentar). Bei „aus“: kein Aufruf von Ollama, keine Einbettungs-Aufgaben, Einlesen endet nach den Abschnitten erfolgreich, die Suche arbeitet nur mit der Stichwortsuche, Selbsttest und Oberfläche zeigen „KI nicht aktiviert“ als neutralen Zustand (kein Fehler, kein Warnsymbol). Jede KI-abhängige Stelle braucht einen Test für beide Zustände; die CI läuft mit „aus“ und mit „an“ plus Attrappe.
 
 Voraussetzung: 052 ist nach `main` zusammengeführt (Endpunkt im erzeugten Client).

@@ -155,10 +155,10 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | Nr. | Auftrag | Stufe | Voraussetzung | Status |
 | --- | --- | --- | --- | --- |
 | 070 | Theme, Schrift Inter, Text-Animationen, Einstellungsseite | C | – (E-50, E-52) | erledigt |
-| 071 | Icon-Schicht mit Lucide | C | 070 (E-51) | in Arbeit |
+| 071 | Icon-Schicht mit Lucide | C | 070 (E-51) | erledigt |
 | 072 | Marke: Bildmarke im Kopf, Favicon | C | 070 (E-52) | erledigt |
 | 073 | Gerätetyp als Feld, API, Admin, CSV-Spalte, Testfabrik | C | – (E-53) | erledigt |
-| 074 | Eigene Geräte-Icons in Baum, Geräteseite, Landkarte | B | 071, 073 | offen |
+| 074 | Eigene Geräte-Icons in Baum, Geräteseite, Landkarte | B | 071, 073 | in Arbeit |
 
 ## M2 – Einlesen und Suche (freigegeben 22.11.2026, E-54)
 
@@ -169,9 +169,9 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 040 | Datenbank: Erweiterungen vector und pg_trgm, Paket pgvector | C | – | erledigt |
 | 041 | Docling-Anbindung: Client, Probelauf, Testdaten | C | – | erledigt |
 | 042 | Datenmodell: Einlese-Auftrag und Abschnitt | C | 040 | erledigt |
-| 043 | Abschnitte aus dem Docling-Ergebnis bilden | C | 041 | in Arbeit |
-| 044 | Einbettungen über Ollama: Client und Prüfung | C | 040, 041 | in Arbeit |
-| 045 | Celery und Einlese-Einstellungen | C | 044 | offen |
+| 043 | Abschnitte aus dem Docling-Ergebnis bilden | C | 041 | erledigt |
+| 044 | Einbettungen über Ollama: Client und Prüfung | C | 040, 041 | erledigt |
+| 045 | Celery und Einlese-Einstellungen | C | 044 | in Arbeit |
 | 046 | Einlese-Ablauf im Worker | B | 042, 043, 045 | offen |
 | 047 | Such-Schnittstelle und Stichwortsuche | C | 042 | in Arbeit |
 | 048 | Einbettungs-Aufgabe im Worker | B | 046 | offen |
@@ -194,3 +194,6 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 - 041: Docling-Client (`ingest/docling.py`) mit Streaming und vier Fehlerarten, `check_docling --convert`, Fixtures aus freien Testdaten. Gemessen ~5 s je PDF-Seite auf der CPU (60 Seiten in ~5 min). Für 057: 2 000 Seiten × 5 s ≈ 2,8 h überschreiten die Grenze von 2 h je Dokument (E-55) – Grenze nach dem Messlauf neu vorschlagen. Docling liefert ein abgeholtes Ergebnis noch ~300 s lang erneut aus; RapidOCR erscheint nicht im Docling-Protokoll (Nachweis über geladene ONNX-Bibliothek).
 - 042: Modelle `IngestJob` (je Versuch eine Zeile, höchstens ein aktiver Auftrag je Version) und `Section` (Suchvektor als generierte Spalte über `heading_text` und `text`, simple/german/english; Einbettung `vector(1024)` nullbar; GIN-, Trigramm- und HNSW-Index). Für 043: leere Abschnittstexte werden abgewiesen. Für 047: Phrasensuche über die Grenzen der verketteten tsvector-Kopien prüfen.
 - 072: Bildmarke im Kopf neben „2x“ (Komponente `BrandMark`, Token `brand` getrennt vom Akzent), Favicon SVG/ICO und Touch-Icon; Backend liefert `/favicon.ico`, `/favicon.svg`, `/apple-touch-icon.png` über feste Pfade. `favicon.svg` danach aus der korrigierten Vorlage neu übernommen (wechselt jetzt im Dunkelmodus auf #B496B8).
+- 043: Abschnitte aus dem Docling-JSON (`ingest/sections.py`), Seiten nie zu eng, Tabellen wortgetreu. Hinweise: aufeinanderfolgende Überschriften ohne Text verschiedener Ebenen landen in umgekehrter Reihenfolge im nächsten Abschnitt; jede Schemaversion 1.x.y wird angenommen (geprüft nur 1.10.0).
+- 044: Einbettungs-Client (`answers/embeddings.py`), Schalter `TWOX_AI_ENABLED` (Standard aus, `.env.example` an), `check_llm --embed` mit neutralem `DISABLED:`; Cloud-Modelle werden am Namen und über `/api/tags` abgewiesen, `/api/show` wird nie aufgerufen. Offen (E-59): Selbsttest und Testseite zeigen noch keinen KI-Zustand – für 048 vorgemerkt. Doku zu `--embed` und den neuen Variablen in 059.
+- 071: Lucide-Icons über `web/src/icons/` (Pflichtfeld `icon` in `navigation.ts`), einzeilige Kopfzeile, Benutzermenü mit Sprache, Einstellungen, Abmelden. Für 054/055: neue Navigationseinträge brauchen ein eigenes Icon in `names.ts` und Anpassungen in `web/e2e/navigation.spec.ts`.
