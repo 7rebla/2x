@@ -73,5 +73,16 @@ Pure CSS in `index.css`; only `opacity`, `transform`, `filter`, `background-posi
 | B, line mask | device header, file title | `MaskedTitle` |
 | C, navigation line | main navigation, settings link | class `nav-link` around an icon and a `nav-label` with `data-label` (reserves the width of the bold label); the current entry also gets the soft accent background |
 | D, loading shimmer | `Loading`, self-test "checking" | `LoadingText` |
+| E, typing (E-64, work order 076) | the name next to the brand mark in the header | `TypedText` (via `BrandMark` with `typing`, set in `Layout.tsx`) |
 
 With reduced motion (settings page or operating system) the components render plain text without animation classes, and `index.css` switches off every animation and transition.
+
+### Typing (pattern E)
+
+| | |
+| --- | --- |
+| When | Once per browser session and run: on the sign-in page (run `sign-in`, also when the session cannot be loaded) and on the first page after signing in (run `app`). The runs already typed are kept in `sessionStorage` under `twox.typed` (access in `try/catch`; without a storage the name types on every page load). Page changes never type again, because the header stays mounted. While the session loads, the place of the name stays empty if nothing has typed yet in this session, else the name stands there at once. |
+| Duration | Start after 300 ms (`--tx-type-start`), then one character every 120 ms (`--tx-type-step`), hard, without fading; afterwards the cursor blinks three times (300 ms on, 300 ms off) and disappears. For "2x": about 0.5 s of typing plus 1.8 s of cursor. Any length of name works: each character (grapheme) gets its position as `--tx-char`. |
+| Look | Interface font (Inter), no monospace. The cursor is a narrow bar (`max(2px, 0.07em)`) in the token `brand`; it waits before the first character and follows each typed character. The brand mark is visible from the start; only the name types. |
+| Layout and accessibility | The name itself (`.tx-type-text`) stays in the flow, reserves the full width and remains the accessible name of the link, but is not drawn while the typed layer (`.tx-type-layer`, `aria-hidden`, absolute on top of it) shows the characters through `::before { content: attr(data-char) }`. The text of the page therefore stays the name, and the navigation never moves. |
+| Switched off | With reduced motion (settings page or operating system) `TypedText` renders the plain name and the run counts as done; the global rules in `index.css` would also leave every character visible and every cursor hidden. |
