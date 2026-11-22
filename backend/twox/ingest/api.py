@@ -155,18 +155,24 @@ class IngestJobPagination(PageNumberPagination):
     page_size = 50
 
 
-def ingest_jobs() -> QuerySet[IngestJob]:
-    """All ingest jobs, newest first, with document, device and requester in the same query.
+def is_newest_job() -> Q:
+    """Condition: the job is the newest job of its version.
 
-    Each job carries ``is_latest``: whether it is the newest job of its
-    version. The rule is the one of the field ``ingest`` of a version
+    The rule is the one of the field ``ingest`` of a version
     (:func:`newest_ingest_jobs`, ``DISTINCT ON`` the version, newest by
     creation, then id); it is a subquery of the same query.
     """
-    newest = newest_ingest_jobs().values("pk")
+    return Q(pk__in=newest_ingest_jobs().values("pk"))
+
+
+def ingest_jobs() -> QuerySet[IngestJob]:
+    """All ingest jobs, newest first, with document, device and requester in the same query.
+
+    Each job carries ``is_latest`` (:func:`is_newest_job`).
+    """
     return (
         IngestJob.objects.select_related("document_version__document__device", "requested_by")
-        .annotate(is_latest=ExpressionWrapper(Q(pk__in=newest), output_field=BooleanField()))
+        .annotate(is_latest=ExpressionWrapper(is_newest_job(), output_field=BooleanField()))
         .order_by("-created_at", "-pk")
     )
 
@@ -251,7 +257,7 @@ class IngestJobListView(generics.ListAPIView[IngestJob]):
         # other filters: a failed attempt followed by a done one is not listed
         # under ?latest=true&status=failed.
         if query_flag(self.request, "latest"):
-            queryset = queryset.filter(is_latest=True)
+            queryset = queryset.filter(is_newest_job())
         statuses = query_statuses(self.request)
         if statuses:
             queryset = queryset.filter(status__in=statuses)
