@@ -1,7 +1,7 @@
 // The one place that names the drawing behind every icon of the interface
 // (work order 071, E-51). Lucide is imported here and nowhere else; code uses
-// icons only by their IconName through Icon.tsx. Own drawings (work order 074)
-// are added to the same table, as components built on SvgGlyph (glyph.tsx).
+// icons only by their IconName through Icon.tsx. Own drawings (work order 074,
+// industrial/) are in the same table, as components built on SvgGlyph (glyph.tsx).
 //
 // Only named imports: the bundler keeps just these icons (tree shaking).
 // Lucide's own names follow its current version (1.77.0); older aliases such
@@ -15,9 +15,7 @@ import {
   CircleCheck,
   CircleUser,
   CircleX,
-  Cpu,
   Download,
-  Factory,
   FileText,
   Funnel,
   FunnelX,
@@ -44,6 +42,16 @@ import {
 } from "lucide-react";
 
 import type { Glyph } from "./glyph.tsx";
+import {
+  ComputerGlyph,
+  ControllerGlyph,
+  DeviceGlyph,
+  FirewallGlyph,
+  PlantGlyph,
+  PlcGlyph,
+  RobotGlyph,
+  RouterGlyph,
+} from "./industrial/glyphs.tsx";
 
 // `satisfies` checks that every entry is a drawing Icon.tsx can render,
 // while IconName stays the exact list of keys.
@@ -60,11 +68,20 @@ const glyphs = {
   // Objects and hierarchy (OBJ)
   site: MapPin, // OBJ-01
   area: LayoutGrid, // OBJ-02
-  plant: Factory, // OBJ-03 (library icon until an own one is drawn)
-  device: Cpu, // OBJ-04, generic device (own icons per class: work order 074)
+  plant: PlantGlyph, // OBJ-03, own drawing
+  device: DeviceGlyph, // OBJ-04, own drawing: generic device and fallback of the device classes
   network: Network, // OBJ-11
   document: FileText, // OBJ-05
   version: GitCommitVertical, // OBJ-07
+
+  // Device classes (DEV, E-53), own drawings; chosen by deviceClassIcon()
+  // in pages/structure/deviceClass.ts, the class "other" shows `device`.
+  devicePlc: PlcGlyph, // DEV-01
+  deviceController: ControllerGlyph, // DEV-02
+  deviceComputer: ComputerGlyph, // DEV-03
+  deviceRouter: RouterGlyph, // DEV-04
+  deviceRobot: RobotGlyph, // DEV-05
+  deviceFirewall: FirewallGlyph, // DEV-06
 
   // Actions (ACT)
   create: Plus, // ACT-01

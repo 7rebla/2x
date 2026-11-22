@@ -27,7 +27,8 @@ import { Icon } from "../icons/Icon.tsx";
 | Group | Names |
 | --- | --- |
 | Navigation | `structure`, `map`, `import`, `audit`, `selftest`, `settings`, `user` |
-| Objects | `site`, `area`, `plant`, `device` (generic), `network`, `document`, `version` |
+| Objects | `site`, `area`, `plant` (own), `device` (own, generic), `network`, `document`, `version` |
+| Device classes (own) | `devicePlc`, `deviceController`, `deviceComputer`, `deviceRouter`, `deviceRobot`, `deviceFirewall` |
 | Actions | `create`, `edit`, `upload`, `download`, `retry`, `apply`, `filter`, `resetFilter`, `search`, `fitView`, `previous`, `next`, `signOut` |
 | Status | `success`, `error`, `warning`, `loading`, `noPermission`, `info` |
 
@@ -35,9 +36,15 @@ The navigation entries name their icon in `../navigation.ts` (`icon`).
 
 ## Own drawings (work order 074 and later)
 
-Own icons, such as one per device class, are React components on the frame `SvgGlyph` (`glyph.tsx`): view box `0 0 24 24`, no fill, stroke in `currentColor`, round caps and joins. They pass only their shapes, without colours, and are added to the table in `names.ts` next to the Lucide icons, under a new name. `icons.test.tsx` then checks them like every other icon (24 grid, `currentColor`, no own colours, a drawing different from all others).
+Own icons are React components on the frame `SvgGlyph` (`glyph.tsx`): view box `0 0 24 24`, no fill, stroke in `currentColor`, round caps and joins. They pass only their shapes, without colours, and are added to the table in `names.ts` next to the Lucide icons, under a new name. `icons.test.tsx` then checks them like every other icon (24 grid, `currentColor`, no own colours, a drawing different from all others).
 
-A mapping from device class to icon (`device_class` → `IconName`, with `device` as fallback) belongs next to `../pages/structure/deviceClass.ts`.
+`industrial/` holds the eight own icons approved by a7: plant (OBJ-03), generic device (OBJ-04) and the device classes PLC, controller, computer, router, robot and firewall (DEV-01 to DEV-06).
+
+- The `.svg` files there are the approved drawings, unchanged byte for byte. They are not imported by the application; they are the reference.
+- `industrial/glyphs.tsx` repeats the shapes of each file as a component. `industrial/glyphs.test.tsx` compares every component with its file shape by shape and checks that each file holds nothing but `path`, `rect` and `circle` on the rules above. A changed drawing therefore means: replace the file, then the shapes in `glyphs.tsx`, until the test passes.
+- They are the project's own work under the licence of the repository.
+
+The mapping from device class to icon (`device_class` → `IconName`) is `deviceClassIcon()` in `../pages/structure/deviceClass.ts`, the only place that knows it. `other`, a missing and an unknown class show `device`; plants show `plant` (`PLANT_ICON`). Every place that shows a class icon also writes the class out (tree row, field on the device page, tooltip and label of the map node), because the icon is decorative.
 
 ## Library
 
