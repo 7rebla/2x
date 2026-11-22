@@ -267,6 +267,7 @@ All variables and their defaults are listed in [docs/ARCHITECTURE.md](docs/ARCHI
 | `TWOX_SEARCH_EMBED_TIMEOUT_SECONDS` | Time limit for embedding a search query (20 s); after it the search falls back to keywords. |
 | `TWOX_INGEST_MAX_RETRIES`, `TWOX_INGEST_POLL_MIN_SECONDS`, `TWOX_INGEST_POLL_MAX_SECONDS` | Retries after a temporary error (5) and the wait between two status queries at Docling (10 to 60 s). |
 | `TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS`, `TWOX_INGEST_TIMEOUT_SECONDS` | Time limit sent to Docling per document (7,200 s, at most that) and the deadline of a conversion from its start at Docling (9,000 s). |
+| `TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS` | Deadline of a job whose Docling task never starts, from the start of the job (86,400 s = 24 hours, at least `TWOX_INGEST_TIMEOUT_SECONDS`); long, so that a large batch waiting in Docling's queue is not cut off. |
 | `TWOX_SECTION_MAX_CHARS` | Largest section in characters (2,000). |
 | `TWOX_EMBED_TASK_MAX_SECONDS` | One embedding task works at most this long, then continues in a new task (240 s). |
 
