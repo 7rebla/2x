@@ -112,6 +112,21 @@ test("the navigation leads to the ingest overview, which lists the open jobs by 
   expect(consoleErrors, "errors in the browser console").toEqual([]);
 });
 
+test.describe("on a phone", () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test("the filters fit and only the table scrolls sideways", async ({ page }) => {
+    await page.goto("/ingest?status=all");
+    await expect(page.getByTestId("ingest-jobs")).toBeVisible();
+    const pageOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(pageOverflow).toBeLessThanOrEqual(0);
+    for (const id of ["ingest-filter-status", "ingest-filter-device"]) {
+      const box = await page.getByTestId(id).boundingBox();
+      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(375);
+    }
+  });
+});
+
 test("an uploaded plain-text file appears under All as skipped, with its device and a link to the file", async ({ page }) => {
   const consoleErrors = collectConsoleErrors(page);
   const device = await newDevice(page, 55);

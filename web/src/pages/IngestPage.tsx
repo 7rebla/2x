@@ -152,14 +152,14 @@ function IngestFilter({
       }}
       className="space-y-2"
     >
-      <fieldset className="flex flex-wrap items-end gap-3">
+      <fieldset className="flex min-w-0 flex-wrap items-end gap-3">
         <legend className="sr-only">{t("filter.legend")}</legend>
-        <div className="flex flex-col gap-1 text-sm">
+        <div className="flex max-w-full min-w-0 flex-col gap-1 text-sm">
           <label htmlFor={statusId}>{t("filter.status")}</label>
           <select
             id={statusId}
             data-testid="ingest-filter-status"
-            className="rounded border border-line-strong bg-surface px-2 py-1 text-base"
+            className="max-w-full rounded border border-line-strong bg-surface px-2 py-1 text-base"
             value={address.status}
             onChange={(event) => {
               const value = event.target.value;
@@ -173,12 +173,12 @@ function IngestFilter({
             ))}
           </select>
         </div>
-        <div className="flex flex-col gap-1 text-sm">
+        <div className="flex max-w-full min-w-0 flex-col gap-1 text-sm">
           <label htmlFor={deviceId}>{t("filter.device")}</label>
           <select
             id={deviceId}
             data-testid="ingest-filter-device"
-            className="max-w-72 rounded border border-line-strong bg-surface px-2 py-1 text-base"
+            className="max-w-full rounded sm:max-w-72 border border-line-strong bg-surface px-2 py-1 text-base"
             value={address.device === null ? "" : String(address.device)}
             aria-busy={devices.isPending}
             onChange={(event) => {
@@ -283,7 +283,7 @@ function IngestJobs({ address }: { address: IngestAddress }): ReactElement {
                   {t("column.times")}
                 </th>
                 {canManage ? (
-                  <th scope="col" data-testid="ingest-column-requested-by" className="p-2 font-semibold">
+                  <th scope="col" data-testid="ingest-column-requested-by" className="p-2 font-semibold whitespace-nowrap">
                     {t("column.requestedBy")}
                   </th>
                 ) : null}
@@ -390,7 +390,7 @@ function IngestJobRow({
         </span>
       </td>
       {canManage ? (
-        <td className="p-2" data-testid="ingest-job-requested-by">
+        <td className="p-2 whitespace-nowrap" data-testid="ingest-job-requested-by">
           {job.requested_by ?? <span className="text-fg-muted">{t("system")}</span>}
         </td>
       ) : null}

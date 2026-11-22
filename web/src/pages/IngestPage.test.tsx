@@ -219,7 +219,7 @@ describe("filter", () => {
     await openOverview(reader);
     const select = screen.getByTestId("ingest-filter-status");
     expect(within(select).getAllByRole("option").map((option) => option.textContent)).toEqual([
-      "Open: error, ingesting, queued",
+      "Open (error, running, queued)",
       "Error",
       "Ingesting",
       "Queued",
@@ -230,7 +230,7 @@ describe("filter", () => {
 
     await act(() => changeLanguage("de"));
     expect(within(select).getAllByRole("option").map((option) => option.textContent)).toEqual([
-      "Offen: Fehler, wird eingelesen, in Warteschlange",
+      "Offen (Fehler, läuft, wartet)",
       "Fehler",
       "Wird eingelesen",
       "In Warteschlange",

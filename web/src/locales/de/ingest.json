@@ -8,7 +8,7 @@
     "unknownDevice": "Gerät Nr. {{id}}"
   },
   "statusFilter": {
-    "open": "Offen: Fehler, wird eingelesen, in Warteschlange",
+    "open": "Offen (Fehler, läuft, wartet)",
     "failed": "Fehler",
     "running": "Wird eingelesen",
     "queued": "In Warteschlange",

@@ -8,7 +8,7 @@
     "unknownDevice": "Device no. {{id}}"
   },
   "statusFilter": {
-    "open": "Open: error, ingesting, queued",
+    "open": "Open (error, running, queued)",
     "failed": "Error",
     "running": "Ingesting",
     "queued": "Queued",
