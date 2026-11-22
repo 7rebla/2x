@@ -1,6 +1,6 @@
 # Auftrag 134 – Navigation Auskunft
 
-Meilenstein: M3 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: C · Status: erledigt
 
 Voraussetzung: 132 (Seite Auskunft unter `/ask`) ist auf `main`. Start erst nach Entscheidung von a7 zu D13 und D14 (Icon); siehe „Fragen an a7“.
 

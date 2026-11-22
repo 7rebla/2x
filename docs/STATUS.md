@@ -238,7 +238,7 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 131 | Oberfläche Antwortstrom und Hook | B | 130 | erledigt |
 | 132 | Seite Auskunft mit Quellenanzeige | B | 131 | erledigt |
 | 133 | Eingrenzen auf Gerät und Anlage | B | 132 | in Arbeit |
-| 134 | Navigation Auskunft | C | 132 | in Arbeit |
+| 134 | Navigation Auskunft | C | 132 | erledigt |
 | 135 | Prüffragen in der CI mit Aufzeichnungen | C | 126, 127 | erledigt |
 | 136 | Beleg für Prüffrage 8 | C | 120 | erledigt |
 | 137 | Abnahmetests M3 und Browserfluss | B | 127, 130, 133, 134 | offen |
