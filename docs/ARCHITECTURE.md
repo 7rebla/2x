@@ -222,7 +222,11 @@ All file content goes through the interface in `twox/files/storage.py` (decision
 | `/api/v1/documents/{document_id}/` | GET a file with all versions | `CanRead` |
 | `/api/v1/documents/{document_id}/versions/` | POST a new version; 409 for content equal to the newest version | `CanManageOrReadOnly` |
 | `/api/v1/document-versions/{version_id}/download/` | GET the content as attachment | `CanRead` |
+| `/api/v1/document-versions/{version_id}/ingest/` | POST: start ingesting the version again; 202 with the new job, 409 while a job is queued or running, 400 for a configuration | `CanManage` |
+| `/api/v1/ingest-jobs/` | GET, 50 jobs per page, newest first, with document, version and device; filters `status` (repeatable), `device`, `document`, `version`; `requested_by` only for `manage`, `null` for `read` | `CanRead` |
 | `/api/v1/audit-log/` | GET, 50 entries per page, newest first; filters `object_type`, `object_id`, `actor` | `CanManage` |
+
+Every version in the files endpoints carries `ingest`: its newest ingest job (status, step, error code, cleaned error detail, counts, times) or `null`, loaded with one extra query for the whole answer. Error code and error detail are shown to both roles (E-57).
 
 The lists of areas, plants and devices filter by their parents (`areas?site=`, `plants?area=`, `devices?plant=`, `devices?site=`). Two requests that create the same key at the same moment end with one success and one HTTP 400 at the field: the views turn the violated unique constraint into a field error.
 
