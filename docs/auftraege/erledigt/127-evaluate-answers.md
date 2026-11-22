@@ -1,6 +1,6 @@
 # Auftrag 127 – Messwerkzeug evaluate_answers
 
-Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 120 (Probe-Liste `m3.json`, Recall@k, Fundstelle über Überschriftenpfad) und 126 (Antwortdienst `answer()`, Befehl `ask`) sind auf `main`. Mittelbar damit auch 121 (`FakeChatModel`), 122 (`ContextSource`, `AnswerEvent`, `prompt_version()`), 123 (`citations.verify`) und 125 (Kontextauswahl).
 

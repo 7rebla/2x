@@ -230,7 +230,7 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 124 | Abstand und Volltext im Suchtreffer | C | 120 | erledigt |
 | 125 | Kontextauswahl für Antworten | B | 121, 122, 124 | erledigt |
 | 126 | Antwortdienst und Befehl ask | B | 121, 122, 123, 125 | erledigt |
-| 127 | Messwerkzeug evaluate_answers | B | 120, 126 | in Arbeit |
+| 127 | Messwerkzeug evaluate_answers | B | 120, 126 | erledigt |
 | 128 | Messlauf Chat-Modell | C | 126, 127 | offen |
 | 129 | Selbsttest und check_llm für Chat | B | 121 | erledigt |
 | 130 | Antwort-API mit SSE und Status | C | 126, 129 | in Arbeit |
