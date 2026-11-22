@@ -1,6 +1,6 @@
 # Auftrag 064 – Filter „nur neuester Auftrag je Version“
 
-Meilenstein: M2 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 055 ist nach `main` zusammengeführt.
 

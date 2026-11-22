@@ -1,6 +1,6 @@
 # Auftrag 062 – Seiten bei Bedarf nachladen
 
-Meilenstein: M2 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 054 und 055 sind nach `main` zusammengeführt (beide ändern `web/src/routes.tsx`).
 
