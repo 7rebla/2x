@@ -5,6 +5,8 @@
 //   be asked for from GET /api/v1/answers/status/ (answersStatusQueryOptions).
 // - ?q= only fills the field; nothing is ever sent on its own (D14 (i)). The
 //   question is not written into the address and nothing is stored (D7).
+// - ?device= or ?plant= limits the answers to one device or plant (work order
+//   133, answer/scope.ts); the device page links here with ?device=.
 // - No jump into the PDF (D14 (f)); sources link to the file page.
 // - routes.tsx loads this page on demand with lazyPage(). It has no entry in
 //   the navigation yet (work order 134), so it needs the role "read".
@@ -20,6 +22,8 @@ import { AnswerCard } from "./answer/AnswerCard.tsx";
 import { AnswerForm } from "./answer/AnswerForm.tsx";
 import { AnswerError, AvailabilityNotice, ContradictionNotice, NoEvidence } from "./answer/AnswerStates.tsx";
 import { availabilityOf, citationTargets, citedSources, statusKeyOf } from "./answer/answerView.ts";
+import { ALL_DEVICES, readScopeAddress, type ScopeAddress, withScopeAddress } from "./answer/scope.ts";
+import { ScopeChip } from "./answer/ScopeChip.tsx";
 import { SourceList } from "./answer/SourceList.tsx";
 import { type AnswerStreamState, useAnswerStream } from "./answer/useAnswerStream.ts";
 
@@ -86,8 +90,14 @@ function AnswerResult({ state, question }: { state: AnswerStreamState; question:
 export function AnswerPage(): ReactElement {
   const { t } = useTranslation("answers");
   usePageTitle(t("title"));
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const initialQuestion = params.get("q") ?? "";
+  // The limit to one device or plant stands in the address (work order 133).
+  const scope = readScopeAddress(params);
+  function changeScope(next: ScopeAddress): void {
+    // Replace: choosing does not add history entries; it never sends a question.
+    setParams((current) => withScopeAddress(current, next), { replace: true });
+  }
   const status = useQuery(answersStatusQueryOptions());
   const { state, ask, cancel } = useAnswerStream();
   /** The question of the shown answer (for the link to the search). */
@@ -102,6 +112,13 @@ export function AnswerPage(): ReactElement {
       <AnimatedHeading text={t("title")} />
       <p className="max-w-prose text-fg-muted">{t("intro")}</p>
       {locked ? <AvailabilityNotice availability={availability} /> : null}
+      {/* Lifting the limit does not stop a running answer; the next question is for all devices. */}
+      <ScopeChip
+        scope={scope}
+        onReset={() => {
+          changeScope(ALL_DEVICES);
+        }}
+      />
       <AnswerForm
         // A new ?q= starts the form again with its text.
         key={initialQuestion}
@@ -109,6 +126,8 @@ export function AnswerPage(): ReactElement {
         locked={locked}
         waiting={availability === "pending"}
         streaming={state.phase === "streaming"}
+        scope={scope}
+        onScopeChange={changeScope}
         onAsk={(request) => {
           setAsked(request.question);
           ask(request);

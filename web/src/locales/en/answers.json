@@ -11,6 +11,19 @@
     "submitting": "Answering…",
     "cancel": "Cancel"
   },
+  "scope": {
+    "device": "Device",
+    "allDevices": "All devices",
+    "plant": "Plant",
+    "allPlants": "All plants",
+    "unknownDevice": "Unknown device ({{id}})",
+    "unknownPlant": "Unknown plant ({{id}})",
+    "byId": "No. {{id}}",
+    "limitedTo": "Limited to:",
+    "kindDevice": "device",
+    "kindPlant": "plant",
+    "reset": "Remove limit"
+  },
   "state": {
     "searching": "Searching for sources…",
     "writing": "Writing the answer…",
