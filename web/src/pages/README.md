@@ -146,6 +146,14 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 - `main.tsx` installs both (and the client configuration) once. Tests render the whole app with
   `../test/renderApp.tsx` and fake the server with `../test/fakeApi.ts` (who `/api/v1/me/` reports, other answers).
 - The self-test page keeps its own loading code from M0 (`../api/selftest.ts`).
+- Answers (M3) do not go through TanStack Query: `POST /api/v1/answers/` is a stream of server-sent events.
+  `../api/answers.ts` (`streamAnswer`) asks through the generated `answer()` and checks every event
+  (`answer/events.ts`); `answer/useAnswerStream.ts` keeps the state (`idle`, `streaming`, `done`, `error`) for the
+  page. Rules: a question is never sent again on its own (no retry, not even after a network error); failures are
+  `ApiError`s like everywhere else (a 403 goes to `onForbidden`, 409 `ai_disabled` is its own cause `ai-disabled`);
+  `cancel()` and leaving the page abort the stream. The streamed text is provisional until `done` replaces it
+  with the checked text (`verified`), and it stays a plain string. Only whether answers are available
+  (`GET /api/v1/answers/status/`) is a query: `answersStatusQueryOptions()`.
 
 ## Structure and devices
 
