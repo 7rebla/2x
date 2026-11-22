@@ -17,6 +17,12 @@ sends the task ``twox.ingest.embed`` after its commit (``ignore_result``; a
 message that cannot be sent leaves its job queued, with a warning). A
 version that already has a queued or running job is skipped and counted.
 
+The newest job of a version is its ingest state in the files API (051). So
+that an embedding job does not hide the result of the conversion, each new
+job takes over ``page_count`` and a note on a partial conversion
+(``error_detail`` starting with ``PARTIAL_DETAIL_PREFIX``) from the newest
+finished conversion of the version (work order 061).
+
 The AI features are optional (E-59): with them off, the command says so
 (``DISABLED:``, exit code 0) and creates nothing.
 """
@@ -33,7 +39,14 @@ from twox.accounts.models import User
 from twox.accounts.roles import MANAGE, user_role
 from twox.files.models import DocumentVersion
 from twox.ingest import tasks
-from twox.ingest.models import ACTIVE_STATUSES, IngestJob, IngestStatus, IngestStep, Section
+from twox.ingest.models import (
+    ACTIVE_STATUSES,
+    PARTIAL_DETAIL_PREFIX,
+    IngestJob,
+    IngestStatus,
+    IngestStep,
+    Section,
+)
 from twox.ingest.pipeline import needs_embedding
 from twox.ingest.services import SEND_RETRY_POLICY
 
@@ -71,6 +84,37 @@ def selected_versions(sections: QuerySet[Section]) -> QuerySet[DocumentVersion]:
 def is_busy(version: DocumentVersion) -> bool:
     """Whether ``version`` has a queued or running ingest job."""
     return IngestJob.objects.filter(document_version=version, status__in=ACTIVE_STATUSES).exists()
+
+
+@dataclass(frozen=True)
+class ConversionState:
+    """What an embedding job takes over from the conversion of its version."""
+
+    page_count: int | None = None
+    error_detail: str = ""
+
+
+def conversion_state(version: DocumentVersion) -> ConversionState:
+    """Page count and partial-conversion note of the newest finished conversion of ``version``.
+
+    A conversion job is ``done`` and has a stored Docling answer (its own or
+    one it reused); an embedding job has none. Without such a job the state is
+    empty. Any other detail of the conversion is not taken over.
+    """
+    conversion = (
+        IngestJob.objects.filter(document_version=version, status=IngestStatus.DONE)
+        .exclude(result_blob_key="")
+        .order_by("-created_at", "-pk")
+        .only("page_count", "error_detail")
+        .first()
+    )
+    if conversion is None:
+        return ConversionState()
+    detail = conversion.error_detail
+    return ConversionState(
+        page_count=conversion.page_count,
+        error_detail=detail if detail.startswith(PARTIAL_DETAIL_PREFIX) else "",
+    )
 
 
 class Command(BaseCommand):
@@ -183,6 +227,7 @@ class Command(BaseCommand):
         created: set[int] = set()
         with transaction.atomic():
             for version, _total in planned:
+                state = conversion_state(version)
                 try:
                     with transaction.atomic():
                         job = IngestJob.objects.create(
@@ -191,6 +236,8 @@ class Command(BaseCommand):
                             step=IngestStep.EMBED,
                             requested_by=user,
                             section_count=Section.objects.filter(document_version=version).count(),
+                            page_count=state.page_count,
+                            error_detail=state.error_detail,
                         )
                 except IntegrityError:
                     # Another job became active since the selection (one per version).
