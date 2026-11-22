@@ -268,6 +268,11 @@ services:
       # The device list of the test factory, read-only: the acceptance test of
       # the CSV import reads it (tests/assets/test_csv_import.py).
       - ../../testfactory/layout:/testfactory/layout:ro
+      # Manifest and test questions of the test factory, read-only: the probe
+      # list of evaluate_search is checked against them
+      # (tests/search/test_probes.py). Only references, no vendor documents.
+      - ../../testfactory/manifest.yaml:/testfactory/manifest.yaml:ro
+      - ../../testfactory/questions.yaml:/testfactory/questions.yaml:ro
     depends_on:
       db:
         condition: service_healthy
