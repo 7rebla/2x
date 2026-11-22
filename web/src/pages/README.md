@@ -45,7 +45,7 @@ loaded when it is opened (work order 062): `routes.tsx` wraps it with `lazyPage(
   Three forms (E-65 point 3, work order 082):
   - From 1280 px (`xl`) icon and text side by side; the seven entries of M2 fit on one line in German and English
     (work order 055), a navigation that is still too wide scrolls on its own.
-  - From 768 to 1279 px the icon above a short text (13 px on a 16 px line, E-65 point 5; `nav:short.*` in
+  - From 768 to 1279 px the icon above a short text (metadata size `text-meta`, 13 px, on a 16 px line, E-65 point 5; `nav:short.*` in
     `locales/*/nav.json`, at most ten characters and part of the full text). The full text stays the link's text,
     accessible name and tooltip; the short text is drawn by CSS (`.nav-short` in `../index.css`) inside an
     `aria-hidden` element. Where it fits, the short text is a whole word of the full name (English: the full names,
@@ -393,7 +393,7 @@ useReportCount(filterKey, query.data?.count, reportCount);
 - Size and zoom (work order 080): the map takes the whole width of the page grid and reaches down to the bottom of the
   window (`useRestHeight`: window height minus the map's place in the page minus the 32 px padding of `main`, measured
   again on resize; at least 28rem as before, 70vh until measured). Fitting the view, on opening and with "Fit view", keeps the
-  zoom between 0.6 and 1.25 (`FIT_VIEW_OPTIONS`), so the 12 px texts of the nodes never shrink below about 7 px; a
+  zoom between 0.6 and 1.25 (`FIT_VIEW_OPTIONS`), so the 13 px metadata of the nodes never shrink below about 8 px (the 12 px labels in capitals about 7 px); a
   larger structure is then reached by panning, the overview or zooming out by hand. The search still fits all its
   matches, at any zoom.
 - The legend is a small box in the top right corner of the map (React Flow `Panel`, `role="note"`, named "Legend"):

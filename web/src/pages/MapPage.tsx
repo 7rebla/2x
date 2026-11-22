@@ -201,7 +201,7 @@ function MapLegend(): ReactElement {
       data-testid="map-legend"
       aria-label={t("legend.label")}
       role="note"
-      className="max-w-60 rounded border border-line bg-surface/90 px-3 py-2 text-[13px] text-fg-muted shadow-sm"
+      className="max-w-60 rounded border border-line bg-surface/90 px-3 py-2 text-meta text-fg-muted shadow-sm"
     >
       <p className="flex items-start gap-2 text-fg">
         {/* The same dash as the network lines (6 4). */}

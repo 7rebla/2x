@@ -76,7 +76,7 @@ function MatchKinds({ kinds }: { kinds: readonly MatchKindsEnum[] }): ReactEleme
         <li
           key={kind}
           data-testid="search-match-kind-item"
-          className="cursor-help rounded-full border border-line-strong bg-surface-muted px-2 text-xs text-fg-muted"
+          className="cursor-help rounded-full border border-line-strong bg-surface-muted px-2 text-meta text-fg-muted"
         >
           <span data-testid="search-match-kind" data-kind={kind} title={t(`matchKind.hint.${kind}`)}>
             {t(`matchKind.${kind}`)}
@@ -115,7 +115,7 @@ function LocationView({ location }: { location: SearchLocation }): ReactElement 
         <span
           data-testid="search-older-version"
           title={t("olderVersionHint")}
-          className="inline-flex items-center gap-1 rounded border border-warning-line bg-warning-soft px-1.5 text-xs text-warning"
+          className="inline-flex items-center gap-1 rounded border border-warning-line bg-warning-soft px-1.5 text-meta text-warning"
         >
           <Icon name="warning" decorative />
           {t("olderVersion")}

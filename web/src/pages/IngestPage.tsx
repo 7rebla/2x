@@ -340,7 +340,7 @@ function IngestJobTable({ jobs, canManage }: { jobs: readonly IngestJob[]; canMa
             <Icon name="device" className="mr-1" decorative />
             {job.device.name}
           </Link>
-          <span className="block text-xs text-fg-muted tabular-nums slashed-zero">{job.device.key}</span>
+          <span className="block text-meta text-fg-muted tabular-nums slashed-zero">{job.device.key}</span>
         </>
       ),
     },
@@ -379,7 +379,7 @@ function IngestJobTable({ jobs, canManage }: { jobs: readonly IngestJob[]; canMa
       key: "times",
       header: t("column.times"),
       headerClassName: "p-2 font-semibold",
-      className: "p-2 text-xs whitespace-nowrap tabular-nums",
+      className: "p-2 text-meta whitespace-nowrap tabular-nums",
       testId: "ingest-job-times",
       cell: (job) => (
         <>
@@ -439,7 +439,7 @@ function VersionLine({ job }: { job: IngestJob }): ReactElement {
   const { t } = useTranslation("ingest");
   return (
     <span
-      className="line-clamp-2 max-w-xs text-xs break-words text-fg-muted"
+      className="line-clamp-2 max-w-xs text-meta break-words text-fg-muted"
       title={job.version.original_filename}
       data-testid="ingest-job-version"
     >
@@ -459,7 +459,7 @@ function JobState({ job, canManage }: { job: IngestJob; canManage: boolean }): R
       <IngestStatusBadge job={job} />
       <IngestError job={job} />
       {superseded ? (
-        <p data-testid="ingest-superseded" className="text-xs text-fg-muted">
+        <p data-testid="ingest-superseded" className="text-meta text-fg-muted">
           {t("superseded")}
         </p>
       ) : canManage ? (

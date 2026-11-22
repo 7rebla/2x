@@ -60,8 +60,8 @@ describe("navigation with icons", () => {
       expect(short?.getAttribute("data-short")).toBe(enNav.short[entry?.textKey ?? "structure"]);
       expect(short?.getAttribute("aria-hidden")).toBe("true");
       expect(short?.textContent).toBe("");
-      // 13 px on a 16 px line (E-65 point 5), so the entry stays 42 px high.
-      expect(short?.classList.contains("text-[13px]")).toBe(true);
+      // The metadata size (13 px, E-65 point 5, work order 084) on a 16 px line, so the entry stays 42 px high.
+      expect(short?.classList.contains("text-meta")).toBe(true);
       expect(short?.classList.contains("leading-4")).toBe(true);
       expect(short?.classList.contains("xl:hidden")).toBe(true);
       expect(link.classList.contains("max-xl:flex-col")).toBe(true);

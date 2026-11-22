@@ -25,6 +25,14 @@
     "Noto Color Emoji";
   /* Stylistic set 2 tells I, l and 1 apart. */
   --font-sans--font-feature-settings: "ss02";
+  /*
+   * Metadata (E-65 point 5, work order 084): times, status details, identifiers
+   * below a name, change log fields, badges. Class text-meta, 13 px on 18 px.
+   * text-xs (12 px) is only for labels in capitals (uppercase tracking-wide);
+   * theme/sourceTypography.test.ts checks both.
+   */
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.125rem;
   --ease-calm: cubic-bezier(0.22, 1, 0.36, 1);
 }
 

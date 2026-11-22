@@ -100,13 +100,13 @@ export function IngestStatusBadge({
       <span
         data-testid="ingest-status"
         data-status={state}
-        className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-medium whitespace-nowrap ${look.className}`}
+        className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-meta font-medium whitespace-nowrap ${look.className}`}
       >
         <Icon name={look.icon} className={state === "running" ? "animate-spin" : undefined} decorative />
         {text}
       </span>
       {counts.length === 0 ? null : (
-        <span data-testid="ingest-counts" className="text-xs text-fg-muted">
+        <span data-testid="ingest-counts" className="text-meta text-fg-muted">
           {counts.join(", ")}
         </span>
       )}
@@ -152,7 +152,7 @@ export function IngestError({ job }: { job: IngestJobSummary | null }): ReactEle
   }
 
   return (
-    <div data-testid="ingest-error" data-code={job.error_code} className="space-y-1 text-xs">
+    <div data-testid="ingest-error" data-code={job.error_code} className="space-y-1 text-meta">
       {message === null ? null : (
         <p data-testid="ingest-error-message" className={message.tone}>
           {message.text}
@@ -212,14 +212,14 @@ export function IngestRetryButton({ version }: { version: IngestRetryTarget }): 
   let message: ReactElement | null = null;
   if (error instanceof ApiError && error.kind === "http" && error.status === 409) {
     message = (
-      <p role="status" data-testid="ingest-conflict" className="text-xs text-info">
+      <p role="status" data-testid="ingest-conflict" className="text-meta text-info">
         <Icon name="info" className="mr-1" decorative />
         {t("ingest.active")}
       </p>
     );
   } else if (error instanceof ApiError && error.kind === "http" && error.status === 400) {
     message = (
-      <p role="alert" data-testid="ingest-rejected" className="text-xs text-danger">
+      <p role="alert" data-testid="ingest-rejected" className="text-meta text-danger">
         <Icon name="error" className="mr-1" decorative />
         {t("ingest.configuration")}
       </p>

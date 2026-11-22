@@ -184,7 +184,7 @@ function NavigationList({
               </span>
               {inMenu ? null : (
                 <span
-                  className="nav-short text-[13px] leading-4 xl:hidden"
+                  className="nav-short text-meta leading-4 xl:hidden"
                   data-short={t(`short.${entry.textKey}`)}
                   aria-hidden="true"
                 />

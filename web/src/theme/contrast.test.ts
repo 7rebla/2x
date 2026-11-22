@@ -49,8 +49,31 @@ const pairs: readonly Pair[] = [
   ["danger", "canvas", NON_TEXT, "border of danger buttons on the page (components/ui)"],
   ["info", "info-soft", TEXT, "information message"],
   ["info", "surface", TEXT, "information text on cards"],
+  ["info", "canvas", TEXT, "information text on the page"],
   ["brand", "surface", NON_TEXT, "brand mark in the header"],
   ["brand", "canvas", NON_TEXT, "brand mark on the page"],
+];
+
+/**
+ * Colour pairs of the small text (13 px metadata and 12 px labels in capitals,
+ * work order 084). Small text gets no relief for large text: each pair must
+ * be in the list above with the full 4.5:1.
+ */
+const smallTextPairs: readonly (readonly [foreground: string, background: string, use: string])[] = [
+  ["fg-muted", "canvas", "times, identifiers and hints on the page"],
+  ["fg-muted", "surface", "times, identifiers, user, checksum, kind labels in tables, cards and map nodes"],
+  ["fg-muted", "surface-muted", "badges of the search, queued and skipped ingest, network nodes, hovered rows"],
+  ["fg", "surface", "IP address on device nodes of the map"],
+  ["fg", "accent-soft", "short text of the current navigation entry"],
+  ["on-accent", "accent", "accent preview tile on the settings page"],
+  ["info", "info-soft", "running ingest badge"],
+  ["info", "surface", "ingest conflict note in tables"],
+  ["info", "canvas", "ingest conflict note on the page"],
+  ["success", "success-soft", "finished ingest badge"],
+  ["warning", "warning-soft", "older version badge of the search"],
+  ["danger", "danger-soft", "failed ingest badge"],
+  ["danger", "surface", "ingest error and rejected note in tables"],
+  ["danger", "canvas", "ingest error and rejected note on the page"],
 ];
 
 const modes: readonly ResolvedTheme[] = ["light", "dark"];
@@ -168,6 +191,18 @@ describe("theme tokens in index.css", () => {
         }
         expect(hue < 160 || hue > 200, `${mode}/${accent} hue ${hue.toFixed(0)}`).toBe(true);
       }
+    }
+  });
+});
+
+describe("contrast of small text", () => {
+  it("measures every colour pair of small text as text (4.5:1)", () => {
+    for (const [foreground, background, use] of smallTextPairs) {
+      const measured = pairs.some(
+        ([pairForeground, pairBackground, minimum]) =>
+          pairForeground === foreground && pairBackground === background && minimum === TEXT,
+      );
+      expect(measured, `${foreground} on ${background} (${use})`).toBe(true);
     }
   });
 });
