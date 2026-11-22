@@ -59,7 +59,7 @@ Nichts davon hält die laufende Arbeit auf.
 3. ~~Lizenzlage fischertechnik~~ – entschieden mit E-63: keine Anfrage. Frühere Beschreibung: **Lizenzlage fischertechnik (Auftrag 102, Frage 1):** Beide Repositories haben keine Lizenz, die Zentralsteuerung ist ausdrücklich „UNLICENSED". Soll a7 beim Hersteller anfragen? Den Entwurf der Anfrage liefert Auftrag 102. Bis dahin gilt: laden ja, weitergeben nein.
 4. ~~URSim~~ – entschieden mit E-63: keine Anfrage. Frühere Beschreibung: **URSim (Auftrag 103, Frage 3):** Die Nutzungsbedingungen erlauben nur eigene interne Nutzung. Anfrage bei Universal Robots vor T2? Arbeitsstand bis dahin: nur selbst erzeugte Dateien einchecken.
 5. **GitHub Secret Scanning mit Push Protection** am Repository einschalten (Auftrag 003, Frage 1) – Einstellung am Konto, nimmt a7 selbst vor.
-6. **Prüffragen in der CI (Auftrag 011, Frage 1):** Empfehlung: aufgezeichnete Antworten in der CI, dazu der echte Lauf lokal vor jedem Zusammenführen. Entscheidung spätestens zu M3.
+6. ~~Prüffragen in der CI~~ – entschieden mit E-69 (D6). Frühere Beschreibung: **Prüffragen in der CI (Auftrag 011, Frage 1):** Empfehlung: aufgezeichnete Antworten in der CI, dazu der echte Lauf lokal vor jedem Zusammenführen. Entscheidung spätestens zu M3.
 7. **Startunterlage berichtigen (Auftrag 102, Frage 5):** Laut Recherche haben fünf statt vier Module eine S7-1200 (zusätzlich DPS). Die Leitstelle ändert die Startunterlage nicht ohne a7.
 8. ~~Gebündelte Bibliotheken in psycopg-binary~~ – bestätigt mit E-28.
 9. ~~Siemens: Klausel gegen Text- und Data-Mining~~ – entschieden mit E-27: nur lokal, von Hand geladen.
@@ -72,7 +72,7 @@ Nichts davon hält die laufende Arbeit auf.
 16. ~~Abnahme M2~~ – abgenommen mit E-67. Frühere Beschreibung: Wiederholung von 060 nach 067: Handbücher eingelesen, Fehler sichtbar, IP-Adresse auf Rang 2, Prüffrage 9 auf Rang 1 – das ROADMAP-Kriterium ist erfüllt. Der Abnahmetest scheitert nur noch an Prüffrage 10 in seiner eigenen Formulierung (Rang 10 statt ≤ 5; in der Formulierung der Probe Rang 1). Optionen: (a) M2 abnehmen, Prüffrage 10 als Thema für M3 (Antwort mit Quellen) vormerken und den Abnahmetest auf das ROADMAP-Kriterium (eine sinngemäße Frage) zurückführen – Empfehlung; (b) vor der Abnahme die Suche weiter verbessern (z. B. Abschnittsüberschriften stärker gewichten, Rangfolge mit einem Reranker – neue Abhängigkeit) und 060 erneut laufen lassen.
 17. ~~Abnahme D1~~ – abgenommen mit E-68. Frühere Beschreibung: **Abnahme D1 (Gestaltung).** Alle Aufträge 070–094 sind erledigt und auf `main`; Testumgebung 2x zeigt den Stand. Empfehlung: abnehmen.
 18. **Grenze Tabelle/Karten (081).** Zwischen 768 und etwa 900 px scrollen Protokoll, Einlesen und Dateien noch im eigenen Kasten (die Seite nicht). Optionen: (a) bei 768 px lassen, wie E-65 sagt – Empfehlung; (b) Grenze auf 1024 px (eine Zeile, `WIDE_TABLE_QUERY`), dann Karten bis 1023 px.
-19. **Freigabe M3 und Entscheidungen D1–D17** (Einzelheiten mit Optionen in den Aufträgen 120–138 unter „Fragen an a7“). Empfehlungen:
+19. ~~Freigabe M3~~ – freigegeben mit E-69, alle Empfehlungen übernommen. Frühere Beschreibung: **Freigabe M3 und Entscheidungen D1–D17** (Einzelheiten mit Optionen in den Aufträgen 120–138 unter „Fragen an a7“). Empfehlungen:
     - D1 Chat-Modell (128): Messlauf mit zwei Kandidaten mit Lizenz ohne Nutzungsbeschränkung, Reasoning aus; `ollama pull` und `OLLAMA_CONTEXT_LENGTH=16384` am Host als Ausnahme wie bei E-56. Die Leitstelle prüft Lizenz und Digest vor dem pull an der Quelle (Rechercheangaben ungeprüft).
     - D2 Prüffrage 8 (136): zwei öffentliche Markdown-Dateien der Fertigungslinie (Modul Bohrstation) in der Testumgebung hochladen; die Datei mit Standard-Zugangsdaten bleibt draußen.
     - D3 Belegumfang: für M3 genügt eine Fundstelle aus der eingelesenen Dokumentation; Repository-Quellen werden mit M5 nachgeprüft.
@@ -217,16 +217,16 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 - 084: Schriftstufe `text-meta` (13/18 px) für Metadaten, 12 px nur noch für Großbuchstaben-Kennzeichen; `sourceTypography.test.ts` wacht darüber. Offen (Folgeauftrag nach 093): Beschriftung der Netzlinien auf der Landkarte steht als Inline-Stil mit 11 px (`MapPage.tsx`), und der Quelltexttest erfasst Inline-`fontSize` noch nicht.
 - 093: Der Landkarten-Test suchte nach einer zufälligen Adresse, die als Teil der Adressen alter Testgeräte vorkam; bei vielen Treffern stößt das Einpassen an `minZoom` 0.05. Der Test wählt jetzt eine freie dreistellige Endung („1 match“). Hinweis: Die Seite kann bei sehr vielen Treffern nicht alle zeigen (Grenzfall, kein Auftrag).
 
-## M3 – Auskunft mit Quellen (vorbereitet 22.11.2026, wartet auf Freigabe durch a7)
+## M3 – Auskunft mit Quellen (freigegeben 22.11.2026, E-69)
 
 Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entscheidungen D1–D17 stehen unter „Wartet auf a7“, Punkt 19. Welle 1 (120–123, Stufe B) kann sofort nach Freigabe starten.
 
 | Nr. | Auftrag | Stufe | Voraussetzung | Status |
 | --- | --- | --- | --- | --- |
-| 120 | Suchgrundlinie Prüffragen | B | – | offen |
-| 121 | Schnittstelle Sprachmodell | B | – | offen |
-| 122 | Antworttypen und Prompt mit Injektionsschutz | B | – | offen |
-| 123 | Zitatprüfung und feste Absage | B | – | offen |
+| 120 | Suchgrundlinie Prüffragen | B | – | in Arbeit |
+| 121 | Schnittstelle Sprachmodell | B | – | in Arbeit |
+| 122 | Antworttypen und Prompt mit Injektionsschutz | B | – | in Arbeit |
+| 123 | Zitatprüfung und feste Absage | B | – | in Arbeit |
 | 124 | Abstand und Volltext im Suchtreffer | C | 120 | offen |
 | 125 | Kontextauswahl für Antworten | B | 121, 122, 124 | offen |
 | 126 | Antwortdienst und Befehl ask | B | 121, 122, 123, 125 | offen |
