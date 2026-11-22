@@ -15,7 +15,9 @@ back, with ``snake_case`` field names; ``json.dumps(to_json(event))`` read
 back through :func:`from_json` gives an equal event.
 
 :data:`NO_EVIDENCE_TEXT` and :data:`CONTRADICTION_PHRASE` are defined here and
-only here; the prompt, the citation check and the answer service import them.
+only here. The prompt imports them; the citation check (``citations.py``)
+and the answer service are to import them from here as well (``citations.py``
+still carries placeholders with the same wording until it is switched over).
 """
 
 from collections.abc import Mapping, Sequence

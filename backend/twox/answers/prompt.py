@@ -82,25 +82,43 @@ USER_TEMPLATE: Final = "Abschnitte:\n\n{sources}\n\n{question}"
 #: Stands for the sections when there are none.
 NO_SOURCES_TEXT: Final = "(keine Abschnitte)"
 
-#: Characters that look like the angle brackets of a delimiter.
-OPENING_BRACKETS: Final = "<\u2039\u00ab\uff1c\ufe64\u3008\u27e8\u300a\u276e\u2770\u29fc"
-CLOSING_BRACKETS: Final = ">\u203a\u00bb\uff1e\ufe65\u3009\u27e9\u300b\u276f\u2771\u29fd"
-#: What a bracket in a run of two or more becomes.
+#: Unicode categories removed from every text: control characters (Cc) and
+#: format characters (Cf: zero-width characters, bidi controls, soft hyphen
+#: and so on), except the characters in :data:`KEPT_CHARACTERS`.
+REMOVED_CATEGORIES: Final = ("Cc", "Cf")
+KEPT_CHARACTERS: Final = "\n\t"
+#: Characters that look like an angle bracket of a delimiter; a run of two or
+#: more of them (also with white space in between) is replaced.
+OPENING_BRACKETS: Final = (
+    "<\u2039\u00ab\uff1c\ufe64\u3008\u27e8\u300a\u276e\u2770\u29fc\u2329\u02c2\u276c\u1438"
+)
+CLOSING_BRACKETS: Final = (
+    ">\u203a\u00bb\uff1e\ufe65\u3009\u27e9\u300b\u276f\u2771\u29fd\u232a\u02c3\u276d\u1433"
+)
+#: Characters that look like two or three angle brackets at once (much less
+#: than, very much less than, ...); replaced even when they stand alone.
+OPENING_MULTI_BRACKETS: Final = "\u226a\u22d8"
+CLOSING_MULTI_BRACKETS: Final = "\u226b\u22d9"
+#: What each bracket character of a replaced run becomes.
 OPENING_REPLACEMENT: Final = "("
 CLOSING_REPLACEMENT: Final = ")"
+#: What may stand between the brackets of an imitated delimiter (format
+#: characters are already removed at that point).
+GAP_PATTERN: Final = r"\s*"
 #: What the current identifier becomes inside a text.
 NONCE_REPLACEMENT: Final = "[Kennung]"
+#: Accepted identifiers.
+NONCE_PATTERN: Final = r"[0-9a-f]{8,64}"
 
-# White space and invisible characters that may stand between the brackets
-# of an imitated delimiter.
-_GAP = r"[\s­᠎​-‏⁠-⁤﻿]*"
-_OPENING_RUN = re.compile(
-    f"[{re.escape(OPENING_BRACKETS)}](?:{_GAP}[{re.escape(OPENING_BRACKETS)}])+"
-)
-_CLOSING_RUN = re.compile(
-    f"[{re.escape(CLOSING_BRACKETS)}](?:{_GAP}[{re.escape(CLOSING_BRACKETS)}])+"
-)
-_NONCE = re.compile(r"[0-9a-f]{8,64}")
+
+def _run_pattern(brackets: str, multi: str) -> re.Pattern[str]:
+    every = re.escape(brackets + multi)
+    return re.compile(f"[{every}](?:{GAP_PATTERN}[{every}])+|[{re.escape(multi)}]")
+
+
+_OPENING_RUN = _run_pattern(OPENING_BRACKETS, OPENING_MULTI_BRACKETS)
+_CLOSING_RUN = _run_pattern(CLOSING_BRACKETS, CLOSING_MULTI_BRACKETS)
+_NONCE = re.compile(NONCE_PATTERN)
 
 
 def new_nonce() -> str:
@@ -111,8 +129,9 @@ def new_nonce() -> str:
 def prompt_version() -> str:
     """Short hash over the templates and neutralisation rules (12 hex characters).
 
-    Changes whenever the prompt changes, the fixed sentences included; the key
-    of the recorded model answers in CI (E-10, work order 135).
+    Changes whenever the prompt or a neutralisation rule changes, the fixed
+    sentences included; the key of the recorded model answers in CI (E-10,
+    work order 135).
     """
     parts = (
         SYSTEM_TEMPLATE,
@@ -124,11 +143,17 @@ def prompt_version() -> str:
         QUESTION_END_TEMPLATE,
         USER_TEMPLATE,
         NO_SOURCES_TEXT,
+        *REMOVED_CATEGORIES,
+        KEPT_CHARACTERS,
         OPENING_BRACKETS,
         CLOSING_BRACKETS,
+        OPENING_MULTI_BRACKETS,
+        CLOSING_MULTI_BRACKETS,
         OPENING_REPLACEMENT,
         CLOSING_REPLACEMENT,
+        GAP_PATTERN,
         NONCE_REPLACEMENT,
+        NONCE_PATTERN,
         answer_types.NO_EVIDENCE_TEXT,
         answer_types.CONTRADICTION_PHRASE,
     )
@@ -139,29 +164,36 @@ def prompt_version() -> str:
 def neutralise(text: str, nonce: str) -> str:
     """``text`` made safe to stand inside a block with identifier ``nonce``.
 
-    - Line breaks become ``\\n``; other control characters (except tab) are
-      removed.
-    - Every run of two or more bracket-like characters (``<<``, ``> >``,
-      look-alike angle brackets, also with white space or invisible characters in
-      between) becomes round brackets, so no delimiter can be imitated, with
-      any identifier or spelling.
+    - Line breaks become ``\\n``. Control and format characters
+      (:data:`REMOVED_CATEGORIES`: also zero-width characters and bidi
+      controls) are removed, except line break and tab.
+    - Every run of two or more angle brackets or look-alikes
+      (:data:`OPENING_BRACKETS`, :data:`CLOSING_BRACKETS`, also with white
+      space in between) and every character that looks like several brackets
+      at once (:data:`OPENING_MULTI_BRACKETS`, :data:`CLOSING_MULTI_BRACKETS`)
+      becomes round brackets, so no delimiter can be imitated, with any
+      identifier or spelling. A single angle bracket stays.
     - Every occurrence of ``nonce`` (any case) becomes
       :data:`NONCE_REPLACEMENT`.
 
     Everything else stays as it is; nothing is shortened.
     """
     text = text.replace("\r\n", "\n").replace("\r", "\n")
-    text = "".join(char for char in text if char in "\n\t" or unicodedata.category(char) != "Cc")
-    text = _OPENING_RUN.sub(lambda m: _replace_brackets(m.group(), OPENING_BRACKETS), text)
-    text = _CLOSING_RUN.sub(lambda m: _replace_brackets(m.group(), CLOSING_BRACKETS), text)
+    text = "".join(
+        char
+        for char in text
+        if char in KEPT_CHARACTERS or unicodedata.category(char) not in REMOVED_CATEGORIES
+    )
+    text = _OPENING_RUN.sub(lambda m: _replace_brackets(m.group(), OPENING_REPLACEMENT), text)
+    text = _CLOSING_RUN.sub(lambda m: _replace_brackets(m.group(), CLOSING_REPLACEMENT), text)
     if nonce:
         text = re.sub(re.escape(nonce), NONCE_REPLACEMENT, text, flags=re.IGNORECASE)
     return text
 
 
-def _replace_brackets(run: str, brackets: str) -> str:
-    replacement = OPENING_REPLACEMENT if brackets == OPENING_BRACKETS else CLOSING_REPLACEMENT
-    return "".join(replacement if char in brackets else char for char in run)
+def _replace_brackets(run: str, replacement: str) -> str:
+    """Every non-space character of ``run`` becomes ``replacement``."""
+    return "".join(char if char.isspace() else replacement for char in run)
 
 
 def system_prompt(nonce: str) -> str:
