@@ -273,6 +273,29 @@ docker compose exec -T api python manage.py evaluate_search --probes m3 --cutoff
 - A **control probe** (id `control-…`, empty list `expected`) asks for something no document answers (`control-11`). It is searched but not judged and does not count in Recall or MRR; the output lists its first 10 hits per kind with identifiers only (section, version, checksum, pages, device).
 - A place in a Markdown file has no pages; a probe gives it by `heading_path` (the headings from the top, matched as a prefix) and `path` (the file in the repository) instead of `pages`.
 
+### Answers
+
+`POST /api/v1/answers/` answers a question from the ingested documents with numbered sources (AI features and a chat model needed, see [Chat model for answers](#chat-model-for-answers)). The question goes in a JSON body (`question`, 1 to 500 characters; optionally `device` and `plant` with ids), never in the address. The answer comes as server-sent events:
+
+- `sources`: the numbered sources with pages, headings, places and a short snippet (never the whole section);
+- `delta`: pieces of the text as the model writes them (provisional);
+- `done`: `status` (`answered`, `no_evidence`, `contradiction`), the cited numbers and `final_text`, the checked answer that replaces the pieces. Without a matching section the answer is "Dazu finde ich nichts in den Unterlagen." and the model is not asked;
+- or `error` with a fixed `code` (`model_unavailable`, `timeout` …) and a short `detail`.
+
+Each account may run one answer at a time (otherwise 409 `answer_in_progress`) and ask `TWOX_ANSWER_RATE` questions (default `10/min`, then 429); an answer ends after `TWOX_ANSWER_TOTAL_TIMEOUT` seconds (default 180) with `timeout`. With the AI features off the endpoint answers 409 `ai_disabled` without searching or contacting anything, without a chat model 503 `chat_not_configured`. `GET /api/v1/answers/status/` tells beforehand: `{"enabled": …, "chat_model_configured": …, "available": …}`.
+
+To try it by hand, sign in first and use the session cookie and the CSRF token of that session (placeholders below):
+
+```sh
+curl -N http://localhost:8000/api/v1/answers/ \
+  -H "Content-Type: application/json" \
+  -H "Cookie: sessionid=<session id>; csrftoken=<csrf token>" \
+  -H "X-CSRFToken: <csrf token>" \
+  -d '{"question": "<your question>"}'
+```
+
+`-N` shows each event as it arrives. Without the session the answer is 403.
+
 ### Acceptance of M2 by hand
 
 In a test environment with the manuals of the test factory uploaded to their devices (`testfactory/fetch.py` downloads them; vendor material never goes into the repository), Docling running and an account with the role `manage`:
@@ -530,7 +553,7 @@ The CI (`.github/workflows/ci.yml`, jobs `backend`, `web`, `testfactory`, `e2e`)
   A locked account gets HTTP 400 with the code `too_many_login_attempts` (also with the right password), the limit per IP address HTTP 429; the sign-in page explains both. The message of the sign-in adapter about a failed sign-in names the user name only, never the password or the IP address.
   The access log of uvicorn has one line per request, failed sign-ins included, but without the client address (decision E-62): it names method, path and status only. The rate limit still counts per IP address internally; that address is not logged.
 - **Roles** (decision E-40): two Django groups, `manage` and `read`.
-  - `read` reads the structure, the files, the ingest jobs and the self-test, downloads files and searches.
+  - `read` reads the structure, the files, the ingest jobs and the self-test, downloads files, searches and asks questions (`/api/v1/answers/`).
   - `manage` may also create and change structure entries, upload files, start an ingestion again, import the device list and read the change log, and sees who started an ingest job.
   - A superuser counts as `manage`. A signed-in account without a role sees no data (HTTP 403).
   - Every API endpoint needs a role unless it says otherwise; the only exceptions are `/api/v1/health/` (open, for the container health check) and `/api/v1/me/` (any signed-in account). A test (`backend/tests/config/test_api.py`) fails for any other endpoint that is open.
@@ -544,7 +567,8 @@ The CI (`.github/workflows/ci.yml`, jobs `backend`, `web`, `testfactory`, `e2e`)
 - **Default credentials in vendor manuals** (E-57): some manuals list the user names and passwords of the delivery state. They are ingested like any other text and every account with a role finds them in the search. They are public vendor information about the delivery state, not about this plant; redaction in documents is checked with M5.
 - **Ingestion:** Docling gets the file under a neutral name (`version-<id>.pdf`), never the original name. The technical error text of a job is cleaned of file names, paths, URLs and IP and MAC addresses and shown to both roles; the raw text goes to the server log only. Who started a job (`requested_by`) is shown to managers only.
 - **Search texts** are not logged: the API logs no query, and a filter (`backend/twox/config/logging.py`) cuts the query string off every line of the access log (method, path and status stay; the client address is not logged either). The search page keeps the text in its address (`/search?q=…`), so it stays in the browser history.
-- **Model server:** with the AI features on, the texts of all sections and every search query go to `TWOX_LLM_BASE_URL`. `check_llm --embed` warns when it points to another machine. Ollama cloud models are refused by name and by the local model list.
+- **Questions and answers** are neither stored nor logged: no table, no history on the server; the API and the answer service log only the outcome, the model, the duration and counts. A question travels in the body of the request, so the access log never sees it. Questions and the selected sections go to `TWOX_LLM_BASE_URL`.
+- **Model server:** with the AI features on, the texts of all sections, every search query, every question and the sections selected for its answer go to `TWOX_LLM_BASE_URL`. `check_llm --embed` warns when it points to another machine. Ollama cloud models are refused by name and by the local model list.
 - **Change log** (django-auditlog, decision E-43): every change to sites, areas, plants, devices, files, versions and accounts (including role, the active flag and the superuser right) with time, user and old and new values. It stores no IP addresses, no password hashes and no values from request headers. Only managers read it (`/audit`, `/api/v1/audit-log/`); superusers also see it read-only in the admin. Ingest jobs and sections are not in the change log; a job records who started it and when.
   It is not tamper-proof: the management command `auditlogflush` that comes with django-auditlog deletes entries and is not blocked, and anyone with access to the database can change the table. Protection in the database is to be checked again before version 0.1. Further gaps are listed under [Limits and known gaps](docs/ARCHITECTURE.md#limits-and-known-gaps).
 - **Missing for HTTPS (milestone M6):** secure cookies, `CSRF_TRUSTED_ORIGINS`, HSTS and a content security policy for the pages; behind a reverse proxy also `ALLAUTH_TRUSTED_PROXY_COUNT` (otherwise every failed sign-in counts against the proxy's address); an installation guide and an `.env` template for testers without debug mode and without development passwords.
