@@ -1,4 +1,4 @@
-"""Reciprocal Rank Fusion of keyword and vector list (050) and of the exact hits (063).
+"""Reciprocal Rank Fusion of keyword and vector list (050) and the exact hits (063, 067).
 
 The expected orders and scores are worked out by hand in the comments, with
 ``k = 60``: a list adds ``1 / (60 + rank)``. All texts are written for these
@@ -189,7 +189,7 @@ def test_switch_decides_whether_the_vector_list_takes_part(
     assert fake_embedder.calls == (["gearbox"] if ai_enabled else [])
 
 
-# --- Exact hits: first, or a third list of the fusion (063) -----------------
+# --- Exact hits: first (063), or no list of their own in a question (067, E-61)
 
 
 @pytest.mark.parametrize(
@@ -227,7 +227,7 @@ def test_other_words_are_the_words_beside_the_identifiers() -> None:
 
 @pytest.fixture
 def xr7(version: DocumentVersion) -> dict[str, Section]:
-    """Five sections for the query "XR7 Getriebeöl wechseln" (two words beside XR7: fused).
+    """Five sections for the query "XR7 Getriebeöl wechseln" (two words beside XR7: a question).
 
     keyword (every word, XR7 also in a heading): A 1 (XR7 in the heading,
     weight A), B 2; exact (XR7 in the text): B, C, D; vector: B 1, A 2, C 3,
@@ -247,33 +247,35 @@ def xr7(version: DocumentVersion) -> dict[str, Section]:
     return {"A": a, "B": b, "C": c, "D": d, "E": e}
 
 
-def test_exact_list_fused_worked_out_by_hand(
+def test_question_without_exact_list_worked_out_by_hand(
     xr7: dict[str, Section], fake_embedder: FakeEmbedder
 ) -> None:
-    # Exact list, ranked by the number of identifiers, then by keyword rank:
-    # B (1 identifier, keyword rank 2) place 1; C and D (1 identifier, no
-    # keyword rank) tie for places 2 and 3 and share their mean, rank 2.5.
-    # A = keyword 1 + vector 2           = 1/61 + 1/62          = 0.032522
-    # B = exact 1 + keyword 2 + vector 1 = 1/61 + 1/62 + 1/61   = 0.048916
-    # C = exact 2.5 + vector 3           = 1/62.5 + 1/63        = 0.031873
-    # D = exact 2.5                      = 1/62.5               = 0.016000
-    # E = vector 4                       = 1/64                 = 0.015625
+    # A question (E-61): only keyword and vector list count, XR7 adds nothing.
+    # A = keyword 1 + vector 2 = 1/61 + 1/62 = 0.032522
+    # B = keyword 2 + vector 1 = 1/62 + 1/61 = 0.032522  (tie with A)
+    # C = vector 3             = 1/63        = 0.015873
+    # E = vector 4             = 1/64        = 0.015625
+    # D = in neither list      = 0           (still found: XR7 word for word)
+    # B and A tie; the hit nearer in meaning comes first: B (vector 1), A (vector 2).
+    # With the exact list of 063, B had 1/61 more and C and D 1/62.5 more each
+    # (order B, A, C, D, E).
     result = search("XR7 Getriebeöl wechseln")
 
     assert result.semantic_used is True
-    assert names(xr7, [hit.section_id for hit in result.hits]) == ["B", "A", "C", "D", "E"]
+    assert names(xr7, [hit.section_id for hit in result.hits]) == ["B", "A", "C", "E", "D"]
     assert [hit.score for hit in result.hits] == pytest.approx(
-        [0.048916, 0.032522, 0.031873, 0.016000, 0.015625], abs=1e-6
+        [0.032522, 0.032522, 0.015873, 0.015625, 0.0], abs=1e-6
     )
     assert [hit.score for hit in result.hits] == pytest.approx(
-        [rrf(1, 2, 1), rrf(1, 2), rrf(2.5, 3), rrf(2.5), rrf(4)]
+        [rrf(2, 1), rrf(1, 2), rrf(3), rrf(4), 0.0]
     )
+    # The match kinds still name the exact matches.
     assert [hit.match_kinds for hit in result.hits] == [
         ALL_THREE,
         BOTH,
         EXACT_SEMANTIC,
-        EXACT,
         SEMANTIC,
+        EXACT,
     ]
     # No score reaches 1: no hit comes first just for naming XR7.
     assert all(hit.score < 1 for hit in result.hits)
@@ -336,11 +338,12 @@ def test_queries_of_identifiers_keep_exact_hits_first(
     assert result.hits[0].score >= 1 > result.hits[1].score
 
 
-def test_tie_between_exact_list_and_vector_list_goes_to_the_meaning(
+def test_exact_hit_in_no_list_comes_after_the_hits_by_meaning(
     version: DocumentVersion, fake_embedder: FakeEmbedder
 ) -> None:
-    # Three words beside E1234: fused. The only exact hit has exact rank 1, the
-    # nearest section vector rank 1: both 1/61. The nearer in meaning comes first.
+    # Three words beside E1234: a question. The only exact hit is in neither the
+    # keyword nor the vector list: score 0, after the nearest section (1/61).
+    # With the exact list of 063 both had 1/61 and the tie went to the meaning.
     exact, near = add_sections(
         version, "Fault E1234: the door is open.", "Close the door before the start."
     )
@@ -349,16 +352,16 @@ def test_tie_between_exact_list_and_vector_list_goes_to_the_meaning(
     hits = search("Was bedeutet Fehler E1234?").hits
 
     assert [hit.section_id for hit in hits] == [near.pk, exact.pk]
-    assert [hit.score for hit in hits] == pytest.approx([rrf(1), rrf(1)])
+    assert [hit.score for hit in hits] == pytest.approx([rrf(1), 0.0])
     assert [hit.match_kinds for hit in hits] == [SEMANTIC, EXACT]
 
 
-def test_same_content_counts_once_in_the_exact_list(
+def test_same_content_is_one_hit_when_exact_hits_add_nothing(
     plant: Plant, fake_embedder: FakeEmbedder
 ) -> None:
-    # The same manual on two devices: its exact hit is one place of the exact
-    # list, not two. Exact list: the shared section and the note tie for places
-    # 1 and 2 (rank 1.5 each); counted per row, it would be 2 for all three.
+    # The same manual on two devices: its exact match is one hit with both
+    # places. In a question it is in neither list: score 0, like the note,
+    # after the nearest section; the two tie and keep the order of their ids.
     first = make_device(plant, "plc-01")
     second = make_device(plant, "plc-02")
     shared = sha256_of("shared manual")
@@ -371,5 +374,6 @@ def test_same_content_counts_once_in_the_exact_list(
     hits = search("How heavy is the XR7?").hits
 
     assert [hit.section_id for hit in hits] == [near.pk, one.pk, note.pk]
-    assert [hit.score for hit in hits] == pytest.approx([rrf(1), rrf(1.5), rrf(1.5)])
+    assert [hit.score for hit in hits] == pytest.approx([rrf(1), 0.0, 0.0])
+    assert [hit.match_kinds for hit in hits] == [SEMANTIC, EXACT, EXACT]
     assert [location.section_id for location in hits[1].locations] == [one.pk, two.pk]

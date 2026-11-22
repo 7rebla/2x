@@ -117,33 +117,47 @@ def test_question_without_common_words_is_found_by_vector_only(
 def test_question_naming_a_product_puts_the_best_meaning_first(
     version: DocumentVersion, fake_embedder: FakeEmbedder
 ) -> None:
-    # 063: a question in plain words that names a product on the side. Before,
-    # every section with "XR7" scored 1 and came before the answer. Here the
-    # sections that name XR7 are not among the nearest (no embedding); one that
-    # is would be in two lists and come first (RRF).
-    answer, level = add_sections(
+    # A question in plain words that names a product on the side. Before 063,
+    # every section with "XR7" scored 1 and came before the answer. With the
+    # exact list of 063, a section that names XR7 and is also among the nearest
+    # was in two lists and still came first (test question 9 in the acceptance
+    # run 060). Since 067 (E-61) the name counts only through the keyword and
+    # the vector list. No keyword hit here (the keyword search needs every word).
+    answer, near_naming, level = add_sections(
         version,
         "Zum Wechsel des Getriebeöls die Ablassschraube lösen und das alte Öl auffangen.",
+        "Der XR7 wiegt 40 kg.",
         "Den Ölstand jeden Monat prüfen.",
     )
     naming = add_sections(
         version,
-        "Der XR7 wiegt 40 kg.",
         "Den XR7 nur mit Schutzbrille bedienen.",
         "Das Typenschild des XR7 sitzt hinten.",
     )
     embed(answer, at_angle(10))
-    embed(level, at_angle(25))
+    embed(near_naming, at_angle(20))
+    embed(level, at_angle(30))
 
     result = search("Wie tausche ich beim XR7 das Getriebeöl?")
 
     hits = result.hits
     assert result.semantic is SemanticState.USED
-    # answer: vector rank 1 = 1/61; the three sections that only name XR7 tie
-    # in the exact list for places 1 to 3, rank 2 each: 1/62, like the vector rank 2.
-    assert [hit.section_id for hit in hits] == [answer.pk, level.pk] + [s.pk for s in naming]
-    assert [hit.match_kinds for hit in hits] == [[MatchKind.SEMANTIC]] * 2 + [[MatchKind.EXACT]] * 3
-    assert [hit.score for hit in hits] == pytest.approx([1 / 61] + [1 / 62] * 4)
+    # vector: answer 1 = 1/61, near_naming 2 = 1/62, level 3 = 1/63; the two
+    # sections that only name XR7 are in no list: 0, last, still "exact".
+    # With 063 the three sections naming XR7 tied for places 1 to 3 of the
+    # exact list (rank 2 each): near_naming = 1/62 + 1/62 = 0.032258, before
+    # the answer (0.016393).
+    assert [hit.section_id for hit in hits] == [answer.pk, near_naming.pk, level.pk] + [
+        s.pk for s in naming
+    ]
+    assert [hit.match_kinds for hit in hits] == [
+        [MatchKind.SEMANTIC],
+        [MatchKind.EXACT, MatchKind.SEMANTIC],
+        [MatchKind.SEMANTIC],
+        [MatchKind.EXACT],
+        [MatchKind.EXACT],
+    ]
+    assert [hit.score for hit in hits] == pytest.approx([1 / 61, 1 / 62, 1 / 63, 0.0, 0.0])
 
 
 def test_vector_list_holds_the_50_nearest_sections(
