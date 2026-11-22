@@ -15,7 +15,7 @@ Die Wochen sind Richtwerte. Mit dem Betrieb ohne a7 kann es schneller gehen; ma�
 | M4 | Steckbrief: Feldvorschläge mit Herkunft, bestätigen und korrigieren | Steckbrief für fünf Geräte der Testfabrik; jede Angabe führt zur Quelle | 8 | offen |
 | M5 | Konfigurationen: Einlese-Module 2–4, Schwärzen von Zugangsdaten, Anzeige mit Zeilenbezug | kein Kennwort in Datenbank oder Index; Fragen zu Konfigurationen werden belegt beantwortet | 9–10 | offen |
 | M6 | Version 0.1: Installationsanleitung, Testfabrik in einem Befehl ladbar, Prüffragen in der CI | ein fremder Rechner startet in 10 Minuten; erste Tester haben Zugang | 11–12 | offen |
-| M1b | Landkarte als interaktive Vorschau (vorgezogen, E-48): Struktur, Geräte und IP-Netze, ohne abgeleitete Verbindungen | Auftrag 039 | – | in Arbeit |
+| M1b | Landkarte als interaktive Vorschau (vorgezogen, E-48): Struktur, Geräte und IP-Netze, ohne abgeleitete Verbindungen | Auftrag 039 | – | fertig, wartet auf Ansicht durch a7 |
 | M7 | Landkarte: Beziehungen aus Konfigurationen, Darstellung | | danach | offen |
 | M8 | Änderungsvergleich zwischen Versionen | | danach | offen |
 | M9 | Was-wäre-wenn im Kleinen: Netzänderungen prüfen, Daten abspielen | | danach | offen |
