@@ -27,7 +27,8 @@ Docling being unreachable and a lost Docling task are retried with a growing
 delay, at most ``TWOX_INGEST_MAX_RETRIES`` times per job (the counter is
 ``attempts``). The deadline ``TWOX_INGEST_TIMEOUT_SECONDS`` counts from the
 first ``started`` reported by Docling; waiting in Docling's own queue does
-not count.
+not count. A task that Docling never reports as started (it stays
+``pending``) gets the same span from the start of the job (work order 065).
 
 :func:`embed` (task ``twox.ingest.embed``, work order 048)
     Only with the AI features on (E-59). Computes the embeddings of the
@@ -263,10 +264,30 @@ def retry_delay(attempt: int) -> int:
 
 
 def _deadline_passed(job: IngestJob, now: datetime) -> bool:
+    """Whether the deadline from the first ``started`` at Docling has passed.
+
+    Without ``docling_started_at`` this deadline does not apply; see
+    :func:`_start_deadline_passed` for a task that Docling never starts.
+    """
     if job.docling_started_at is None:
         return False
     limit = timedelta(seconds=settings.TWOX_INGEST_TIMEOUT_SECONDS)
     return now - job.docling_started_at >= limit
+
+
+def _start_deadline_passed(job: IngestJob, now: datetime) -> bool:
+    """Whether Docling has had ``TWOX_INGEST_TIMEOUT_SECONDS`` to start the task, in vain.
+
+    Counts from ``started_at`` of the job: the job has no field of its own for
+    the upload to Docling, and :func:`convert` uploads right after it sets
+    ``started_at`` (work order 065, no migration). A job that was uploaded
+    again after a lost task keeps its first ``started_at``. Only for a job
+    whose task Docling has not reported as ``started``.
+    """
+    if job.docling_started_at is not None or job.started_at is None:
+        return False
+    limit = timedelta(seconds=settings.TWOX_INGEST_TIMEOUT_SECONDS)
+    return now - job.started_at >= limit
 
 
 # --- Names --------------------------------------------------------------------
@@ -572,6 +593,10 @@ def _poll(job: IngestJob, storage: BlobStorage, converter: DocumentConverter | N
     # _update), so that a long conversion is not taken for a stuck job
     # (ingest_versions --stuck, work order 049).
     fields: dict[str, Any] = {"docling_started_at": timezone.now()} if first_start else {}
+    waiting = not status.finished and not first_start
+    if waiting and _start_deadline_passed(job, timezone.now()):
+        # Asked first: a task that has finished or just started is not lost.
+        return _start_timeout(job)
     if not _update(job, **fields):
         return StepResult(Outcome.IGNORED)
     if not status.finished:
@@ -597,6 +622,16 @@ def _timeout(job: IngestJob) -> StepResult:
         job,
         IngestErrorCode.TIMEOUT,
         f"the conversion did not finish within {seconds} seconds after it started",
+    )
+
+
+def _start_timeout(job: IngestJob) -> StepResult:
+    seconds: int = settings.TWOX_INGEST_TIMEOUT_SECONDS
+    logger.warning("ingest: job %s, Docling did not start the task within %s s", job.pk, seconds)
+    return _fail(
+        job,
+        IngestErrorCode.TIMEOUT,
+        f"Docling did not start the conversion within {seconds} seconds after the upload",
     )
 
 

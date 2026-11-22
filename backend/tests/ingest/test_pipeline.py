@@ -597,17 +597,82 @@ def test_soft_time_limit_fails_as_timeout() -> None:
 # --- Deadline --------------------------------------------------------------------
 
 
-def test_long_wait_in_the_docling_queue_is_no_timeout() -> None:
+def test_wait_in_the_docling_queue_within_the_deadline_goes_on(settings: Settings) -> None:
     job = make_job(make_version())
     converter = FakeConverter(statuses=[PENDING])
     pipeline.convert(job.pk, converter=converter)
-    IngestJob.objects.filter(pk=job.pk).update(started_at=timezone.now() - timedelta(hours=10))
+    submitted = timezone.now() - timedelta(seconds=settings.TWOX_INGEST_TIMEOUT_SECONDS - 60)
+    IngestJob.objects.filter(pk=job.pk).update(started_at=submitted)
 
     result = pipeline.poll(job.pk, converter=converter)
 
     job.refresh_from_db()
     assert result == StepResult(POLLING, poll_after=60)
     assert (job.status, job.docling_started_at) == ("running", None)
+
+
+def test_task_that_docling_never_starts_fails_with_timeout(settings: Settings) -> None:
+    job = make_job(make_version())
+    converter = FakeConverter(statuses=[PENDING])
+    pipeline.convert(job.pk, converter=converter)
+    pipeline.poll(job.pk, converter=converter)
+    submitted = timezone.now() - timedelta(seconds=settings.TWOX_INGEST_TIMEOUT_SECONDS + 1)
+    IngestJob.objects.filter(pk=job.pk).update(started_at=submitted)
+
+    result = pipeline.poll(job.pk, converter=converter)
+
+    job.refresh_from_db()
+    assert result == StepResult(Outcome.FAILED)
+    assert (job.status, job.error_code) == ("failed", "timeout")
+    assert job.error_detail == (
+        "Docling did not start the conversion within 9000 seconds after the upload"
+    )
+    assert job.docling_started_at is None
+    assert job.finished_at is not None
+
+
+def test_late_start_after_a_long_wait_counts_from_the_start(settings: Settings) -> None:
+    job = make_job(make_version())
+    converter = FakeConverter(statuses=[PENDING, STARTED])
+    pipeline.convert(job.pk, converter=converter)
+    pipeline.poll(job.pk, converter=converter)
+    submitted = timezone.now() - timedelta(seconds=settings.TWOX_INGEST_TIMEOUT_SECONDS + 1)
+    IngestJob.objects.filter(pk=job.pk).update(started_at=submitted)
+    before = timezone.now()
+
+    first = pipeline.poll(job.pk, converter=converter)
+    job.refresh_from_db()
+    assert first.outcome == POLLING
+    assert job.docling_started_at is not None
+    assert job.docling_started_at >= before
+
+    # From now on only the deadline from docling_started_at applies.
+    assert pipeline.poll(job.pk, converter=converter).outcome == POLLING
+    started = timezone.now() - timedelta(seconds=settings.TWOX_INGEST_TIMEOUT_SECONDS + 1)
+    IngestJob.objects.filter(pk=job.pk).update(docling_started_at=started)
+
+    result = pipeline.poll(job.pk, converter=converter)
+
+    job.refresh_from_db()
+    assert result == StepResult(Outcome.FAILED)
+    assert job.error_detail == "the conversion did not finish within 9000 seconds after it started"
+
+
+def test_finished_between_two_queries_without_started_is_done(settings: Settings) -> None:
+    job = make_job(make_version())
+    converter = FakeConverter(statuses=[PENDING, SUCCESS])
+    pipeline.convert(job.pk, converter=converter)
+    pipeline.poll(job.pk, converter=converter)
+    # Even past the deadline without a start: Docling is asked first.
+    submitted = timezone.now() - timedelta(seconds=settings.TWOX_INGEST_TIMEOUT_SECONDS + 1)
+    IngestJob.objects.filter(pk=job.pk).update(started_at=submitted)
+
+    result = pipeline.poll(job.pk, converter=converter)
+
+    job.refresh_from_db()
+    assert result == StepResult(Outcome.DONE)
+    assert (job.status, job.error_code, job.docling_started_at) == ("done", "", None)
+    assert job.section_count and job.section_count > 0
 
 
 def test_first_started_sets_the_start_of_the_deadline() -> None:

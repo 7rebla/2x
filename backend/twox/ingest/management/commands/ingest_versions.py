@@ -14,9 +14,14 @@ At least one selection is needed; several are combined:
 ``--stuck MINUTES``
     jobs that are ``queued`` or ``running`` and were not updated for at least
     MINUTES minutes become ``failed`` (``timeout``) and their version is
-    started again. A running job is not updated while Docling converts, so
-    for running jobs choose more than the ingest deadline
-    (``TWOX_INGEST_TIMEOUT_SECONDS``); ``--stuck 0`` takes every active job;
+    started again. Every status query at Docling updates a running job (at
+    least once per ``TWOX_INGEST_POLL_MAX_SECONDS``, work order 048), so this
+    takes jobs that are no longer queried at all, for example after a hard
+    stop of the worker. A job that is still queried ends on its own: after
+    ``TWOX_INGEST_TIMEOUT_SECONDS`` from the start at Docling, or from the
+    start of the job if Docling never starts the task (work order 065).
+    For running jobs more than that deadline remains the safe choice;
+    ``--stuck 0`` takes every active job;
 ``--all``
     a new job for every version (builds the sections again with the current
     ``TWOX_SECTION_MAX_CHARS``; the stored Docling answer is reused);
@@ -194,7 +199,10 @@ class Command(BaseCommand):
             metavar="MINUTES",
             help=(
                 "Jobs queued or running without an update for at least MINUTES minutes:"
-                " set them to failed (timeout) and start their versions again."
+                " set them to failed (timeout) and start their versions again. Every status"
+                " query at Docling updates a running job, so this takes jobs that are no"
+                " longer queried (for example after a hard stop of the worker); for running"
+                " jobs more than TWOX_INGEST_TIMEOUT_SECONDS is the safe choice."
             ),
         )
         parser.add_argument(
