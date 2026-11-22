@@ -1,6 +1,6 @@
 # Auftrag 094 – Beschriftung der Netzlinien auf der Landkarte nach E-65
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 
