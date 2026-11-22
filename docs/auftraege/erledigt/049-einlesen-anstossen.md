@@ -1,6 +1,6 @@
 # Auftrag 049 – Einlesen anstoßen: nach dem Upload, Formatprüfung, Befehl
 
-Meilenstein: M2 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 
