@@ -97,9 +97,17 @@ def skipped_detail(check: FormatCheck) -> str:
 
 
 def send_convert(job_id: int) -> bool:
-    """Send ``twox.ingest.convert`` for the job; ``False`` (and a warning) if that fails."""
+    """Send ``twox.ingest.convert`` for the job; ``False`` (and a warning) if that fails.
+
+    The job row holds the outcome, so no task result is kept
+    (``ignore_result``). That also keeps the sender away from the result
+    store: Celery would otherwise subscribe to the result first and, with
+    Valkey down, retry that for about 100 seconds before the upload returns.
+    """
     try:
-        tasks.convert.apply_async((job_id,), retry=True, retry_policy=SEND_RETRY_POLICY)
+        tasks.convert.apply_async(
+            (job_id,), ignore_result=True, retry=True, retry_policy=SEND_RETRY_POLICY
+        )
     except Exception:
         logger.warning(
             "ingest: job %s could not be sent to the task queue and stays queued; "

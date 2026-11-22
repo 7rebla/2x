@@ -301,7 +301,7 @@ def test_failed_send_leaves_the_job_queued_and_warns(
     assert "ingest_versions --stuck" in caplog.text
 
 
-def test_send_uses_a_short_retry_policy(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_send_keeps_no_result_and_retries_briefly(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[tuple[object, dict[str, object]]] = []
 
     def apply_async(args: object, **options: object) -> None:
@@ -310,7 +310,13 @@ def test_send_uses_a_short_retry_policy(monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setattr(tasks.convert, "apply_async", apply_async)
 
     assert services.send_convert(42) is True
-    assert calls == [((42,), {"retry": True, "retry_policy": services.SEND_RETRY_POLICY})]
+    # No result is kept: the sender never waits for the result store (Valkey).
+    assert calls == [
+        (
+            (42,),
+            {"ignore_result": True, "retry": True, "retry_policy": services.SEND_RETRY_POLICY},
+        )
+    ]
     assert services.SEND_RETRY_POLICY["max_retries"] <= 3
 
 
