@@ -9,15 +9,17 @@ from rest_framework import serializers
 
 from twox.files.models import Document, DocumentKind, DocumentVersion
 from twox.files.services import DuplicateLocation
-from twox.ingest.models import IngestErrorCode, IngestJob, IngestStatus, IngestStep
+from twox.ingest.models import (
+    PARTIAL_DETAIL_PREFIX,
+    IngestErrorCode,
+    IngestJob,
+    IngestStatus,
+    IngestStep,
+)
 
 #: Attribute that :func:`prefetch_latest_ingest_job` fills on each version:
 #: a list with the newest ingest job, or an empty list.
 LATEST_INGEST_JOB_ATTR: Final = "latest_ingest_jobs"
-
-#: Start of ``error_detail`` of a job that Docling converted only in part
-#: (``partial_success``, work order 046); such a job ends ``done``.
-PARTIAL_DETAIL_PREFIX: Final = "converted with "
 
 
 def username_field(source: str, help_text: str) -> serializers.CharField:

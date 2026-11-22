@@ -29,12 +29,17 @@ from tests.files.helpers import (
 )
 from twox.assets.models import Device
 from twox.files.models import Document, DocumentKind, DocumentVersion
-from twox.files.serializers import PARTIAL_DETAIL_PREFIX
 from twox.files.services import add_version, create_document
 from twox.files.uploads import MULTIPART_OVERHEAD_BYTES
 from twox.ingest import pipeline
 from twox.ingest.docling import ConversionErrorItem
-from twox.ingest.models import IngestErrorCode, IngestJob, IngestStatus, IngestStep
+from twox.ingest.models import (
+    PARTIAL_DETAIL_PREFIX,
+    IngestErrorCode,
+    IngestJob,
+    IngestStatus,
+    IngestStep,
+)
 
 if TYPE_CHECKING:
     # Exists in the type stubs only; annotations are not evaluated at runtime.

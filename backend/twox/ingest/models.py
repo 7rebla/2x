@@ -19,7 +19,7 @@ one, and the keyword search works on the search vector alone.
 """
 
 from collections.abc import Iterable, Sequence
-from typing import Protocol
+from typing import Final, Protocol
 
 from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
@@ -49,6 +49,11 @@ SEARCH_CONFIGS = ("simple", "german", "english")
 HEADING_SEPARATOR = " > "
 
 ERROR_DETAIL_MAX_LENGTH = 2000
+#: Start of ``error_detail`` of a job that Docling converted only in part
+#: (``partial_success``, work order 046); such a job ends ``done``. Defined
+#: here, not in the ingest flow, so that the files API can use it without
+#: importing the flow and its clients (work order 061).
+PARTIAL_DETAIL_PREFIX: Final = "converted with "
 EMBEDDING_MODEL_MAX_LENGTH = 200
 DOCLING_TASK_ID_MAX_LENGTH = 200
 

@@ -107,6 +107,10 @@ from twox.ingest.models import (
     Section,
     section_rows,
 )
+
+# Re-exported: the start of the detail of a partly converted document; such an
+# answer is never reused (work order 061 moved it to the models).
+from twox.ingest.models import PARTIAL_DETAIL_PREFIX as PARTIAL_DETAIL_PREFIX
 from twox.ingest.sections import UnsupportedDocumentError, build_sections
 
 logger = logging.getLogger(__name__)
@@ -127,8 +131,6 @@ INTERNAL_DETAIL: Final = "unexpected error in the ingest flow; details are in th
 REDELIVERY_DETAIL: Final = (
     "the worker stopped while working on this job too often; details are in the server log"
 )
-#: Start of the detail of a partly converted document; such an answer is never reused.
-PARTIAL_DETAIL_PREFIX: Final = "converted with "
 #: Separator between the headings and the text of a section in the embedded text.
 EMBEDDING_TEXT_SEPARATOR: Final = "\n\n"
 
