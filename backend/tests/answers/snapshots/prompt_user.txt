@@ -1,0 +1,15 @@
+Abschnitte:
+
+<<<QUELLE 1 0123456789abcdef>>>
+Überschriften: Technische Daten / Versorgung
+Der Motor des Testgeräts läuft mit 24 V Gleichspannung.
+Die Stromaufnahme beträgt höchstens 2 A.
+<<<ENDE 1 0123456789abcdef>>>
+
+<<<QUELLE 2 0123456789abcdef>>>
+Nach einer Störung blinkt die rote Leuchte dreimal.
+<<<ENDE 2 0123456789abcdef>>>
+
+<<<FRAGE 0123456789abcdef>>>
+Mit welcher Spannung läuft der Motor?
+<<<ENDE FRAGE 0123456789abcdef>>>
