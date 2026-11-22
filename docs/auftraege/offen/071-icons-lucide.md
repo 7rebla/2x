@@ -43,6 +43,8 @@ Eine zentrale, typisierte Icon-Schicht in der Oberfläche und die ersten Icons a
 
 ## Vorgaben und Hinweise
 
+- **Nachtrag der Leitstelle (Rückmeldung a7, 22.11.2026):** Die Kopfzeile bricht heute um (englisch „Self-test" in zweiter Zeile, deutsch schlimmer, der Kopf springt beim Sprachwechsel). In diesem Auftrag beheben: Kopfzeile in Deutsch und Englisch einzeilig, kein Springen beim Sprachwechsel; Sprachumschalter aus der Kopfzeile ins Benutzermenü/die Einstellungen (auf der Anmeldeseite bleibt er), Angaben zu Konto und Rolle kompakt im Benutzermenü; unter ca. 1024 px Navigationspunkte als Icon mit zugänglichem Namen. Markenbereich links (072) nicht anfassen. Playwright bei 1280 und 1024 px Breite je Sprache: Navigationspunkte auf einer Zeile, gleiche Kopfhöhe; bei 375 px bedienbar ohne horizontales Scrollen der Seite.
+
 Voraussetzung: Auftrag 070 ist auf `main` (Tokens, Farben über `currentColor`); a7 hat Frage 1 beantwortet.
 
 - Icon-Größen und Strich nach `docs/design/icon-bedarfsanalyse.md`, Teil F. Lokale, ungetrackte Design-Vorlagen unter `docs/design/bildmarke/` nicht ins Repository übernehmen und nicht nennen; dort vorkommende Produktnamen nie in Code, Commits oder Kurzbericht.
