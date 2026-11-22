@@ -1,11 +1,12 @@
 {
-  "intro": "Ingest jobs of all devices, newest first. Without a filter the page lists the jobs that failed, are running or wait in the queue.",
+  "intro": "Ingest jobs of all devices, newest first. Without a filter the page lists the jobs that failed, are running or wait in the queue, and only the newest job of each file version.",
   "filter": {
     "legend": "Filter the ingest jobs",
     "status": "Status",
     "device": "Device",
     "allDevices": "All devices",
-    "unknownDevice": "Device no. {{id}}"
+    "unknownDevice": "Device no. {{id}}",
+    "older": "Also show older attempts"
   },
   "statusFilter": {
     "open": "Open (error, running, queued)",
@@ -29,7 +30,7 @@
   "finished": "Finished",
   "notFinished": "not yet",
   "system": "System",
-  "superseded": "Older attempt: a newer job of this version is listed above.",
+  "superseded": "Older attempt: this version has a newer job.",
   "polling": "Jobs are running: the list updates every 5 seconds.",
   "empty": {
     "open": "Nothing open: no job has failed, none is running or queued.",

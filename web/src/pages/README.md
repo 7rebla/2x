@@ -181,22 +181,28 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 - `IngestPage.tsx` (`/ingest`, role `read`, entry "Ingestion" / "Einlesen" with the icon `ingest`) lists the ingest
   jobs of all devices through `GET /api/v1/ingest-jobs/` (`ingestJobsListOptions`), newest first, 50 per page with
   "previous" and "next" like `/audit`. `routes.tsx` loads it with `lazy()`.
-- Filters: status and device, both in the address (`/ingest?status=…&device=…`) and applied at once. Without a status
-  the page asks for `failed`, `running` and `queued` (what needs attention); one state can be chosen, and `all` sends no
-  status, so ingested and skipped jobs show as well. An unknown status means the default, a device value that cannot
-  be an id means all devices, a device that is not in the list is named by its id. A new filter starts on page 1.
+- Filters: status, device and the switch "Also show older attempts" / "Auch ältere Versuche zeigen", all in the address
+  (`/ingest?status=…&device=…&older=1`) and applied at once. Without a status the page asks for `failed`, `running` and
+  `queued` (what needs attention); one state can be chosen, and `all` sends no status, so ingested and skipped jobs
+  show as well. An unknown status means the default, a device value that cannot be an id means all devices, a device
+  that is not in the list is named by its id. A new filter starts on page 1.
+- Newest job only (work order 064): every job is one attempt (E-55). Without the switch the page sends `latest=true`,
+  so the API lists only the newest job of each version (the job of the field `ingest`, embedding jobs included) and
+  applies status and device to those. A failed attempt that a later one has ingested is therefore not "open" any
+  more. With `?older=1` the page sends no `latest` and lists every attempt.
 - A row shows the device (link, key), the file (link to `/documents/:id`) with version and file name, the status with
   its step and the page and section counts (`IngestStatusBadge`), the translated message with the technical text to
   unfold (`IngestError`), the times (created, finished) and, for `manage` only, who started the job ("System" for
   none; the API sends `null` to `read`, E-57). All three building blocks come from
   `../components/files/IngestStatus.tsx` (work order 053); `error_detail` and every name are rendered as text.
-- "Ingest again" (`IngestRetryButton`) stands on every row of a manager whose job is not queued or running. Every job is
-  one attempt (E-55): when a newer job of the same version is listed on the same page, the older row says so and has
-  no button. A failed attempt stays in the list after a successful retry (the API has no filter for the newest job).
+- "Ingest again" (`IngestRetryButton`) stands on every row of a manager whose job is not queued or running and is the
+  newest job of its version. A row with `is_latest` false (only with older attempts shown) says "Older attempt" and
+  has no button, wherever the newer job is listed; the API decides, not the order of the page.
 - While a listed job is queued or running, the page asks again every 5 seconds (`INGEST_POLL_INTERVAL_MS`) and says
   so; otherwise it does not poll. With the AI features switched off (E-59) no job has the step "embed".
-- Tests fake the list and `POST …/ingest/` inside `IngestPage.test.tsx`; `../../e2e/ingest.spec.ts` uploads a
-  plain-text file, which the format check skips without a converter.
+- Tests fake the list (with `latest` and `is_latest`) and `POST …/ingest/` inside `IngestPage.test.tsx`;
+  `../../e2e/ingest.spec.ts` uploads a plain-text file, which the format check skips without a converter, and checks
+  the switch with answers of its own (`page.route`).
 
 ## Map
 

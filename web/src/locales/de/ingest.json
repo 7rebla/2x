@@ -1,11 +1,12 @@
 {
-  "intro": "Einlese-Aufträge aller Geräte, neueste zuerst. Ohne Filter stehen hier die Aufträge mit Fehler, die laufenden und die wartenden.",
+  "intro": "Einlese-Aufträge aller Geräte, neueste zuerst. Ohne Filter stehen hier die Aufträge mit Fehler, die laufenden und die wartenden, und je Dateiversion nur der neueste Auftrag.",
   "filter": {
     "legend": "Einlese-Aufträge filtern",
     "status": "Status",
     "device": "Gerät",
     "allDevices": "Alle Geräte",
-    "unknownDevice": "Gerät Nr. {{id}}"
+    "unknownDevice": "Gerät Nr. {{id}}",
+    "older": "Auch ältere Versuche zeigen"
   },
   "statusFilter": {
     "open": "Offen (Fehler, läuft, wartet)",
@@ -29,7 +30,7 @@
   "finished": "Beendet",
   "notFinished": "noch nicht",
   "system": "System",
-  "superseded": "Älterer Versuch: Ein neuerer Auftrag dieser Version steht weiter oben.",
+  "superseded": "Älterer Versuch: Zu dieser Version gibt es einen neueren Auftrag.",
   "polling": "Es laufen Aufträge: Die Liste wird alle 5 Sekunden aktualisiert.",
   "empty": {
     "open": "Nichts offen: Kein Auftrag ist gescheitert, keiner läuft oder wartet.",
