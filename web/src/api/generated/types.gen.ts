@@ -23,6 +23,154 @@ export type AiCheck = {
 };
 
 /**
+ * A piece of the answer text; provisional, ``done`` brings the checked text.
+ */
+export type AnswerDeltaEvent = {
+    /**
+     * Always "delta".
+     */
+    type: string;
+    text: string;
+};
+
+/**
+ * Last event of an answer: the checked text replaces the pieces.
+ */
+export type AnswerDoneEvent = {
+    /**
+     * Always "done".
+     */
+    type: string;
+    /**
+     * answered, no_evidence, contradiction.
+     */
+    status: string;
+    cited: Array<number>;
+    removed_sentences: number;
+    final_text: string;
+};
+
+/**
+ * The answer failed; nothing follows. No model output, no address.
+ */
+export type AnswerErrorEvent = {
+    /**
+     * Always "error".
+     */
+    type: string;
+    /**
+     * ai_disabled, model_unavailable, model_rejected, timeout, search_failed, internal.
+     */
+    code: string;
+    detail: string;
+};
+
+export type AnswerEvent = ({
+    type: 'sources';
+} & AnswerSourcesEvent) | ({
+    type: 'delta';
+} & AnswerDeltaEvent) | ({
+    type: 'done';
+} & AnswerDoneEvent) | ({
+    type: 'error';
+} & AnswerErrorEvent);
+
+/**
+ * One place a source is stored at (document, version, device, plant).
+ */
+export type AnswerLocation = {
+    section_id: number;
+    document_id: number;
+    document_title: string;
+    version_id: number;
+    version_number: number;
+    version_filename: string;
+    is_latest_version: boolean;
+    device_id: number;
+    device_key: string;
+    device_name: string;
+    plant_id: number;
+    plant_key: string;
+    plant_name: string;
+};
+
+/**
+ * 409 or 503: no answer is started; ``code`` says why.
+ */
+export type AnswerRefusal = {
+    detail: string;
+    /**
+     * ai_disabled (409), answer_in_progress (409) or chat_not_configured (503).
+     */
+    code: string;
+};
+
+/**
+ * The question and its optional scope.
+ */
+export type AnswerRequest = {
+    /**
+     * The question, 1 to 500 characters after trimming white space.
+     */
+    question: string;
+    /**
+     * Only sections of one of these devices (ids).
+     */
+    device?: Array<number>;
+    /**
+     * Only sections in one of these plants (ids).
+     */
+    plant?: Array<number>;
+};
+
+/**
+ * A numbered source of the answer; the answer cites it as ``[n]``.
+ */
+export type AnswerSource = {
+    n: number;
+    section_id: number;
+    version_id: number;
+    sha256: string;
+    page_start: number | null;
+    page_end: number | null;
+    heading_path: Array<string>;
+    locations: Array<AnswerLocation>;
+    /**
+     * Start of the section, at most 300 characters; not the whole section, not HTML.
+     */
+    snippet: string;
+};
+
+/**
+ * First event: the sources the answer may cite (empty: nothing found).
+ */
+export type AnswerSourcesEvent = {
+    /**
+     * Always "sources".
+     */
+    type: string;
+    sources: Array<AnswerSource>;
+};
+
+/**
+ * Whether answers can be asked for.
+ */
+export type AnswerStatus = {
+    /**
+     * The AI features are on (TWOX_AI_ENABLED).
+     */
+    enabled: boolean;
+    /**
+     * TWOX_CHAT_MODEL is set.
+     */
+    chat_model_configured: boolean;
+    /**
+     * Both, and the chat model is loaded and can generate text.
+     */
+    available: boolean;
+};
+
+/**
  * An area of a site. ``site`` is the id of the site.
  */
 export type Area = {
@@ -886,6 +1034,69 @@ export type SiteWritable = {
 export type UploadResultWritable = {
     duplicates: Array<Duplicate>;
 };
+
+export type AnswerData = {
+    body: AnswerRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/answers/';
+};
+
+export type AnswerErrors = {
+    /**
+     * Invalid input; the errors are per field.
+     */
+    400: unknown;
+    /**
+     * No role or no CSRF token.
+     */
+    403: ErrorDetail;
+    /**
+     * AI features off (ai_disabled), or an answer runs already.
+     */
+    409: AnswerRefusal;
+    /**
+     * Too many questions.
+     */
+    429: ErrorDetail;
+    /**
+     * No chat model configured.
+     */
+    503: AnswerRefusal;
+};
+
+export type AnswerError = AnswerErrors[keyof AnswerErrors];
+
+export type AnswerResponses = {
+    /**
+     * Server-sent events: sources, then delta pieces, then done; or error at any point. Each event is 'event: <type>' and 'data: <JSON>'.
+     */
+    200: AnswerEvent;
+};
+
+export type AnswerResponse = AnswerResponses[keyof AnswerResponses];
+
+export type AnswerStatusData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/answers/status/';
+};
+
+export type AnswerStatusErrors = {
+    /**
+     * No role.
+     */
+    403: ErrorDetail;
+};
+
+export type AnswerStatusError = AnswerStatusErrors[keyof AnswerStatusErrors];
+
+export type AnswerStatusResponses = {
+    200: AnswerStatus;
+};
+
+export type AnswerStatusResponse = AnswerStatusResponses[keyof AnswerStatusResponses];
 
 export type AreasListData = {
     body?: never;

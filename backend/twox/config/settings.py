@@ -6,6 +6,7 @@ prefix ``TWOX_``. Importing this module never opens a database connection.
 
 import math
 import os
+import re
 from itertools import pairwise
 from pathlib import Path
 from typing import Any
@@ -111,6 +112,25 @@ def env_reasoning_effort(name: str, default: str) -> str | None:
     if raw not in _CHAT_REASONING_EFFORTS:
         choices = ", ".join((*_CHAT_REASONING_EFFORTS, _CHAT_REASONING_EFFORT_OMIT))
         raise ImproperlyConfigured(f"Environment variable {name} must be one of: {choices}.")
+    return raw
+
+
+#: A request rate as Django REST framework reads it: a whole number, "/" and a
+#: period whose first letter DRF uses (s, m, h or d).
+_RATE_PATTERN = re.compile(r"(?P<number>[0-9]+)/(?P<period>s|sec|second|m|min|minute|h|hour|d|day)")
+
+
+def env_rate(name: str, default: str) -> str:
+    """Return the variable ``name`` as a DRF throttle rate such as ``10/min``."""
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    match = _RATE_PATTERN.fullmatch(raw)
+    if match is None or int(match["number"]) < 1:
+        raise ImproperlyConfigured(
+            f"Environment variable {name} must be a rate such as 10/min "
+            "(a whole number greater than zero, then /s, /min, /hour or /day)."
+        )
     return raw
 
 
@@ -294,10 +314,20 @@ CACHES = {
     }
 }
 
+# Most questions per user to POST /api/v1/answers/ (work order 130), counted
+# per user in the cache above. One answer of a local model takes seconds to
+# minutes and only one runs per user at a time; 10 per minute leaves room to
+# ask again after a refusal or a cancel and stops scripts that would keep the
+# model busy for everybody else.
+TWOX_ANSWER_RATE = env_rate("TWOX_ANSWER_RATE", "10/min")
+
 REST_FRAMEWORK = {
     # Closed by default: without a permission class of its own, a view needs
     # a role (E-40). Exceptions are listed in tests/config/test_api.py.
     "DEFAULT_PERMISSION_CLASSES": ["twox.accounts.permissions.CanRead"],
+    # Rates of the views that name a throttle scope; there is no throttle
+    # class for all views, so only those views are limited.
+    "DEFAULT_THROTTLE_RATES": {"answers": TWOX_ANSWER_RATE},
     # The web UI uses the Django session at the same origin; DRF then checks
     # the CSRF token on every write of a signed-in user (E-38). No HTTP basic,
     # no tokens in the browser.
@@ -536,6 +566,10 @@ TWOX_ANSWER_MAX_DISTANCE = env_positive_float("TWOX_ANSWER_MAX_DISTANCE", 0.60, 
 TWOX_ANSWER_TRANSLATION_DISTANCE = env_positive_float(
     "TWOX_ANSWER_TRANSLATION_DISTANCE", 0.15, maximum=2.0
 )
+# Longest time in seconds for one answer over the API, from the question to
+# the last event (work order 130); beyond it the answer ends with the error
+# code timeout and the connection to the model is closed.
+TWOX_ANSWER_TOTAL_TIMEOUT = env_positive_int("TWOX_ANSWER_TOTAL_TIMEOUT", 180)
 
 
 def check_answer_settings(*, max_distance: float, translation_distance: float) -> None:

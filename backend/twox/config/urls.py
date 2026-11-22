@@ -51,6 +51,7 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path("api/v1/", include("twox.files.urls")),
     path("api/v1/", include("twox.ingest.urls")),
     path("api/v1/", include("twox.search.urls")),
+    path("api/v1/", include("twox.answers.urls")),
     # The web UI routes in the browser: / and all its page paths return the
     # same index.html. The files below /static/ come from WhiteNoise.
     path("", web_index, name="web-index"),

@@ -10,13 +10,17 @@ from twox.answers.llm_guard import (
     TAGS_PATH,
     ModelListError,
     ModelNotLoadedError,
+    NoCompletionError,
     RemoteModelError,
+    check_chat_model,
     find_local_model,
     full_model_name,
     is_cloud_model_name,
     is_timeout,
     model_capabilities,
     ollama_root,
+    require_completion,
+    require_local_name,
 )
 
 
@@ -126,3 +130,48 @@ def test_is_timeout() -> None:
     assert is_timeout(urllib.error.URLError(TimeoutError()))
     assert not is_timeout(urllib.error.URLError(ConnectionRefusedError()))
     assert not is_timeout(OSError())
+
+
+# --- The shared check of a chat model (work order 130) --------------------------------
+
+
+def test_require_local_name() -> None:
+    require_local_name("qwen3:8b")
+    with pytest.raises(RemoteModelError, match="is an Ollama cloud model"):
+        require_local_name("gpt-oss:120b-cloud")
+
+
+def test_require_completion() -> None:
+    assert require_completion(frozenset({"completion", "tools"}), "chat:1b") is True
+    assert require_completion(None, "chat:1b") is False
+    with pytest.raises(NoCompletionError, match=r"cannot generate text \(no capability"):
+        require_completion(frozenset({"embedding"}), "bge-m3")
+
+
+def test_check_chat_model_without_a_model_list_checks_nothing() -> None:
+    assert check_chat_model(404, b"", "chat:1b") is None
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [{"name": "chat:1b", "capabilities": ["completion"]}, {"name": "chat:1b"}],
+)
+def test_check_chat_model_returns_the_entry(entry: dict[str, object]) -> None:
+    assert check_chat_model(200, tags(entry), "chat:1b") == entry
+
+
+@pytest.mark.parametrize(
+    ("body", "error"),
+    [
+        (tags({"name": "bge-m3:latest", "capabilities": ["embedding"]}), NoCompletionError),
+        (tags({"name": "other:1b"}), ModelNotLoadedError),
+        (
+            tags({"name": "bge-m3:latest", "remote_host": "https://ollama.example"}),
+            RemoteModelError,
+        ),
+        (b"not json", ModelListError),
+    ],
+)
+def test_check_chat_model_errors(body: bytes, error: type[Exception]) -> None:
+    with pytest.raises(error):
+        check_chat_model(200, body, "bge-m3")
