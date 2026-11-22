@@ -1,6 +1,6 @@
 # Auftrag 123 – Zitatprüfung und feste Absage
 
-Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 

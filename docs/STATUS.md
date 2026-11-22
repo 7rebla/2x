@@ -226,7 +226,7 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 120 | Suchgrundlinie Prüffragen | B | – | erledigt |
 | 121 | Schnittstelle Sprachmodell | B | – | erledigt |
 | 122 | Antworttypen und Prompt mit Injektionsschutz | B | – | erledigt |
-| 123 | Zitatprüfung und feste Absage | B | – | in Arbeit |
+| 123 | Zitatprüfung und feste Absage | B | – | erledigt |
 | 124 | Abstand und Volltext im Suchtreffer | C | 120 | erledigt |
 | 125 | Kontextauswahl für Antworten | B | 121, 122, 124 | in Arbeit |
 | 126 | Antwortdienst und Befehl ask | B | 121, 122, 123, 125 | offen |
