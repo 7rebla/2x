@@ -55,6 +55,15 @@ Inter 4.1 (`assets/fonts/inter/InterVariable.woff2`, unchanged from github.com/r
 
 Identifiers, IP addresses, versions and number columns use the interface font with `tabular-nums slashed-zero`; monospace (`font-mono`) is only for checksums and the raw data of a change log entry (work order 079).
 
+### Small text (E-65 point 5, work order 084)
+
+| Size | Class | Use |
+| --- | --- | --- |
+| 13 px on 18 px | `text-meta` (token `--text-meta` in the `@theme` block of `index.css`) | metadata: times, status details and badges, identifiers below a name, user, checksum, change log fields and raw data, hints in a table cell, the short texts of the navigation (there on a 16 px line with `leading-4`), the legend and node details of the map |
+| 12 px | `text-xs` | labels in capitals only (`uppercase tracking-wide`): the kind of an entry in the structure tree and on the map |
+
+Body text stays 16 px, tables and the `sm` building blocks 14 px (`text-sm`). `sourceTypography.test.ts` fails when `text-xs` appears without `uppercase` in the same class list, when a size is written in pixels (`text-[13px]`) instead of a named size, or when the token changes. Small text has the same contrast rule as all text (4.5:1); `contrast.test.ts` lists the colour pairs of small text and checks that each is measured.
+
 ## Brand mark, favicon and touch icon (E-52)
 
 Work order 072. The files are the project's own work (Apache-2.0 like the repository) and are kept byte for byte as designed; change them only together with the design source.
