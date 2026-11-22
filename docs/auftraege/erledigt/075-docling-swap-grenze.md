@@ -1,6 +1,6 @@
 # Auftrag 075 – Swap-Grenze für Docling
 
-Meilenstein: M2 · Freigabestufe: C (entschieden mit E-62) · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: C (entschieden mit E-62) · Status: erledigt
 
 Voraussetzung: E-62; 066 ist auf `main`.
 
