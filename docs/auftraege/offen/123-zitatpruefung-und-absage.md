@@ -200,3 +200,32 @@ Alle Befehle laufen in Git Bash im Wurzelverzeichnis des Arbeitsverzeichnisses, 
   - `ruff check .` „All checks passed!“, `ruff format --check .` Exit 0, `mypy .` „Success: no issues found in 197 source files“.
   - `makemessages`, `check-licenses.sh` und `spectacular` Exit 0, ohne Unterschied. `makemigrations --check` meldet „No changes detected“.
   - `down -v` Exit 0.
+- **Nachbesserung 3 (nach dritter Prüfung der Leitstelle):** `main` zuerst konfliktfrei in den Zweig geführt (mit 120, 121, 124, 136). `.env` danach neu aus `.env.example` erzeugt.
+  1. Kleines `s.` gilt nur nach Leerraum oder `(` als Abkürzung, und nicht direkt nach einer Zahl. `10 s.`, `10s.`, `250 mm/s.` und `100 Mbit/s.` beenden den Satz. Tests: beide Einheitenfälle ergeben zwei Sätze, `(s. Abb. 3) [1]` bleibt ein Satz.
+  2. Wortteile werden nur abgeschnitten, wenn sie mindestens vier Buchstaben haben und Kleinbuchstaben enthalten. Großbuchstaben-Teile wie `-ENBT` bleiben. Bleiben nur Ziffern übrig, wird das ganze Token geprüft. Tests:
+     - `1756-ENBT` gegen `1756-EN2T` ergibt `unsupported_value`.
+     - `S7 1500-Steuerung` gegen `S7-1200` ergibt `unsupported_value`.
+  3. Markdown wird wie Leerraum behandelt: `*` und Backticks immer, `_` am Wortrand (`x86_64` bleibt). Ein abschließender Ergänzungsstrich wird verworfen (`G-12-`). Führende Wortteile in jeder Schrift werden abgeschnitten (`Schütz-K3` prüft `K3`). Tests:
+     - `**192.168.0.99**` gegen `192.168.0.100` ergibt `unsupported_value`.
+     - `` `S7-1500` `` und `_S7-1500_` gegen `S7-1200` ergeben `unsupported_value`.
+     - `Schütz-K3` gegen `-K7` ergibt `unsupported_value`.
+     - Zu jedem Fall gibt es einen positiven Gegentest.
+  4. Port-Schreibweisen `Port:`, `Port-Nr.`, `Port Nr.` und `Portnummer` werden geprüft, mit possessiven Quantoren. Es gibt negative und positive Tests. Der Wachstumstest deckt zusätzlich ab: `Port` mit langem `:-`-Lauf, lange Unterstrich-Läufe sowie lange Wortteil-Ketten am Tokenende und Tokenanfang.
+  5. Festgelegt und im Docstring genannt: `… 24 V. [1]. Weiter …` ergibt die Sätze `… 24 V. [1].` und `Weiter …`.
+  6. Neuer Docstring-Abschnitt „Limits“ mit dem, worauf sich 126 und 128 nicht stützen können:
+     - Wörter ohne Ziffern (Varianten wie Basic oder Comfort)
+     - Zahlen ohne Einheit
+     - Ports ohne das Wort „Port“
+     - Einheiten außerhalb der Liste und der Sinnzusammenhang
+     - Schreibvarianten derselben Adresse
+     - welche von mehreren zitierten Quellen einen Wert nennt
+
+  Die absolute Grenze von 1 s für ungünstige Eingaben bleibt (Festlegung der Leitstelle).
+
+  Prüfungen nach Nachbesserung 3 (twox-123):
+  - Build und `up --wait` Exit 0.
+  - `test_citations.py`: 167 bestanden.
+  - `pytest`: 2787 bestanden, 0 fehlgeschlagen. `pytest -m worker`: 6 bestanden.
+  - `ruff check .` „All checks passed!“, `ruff format --check .` Exit 0, `mypy .` „Success: no issues found in 205 source files“.
+  - `makemessages`, `check-licenses.sh` und `spectacular` Exit 0, ohne Unterschied. `makemigrations --check` meldet „No changes detected“.
+  - `down -v` Exit 0.
