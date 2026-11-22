@@ -15,6 +15,7 @@ All colours live in `src/index.css` as custom properties (`--twox-*`) and reach 
 | `accent`, `accent-strong`, `accent-soft`, `on-accent` | primary buttons, links, navigation line, selected tile; text on `accent` |
 | `focus` | focus ring (the accent; set globally for `:focus-visible`) |
 | `success`, `warning`, `danger`, `info` with `-soft` and `-line` | status text, message background, message border; independent of the accent |
+| `brand` | the brand mark only: `#765477` in light mode, `#b496b8` in dark mode, independent of the accent (never `#765477` on a dark background) |
 
 Typical classes: `bg-surface border border-line`, `text-fg-muted`, `bg-accent text-on-accent hover:bg-accent-strong`, `text-accent underline hover:text-accent-strong`, `border-danger-line bg-danger-soft text-danger`. Icons (work order 071) take their colour from `currentColor`.
 
@@ -53,6 +54,14 @@ script-src 'self' 'sha256-21Q8MBuGgh+LjfmXBiHrboYdShIdCd3JR1T2Q7yFueI=';
 Inter 4.1 (`assets/fonts/inter/InterVariable.woff2`, unchanged from github.com/rsms/inter, `docs/font-files/`, tag `v4.1`; SIL Open Font License 1.1 in `LICENSE.txt` next to it). One variable file for weights 100–900, `font-display: swap`; the stylistic set `ss02` (I, l and 1 distinguishable) is on for the whole interface.
 
 Identifiers, IP addresses, versions and number columns use the interface font with `tabular-nums slashed-zero`; monospace (`font-mono`) is only for checksums.
+
+## Brand mark, favicon and touch icon (E-52)
+
+Work order 072. The files are the project's own work (Apache-2.0 like the repository) and are kept byte for byte as designed; change them only together with the design source.
+
+- `assets/brand/bildmarke.svg` (master, 64 grid, visible mark 6…58) and `assets/brand/bildmarke-16.svg` (small form, 16 grid), both in `currentColor`. `components/BrandMark.tsx` inlines one of them: the small form below 24 px, else the master. The mark takes the token `brand`, is `aria-hidden` and sits in a link to `/` next to the visible name „2x“ (`common:appTitle`), which gives the link its accessible name. The ids of the SVG mask get a unique prefix per instance.
+- Header: mark 36 px (master). Between the visible mark and the name 16 grid units, as in the design rules; the same 16 units (a quarter of the grid) are the minimum clear space around the mark. The name stays in the interface font, no word mark.
+- `public/favicon.svg` (small form, colour follows `prefers-color-scheme`), `public/favicon.ico` (16/32/48, colour `#957597` for light and dark tab bars) and `public/apple-touch-icon.png` (180 px). Vite copies them to the top of the build; the built `index.html` links them below `/static/`. Django also serves them at `/favicon.ico`, `/favicon.svg` and `/apple-touch-icon.png` (`backend/twox/config/webui.py`), where browsers look without reading the page.
 
 ## Text animations (E-52)
 
