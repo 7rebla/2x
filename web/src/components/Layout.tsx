@@ -1,10 +1,11 @@
 import type { ReactElement } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, NavLink, Outlet } from "react-router";
+import { NavLink, Outlet } from "react-router";
 
 import { LanguageSwitch } from "../LanguageSwitch.tsx";
 import { visibleNavigation } from "../navigation.ts";
 import { useSession } from "../session.ts";
+import { BrandMark } from "./BrandMark.tsx";
 import { UserMenu } from "./UserMenu.tsx";
 
 /**
@@ -22,7 +23,7 @@ export function Layout(): ReactElement {
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-8 gap-y-4 px-4 py-4">
           <h1 className="text-3xl font-semibold tracking-tight">
-            <Link to="/">{t("common:appTitle")}</Link>
+            <BrandMark />
           </h1>
           <div className="flex-1">
             {entries.length > 0 ? (
