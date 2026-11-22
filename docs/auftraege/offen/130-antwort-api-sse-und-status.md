@@ -1,6 +1,6 @@
 # Auftrag 130 – Antwort-API mit SSE und Status
 
-Meilenstein: M3 · Freigabestufe: C · Status: offen
+Meilenstein: M3 · Freigabestufe: C · Status: zur Prüfung
 
 Voraussetzung: 126 (Antwortdienst `answer()` und Befehl `ask`) und 129 (Modellprüfung für Selbsttest und `check_llm --chat`) sind auf `main`; damit auch 121 (`get_chat_model()`, `TWOX_CHAT_*`), 122 (`types.py`, Ereignisvertrag) und 123/125. Start erst nach Entscheidung von D7 und D14 durch a7 (siehe unten).
 
@@ -158,7 +158,65 @@ Empfehlung: (a). Anmeldung und Rechte bleiben unberührt. Die übrigen Punkte vo
 Den Grenzwert des Throttles (`TWOX_ANSWER_RATE`, 10/min) hat die Leitstelle festgelegt; er ist über `.env` änderbar.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Eigene Compose-Projekte `twox-130` und `twox-130-web`, `TWOX_API_PORT=18130`. „2x“ und „twox-leit“ nicht angefasst, 127 und 135 (Dateien) nicht berührt. Keine neue Abhängigkeit, keine Migration.
+
+### Was wurde gebaut?
+
+1. **Gemeinsame Modellprüfung (Festlegung nach 129):** `llm_guard.py` bekommt `NoCompletionError`, `require_local_name()`, `require_completion()` und `check_chat_model(status, body, model)` (rein, ohne Verbindung; Rückgabe Eintrag bzw. `None` ohne Modellliste, sonst neutrale Fehler). `OpenAICompatibleChat._ensure_local_model` und `selftest.check_chat_model_list`/`check_chat` nutzen sie; Meldungstexte und Fehlerklassen unverändert (`/api/show` bleibt nur im Chat-Client). Tests in `test_llm_guard.py` ergänzt.
+2. **Einstellungen:** `TWOX_ANSWER_RATE` (Standard `10/min`, Prüfung `env_rate()`: Zahl ≥ 1 und `/s|sec|second|m|min|minute|h|hour|d|day`, sonst `ImproperlyConfigured`) und `TWOX_ANSWER_TOTAL_TIMEOUT` (Standard 180, `env_positive_int`); `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {"answers": TWOX_ANSWER_RATE}`, keine `DEFAULT_THROTTLE_CLASSES`. Je eine Zeile in `compose.yaml` und `.env.example`.
+3. **`backend/twox/answers/api.py`:** `AnswerView` (`POST /api/v1/answers/`, `CanRead`, Session/CSRF, `ScopedRateThrottle` Scope `answers`), `AnswerStatusView` (`GET /api/v1/answers/status/`), Serializer für Eingabe, Ablehnung (`detail`, `code`), Ereignisse und Status, `AnswerLock` (`cache.add`, Schlüssel `twox:answers:active:<pk>`), `AnswerStream` (async Generator) und `AnswerStreamResponse` (`StreamingHttpResponse`).
+   - Reihenfolge vor dem Strom: 403 → 429 → 400 → 409 `ai_disabled` → 503 `chat_not_configured` → 409 `answer_in_progress`.
+   - Strom: `event: <typ>\ndata: <to_json()>\n\n`, bei `error` zusätzlich `detail` (übersetzt). Header wie verlangt, kein `id:`/`retry:`.
+   - **Datenbankverbindungen: Form (a).** Das erste Ereignis (Kontextauswahl) liest `sync_to_async(..., thread_sensitive=True)` im Thread der Anfrage; Django schließt dessen Verbindung mit `response.close()` (`request_finished`). Alle weiteren Ereignisse mit `thread_sensitive=False`; `answer()` greift nach dem ersten Ereignis nicht mehr auf die Datenbank zu (Test 9a prüft beides).
+   - **Gesamtzeit:** jedes Ereignis wird mit `asyncio.wait(..., timeout=Restzeit)` gelesen; bei Überschreitung `model.close()` (bricht ein wartendes Lesen per Socket-`shutdown` ab), dann `error` `timeout`.
+   - **Schließen:** `finally` schließt das Modell, wartet auf einen noch laufenden Leseschritt, ruft `close()` am Generator von `answer()` und gibt die Sperre frei – bei Ende, Fehler, Zeitüberschreitung, Abbruch (`CancelledError`/`aclose()`). `AnswerStreamResponse.__aiter__` schließt den inneren Generator ausdrücklich (`aclose()`); `close()` der Antwort räumt auch einen nie gelesenen Strom auf.
+   - Die Ansicht holt das Modell selbst (`chat_module.get_chat_model()`, ohne Verbindung) und übergibt es als `chat=`; so kann sie es bei Zeitüberschreitung aus dem Event-Loop schließen.
+   - Status: `available` = KI an, Modell gesetzt und `selftest.check_chat(None)["chat_ok"]` (Prüfung aus 129, nur `/api/tags`); Ergebnis 30 s im Cache (`twox:answers:chat_model_ready`, mit Modellname im Wert, ohne Benutzerbezug).
+   - Protokoll: eine Zeile `Answer stream ended: outcome=<answered|no_evidence|contradiction|error code=…|cancelled>`; sonst nur die Zeile des Dienstes.
+4. **URLs:** `answers/urls.py`, Einbindung in `config/urls.py`; `tests/config/expected_paths/answers.py` und Eintrag in `__init__.py`. `test_api.py` unverändert.
+5. **Übersetzung:** neun Meldungen mit deutscher Übersetzung in `django.po`.
+6. **Schema und Client:** `@extend_schema` mit `operation_id="answer"`/`"answer_status"`; 200 `text/event-stream` als `PolymorphicProxySerializer` `AnswerEvent` (Dict-Form, Diskriminator `type` mit Zuordnung) plus 400/403/409/429/503. `spectacular --validate --fail-on-warn` ohne Warnung. **hey-api erzeugt `answer()` als `client.sse.post` mit Rückgabe `Promise<ServerSentEventsResult<AnswerResponses>>`** (Strom über `.stream`, Typ `AnswerEvent` als Union mit Literal-`type`), dazu `answerStatus()` und `answerStatusOptions()` für React Query. Für 131 wichtig: Der SSE-Client von hey-api (`core/serverSentEvents.gen.ts`) versucht bei jedem Fehler – auch bei HTTP 409/503 – **unbegrenzt neu** (Backoff bis 30 s), wenn `sseMaxRetryAttempts` nicht gesetzt ist, und liest den JSON-Fehlerkörper nicht (nur „SSE failed: 409 …“). 131 muss also `sseMaxRetryAttempts: 1` setzen und die Fehler vor dem Strom selbst auswerten (eigenes `fetch` oder Vorabprüfung über den Status).
+7. **Doku:** `ARCHITECTURE.md` (Zeile `answers`, zwei Zeilen „Roles and API permissions“, Punkt SSE in „API and the generated client“, Punkt „Questions and answers are not logged“ in „Logging“, zwei Zeilen in „Configuration“); `README.md` (Unterabschnitt „Answers“ nach „Search“ mit `curl -N` und Platzhaltern, „Roles“, „Questions and answers“ und „Model server“ in „Security notes“).
+
+### Wie wurde getestet?
+
+`backend/tests/answers/test_api.py` (48 Tests). Synchron über `APIClient`, asynchron über die ASGI-Anwendung `twox.config.asgi.application` (mit `async_to_sync`, bei 9a mit `asyncio.run` und eigenem Thread je Anfrage). Attrappen: `FakeChatModel`, `GatedChat` (liefert ein Stück und hängt bis `close()`), Kontext-Stand-in aus `test_service.py`, für 9a echte Kontextauswahl mit `FakeEmbedder`. Cache je Test `LocMemCache`.
+
+| Nr. | Ergebnis | Nachweis |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` 29.9.3, `docker compose version` v5.7.0, Exit 0 |
+| 1 | erfüllt | ruff check „All checks passed!“; ruff format --check ohne Befund; mypy „Success: no issues found in 221 source files“; `pytest` 3298 passed, 6 deselected; `pytest -m worker` 6 passed; `makemessages` danach ohne Diff; „No changes detected“; „License check passed.“; Schema und Client nach erneutem Erzeugen ohne Diff. Web: lint, typecheck, test (47 Dateien, 962 Tests), build, licenses je Exit 0. e2e: 82 passed, 1 skipped (frische Datenbank, siehe Hinweis 4) |
+| 2 | erfüllt | `test_api.py` unverändert und grün; neue Pfade in `expected_paths/answers.py`; `test_without_role_both_endpoints_refuse` |
+| 3 | erfüllt | `test_without_csrf_token_the_question_is_refused`, `test_invalid_input_gives_400_at_the_field` (leer, nur Leerzeichen, 501 Zeichen, fehlend, 101 Ids, Id 0, kein Int), `test_both_roles_may_ask` (500 Zeichen, read und manage) |
+| 4 | erfüllt | `test_stream_through_the_synchronous_client`, `test_stream_through_the_asgi_application` (Header, Reihenfolge, Format, `type`; ASGI: ein Body-Paket je Ereignis) |
+| 5 | erfüllt | `test_below_the_threshold_the_model_is_not_asked` (`fail_on_call`, `calls == []`) |
+| 6 | erfüllt | `test_sources_carry_a_snippet_not_the_whole_section` |
+| 7 | erfüllt | `test_throttle_counts_per_user` (2/min: 200, 200, 429; zweiter Benutzer 200), `test_a_second_answer_of_the_same_user_waits_for_the_first`, Sperre frei nach Ende/Abbruch in den Strom-Tests |
+| 8 | erfüllt | `test_ai_off_contacts_nothing` (mit und ohne Modell; Socket-Sperre, Spione auf Kontextauswahl, `get_chat_model`, Statusprüfung), `test_without_chat_model_nothing_is_contacted`, `test_status_available_after_the_check_and_kept_in_the_cache`, `test_status_not_available_when_the_check_fails` |
+| 9 | erfüllt | `test_client_going_away_closes_the_model_and_frees_the_lock` (ASGI, `http.disconnect` nach dem ersten `delta`), `test_closing_the_stream_after_the_first_delta` (`aclose()`), `test_a_stream_never_read_frees_the_lock_when_closed` |
+| 9a | erfüllt | `test_no_database_connection_stays_open_after_the_stream` (`transaction=True`, drei Läufe, einer abgebrochen): Verbindung des Threads der Kontextauswahl danach geschlossen, dieser Thread ist nicht der Testthread, Modellstücke in Threads ohne Verbindung, `pg_stat_activity` vorher = nachher. Gegenprobe: mit `thread_sensitive=False` auch für das erste Ereignis schlägt der Test fehl |
+| 10 | erfüllt | `test_model_failure_in_the_middle_is_an_error_event` (Adresse `192.0.2.10` und Rohtext nicht im Strom) |
+| 11 | erfüllt | `test_logs_hold_no_question_answer_or_section_text` (Wurzel auf DEBUG, Erfolg, 400, 409, Modellausfall, Zugriffszeile über den konfigurierten `uvicorn.access`) |
+| 12 | erfüllt | `schema.yml` mit `/api/v1/answers/` (`text/event-stream`) und `/api/v1/answers/status/`; `--validate` ohne Warnung; Client neu erzeugt, typecheck grün |
+| 13 | erfüllt | KI aus, Testkonto aus `.env.example`, Anmeldung über die allauth-API mit CSRF: Status `{"enabled":false,"chat_model_configured":false,"available":false}`, POST `409` `{"detail":"Answers are not available: the AI features are switched off.","code":"ai_disabled"}`. `docker compose logs api`: Frage 0-mal; nur `"GET /api/v1/answers/status/ HTTP/1.1" 200 OK`, `Conflict: /api/v1/answers/`, `"POST /api/v1/answers/ HTTP/1.1" 409 Conflict`. Zusätzlich echter Probelauf (KI an, `TWOX_CHAT_MODEL=qwen3.8:27b-q4_K_M` nur in der ungetrackten `.env`, zwei selbst geschriebene Abschnitte zu einem erfundenen Greifer G-12, eingebettet mit bge-m3): Status `available: true`; `curl -N`: `sources` nach 0,14 s, 19 × `delta` von 23,48 s bis 24,06 s (Abstand ≈ 0,03 s, Modell lud erst), `done` 24,10 s, `status: answered`, `cited: [1]`; Header wie verlangt; Frage nicht in den Logs. `down -v` beider Projekte Exit 0 |
+| 14 | erfüllt | `git diff main...HEAD -- backend/uv.lock backend/pyproject.toml web/package-lock.json web/package.json` leer |
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-a9451682295110b11`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-a9451682295110b11`
+- Nicht gepusht, nichts zusammengeführt.
+
+### Abweichungen und Hinweise
+
+1. **`error` trägt `detail`:** Der Auftrag verlangt „genau `to_json()`“ und zugleich ein übersetztes `detail` am `error`. Umgesetzt: `to_json()` plus `detail` nur bei `error`; alle anderen Ereignisse sind genau `to_json()`.
+2. **Schema-Felder `type`, `status`, `code` als Text** (mit Beschreibung der Werte), nicht als Enum: so gibt es keine Enum-Namenskollisionen und keine Änderung an `SPECTACULAR_SETTINGS`. Der Typ `AnswerEvent` im Client hat trotzdem den Literal-`type` (Diskriminator); `status`/`code` sind in TypeScript `string`.
+3. **Zusätzliche Dateien außerhalb der Liste:** `llm_guard.py`, `chat.py`, `config/selftest.py`, `tests/answers/test_llm_guard.py` (Festlegung nach 129); in `settings.py` neben den genannten Zeilen die Hilfsfunktion `env_rate()` (mit `import re`) und `TWOX_ANSWER_TOTAL_TIMEOUT`; in `compose.yaml`/`.env.example` je zwei Zeilen (Rate und Gesamtzeit). `expected_paths/__init__.py`: Importzeile und eine Listenzeile.
+4. **e2e:** Ein erster Lauf nach meinem Probelauf schlug in zwei Suchtests fehl, weil die selbst angelegten G-12-Abschnitte in der Datenbank lagen und die echte Vektorsuche (Ollama am Host) Treffer lieferte. Nach `down -v` und frischer Datenbank: 82 passed, 1 skipped. Kein Zusammenhang mit dem Code dieses Auftrags.
+5. **Sperrdauer:** `ANSWER_LOCK_SECONDS = 600`; `lock_seconds()` nimmt mehr, falls `TWOX_ANSWER_TOTAL_TIMEOUT + TWOX_CHAT_TIMEOUT_SECONDS + 60` darüber liegt (sonst könnte eine Sperre vor Ende einer sehr lang eingestellten Antwort verfallen).
+6. **Bekannte Grenze:** Trennt der Browser die Verbindung, während die Ansicht selbst noch läuft (vor Rückgabe der Antwort, Millisekunden), wird die Antwort nie gelesen und nie geschlossen; die Sperre verfällt dann erst nach 600 s. Bei einer Zeitüberschreitung während der Kontextauswahl wartet das Aufräumen auf deren eigene Zeitgrenze (Einbettung der Frage, `TWOX_SEARCH_EMBED_TIMEOUT_SECONDS`); das `error`-Ereignis geht vorher hinaus.
+7. **WSGI/synchroner Test-Client:** `AnswerStreamResponse.__iter__` sammelt alle Ereignisse vor der Ausgabe (der Server läuft unter ASGI und streamt). So entfällt Djangos Warnung beim synchronen Lesen eines async Iterators.
+8. **Hinweis für 131:** hey-api-SSE versucht ohne `sseMaxRetryAttempts` unbegrenzt neu (auch bei 409/503) und verwirft den JSON-Fehlerkörper, siehe „Was wurde gebaut?“ Punkt 6.
+
+Offene Fragen an a7: keine.
