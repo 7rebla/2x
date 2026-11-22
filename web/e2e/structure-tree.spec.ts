@@ -48,8 +48,11 @@ async function createPlant(page: Page): Promise<Created> {
   const plant = await create(page, "/api/v1/plants/", { area: area.id, key: testName("plant"), name: plantName });
   const base = 1 + Math.floor(Math.random() * 250);
   const devices = [
-    { key: testName("device"), name: testName("device"), ip: testIp(base), deviceClass: "plc" },
-    { key: `${testName("device")}-x`, name: testName("device"), ip: testIp(base + 1), deviceClass: "controller" },
+    // Short kind "d": the name column of the device grid is what is left after the key column, which
+    // grows with the longest key. With "device" the name stood within a few pixels of wrapping to a
+    // second line for some random suffixes (16 of 20000 at 1024 px, 0 of 20000 with "d").
+    { key: testName("d"), name: testName("d"), ip: testIp(base), deviceClass: "plc" },
+    { key: `${testName("d")}-x`, name: testName("d"), ip: testIp(base + 1), deviceClass: "controller" },
   ];
   for (const device of devices) {
     await create(page, "/api/v1/devices/", {
@@ -88,6 +91,23 @@ async function box(locator: Locator): Promise<{ x: number; y: number; width: num
   return found;
 }
 
+/**
+ * Reads the boxes of several elements in one step (one task of the page), so
+ * that a render between two reads cannot move one element against the other.
+ * Separate `boundingBox` calls each cost a round trip to the browser.
+ */
+async function boxesTogether(page: Page, locators: readonly Locator[]): Promise<{ x: number; y: number; width: number; height: number }[]> {
+  const handles = await Promise.all(locators.map((locator) => locator.elementHandle()));
+  return page.evaluate(
+    (elements) =>
+      elements.map((element) => {
+        const { x, y, width, height } = (element as Element).getBoundingClientRect();
+        return { x, y, width, height };
+      }),
+    handles,
+  );
+}
+
 for (const width of [1024, 1600]) {
   test(`devices of a plant stand in fixed columns at ${String(width)} px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -98,24 +118,38 @@ for (const width of [1024, 1600]) {
       throw new Error("two devices expected");
     }
 
+    // Measure only in the settled state: the search has filtered the tree down
+    // to this plant (the status line says so) and the interface font is in use.
+    // Before that the tree is longer and rows move when the filter is applied.
+    await expect(page.getByTestId("structure-search-status")).toHaveText("2 devices shown");
+    await page.evaluate(async () => {
+      await document.fonts.load('16px "Inter"');
+      await document.fonts.ready;
+    });
     // The class is written out next to its icon.
     await expect(first.getByTestId("device-class")).toHaveText("PLC");
     await expect(second.getByTestId("device-class")).toHaveText("Controller / embedded");
     // Name, key and address start at the same place in both rows, although the class labels differ in length.
-    for (const part of [first.getByRole("link"), first.getByTestId("device-key"), first.getByTestId("device-ip")]) {
-      await expect(part).toBeVisible();
-    }
     const firstRow = [first.getByRole("link"), first.getByTestId("device-key"), first.getByTestId("device-ip")];
     const secondRow = [second.getByRole("link"), second.getByTestId("device-key"), second.getByTestId("device-ip")];
-    for (const [index, part] of firstRow.entries()) {
-      const other = secondRow[index];
+    for (const part of [...firstRow, ...secondRow]) {
+      await expect(part).toBeVisible();
+    }
+    // All boxes are read in one step, so the limits below stay as strict as they are.
+    const boxes = await boxesTogether(page, [...firstRow, ...secondRow]);
+    for (const [index, part] of boxes.slice(0, 3).entries()) {
+      const other = boxes[index + 3];
       if (other === undefined) {
         throw new Error("missing cell");
       }
-      expect(Math.abs((await box(part)).x - (await box(other)).x)).toBeLessThan(1);
+      expect(Math.abs(part.x - other.x)).toBeLessThan(1);
     }
     // One line per device.
-    expect(Math.abs((await box(first.getByTestId("device-key"))).y - (await box(first.getByRole("link"))).y)).toBeLessThan(8);
+    const [link, key] = boxes;
+    if (link === undefined || key === undefined) {
+      throw new Error("missing cell");
+    }
+    expect(Math.abs(key.y - link.y)).toBeLessThan(8);
   });
 }
 
