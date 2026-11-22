@@ -169,3 +169,16 @@ Selbsttest gegen den echten Stand (Djangos Testclient im `api`-Container): KI an
 11. Protokollzeilen des Workers erscheinen doppelt (eigener Handler plus Celery); unverändert von 046.
 
 Keine offene Frage, die den Auftrag aufhält.
+
+### Nachbesserung aus der Prüfung der Leitstelle
+
+`main` (mit 049) ist in den Zweig zusammengeführt, ohne Konflikte.
+
+1. **`embed_sections --all` rechnet wirklich neu.** Bisher leerte der Befehl die Einbettungen je Version in einer eigenen Transaktion und sendete sofort. Bei zwei Versionen gleichen Inhalts und Modells übernahm der erste Auftrag die alten Vektoren der noch nicht geleerten Nachbarversion. Jetzt legt der Befehl alle Aufträge in **einer** Transaktion an (Sicherungspunkt je Version für `IntegrityError`), leert bei `--all` die Einbettungen aller dieser Versionen darin und sendet alle `embed`-Nachrichten erst nach dem Commit (ein `on_commit`). Test mit echter Transaktion (`transaction=True`) und einem Worker, der jede Nachricht sofort abarbeitet: zwei Versionen gleichen Inhalts → das Modell (Attrappe) bettet 3 Texte ein, kein alter Vektor bleibt. Mit dem alten Ablauf hätte dieser Test kein Modellaufruf gesehen. Grenze: Eine wegen eines aktiven Auftrags übersprungene Version wird nicht geleert; ihre alten Vektoren könnten übernommen werden.
+2. **Verlorene `embed`-Nachricht hängt nicht mehr.** `poll` und `convert` für einen Auftrag im Schritt `embed` (`running`, bei `convert` auch `queued`) verwerfen die Nachricht nicht mehr, sondern geben `StepResult(Outcome.EMBEDDING, embed_after=0)` zurück; die Aufgabe plant `embed` neu ein (wiederholbar dank `needs_embedding`). Mit KI aus gibt es keine Aufgabe `embed`: Der Auftrag endet dann `done`. Tests: verirrtes `poll`/`convert` plant `embed`, ohne Abschnitte anzufassen; KI aus → `done`; `poll`-Aufgabe nach verlorener Nachricht sendet `twox.ingest.embed`, danach `done`.
+3. **Senden wie `send_convert` (049).** `embed_sections` sendet mit `ignore_result=True`, `retry=True` und `SEND_RETRY_POLICY` aus `ingest/services.py`; ein Sendefehler gibt eine Warnung ins Protokoll und eine Zeile `WARNING: … stay queued; start them again with: manage.py ingest_versions --stuck …` aus, der Auftrag bleibt `queued`. Tests: Sendeoptionen, Sendefehler.
+4. **Zusätzlich:** `backend/twox/ingest/services.py` (aus 049) hatte nach dem Zusammenführen eine Zeile mit 101 Zeichen; `ruff check` schlug fehl (E501). Ich habe den Text in zwei Teile geteilt, der Inhalt ist gleich.
+
+5. Der neue Test mit `transaction=True` legt sein Konto als Superuser an: Ein früherer Test mit `transaction=True` leert die Gruppen aus der Datenmigration, `make_user("manage")` scheiterte deshalb im Gesamtlauf.
+
+Prüfungen des backend-Jobs danach (Images neu gebaut, wie in `ci.yml`): `ruff check` `All checks passed!`, `ruff format --check` `182 files already formatted`, `mypy` `Success: no issues found in 181 source files`, `pytest -rs` `2120 passed, 6 deselected`, kein `SKIPPED`, `pytest -m worker` `6 passed`, `makemessages` ohne Unterschied, `makemigrations --check` `No changes detected`, `License check passed.`, `spectacular` ohne Unterschied in `web/openapi`. `web/` ist in der Nachbesserung nicht geändert.
