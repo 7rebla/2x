@@ -71,12 +71,15 @@ test("an address with a parameter opens directly", async ({ page }) => {
 // Header with icons (work order 071): every entry shows an icon hidden from
 // assistive technology and a readable text; the header stays on one line in
 // English and German and does not change its height when the language changes.
-// From 1280 px (xl) the texts are shown and the header is wider than the page;
-// below that only the icons, with the text as accessible name and tooltip
-// (work order 055, seven entries).
+// From 1280 px (xl) the texts are shown next to the icons; from 768 to 1279 px
+// a short text below each icon, with the full text as accessible name and
+// tooltip; below 768 px a button "Menu" opens a list with every entry and the
+// user menu (work order 082, E-65 point 3; seven entries since work order 055).
 
 const ENGLISH_ENTRIES = ["Structure", "Map", "Search", "Ingestion", "Import", "Change log", "Self-test"];
 const GERMAN_ENTRIES = ["Struktur", "Landkarte", "Suche", "Einlesen", "Import", "Änderungsprotokoll", "Selbsttest"];
+const ENGLISH_SHORT = ["Structure", "Map", "Search", "Ingest", "Import", "Log", "Self-test"];
+const GERMAN_SHORT = ["Struktur", "Karte", "Suche", "Einlesen", "Import", "Protokoll", "Selbsttest"];
 
 interface HeaderLayout {
   readonly header: number;
@@ -87,6 +90,11 @@ interface HeaderLayout {
   readonly labels: string[];
   readonly titles: (string | null)[];
   readonly labelWidths: number[];
+  /** Short texts as drawn (the content of ::before) and the width of their element. */
+  readonly shorts: string[];
+  readonly shortWidths: number[];
+  /** Whether the short text stands below the icon (its top below the icon's bottom). */
+  readonly shortBelowIcon: boolean[];
 }
 
 /** Positions of the header and of every entry of the main navigation. */
@@ -107,8 +115,23 @@ async function headerLayout(page: Page): Promise<HeaderLayout> {
       labels: links.map((link) => link.textContent),
       titles: links.map((link) => link.getAttribute("title")),
       labelWidths: links.map((link) => Math.round(link.querySelector(".nav-label")?.getBoundingClientRect().width ?? 0)),
+      shorts: links.map((link) => {
+        const short = link.querySelector(".nav-short");
+        return short === null ? "" : getComputedStyle(short, "::before").content.replace(/^"|"$/g, "");
+      }),
+      shortWidths: links.map((link) => Math.round(link.querySelector(".nav-short")?.getBoundingClientRect().width ?? 0)),
+      shortBelowIcon: links.map((link) => {
+        const icon = link.querySelector("svg")?.getBoundingClientRect();
+        const short = link.querySelector(".nav-short")?.getBoundingClientRect();
+        return icon !== undefined && short !== undefined && short.width > 0 && short.top >= icon.bottom - 0.5;
+      }),
     };
   });
+}
+
+/** Whether the page itself is wider than the window (a horizontal scroll bar). */
+async function pageOverflows(page: Page): Promise<boolean> {
+  return page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
 }
 
 test("every navigation entry shows a hidden icon and a readable text", async ({ page }) => {
@@ -127,12 +150,14 @@ test("every navigation entry shows a hidden icon and a readable text", async ({ 
 for (const { viewport, texts } of [
   { viewport: { width: 1280, height: 800 }, texts: true },
   { viewport: { width: 1024, height: 768 }, texts: false },
+  { viewport: { width: 768, height: 1024 }, texts: false },
 ]) {
   test(`the header stays on one line in English and German at ${String(viewport.width)} px`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto("/");
     const navigation = page.getByRole("navigation", { name: "Main navigation" });
     await expect(navigation.getByRole("link", { name: "Self-test" })).toBeVisible();
+    await expect(page.getByTestId("navigation-menu-button")).toHaveCount(0);
     const english = await headerLayout(page);
     expect(english.labels).toEqual(ENGLISH_ENTRIES);
     expect(english.titles).toEqual(ENGLISH_ENTRIES);
@@ -144,23 +169,36 @@ for (const { viewport, texts } of [
     expect(german.labels).toEqual(GERMAN_ENTRIES);
     expect(german.titles).toEqual(GERMAN_ENTRIES);
 
-    for (const layout of [english, german]) {
-      // All entries on the same line, nothing to scroll.
+    for (const [layout, shorts] of [
+      [english, ENGLISH_SHORT],
+      [german, GERMAN_SHORT],
+    ] as const) {
+      // All entries on the same line, nothing to scroll, neither the navigation nor the page.
       expect(new Set(layout.tops).size, `tops ${layout.tops.join(", ")}`).toBe(1);
       expect(layout.overflow).toBeLessThanOrEqual(0);
       expect(layout.free).toBeGreaterThanOrEqual(0);
       if (texts) {
-        // Every text is shown.
+        // Every text is shown next to its icon; no short texts.
         for (const width of layout.labelWidths) {
           expect(width).toBeGreaterThan(10);
         }
+        for (const width of layout.shortWidths) {
+          expect(width).toBe(0);
+        }
       } else {
-        // Only the icons: the texts take no room (they stay for screen readers and as tooltip).
+        // The full texts take no room (they stay for screen readers and as tooltip) ...
         for (const width of layout.labelWidths) {
           expect(width).toBeLessThanOrEqual(1);
         }
+        // ... and every entry shows its short text below the icon.
+        expect(layout.shorts).toEqual(shorts);
+        for (const width of layout.shortWidths) {
+          expect(width).toBeGreaterThan(10);
+        }
+        expect(layout.shortBelowIcon).toEqual(shorts.map(() => true));
       }
     }
+    expect(await pageOverflows(page)).toBe(false);
     test.info().annotations.push({
       type: "free width",
       description: `en ${String(english.free)} px, de ${String(german.free)} px at ${String(viewport.width)} px`,
@@ -185,29 +223,122 @@ test("at 1024 px the icon of an entry opens its page and keeps its name", async 
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test("the navigation stays usable without scrolling the whole page", async ({ page }) => {
+  test("a button 'Menu' opens every entry and the user menu, within the screen", async ({ page }) => {
     await page.goto("/");
-    const navigation = page.getByRole("navigation", { name: "Main navigation" });
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Structure");
+    const button = page.getByRole("button", { name: "Menu" });
+    const panel = page.getByTestId("navigation-menu");
+    // Closed: no navigation bar, no scroll bar, the page itself never scrolls sideways.
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+    await expect(button).toHaveAttribute("aria-controls", (await panel.getAttribute("id")) ?? "");
+    await expect(panel).toBeHidden();
+    await expect(page.getByRole("navigation", { name: "Main navigation" })).toHaveCount(0);
+    await expect(page.getByTestId("user-menu-button")).toHaveCount(0);
+    expect(await pageOverflows(page)).toBe(false);
+    // Brand mark and button on one line.
+    const brand = await page.getByRole("banner").getByRole("link", { name: "2x" }).boundingBox();
+    const buttonBox = await button.boundingBox();
+    expect(Math.abs((brand?.y ?? 0) + (brand?.height ?? 0) / 2 - ((buttonBox?.y ?? 0) + (buttonBox?.height ?? 0) / 2))).toBeLessThan(4);
+
+    await button.click();
+    await expect(button).toHaveAttribute("aria-expanded", "true");
+    await expect(panel).toBeVisible();
+    const navigation = panel.getByRole("navigation", { name: "Main navigation" });
+    const links = navigation.getByRole("link");
+    await expect(links).toHaveText(ENGLISH_ENTRIES);
     await expect(navigation.getByRole("link", { name: "Structure" })).toHaveAttribute("aria-current", "page");
-    const layout = await headerLayout(page);
-    expect(new Set(layout.tops).size).toBe(1);
-    // The page itself never scrolls sideways.
-    const pageOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    expect(pageOverflow).toBeLessThanOrEqual(0);
-    // Icons only; the texts stay as accessible names and tooltips.
-    const selftest = navigation.getByRole("link", { name: "Self-test" });
-    await expect(selftest).toHaveAttribute("title", "Self-test");
-    await expect(selftest.locator("svg")).toBeVisible();
-    await selftest.click();
+    // One entry per line, every text visible, everything inside the screen.
+    const boxes = await Promise.all((await links.all()).map((link) => link.boundingBox()));
+    const tops = boxes.map((box) => box?.y ?? 0);
+    expect([...tops].sort((a, b) => a - b)).toEqual(tops);
+    expect(new Set(tops).size).toBe(ENGLISH_ENTRIES.length);
+    for (const box of boxes) {
+      expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
+      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(375);
+      // Touch targets at least 40 px high.
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(40);
+    }
+    for (const label of await navigation.locator(".nav-label").all()) {
+      await expect(label).toBeVisible();
+    }
+    await expect(panel.getByTestId("user-role")).toHaveText("Manage");
+    await expect(panel.getByRole("link", { name: "Settings" })).toBeVisible();
+    await expect(panel.getByRole("combobox", { name: "Language" })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Sign out" })).toBeVisible();
+    const panelBox = await panel.boundingBox();
+    expect(panelBox?.x ?? -1).toBeGreaterThanOrEqual(0);
+    expect((panelBox?.x ?? 0) + (panelBox?.width ?? 0)).toBeLessThanOrEqual(375);
+    expect((panelBox?.y ?? 0) + (panelBox?.height ?? 0)).toBeLessThanOrEqual(812);
+    expect(await pageOverflows(page)).toBe(false);
+
+    // A choice closes the menu and opens the page; the focus moves on to its heading.
+    await navigation.getByRole("link", { name: "Self-test" }).click();
     await expect(page).toHaveURL(/\/selftest$/);
-    await expect(selftest).toHaveAttribute("aria-current", "page");
-    // The user menu still opens and fits on the screen.
-    await page.getByTestId("user-menu-button").click();
-    const menu = page.getByTestId("user-menu");
-    await expect(menu).toBeVisible();
-    const box = await menu.boundingBox();
-    expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
-    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(375);
+    await expect(panel).toBeHidden();
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByRole("heading", { level: 1, name: "Self-test" })).toBeFocused();
+    await button.click();
+    await expect(panel.getByRole("link", { name: "Self-test" })).toHaveAttribute("aria-current", "page");
+  });
+
+  test("the menu works with the keyboard alone", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Structure");
+    const button = page.getByRole("button", { name: "Menu" });
+    const panel = page.getByTestId("navigation-menu");
+    await button.focus();
+    await page.keyboard.press("Enter");
+    await expect(panel).toBeVisible();
+    await expect(button).toHaveAttribute("aria-expanded", "true");
+    // The next stop after the button is the first entry of the list.
+    await page.keyboard.press("Tab");
+    await expect(panel.getByRole("link", { name: "Structure" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(panel.getByRole("link", { name: "Map" })).toBeFocused();
+    // Escape closes it and gives the focus back to the button.
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
+    await expect(button).toBeFocused();
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+    // Space opens it again; choosing with Enter opens the page.
+    await page.keyboard.press("Space");
+    await expect(panel).toBeVisible();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    await expect(panel.getByRole("link", { name: "Search" })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/search$/);
+    await expect(panel).toBeHidden();
+    await expect(page.getByRole("heading", { level: 1, name: "Search" })).toBeFocused();
+  });
+
+  test("the menu speaks German and changes the language", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Menu" }).click();
+    await page.getByTestId("navigation-menu").getByRole("combobox", { name: "Language" }).selectOption("de");
+    const button = page.getByRole("button", { name: "Menü" });
+    await expect(button).toBeVisible();
+    const panel = page.getByTestId("navigation-menu");
+    // Still open after the change of language.
+    await expect(panel).toBeVisible();
+    await expect(panel.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("link")).toHaveText(GERMAN_ENTRIES);
+    expect(await pageOverflows(page)).toBe(false);
+    // Back to English, for the other tests of this browser context.
+    await panel.getByRole("combobox", { name: "Sprache" }).selectOption("en");
+    await expect(page.getByRole("button", { name: "Menu" })).toBeVisible();
+  });
+
+  test("the header bar returns at 768 px", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Menu" }).click();
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await expect(page.getByRole("navigation", { name: "Main navigation" }).getByRole("link")).toHaveText(ENGLISH_ENTRIES);
+    await expect(page.getByTestId("navigation-menu-button")).toHaveCount(0);
+    await expect(page.getByTestId("user-menu-button")).toBeVisible();
+    await page.setViewportSize({ width: 767, height: 1024 });
+    await expect(page.getByTestId("navigation-menu")).toBeHidden();
+    await expect(page.getByRole("button", { name: "Menu" })).toHaveAttribute("aria-expanded", "false");
   });
 });
 
