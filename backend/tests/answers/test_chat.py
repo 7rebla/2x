@@ -1,5 +1,6 @@
 """The chat client, against a stand-in for Ollama; no test talks to a real model service."""
 
+import gc
 import json
 import logging
 import socket
@@ -430,7 +431,7 @@ def test_close_during_the_stream(server: tuple[str, FakeOllama]) -> None:
     client.close()
 
 
-def test_closing_the_generator_closes_the_connection(server: tuple[str, FakeOllama]) -> None:
+def test_closing_the_stream_closes_the_connection(server: tuple[str, FakeOllama]) -> None:
     base_url, fake = server
     fake.chat_pause_before = 1
     fake.chat_pause_seconds = 10.0
@@ -438,12 +439,88 @@ def test_closing_the_generator_closes_the_connection(server: tuple[str, FakeOlla
     pieces = client.stream(MESSAGES)
 
     assert next(pieces) == "Hello"
-    pieces.close()  # type: ignore[attr-defined]
+    pieces.close()
 
     assert fake.client_closed.wait(5)
+    assert pieces.closed
     assert list(pieces) == []
+    assert len(client._streams) == 0
+    pieces.close()
     client.close()
     client.close()
+
+
+def stalled_server(fake: FakeOllama) -> None:
+    """The stand-in sends the headers, then waits before the first piece."""
+    fake.chat_pause_before = 0
+    fake.chat_pause_seconds = 10.0
+
+
+def test_close_before_the_first_piece_closes_the_connection(
+    server: tuple[str, FakeOllama],
+) -> None:
+    base_url, fake = server
+    stalled_server(fake)
+    client = make_chat(base_url)
+    pieces = client.stream(MESSAGES)
+    assert len(client._streams) == 1
+
+    pieces.close()
+
+    assert fake.client_closed.wait(5)
+    assert len(client._streams) == 0
+    assert list(pieces) == []
+    pieces.close()
+
+
+def test_closing_with_an_error_before_the_first_piece(server: tuple[str, FakeOllama]) -> None:
+    base_url, fake = server
+    stalled_server(fake)
+    client = make_chat(base_url)
+
+    with pytest.raises(RuntimeError), closing(client.stream(MESSAGES)):
+        raise RuntimeError("the caller failed before reading")
+
+    assert fake.client_closed.wait(5)
+    assert len(client._streams) == 0
+
+
+def test_with_block_closes_the_connection(server: tuple[str, FakeOllama]) -> None:
+    base_url, fake = server
+    stalled_server(fake)
+    client = make_chat(base_url)
+
+    with client.stream(MESSAGES) as pieces:
+        assert not pieces.closed
+
+    assert pieces.closed
+    assert fake.client_closed.wait(5)
+    assert len(client._streams) == 0
+
+
+def test_dropped_stream_closes_the_connection(server: tuple[str, FakeOllama]) -> None:
+    base_url, fake = server
+    stalled_server(fake)
+    client = make_chat(base_url)
+
+    client.stream(MESSAGES)  # never read, never closed
+    gc.collect()
+
+    assert fake.client_closed.wait(5)
+    assert len(client._streams) == 0
+
+
+def test_client_close_frees_an_unread_stream(server: tuple[str, FakeOllama]) -> None:
+    base_url, fake = server
+    stalled_server(fake)
+    client = make_chat(base_url)
+    pieces = client.stream(MESSAGES)
+
+    client.close()
+
+    assert fake.client_closed.wait(5)
+    assert len(client._streams) == 0
+    assert list(pieces) == []
 
 
 def test_close_without_a_stream_is_harmless() -> None:
@@ -668,6 +745,14 @@ def test_fake_counts_close_and_stops_the_stream() -> None:
 
     assert list(pieces) == []
     assert fake.close_count == 2
+
+
+def test_fake_stream_can_be_closed_like_the_real_one() -> None:
+    with FakeChatModel(["one", "two"]).stream(MESSAGES) as pieces:
+        assert next(pieces) == "one"
+
+    assert pieces.closed
+    assert list(pieces) == []
 
 
 def test_fake_opens_no_connection(monkeypatch: pytest.MonkeyPatch) -> None:

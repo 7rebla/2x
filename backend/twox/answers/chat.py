@@ -12,8 +12,11 @@ with ``model``, ``messages``, ``stream: true``, ``max_tokens``, ``temperature``,
 messages go out exactly as given; the client adds nothing.
 
 The answer comes as server-sent events and is read line by line:
-:meth:`OpenAICompatibleChat.stream` yields the text pieces of
-``choices[0].delta.content`` as they arrive (a synchronous iterator, E-03).
+:meth:`OpenAICompatibleChat.stream` checks the model and sends the request
+in the call itself (errors come before anything is returned) and returns a
+:class:`ChatStream`: a synchronous iterator (E-03) over the text pieces of
+``choices[0].delta.content`` as they arrive, which can be closed at any time,
+also before its first piece, and then frees the connection.
 ``TWOX_CHAT_TIMEOUT_SECONDS`` is the socket time limit, so it bounds the wait
 for every single piece, the first one included; there is no limit for the
 whole answer here (the answer service sets one).
@@ -53,11 +56,14 @@ import socket
 import threading
 import urllib.error
 import urllib.request
-from collections.abc import Iterator, Mapping, Sequence
+import weakref
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import partial
 from http.client import HTTPException, HTTPResponse
 from time import monotonic
-from typing import Final, Literal, Protocol, TypedDict
+from types import TracebackType
+from typing import Final, Literal, Protocol, Self, TypedDict
 from urllib.parse import urlsplit
 
 from django.conf import settings
@@ -123,6 +129,61 @@ class ChatRemoteModelError(ChatError):
     """The model runs remotely (an Ollama cloud model); texts would leave the house."""
 
 
+def _end_stream(pieces: Iterator[str], on_close: Callable[[], None] | None) -> None:
+    """Free what one answer holds: first the connection, then the reading generator."""
+    if on_close is not None:
+        on_close()
+    close = getattr(pieces, "close", None)
+    if callable(close):
+        # ValueError: another thread is iterating right now; on_close above
+        # has already ended its connection, so that thread stops by itself.
+        with contextlib.suppress(ValueError):
+            close()
+
+
+class ChatStream(Iterator[str]):
+    """The pieces of one answer, in order; an iterator that can be closed.
+
+    :meth:`close` (also through ``with`` or :func:`contextlib.closing`) ends
+    the answer and frees its connection in every case - before the first
+    piece, in the middle or after the end - and may be called more than once.
+    A stream that is dropped unclosed is closed when it is garbage-collected
+    (:func:`weakref.finalize`); :meth:`OpenAICompatibleChat.close` closes it
+    as well. To stop an answer from another thread, call the client's
+    ``close()``, not this one.
+    """
+
+    def __init__(self, pieces: Iterator[str], on_close: Callable[[], None] | None = None) -> None:
+        """``pieces`` yields the text; ``on_close`` frees the connection (idempotent)."""
+        self._pieces = pieces
+        # The callback must not refer to self, or the stream would never be collected.
+        self._finalizer = weakref.finalize(self, _end_stream, pieces, on_close)
+        self._finalizer.atexit = False
+
+    def __next__(self) -> str:
+        return next(self._pieces)
+
+    def close(self) -> None:
+        """End the answer and free its connection; calling it again is harmless."""
+        self._finalizer()
+
+    @property
+    def closed(self) -> bool:
+        """Whether :meth:`close` ran (or the stream was collected)."""
+        return not self._finalizer.alive
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        self.close()
+
+
 class ChatModel(Protocol):
     """Generates the text of an answer piece by piece."""
 
@@ -138,11 +199,12 @@ class ChatModel(Protocol):
         max_tokens: int | None = None,
         temperature: float | None = None,
         seed: int | None = None,
-    ) -> Iterator[str]:
+    ) -> ChatStream:
         """Return the pieces of the answer to ``messages`` in order.
 
         ``None`` takes the value from the settings. Errors are :class:`ChatError`;
-        they can come from this call or while iterating.
+        they can come from this call or while iterating. Close the stream
+        (``with`` or ``close()``) when it is not read to its end.
         """
         ...
 
@@ -283,12 +345,14 @@ class OpenAICompatibleChat:
         max_tokens: int | None = None,
         temperature: float | None = None,
         seed: int | None = None,
-    ) -> Iterator[str]:
-        """Send the request and return the pieces of the answer.
+    ) -> ChatStream:
+        """Send the request and return the pieces of the answer as a :class:`ChatStream`.
 
-        The checks and the request happen in this call, so a refused or
-        unreachable model raises here; the pieces are read while iterating.
-        Closing the returned generator, or :meth:`close`, closes the connection.
+        The checks and the request happen in this call: a refused or
+        unreachable model, an HTTP error or AI switched off raise here, before
+        anything is returned. The pieces are read while iterating. The
+        connection is closed when the stream ends, when the stream is closed
+        (also before its first piece), when it is dropped, or by :meth:`close`.
         """
         payload = self._payload(messages, max_tokens, temperature, seed)
         _check_ai_enabled()
@@ -302,7 +366,13 @@ class OpenAICompatibleChat:
         state = _Stream(response)
         with self._streams_lock:
             self._streams.add(state)
-        return self._read(state, started)
+        return ChatStream(self._read(state, started), partial(self._release, state))
+
+    def _release(self, state: _Stream) -> None:
+        """Forget one answer and close its connection; harmless if done already."""
+        with self._streams_lock:
+            self._streams.discard(state)
+        state.close()
 
     def close(self) -> None:
         with self._streams_lock:
@@ -463,9 +533,7 @@ class OpenAICompatibleChat:
             self._log_failure(error, started)
             raise
         finally:
-            with self._streams_lock:
-                self._streams.discard(state)
-            state.close()
+            self._release(state)
         logger.info(
             "Chat answer of model %s finished: %d pieces in %.1fs",
             self._model,
@@ -619,7 +687,7 @@ class FakeChatModel:
         max_tokens: int | None = None,
         temperature: float | None = None,
         seed: int | None = None,
-    ) -> Iterator[str]:
+    ) -> ChatStream:
         self.calls.append(
             FakeChatCall(
                 messages=[{"role": m["role"], "content": m["content"]} for m in messages],
@@ -631,7 +699,7 @@ class FakeChatModel:
         if self.fail_on_call is not None:
             raise self.fail_on_call
         self._closed = False
-        return self._pieces()
+        return ChatStream(self._pieces())
 
     def _pieces(self) -> Iterator[str]:
         for index, piece in enumerate(self.pieces):
