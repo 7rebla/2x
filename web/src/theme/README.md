@@ -61,7 +61,7 @@ Work order 072. The files are the project's own work (Apache-2.0 like the reposi
 
 - `assets/brand/bildmarke.svg` (master, 64 grid, visible mark 6…58) and `assets/brand/bildmarke-16.svg` (small form, 16 grid), both in `currentColor`. `components/BrandMark.tsx` inlines one of them: the small form below 24 px, else the master. The mark takes the token `brand`, is `aria-hidden` and sits in a link to `/` next to the visible name „2x“ (`common:appTitle`), which gives the link its accessible name. The ids of the SVG mask get a unique prefix per instance.
 - Header: mark 36 px (master). Between the visible mark and the name 16 grid units, as in the design rules; the same 16 units (a quarter of the grid) are the minimum clear space around the mark. The name stays in the interface font, no word mark.
-- Sign-in card (work order 086, E-65 point 7): mark 48 px (master) with the name in `text-4xl`, centred above the card. `BrandMark` with `link={false}` draws the same lockup without a link (`data-testid="brand-lockup"`), so the header keeps the only link named „2x“. Its name types in the same run `sign-in` as the header.
+- Sign-in card (work order 086, E-65 point 7): mark 48 px (master) with the name in `text-4xl`, centred above the card. `BrandMark` with `link={false}` draws the same lockup without a link (`data-testid="brand-lockup"`), so the header keeps the only link named „2x“. Its name stands still (only the name in the header types, E-64), and the lockup is `aria-hidden`, because it repeats the header's link and would otherwise be read twice; it holds nothing focusable.
 - `public/favicon.svg` (small form, colour follows `prefers-color-scheme`), `public/favicon.ico` (16/32/48, colour `#957597` for light and dark tab bars) and `public/apple-touch-icon.png` (180 px). Vite copies them to the top of the build; the built `index.html` links them below `/static/`. Django also serves them at `/favicon.ico`, `/favicon.svg` and `/apple-touch-icon.png` (`backend/twox/config/webui.py`), where browsers look without reading the page.
 
 ## Text animations (E-52)
@@ -74,7 +74,7 @@ Pure CSS in `index.css`; only `opacity`, `transform`, `background-position` and 
 | B, line mask | device header, file title | `MaskedTitle` |
 | C, navigation line | main navigation, settings link | class `nav-link` around an icon and a `nav-label` with `data-label` (reserves the width of the bold label); the current entry also gets the soft accent background |
 | D, loading shimmer | `Loading`, self-test "checking" | `LoadingText` |
-| E, typing (E-64, work order 076) | the name next to the brand mark in the header, and above the sign-in card (work order 086, same run) | `TypedText` (via `BrandMark` with `typing`, set in `Layout.tsx` and `pages/LoginPage.tsx`) |
+| E, typing (E-64, work order 076) | the name next to the brand mark in the header (not the one above the sign-in card) | `TypedText` (via `BrandMark` with `typing`, set in `Layout.tsx`) |
 
 With reduced motion (settings page or operating system) the components render plain text without animation classes, and `index.css` switches off every animation and transition.
 

@@ -46,6 +46,9 @@ for (const width of [375, 1024, 1600]) {
     await page.goto("/login");
     const card = page.getByTestId("login-card");
     await expect(card).toBeVisible();
+    // The brand above the card repeats the header's link: hidden from assistive technology, its name never types.
+    await expect(page.getByTestId("login-brand")).toHaveAttribute("aria-hidden", "true");
+    await expect(page.getByTestId("brand-lockup").getByTestId("typed-text")).toHaveCount(0);
 
     const [cardBox, mainBox, lockupBox] = await Promise.all([
       card.boundingBox(),

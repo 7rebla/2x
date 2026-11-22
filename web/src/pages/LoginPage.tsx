@@ -42,9 +42,13 @@ export function LoginPage(): ReactElement {
   }
   return (
     <section data-testid="login-page" className="mx-auto w-full max-w-sm space-y-6 sm:pt-8">
-      {/* The brand above the card (E-65 point 7); its name types like the one in the header (pattern E, run sign-in). */}
-      <div className="flex justify-center text-4xl font-semibold tracking-tight">
-        <BrandMark size={CARD_BRAND_SIZE} typing="sign-in" link={false} />
+      {/*
+        The brand above the card (E-65 point 7). Only the name in the header types (E-64), so this one stands
+        still. It repeats the link "2x" of the header and holds nothing focusable, so it is hidden from
+        assistive technology; otherwise "2x" would be read twice.
+      */}
+      <div data-testid="login-brand" aria-hidden="true" className="flex justify-center text-4xl font-semibold tracking-tight">
+        <BrandMark size={CARD_BRAND_SIZE} link={false} />
       </div>
       <div data-testid="login-card" className="space-y-4 rounded-lg border border-line bg-surface p-6 shadow-sm">
         <AnimatedHeading text={t("heading")} />

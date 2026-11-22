@@ -53,7 +53,8 @@ loaded when it is opened (work order 062): `routes.tsx` wraps it with `lazyPage(
   of the grid: settings `max-w-2xl`; the self-test keeps heading and button at `max-w-xl` and sets its result cards in
   one column, two from 1024 px (`lg`) and three from 1280 px (`xl`). The sign-in page (work order 086, E-65 point 7)
   is a centred card inside the grid (`mx-auto max-w-sm`, `bg-surface`, border `line`, `p-6`) with the brand mark
-  (48 px) and the typing name above it; heading, introduction, error and form sit in the card, fields and the
+  (48 px) and the name above it; that name stands still (only the header's name types) and is `aria-hidden`,
+  since it repeats the header's link; heading, introduction, error and form sit in the card, fields and the
   primary button have the full width of the card and the same height (36 px). The language switch stays in the
   header. `../../e2e/login.spec.ts` measures the card at 375, 1024 and 1600 px.
   The user menu (`../components/UserMenu.tsx`) is a button with the user name; it opens a panel with the role,

@@ -155,18 +155,44 @@ describe("sign-in card (work order 086)", () => {
     expect(within(screen.getByRole("banner")).getByRole("link", { name: "2x" })).toBeDefined();
   });
 
-  it("types the name in the card and in the header (run sign-in)", async () => {
+  it("types only the name in the header (run sign-in); the name above the card stands still", async () => {
     fakeApi(null);
     renderApp("/login");
 
     const lockup = await screen.findByTestId("brand-lockup");
-    expect(within(lockup).getByTestId("typed-text").dataset.typing).toBe("type");
     const header = within(screen.getByRole("banner")).getByRole("link", { name: "2x" });
     expect(within(header).getByTestId("typed-text").dataset.typing).toBe("type");
     expect(window.sessionStorage.getItem("twox.typed")).toBe("sign-in");
+    // The card's name is plain text: no typing wrapper, no typed layer, no cursor.
+    expect(within(lockup).queryByTestId("typed-text")).toBeNull();
+    expect(lockup.querySelector("[class*='tx-']")).toBeNull();
+    expect(lockup.textContent.trim()).toBe("2x");
+    expect(screen.getAllByTestId("typed-text")).toHaveLength(1);
   });
 
-  it("shows the name at once with reduced motion", async () => {
+  it("stands still above the card also after the header has typed (redirect from /)", async () => {
+    // The header of an earlier page in this session has typed the run sign-in already.
+    window.sessionStorage.setItem("twox.typed", "sign-in");
+    fakeApi(null);
+    renderApp("/login");
+
+    const lockup = await screen.findByTestId("brand-lockup");
+    expect(within(lockup).queryByTestId("typed-text")).toBeNull();
+    expect(lockup.textContent.trim()).toBe("2x");
+  });
+
+  it("hides the brand above the card from assistive technology; it holds nothing focusable", async () => {
+    fakeApi(null);
+    renderApp("/login");
+
+    const brand = await screen.findByTestId("login-brand");
+    expect(brand.getAttribute("aria-hidden")).toBe("true");
+    expect(brand.contains(screen.getByTestId("brand-lockup"))).toBe(true);
+    expect(brand.querySelector("a, button, input, select, textarea, [tabindex]")).toBeNull();
+    expect(within(brand).queryAllByRole("link", { hidden: true })).toHaveLength(0);
+  });
+
+  it("shows the name at once with reduced motion, in the header too", async () => {
     act(() => {
       updateDisplaySettings({ reduceMotion: true });
     });
@@ -176,6 +202,7 @@ describe("sign-in card (work order 086)", () => {
     const lockup = await screen.findByTestId("brand-lockup");
     expect(lockup.querySelector(".tx-type")).toBeNull();
     expect(lockup.textContent.trim()).toBe("2x");
+    expect(screen.getByRole("banner").querySelector(".tx-type")).toBeNull();
   });
 
   it("gives fields and button the same height and the button the full width", async () => {
