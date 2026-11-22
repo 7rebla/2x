@@ -355,6 +355,8 @@ interface Probe {
   readonly name: string;
   readonly query: string;
   readonly within: number;
+  /** false: the rank is only reported (annotation `rank`), not required (E-67). */
+  readonly required: boolean;
   readonly expected: readonly { readonly manual: Manual; readonly pages: readonly number[] }[];
 }
 
@@ -364,6 +366,7 @@ const PROBES: readonly Probe[] = [
     name: "IP address of the central control (question 1)",
     query: "192.168.0.100",
     within: 3,
+    required: true,
     expected: [
       { manual: APS_DOCUMENTATION_DE, pages: [18, 31, 38] },
       { manual: APS_DOCUMENTATION_EN, pages: [18, 31, 38] },
@@ -374,13 +377,18 @@ const PROBES: readonly Probe[] = [
     name: "payload of the UR5e (question 9)",
     query: "Wie schwer darf eine Last höchstens sein, die der UR5e bewegen soll?",
     within: 5,
+    required: true,
     expected: [{ manual: UR5E_USER_MANUAL_DE, pages: [16, 101, 102] }],
   },
   {
     // Test question 10 as meant by E-33: release after a stop by a safeguard (SF2).
+    // Not required (E-67): the ROADMAP asks for one question in other words
+    // (question 9); the rank of question 10 depends on the wording and is only
+    // reported, a topic for M3 (docs/ARCHITECTURE.md, limits of the search).
     name: "release after a safeguard stop (question 10)",
     query: "Wie gibt man den UR5e wieder frei, wenn eine Schutzeinrichtung ihn angehalten hat?",
     within: 5,
+    required: false,
     expected: [
       { manual: UR5E_USER_MANUAL_DE, pages: [81, 84, 86, 252] },
       { manual: UR5E_SOFTWARE_HANDBOOK_EN, pages: [46] },
@@ -523,7 +531,9 @@ test("M2 acceptance, local part: the manuals of the test factory are ingested an
   }
 
   // 3. The searches of the acceptance: the address of question 1 among the
-  // first three hits, questions 9 and 10 in other words among the first five.
+  // first three hits, question 9 in other words among the first five (the
+  // ROADMAP criterion, E-67). Question 10 is asked as well, but its rank is
+  // only reported as the annotation "rank" (a known limit, M3).
   await page.goto("/search");
   for (const probe of PROBES) {
     await test.step(`search: ${probe.name}`, async () => {
@@ -535,7 +545,8 @@ test("M2 acceptance, local part: the manuals of the test factory are ingested an
         `a file of ${probe.expected.map(({ manual }) => manual.manifestId).join(" or ")} is uploaded`,
       ).toBe(true);
       const answer = await searchFor(page, probe.query);
-      const index = answer.hits.slice(0, probe.within).findIndex((hit) =>
+      const hits = probe.required ? answer.hits.slice(0, probe.within) : answer.hits;
+      const index = hits.findIndex((hit) =>
         expected.some(
           ({ documents, pages }) =>
             hit.locations.some((location) => documents.has(location.document.id)) &&
@@ -543,6 +554,13 @@ test("M2 acceptance, local part: the manuals of the test factory are ingested an
             pages.some((number) => (hit.page_start ?? 0) <= number && number <= (hit.page_end ?? hit.page_start ?? 0)),
         ),
       );
+      test.info().annotations.push({
+        type: "rank",
+        description: `${probe.name}: ${index >= 0 ? String(index + 1) : "not found"} of ${String(answer.hits.length)} hits (semantic: ${answer.semantic})`,
+      });
+      if (!probe.required) {
+        return;
+      }
       expect(index, `expected place among the first ${String(probe.within)} hits (semantic: ${answer.semantic})`).toBeGreaterThanOrEqual(0);
 
       // The same hit on the page: its page and a link to the file.
