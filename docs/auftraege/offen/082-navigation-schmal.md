@@ -72,6 +72,26 @@ Keine.
     - `components/UserMenu.tsx`: Inhalt des Panels als `UserMenuContent` herausgelöst, das Verhalten ist unverändert.
     - `icons/names.ts` und `icons/README.md`: zwei neue Icons.
     - `pages/README.md` und `theme/README.md`: Doku, wie im Auftrag vorgesehen.
-  - `text-xs` (12 px) für die Kurztexte steht so im Auftrag, weicht aber von E-65 Punkt 5 ab (12 px nur für Großbuchstaben-Kennzeichen). Umgesetzt wie im Auftrag; a7 kann es bei Bedarf auf 13 px anheben, dann wird der Kopf zwischen 768 und 1279 px allerdings höher als ab 1280 px.
+  - `text-xs` (12 px) für die Kurztexte stand so im Auftrag, wich aber von E-65 Punkt 5 ab. Mit der Nachbesserung ist das erledigt: jetzt 13 px, der Kopf bleibt 76 px hoch.
   - Die Sichtprüfung lief im gemeinsamen Browserfenster: Eine andere Sitzung (Port 18089) hat zwischendurch denselben Tab benutzt und über das geteilte Cookie auf 127.0.0.1 eine Abmeldung ausgelöst. Danach habe ich in einem eigenen Tab neu angemeldet und weitergeprüft.
 - **Offene Fragen:** keine.
+
+### Nachbesserung (nach Prüfung der Leitstelle)
+
+1. **Fokus verlässt das Menü (unter 768 px):** Knopf und Feld stehen in einem gemeinsamen Wrapper mit `onBlur` (focusout). Geht der Fokus auf ein Element außerhalb (`relatedTarget` außerhalb, also Tab nach „Abmelden“ oder Umschalt+Tab vor dem Knopf), schließt das Feld. Der Fokus bleibt dort, wo er hingegangen ist, wie im Muster „Disclosure Navigation“ der APG. Geht der Fokus ins Leere (`relatedTarget` null, etwa bei einem Klick auf Text im Feld), bleibt das Feld offen; einen Klick außerhalb fängt weiter `pointerdown` ab. Tests: Vitest (innen bleibt offen, ins Leere bleibt offen, nach außen schließt ohne Rückholen) und ein e2e-Schritt in `navigation.spec.ts`. Dort schließt Tab nach „Sign out“ das Feld, der Fokus liegt sichtbar in `main` und nicht auf dem Knopf. Umschalt+Tab vor dem Knopf schließt ebenfalls.
+2. **Schriftgröße der Kurztexte:** 13 px mit 16 px Zeilenhöhe (`text-[13px] leading-4`, E-65 Punkt 5). Gemessen bei 768 px auf Deutsch: Leiste 42 px hoch, Kopf 76 px.
+3. **Überlauf bei 768 px:** Gemessen auf Deutsch mit einem Benutzernamen, der den Knopf ausreizt (192 px). Mit den bisherigen Abständen lief die Leiste um 40 px über, und „Selbsttest“ lag unter dem Benutzerknopf.
+   - Abstände unter 1280 px verkleinert: kein `gap` zwischen den Einträgen, Innenabstand 4 px statt 8 px.
+   - `overflow-x-auto` gilt jetzt als Rückfall bei allen Breiten. Der Fokusrahmen liegt unter 1280 px innen (`-outline-offset-2`), damit die Scrollbox ihn nicht abschneidet und der Kopf 76 px hoch bleibt. Akzent auf `accent-soft` ist in `contrast.test.ts` mit 3:1 geprüft.
+   - Messwerte bei 768 px, Deutsch, langer Name: freie Breite 25 px, auch mit sichtbarer 15-px-Bildlaufleiste des Fensters. Kein Überlauf der Seite, Kopf 76 px.
+   - Neuer e2e-Schritt: 768 px, Deutsch, langer Name über eine umgeschriebene Antwort von `/api/v1/me/`. Geprüft wird: Knopf 192 px breit, Leiste endet vor dem Knopf und scrollt nicht, eine Zeile, Kopf 76 px, kein Überlauf der Seite.
+4. **Kurztexte:**
+   - Englisch jetzt „Ingestion“ statt „Ingest“. Bei 768 px mit langem Namen bleiben 41 px frei (vor der Verkleinerung der Abstände gemessen).
+   - Damit sind alle englischen Kurztexte ganze Wörter des vollen Namens („Log“ aus „Change log“).
+   - Deutsch bleibt „Karte“ und „Protokoll“. „Landkarte“ braucht 29 px mehr und passt bei 768 px neben einem langen Namen nicht sicher; „Änderungsprotokoll“ passt nicht. Die Abweichung steht in `web/src/pages/README.md`.
+
+Geprüft:
+- Web-Job wie in `ci.yml`: lint, typecheck, test (44 Dateien, 900 Tests), build und licenses mit Exit 0; `api:generate` ohne Unterschied.
+- e2e: 77 bestanden, 1 übersprungen (lokaler Teil der M2-Abnahme), Exit 0.
+- Sichtprüfung im eigenen Tab unter `twox082.localhost:18082` (in der ungetrackten `.env` unter `TWOX_ALLOWED_HOSTS` eingetragen), mit einem zweiten Testkonto mit langem Namen, hell und dunkel bei 768 px.
+- `down -v` beider Projekte: Exit 0.
