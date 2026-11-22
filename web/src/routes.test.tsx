@@ -271,6 +271,7 @@ describe("loading on demand (work order 062)", () => {
       "audit",
       "selftest",
       "settings",
+      "ask",
     ]);
     expect(pageType(pages.get(""))).toBe(StructurePage);
     const login = routes[0]?.children?.[0]?.children?.find((route) => route.path === "login");
