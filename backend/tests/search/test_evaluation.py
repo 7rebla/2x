@@ -1198,15 +1198,17 @@ def test_model_failure_leaves_the_control_lists_unmeasured(
 
 @pytest.mark.django_db
 def test_probe_list_m3_by_name() -> None:
+    count = len(load_probes((PROBE_LISTS / "m3.json").read_text(encoding="utf-8")))
+
     output = run_command("", "--probes", "m3", "--cutoffs", "5,8,10,12")
 
-    assert output.startswith("Search probes: 13;")
+    assert output.startswith(f"Search probes: {count};")
     assert "control-11" in output
     assert "control, not judged" in output
     # The keyword list of the control probe is empty; the output says so.
     assert "no entries" in output
     # Nothing is ingested in the test database; the control probe is searched anyway.
-    assert output.endswith("Not ingested: 12 of 13 probes\n")
+    assert output.endswith(f"Not ingested: {count - 1} of {count} probes\n")
 
 
 @pytest.mark.parametrize(

@@ -165,7 +165,8 @@ def test_the_test_questions_are_covered_in_own_words(
 ) -> None:
     covered = {probe["basis"]["question"] for probe in probe_list["probes"]}
 
-    assert covered == COVERED_QUESTIONS | {CONTROL_QUESTION}
+    # Question 8 may be added later (136), by heading path.
+    assert covered - {NOT_MEASURABLE_QUESTION} == COVERED_QUESTIONS | {CONTROL_QUESTION}
     for number in TWICE:
         queries = [probe["query"] for probe in probes_of(probe_list, number)]
         assert len(queries) == 2, number
@@ -260,6 +261,19 @@ def test_a_probe_by_heading_path_is_accepted(manifest: Manifest, questions: Ques
 
     assert probe_problems(probe, manifest, questions) == []
     assert load_probes(json.dumps({"schema_version": 1, "probes": [probe]}))[0].expected
+
+
+def test_the_list_with_a_probe_for_question_8_is_accepted(
+    probe_list: dict[str, Any], manifest: Manifest, questions: Questions
+) -> None:
+    """What 136 will add passes the same checks as the list of 120."""
+    extended = {**probe_list, "probes": [*probe_list["probes"], markdown_probe()]}
+
+    assert list_problems(extended, manifest, questions) == []
+    assert len(load_probes(json.dumps(extended))) == len(probe_list["probes"]) + 1
+    test_the_test_questions_are_covered_in_own_words(extended, questions)
+    test_question_8_is_missing_with_a_reason_or_located_by_heading_path(extended)
+    test_places_in_the_other_language_edition_match_the_documented_place(extended, manifest)
 
 
 @pytest.mark.parametrize(

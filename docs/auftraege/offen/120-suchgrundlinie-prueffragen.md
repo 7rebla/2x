@@ -192,3 +192,9 @@ Lauf im eigenen Projekt ohne Handbücher: `D run --rm -T backend-dev python mana
 4. **Eigenes Projekt mit KI an:** `.env.example` schaltet die KI ein; beim Lauf mit `--probes m3` im eigenen Projekt wurde die Kontrollanfrage einmal an Ollama auf dem Host eingebettet (nur lesend, keine Abschnitte vorhanden, Listen leer). Die Tests selbst nutzen nur die Attrappe.
 5. `testdata/klein/` wurde nicht eingelesen (ohne Docling kein Einlesen); der Nachweis ohne Handbücher läuft auf der leeren Datenbank von `twox-120` („not ingested“, wie erwartet).
 6. Lokal bleiben die Images `twox-120-*`; die ignorierte `.env` hat `TWOX_API_PORT=18120`.
+
+### Nachbesserung (nach Prüfung der Leitstelle)
+
+- `test_probes_m3.py`: Die Abdeckung erlaubt Frage 8, verlangt sie aber nicht (`covered - {8} == …`). Neuer Test `test_the_list_with_a_probe_for_question_8_is_accepted`: `m3.json` plus eine `markdown_probe()` für Frage 8 (Fundstelle über `heading_path`) besteht alle Prüfungen der Liste.
+- `test_evaluation.py::test_probe_list_m3_by_name`: Die Zahl der Proben kommt aus der geladenen `m3.json` statt fest 13; 136 kann `question-8` ohne Teständerung ergänzen.
+- Geprüft in `twox-120`: `ruff check`, `ruff format --check`, `mypy` (196 Dateien, keine Fehler), `pytest tests/search tests/acceptance` 416 passed; danach `--profile dev down -v` Exit 0, kein Container und kein Volume `twox-120*`.
