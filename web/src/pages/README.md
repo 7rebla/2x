@@ -118,7 +118,9 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 
 - `ImportPage.tsx` (`/import`, role `manage`) uploads the device list as CSV through the generated
   `devicesImportMutation` (`multipart/form-data`, CSRF header from `../api/client.ts`). The page describes the
-  13 columns (`deviceListColumns`, the order of E-44).
+  13 columns (`deviceListColumns`, the order of E-44) and the optional 14th column `device_class`
+  (`deviceListOptionalColumn`, E-53) with its values (`deviceClasses` from `structure/deviceClass.ts`, which the
+  device form uses for its choice as well; labels under `deviceClass` in `assets.json`).
 - Step 1 sends the file with `dry_run=true`. The answer is always a report (200, `../components/ImportReportView.tsx`):
   counts per level (created, changed, unchanged) or, if the file has errors, every error with line, column and
   the message of the API. Values from the file and messages are shown as text.

@@ -24,7 +24,8 @@ from rest_framework.test import APIClient
 from tests.accounts.users import make_user
 from tests.assets.csv_files import csv_text, row
 from twox.accounts.roles import MANAGE, READ, ROLE_LABELS
-from twox.assets.models import Area, Device, Plant, Site
+from twox.assets.csv_import import COLUMNS_WITH_DEVICE_CLASS
+from twox.assets.models import Area, Device, DeviceClass, Plant, Site
 from twox.config.asgi import application
 from twox.files.models import Document
 from twox.files.uploads import Message, Scope, max_request_bytes, scope_language
@@ -95,6 +96,45 @@ def test_import_messages_of_django_come_in_german_too() -> None:
     assert import_errors(manager(), content, "de") == [
         "Bitte eine gültige IPv4 oder IPv6-Adresse eingeben."
     ]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("language", "message"),
+    [
+        (
+            "de",
+            "„sps“ ist kein Gerätetyp. Erlaubt sind: plc, controller, computer, router,"
+            " firewall, robot, other.",
+        ),
+        (
+            "en",
+            '"sps" is not a device class. Use one of: plc, controller, computer, router,'
+            " firewall, robot, other.",
+        ),
+    ],
+)
+def test_import_with_an_unknown_device_class(language: str, message: str) -> None:
+    content = csv_text([row(device_class="sps")], header=COLUMNS_WITH_DEVICE_CLASS).encode()
+
+    assert import_errors(manager(), content, language) == [message]
+
+
+def test_device_class_labels_are_german() -> None:
+    with translation.override("de"):
+        labels = {value: str(label) for value, label in DeviceClass.choices}
+        verbose_name = str(Device._meta.get_field("device_class").verbose_name)
+
+    assert labels == {
+        "plc": "SPS",
+        "controller": "Controller/Embedded",
+        "computer": "Rechner/Edge",
+        "router": "Router",
+        "firewall": "Firewall",
+        "robot": "Roboter",
+        "other": "Sonstiges",
+    }
+    assert verbose_name == "Gerätetyp"
 
 
 @pytest.mark.django_db

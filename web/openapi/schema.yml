@@ -1012,6 +1012,10 @@ components:
         name:
           type: string
           readOnly: true
+        device_class:
+          allOf:
+          - $ref: '#/components/schemas/DeviceClassEnum'
+          readOnly: true
         manufacturer:
           type: string
           readOnly: true
@@ -1046,6 +1050,7 @@ components:
       - address_source
       - area
       - created_at
+      - device_class
       - id
       - ip_address
       - key
@@ -1058,6 +1063,24 @@ components:
       - site
       - software_version
       - updated_at
+    DeviceClassEnum:
+      enum:
+      - plc
+      - controller
+      - computer
+      - router
+      - firewall
+      - robot
+      - other
+      type: string
+      description: |-
+        * `plc` - PLC
+        * `controller` - Controller / embedded
+        * `computer` - Computer / edge
+        * `router` - Router
+        * `firewall` - Firewall
+        * `robot` - Robot
+        * `other` - Other
     DeviceImportForm:
       type: object
       description: Form of a device list import (``multipart/form-data``).
@@ -1066,7 +1089,8 @@ components:
           type: string
           format: binary
           description: 'The device list as CSV: UTF-8, comma, the 13 columns of format
-            version 1; at most TWOX_UPLOAD_MAX_BYTES bytes.'
+            version 1, optionally followed by device_class; at most TWOX_UPLOAD_MAX_BYTES
+            bytes.'
         dry_run:
           type: boolean
           default: true
@@ -1090,6 +1114,8 @@ components:
         name:
           type: string
           maxLength: 200
+        device_class:
+          $ref: '#/components/schemas/DeviceClassEnum'
         manufacturer:
           type: string
         model:
@@ -1472,6 +1498,8 @@ components:
         name:
           type: string
           maxLength: 200
+        device_class:
+          $ref: '#/components/schemas/DeviceClassEnum'
         manufacturer:
           type: string
         model:

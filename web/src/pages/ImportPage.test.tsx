@@ -135,6 +135,13 @@ describe("import page", () => {
     expect(screen.getByTestId("import-columns").textContent).toBe(
       "site,area,plant_id,plant_name,device_id,device_name,manufacturer,model,software_version,ip_address,address_source,protocols,notes",
     );
+    // The optional 14th column and its values (E-53).
+    expect(screen.getByTestId("import-optional-column").textContent).toBe("device_class");
+    expect(screen.getByTestId("import-device-classes").textContent).toBe(
+      "plc, controller, computer, router, firewall, robot, other",
+    );
+    expect(screen.getByTestId("import-format").textContent).toContain("A 14th column may follow at the end");
+    expect(screen.getByTestId("import-format").textContent).toContain("a new device gets the class other");
     const checkButton = screen.getByRole("button", { name: "Start dry run" });
     expect(checkButton).toHaveProperty("disabled", true);
     expect(screen.queryByRole("button", { name: "Apply" })).toBeNull();
@@ -337,6 +344,8 @@ describe("import page", () => {
     await openPage();
 
     expect(screen.getByRole("heading", { level: 3, name: "Erwartetes Format" })).toBeDefined();
+    expect(screen.getByTestId("import-format").textContent).toContain("Am Ende darf eine 14. Spalte folgen");
+    expect(screen.getByTestId("import-format").textContent).toContain("Sie enthält den Gerätetyp");
     fireEvent.change(screen.getByLabelText("CSV-Datei"), { target: { files: [csvFile()] } });
     fireEvent.click(screen.getByRole("button", { name: "Probelauf starten" }));
 

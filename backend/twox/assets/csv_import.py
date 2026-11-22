@@ -2,7 +2,9 @@
 
 Format (version 1):
 
-- Exactly the 13 columns of :data:`COLUMNS`, in this order, in the first line.
+- Exactly the 13 columns of :data:`COLUMNS`, in this order, in the first line,
+  optionally followed by a 14th column ``device_class`` (E-53). Every row has
+  as many fields as the first line names.
 - UTF-8; a byte order mark at the start is accepted. Comma as separator,
   double quotes as in RFC 4180 (a field may hold commas, quotes and line
   breaks).
@@ -13,7 +15,9 @@ Mapping: ``site`` is the name of the site, ``area`` the name of the area at
 that site, ``plant_id``/``plant_name`` the key and name of the plant,
 ``device_id``/``device_name`` the key and name of the device; the other
 columns go one to one into the device fields. An empty ``ip_address`` is no
-address.
+address. ``device_class`` must be one of the values of
+:class:`~twox.assets.models.DeviceClass`; without the column, or with an
+empty value, a new device gets ``other`` and a stored device keeps its class.
 
 Rules (E-44): plants and devices are matched by their keys. Existing objects
 are updated, new ones created, nothing is deleted; a device may move to
@@ -57,12 +61,13 @@ from twox.assets.models import (
     NAME_MAX_LENGTH,
     Area,
     Device,
+    DeviceClass,
     Plant,
     Site,
     validate_key,
 )
 
-#: The columns of format version 1, in this order.
+#: The required columns of format version 1, in this order.
 COLUMNS: tuple[str, ...] = (
     "site",
     "area",
@@ -79,6 +84,12 @@ COLUMNS: tuple[str, ...] = (
     "notes",
 )
 
+#: The optional last column (E-53): the class of the device.
+DEVICE_CLASS_COLUMN = "device_class"
+
+#: The columns of a file with the optional last column, in this order.
+COLUMNS_WITH_DEVICE_CLASS: tuple[str, ...] = (*COLUMNS, DEVICE_CLASS_COLUMN)
+
 #: Columns that describe a device and stay empty in a row without ``device_id``.
 #: (``notes`` is the exception: without a device it holds the plant's notes.)
 DEVICE_ONLY_COLUMNS: tuple[str, ...] = (
@@ -89,6 +100,7 @@ DEVICE_ONLY_COLUMNS: tuple[str, ...] = (
     "ip_address",
     "address_source",
     "protocols",
+    DEVICE_CLASS_COLUMN,
 )
 
 #: Device fields filled from the column of the same name (besides key and name).
@@ -108,7 +120,7 @@ MAX_ROWS = 10_000
 #: Most errors listed; reading stops after the row that reaches the limit.
 MAX_ERRORS = 1_000
 
-#: Longest physical line in bytes, line break included. 13 fields at the
+#: Longest physical line in bytes, line break included. 14 fields at the
 #: ``csv`` field limit (131072 characters of up to 4 bytes) fit.
 MAX_LINE_BYTES = 8 * 1024 * 1024
 
@@ -137,8 +149,8 @@ class RowError:
     """An error in the file.
 
     ``line`` is the line where the row starts (the header is line 1);
-    ``None`` for the file as a whole. ``column`` is one of :data:`COLUMNS`,
-    or ``None`` for the whole row.
+    ``None`` for the file as a whole. ``column`` is one of
+    :data:`COLUMNS_WITH_DEVICE_CLASS`, or ``None`` for the whole row.
     """
 
     line: int | None
@@ -170,6 +182,8 @@ class DeviceRow:
     key: str
     name: str
     #: The fields of :data:`DEVICE_VALUE_FIELDS`; ``ip_address`` may be ``None``.
+    #: ``device_class`` only if the row gives one; otherwise a new device gets
+    #: the default and a stored device keeps its class.
     values: Mapping[str, str | None]
 
 
@@ -273,8 +287,13 @@ def _header_error(header: Sequence[str]) -> RowError:
     message = gettext(
         "The first line must name exactly these %(count)d columns in this order: %(columns)s."
     ) % {"count": len(COLUMNS), "columns": ", ".join(COLUMNS)}
+    message += " " + gettext("The column %(column)s may follow as the last one.") % {
+        "column": DEVICE_CLASS_COLUMN
+    }
     missing = [column for column in COLUMNS if column not in header]
-    unexpected = [_echo(name) for name in header if name not in COLUMNS][: len(COLUMNS)]
+    unexpected = [_echo(name) for name in header if name not in COLUMNS_WITH_DEVICE_CLASS][
+        : len(COLUMNS_WITH_DEVICE_CLASS)
+    ]
     if missing:
         message += " " + gettext("Missing: %(columns)s.") % {"columns": ", ".join(missing)}
     if unexpected:
@@ -316,6 +335,16 @@ class DeviceListRowSerializer(serializers.Serializer[Any]):
     address_source = serializers.CharField(allow_blank=True)
     protocols = serializers.CharField(allow_blank=True)
     notes = serializers.CharField(allow_blank=True)
+    # Only in a file with the optional last column.
+    device_class = serializers.CharField(allow_blank=True, required=False)
+
+    def validate_device_class(self, value: str) -> str:
+        if value and value not in DeviceClass.values:
+            raise serializers.ValidationError(
+                gettext('"%(value)s" is not a device class. Use one of: %(values)s.')
+                % {"value": _echo(value), "values": ", ".join(DeviceClass.values)}
+            )
+        return value
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         errors: dict[str, list[str]] = {}
@@ -324,7 +353,7 @@ class DeviceListRowSerializer(serializers.Serializer[Any]):
                 errors["device_name"] = [gettext("A row with a device_id needs a device_name.")]
         else:
             for column in DEVICE_ONLY_COLUMNS:
-                if attrs[column]:
+                if attrs.get(column):
                     errors[column] = [
                         gettext(
                             "This column describes a device; leave it empty in a row"
@@ -340,8 +369,10 @@ class DeviceListRowSerializer(serializers.Serializer[Any]):
 class _Collector:
     """Turns checked rows into plants and devices and finds contradictions."""
 
-    def __init__(self, parsed: ParsedFile) -> None:
+    def __init__(self, parsed: ParsedFile, columns: tuple[str, ...]) -> None:
         self.parsed = parsed
+        #: The columns of the file: :data:`COLUMNS` or :data:`COLUMNS_WITH_DEVICE_CLASS`.
+        self.columns = columns
         self.plants: dict[str, PlantRow] = {}
         self.device_lines: dict[str, int] = {}
 
@@ -349,19 +380,19 @@ class _Collector:
         self.parsed.errors.append(RowError(line, column, message))
 
     def add(self, line: int, record: list[str]) -> None:
-        if len(record) != len(COLUMNS):
+        if len(record) != len(self.columns):
             self.error(
                 line,
                 None,
                 gettext("The row has %(found)d fields instead of %(expected)d.")
-                % {"found": len(record), "expected": len(COLUMNS)},
+                % {"found": len(record), "expected": len(self.columns)},
             )
             return
-        row = DeviceListRowSerializer(data=dict(zip(COLUMNS, record, strict=True)))
+        row = DeviceListRowSerializer(data=dict(zip(self.columns, record, strict=True)))
         if not row.is_valid():
             for column, messages in row.errors.items():
                 for message in messages:
-                    self.error(line, column if column in COLUMNS else None, str(message))
+                    self.error(line, column if column in self.columns else None, str(message))
             return
         values: dict[str, Any] = row.validated_data
         plant = self.plant(line, values)
@@ -413,13 +444,16 @@ class _Collector:
             )
             return
         self.device_lines[key] = line
+        device_values: dict[str, str | None] = {name: values[name] for name in DEVICE_VALUE_FIELDS}
+        if values.get(DEVICE_CLASS_COLUMN):
+            device_values[DEVICE_CLASS_COLUMN] = values[DEVICE_CLASS_COLUMN]
         self.parsed.devices.append(
             DeviceRow(
                 line=line,
                 plant_key=values["plant_id"],
                 key=key,
                 name=values["device_name"],
-                values={name: values[name] for name in DEVICE_VALUE_FIELDS},
+                values=device_values,
             )
         )
 
@@ -448,16 +482,17 @@ def parse(stream: ByteLines) -> ParsedFile:
     parsed = ParsedFile()
     lines = _Lines(stream)
     reader = csv.reader(iter(lines), dialect="excel", strict=True)
-    collector = _Collector(parsed)
     start = 1
     try:
         header = next(reader, None)
         if header is None:
             parsed.errors.append(RowError(None, None, gettext("The file is empty.")))
             return parsed
-        if header != list(COLUMNS):
+        columns = tuple(header)
+        if columns not in (COLUMNS, COLUMNS_WITH_DEVICE_CLASS):
             parsed.errors.append(_header_error(header))
             return parsed
+        collector = _Collector(parsed, columns)
         while True:
             start = lines.count + 1
             record = next(reader, None)

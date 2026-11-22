@@ -3,6 +3,9 @@
   "format": {
     "heading": "Expected format",
     "header": "The first line holds exactly these 13 columns, in this order:",
+    "optionalColumn": "A 14th column may follow at the end; then every row has 14 values:",
+    "deviceClassValues": "It holds the device class, one of these values:",
+    "deviceClassEmpty": "Without this column, or with an empty value, a new device gets the class other and an existing device keeps its class. An unknown value is an error.",
     "encoding": "UTF-8, columns separated by commas, values with commas or line breaks in double quotes.",
     "matching": "Plants are matched by plant_id, devices by device_id. Existing entries are updated, new ones created, nothing is deleted.",
     "plantRow": "A row without device_id describes only the plant; it may fill notes, but no device column.",

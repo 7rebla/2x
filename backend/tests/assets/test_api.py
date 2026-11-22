@@ -6,6 +6,8 @@ from typing import Any
 
 import pytest
 import yaml
+from auditlog.models import LogEntry
+from django.contrib.contenttypes.models import ContentType
 from django.core.management import call_command
 from django.db.models import Model
 from django.db.models.signals import post_save
@@ -13,7 +15,7 @@ from pytest_django import DjangoAssertNumQueries
 from rest_framework.test import APIClient
 
 from tests.assets.conftest import ClientFactory, Structure
-from twox.assets.models import Area, Device, Plant, Site
+from twox.assets.models import Area, Device, DeviceClass, Plant, Site
 
 
 @pytest.fixture
@@ -50,6 +52,7 @@ def test_device_answer_shows_the_chain(structure: Structure, reader: APIClient) 
         "site",
         "key",
         "name",
+        "device_class",
         "manufacturer",
         "model",
         "software_version",
@@ -60,6 +63,7 @@ def test_device_answer_shows_the_chain(structure: Structure, reader: APIClient) 
         "created_at",
         "updated_at",
     }
+    assert body["device_class"] == "other"
 
 
 def test_device_without_address_shows_null(structure: Structure, reader: APIClient) -> None:
@@ -172,6 +176,111 @@ def test_put_empties_optional_device_fields(structure: Structure, manager: APICl
 
     assert response.status_code == 200
     assert Device.objects.get(pk=structure.press_plc.pk).notes == ""
+
+
+# --- Device class (E-53) -----------------------------------------------------
+
+
+def test_created_device_without_class_is_other(structure: Structure, manager: APIClient) -> None:
+    response = manager.post(
+        "/api/v1/devices/",
+        {"plant": structure.paint.pk, "key": "paint-pc", "name": "Paint PC"},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert response.json()["device_class"] == "other"
+    assert Device.objects.get(key="paint-pc").device_class == DeviceClass.OTHER
+
+
+@pytest.mark.parametrize("device_class", DeviceClass.values)
+def test_device_class_is_written_and_read(
+    structure: Structure, manager: APIClient, device_class: str
+) -> None:
+    created = manager.post(
+        "/api/v1/devices/",
+        {
+            "plant": structure.paint.pk,
+            "key": "paint-new",
+            "name": "New device",
+            "device_class": device_class,
+        },
+        format="json",
+    )
+
+    assert created.status_code == 201
+    assert created.json()["device_class"] == device_class
+    read = manager.get(f"/api/v1/devices/{created.json()['id']}/")
+    assert read.json()["device_class"] == device_class
+    assert Device.objects.get(key="paint-new").device_class == device_class
+
+
+def test_patch_changes_the_device_class(structure: Structure, manager: APIClient) -> None:
+    response = manager.patch(
+        f"/api/v1/devices/{structure.press_plc.pk}/", {"device_class": "plc"}, format="json"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["device_class"] == "plc"
+    stored = Device.objects.get(pk=structure.press_plc.pk)
+    assert stored.device_class == DeviceClass.PLC
+    assert stored.name == "Press PLC"
+    entry = LogEntry.objects.get(
+        content_type=ContentType.objects.get_for_model(Device),
+        object_id=stored.pk,
+        action=LogEntry.Action.UPDATE,
+    )
+    assert entry.changes == {"device_class": ["other", "plc"]}
+    assert entry.actor is not None
+
+
+def test_put_without_device_class_keeps_it(structure: Structure, manager: APIClient) -> None:
+    Device.objects.filter(pk=structure.press_plc.pk).update(device_class=DeviceClass.PLC)
+
+    response = manager.put(
+        f"/api/v1/devices/{structure.press_plc.pk}/",
+        {"plant": structure.press.pk, "key": "press-plc", "name": "Press PLC"},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.json()["device_class"] == "plc"
+
+
+@pytest.mark.parametrize("value", ["", "PLC", "sps", "switch", None, 3])
+def test_invalid_device_class_is_400_at_the_field(
+    structure: Structure, manager: APIClient, value: object
+) -> None:
+    response = manager.patch(
+        f"/api/v1/devices/{structure.press_plc.pk}/", {"device_class": value}, format="json"
+    )
+
+    assert response.status_code == 400
+    assert set(response.json()) == {"device_class"}
+    assert Device.objects.get(pk=structure.press_plc.pk).device_class == DeviceClass.OTHER
+
+
+def test_invalid_device_class_on_create_saves_nothing(
+    structure: Structure, manager: APIClient
+) -> None:
+    response = manager.post(
+        "/api/v1/devices/",
+        {"plant": structure.paint.pk, "key": "paint-x", "name": "X", "device_class": "robots"},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert set(response.json()) == {"device_class"}
+    assert not Device.objects.filter(key="paint-x").exists()
+
+
+def test_reader_cannot_change_the_device_class(structure: Structure, reader: APIClient) -> None:
+    response = reader.patch(
+        f"/api/v1/devices/{structure.press_plc.pk}/", {"device_class": "plc"}, format="json"
+    )
+
+    assert response.status_code == 403
+    assert Device.objects.get(pk=structure.press_plc.pk).device_class == DeviceClass.OTHER
 
 
 @pytest.fixture
@@ -579,7 +688,7 @@ def test_schema_types_every_field(schema: dict[str, Any]) -> None:
     components = schema["components"]["schemas"]
     for name in ("Site", "Area", "Plant", "Device", "DeviceWrite", "PlantRef", "AreaRef"):
         for field, definition in components[name]["properties"].items():
-            assert "type" in definition or "allOf" in definition, f"{name}.{field}"
+            assert {"type", "allOf", "$ref"} & set(definition), f"{name}.{field}"
 
 
 def test_schema_device_reads_the_chain_and_writes_the_plant_id(schema: dict[str, Any]) -> None:
@@ -597,6 +706,24 @@ def test_schema_device_reads_the_chain_and_writes_the_plant_id(schema: dict[str,
     assert request == {"$ref": "#/components/schemas/DeviceWrite"}
     assert answer == {"$ref": "#/components/schemas/Device"}
     assert [parameter["name"] for parameter in path["get"]["parameters"]] == ["plant", "site"]
+
+
+def test_schema_names_the_device_classes(schema: dict[str, Any]) -> None:
+    components = schema["components"]["schemas"]
+
+    def reference(definition: dict[str, Any]) -> str:
+        """The component a property refers to, directly or through allOf."""
+        if "$ref" in definition:
+            return str(definition["$ref"])
+        (only,) = definition["allOf"]
+        return str(only["$ref"])
+
+    assert components["DeviceClassEnum"]["enum"] == DeviceClass.values
+    for name in ("Device", "DeviceWrite", "PatchedDeviceWrite"):
+        device_class = components[name]["properties"]["device_class"]
+        assert reference(device_class) == "#/components/schemas/DeviceClassEnum", name
+    assert "device_class" in components["Device"]["required"]
+    assert "device_class" not in components["DeviceWrite"].get("required", [])
 
 
 @pytest.mark.parametrize(

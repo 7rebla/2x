@@ -81,6 +81,7 @@ export type Device = {
     site: SiteRef;
     readonly key: string;
     readonly name: string;
+    device_class: DeviceClassEnum;
     readonly manufacturer: string;
     readonly model: string;
     readonly software_version: string;
@@ -93,11 +94,22 @@ export type Device = {
 };
 
 /**
+ * * `plc` - PLC
+ * * `controller` - Controller / embedded
+ * * `computer` - Computer / edge
+ * * `router` - Router
+ * * `firewall` - Firewall
+ * * `robot` - Robot
+ * * `other` - Other
+ */
+export type DeviceClassEnum = 'plc' | 'controller' | 'computer' | 'router' | 'firewall' | 'robot' | 'other';
+
+/**
  * Form of a device list import (``multipart/form-data``).
  */
 export type DeviceImportForm = {
     /**
-     * The device list as CSV: UTF-8, comma, the 13 columns of format version 1; at most TWOX_UPLOAD_MAX_BYTES bytes.
+     * The device list as CSV: UTF-8, comma, the 13 columns of format version 1, optionally followed by device_class; at most TWOX_UPLOAD_MAX_BYTES bytes.
      */
     file: Blob | File;
     /**
@@ -115,6 +127,7 @@ export type DeviceWrite = {
     plant: number;
     key: string;
     name: string;
+    device_class?: DeviceClassEnum;
     manufacturer?: string;
     model?: string;
     software_version?: string;
@@ -328,6 +341,7 @@ export type PatchedDeviceWrite = {
     plant?: number;
     key?: string;
     name?: string;
+    device_class?: DeviceClassEnum;
     manufacturer?: string;
     model?: string;
     software_version?: string;

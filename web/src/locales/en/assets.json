@@ -53,6 +53,7 @@
     "plant": "Plant",
     "name": "Name",
     "key": "Key",
+    "device_class": "Device class",
     "notes": "Notes",
     "manufacturer": "Manufacturer",
     "model": "Model",
@@ -62,6 +63,15 @@
     "protocols": "Protocols",
     "created_at": "Created",
     "updated_at": "Last changed"
+  },
+  "deviceClass": {
+    "plc": "PLC",
+    "controller": "Controller / embedded",
+    "computer": "Computer / edge",
+    "router": "Router",
+    "firewall": "Firewall",
+    "robot": "Robot",
+    "other": "Other"
   },
   "device": {
     "breadcrumb": "Location of the device",

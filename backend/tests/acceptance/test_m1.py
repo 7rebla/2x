@@ -21,7 +21,7 @@ from pytest_django.fixtures import Settings
 from rest_framework.test import APIClient
 
 from tests.accounts.users import make_user
-from tests.assets.csv_files import TESTFACTORY_DEVICES_CSV
+from tests.assets.csv_files import TESTFACTORY_DEVICE_CLASSES, TESTFACTORY_DEVICES_CSV
 
 if TYPE_CHECKING:
     # Exists in the type stubs only; annotations are not evaluated at runtime.
@@ -147,6 +147,10 @@ def test_device_list_of_the_test_factory_is_imported(
     devices = {device["key"]: device for device in get(manager, "/api/v1/devices/")}
     assert len(devices) == EXPECTED["devices"]
     assert devices["dps-plc"]["ip_address"] == "192.168.0.90"
+    # Every device has the class of the test factory's list (E-53).
+    assert {key: device["device_class"] for key, device in devices.items()} == (
+        TESTFACTORY_DEVICE_CLASSES
+    )
     charging = next(p for p in get(manager, "/api/v1/plants/") if p["key"] == "aps-charging")
     assert charging["notes"].startswith("Kein Gerät angelegt")
     assert get(manager, f"/api/v1/devices/?plant={charging['id']}") == []
@@ -169,6 +173,7 @@ def test_change_log_shows_the_import_with_the_user(
     plc = [entry for entry in devices if entry["object_repr"].endswith("(dps-plc)")]
     assert len(plc) == 1
     assert plc[0]["changes"]["ip_address"] == [None, "192.168.0.90"]
+    assert plc[0]["changes"]["device_class"] == [None, "plc"]
 
 
 def test_repeated_import_changes_nothing(manager: APIClient, imported: dict[str, Any]) -> None:

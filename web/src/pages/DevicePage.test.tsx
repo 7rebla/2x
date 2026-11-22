@@ -172,6 +172,7 @@ describe("device page", () => {
       plant: 100,
       key: "test-plc-1",
       name: "Test controller",
+      device_class: "plc",
       manufacturer: "Test maker",
       model: "Test model",
       software_version: "2.0.0",
@@ -181,6 +182,25 @@ describe("device page", () => {
       notes: "First line of the notes\nSecond line of the notes",
     });
     expect(api.requestsTo("/api/v1/devices/1000/").filter((request) => request.method === "GET")).toHaveLength(2);
+  });
+
+  it("shows the stored device class in the form and sends a changed one", async () => {
+    const api = fakeApi(manager, fakeStructureApi().handler);
+    renderApp("/devices/1000");
+    await deviceHeading("Test controller");
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit device Test controller" }));
+    const deviceForm = await screen.findByRole("form", { name: "Edit device" });
+    const select = within(deviceForm).getByLabelText<HTMLSelectElement>("Device class");
+    expect(select.value).toBe("plc");
+    fireEvent.change(select, { target: { value: "router" } });
+    fireEvent.click(within(deviceForm).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("form", { name: "Edit device" })).toBeNull();
+    });
+    const put = api.requestsTo("/api/v1/devices/1000/").find((request) => request.method === "PUT");
+    expect(((await put?.clone().json()) as { device_class: unknown }).device_class).toBe("router");
   });
 
   it("an empty IP address is sent as null", async () => {

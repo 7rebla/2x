@@ -3,9 +3,9 @@
 import pytest
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import ProtectedError
+from django.db.models import CharField, ProtectedError
 
-from twox.assets.models import Area, Device, Plant, Site
+from twox.assets.models import Area, Device, DeviceClass, Plant, Site
 
 pytestmark = pytest.mark.django_db
 
@@ -185,6 +185,69 @@ def test_free_text_fields_may_be_empty() -> None:
     assert loaded.manufacturer == ""
     assert loaded.protocols == ""
     assert loaded.ip_address is None
+
+
+def test_device_classes_are_the_seven_of_e53() -> None:
+    assert DeviceClass.values == [
+        "plc",
+        "controller",
+        "computer",
+        "router",
+        "firewall",
+        "robot",
+        "other",
+    ]
+    assert [str(label) for label in DeviceClass.labels] == [
+        "PLC",
+        "Controller / embedded",
+        "Computer / edge",
+        "Router",
+        "Firewall",
+        "Robot",
+        "Other",
+    ]
+    field = Device._meta.get_field("device_class")
+    assert isinstance(field, CharField)
+    assert field.max_length is not None
+    assert all(len(value) <= field.max_length for value in DeviceClass.values)
+
+
+def test_new_device_is_of_class_other() -> None:
+    device = make_chain()
+
+    assert Device.objects.get(pk=device.pk).device_class == DeviceClass.OTHER
+    assert device.get_device_class_display() == "Other"
+
+
+@pytest.mark.parametrize("device_class", DeviceClass.values)
+def test_every_device_class_is_stored(device_class: str) -> None:
+    device = make_chain()
+    device.device_class = device_class
+
+    device.full_clean()
+    device.save()
+
+    assert Device.objects.get(pk=device.pk).device_class == device_class
+
+
+@pytest.mark.parametrize("device_class", ["", "PLC", "switch", "sps"])
+def test_invalid_device_class_is_rejected(device_class: str) -> None:
+    device = make_chain()
+    device.device_class = device_class
+
+    with pytest.raises(ValidationError) as raised:
+        device.full_clean()
+
+    assert "device_class" in raised.value.message_dict
+
+
+def test_device_class_column_is_not_null() -> None:
+    field = Device._meta.get_field("device_class")
+
+    assert isinstance(field, CharField)
+    assert field.null is False
+    assert field.blank is False
+    assert field.default == DeviceClass.OTHER
 
 
 def test_models_have_ordering_and_verbose_names() -> None:

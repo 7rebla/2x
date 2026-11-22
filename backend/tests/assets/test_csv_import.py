@@ -10,6 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from tests.accounts.users import make_user
 from tests.assets.csv_files import (
+    TESTFACTORY_DEVICE_CLASSES,
     TESTFACTORY_DEVICES_CSV,
     csv_file,
     csv_text,
@@ -22,13 +23,15 @@ from twox.accounts.models import User
 from twox.assets import csv_import
 from twox.assets.csv_import import (
     COLUMNS,
+    COLUMNS_WITH_DEVICE_CLASS,
+    DEVICE_CLASS_COLUMN,
     ImportReport,
     ParsedFile,
     RowError,
     apply,
     parse,
 )
-from twox.assets.models import Area, Device, Plant, Site
+from twox.assets.models import Area, Device, DeviceClass, Plant, Site
 
 pytestmark = pytest.mark.django_db
 
@@ -135,10 +138,19 @@ def test_testfactory_values_arrive_unchanged(importer: User) -> None:
             assert getattr(device, column) == values[column], (values["device_id"], column)
         assert device.protocols == values["protocols"]
         assert device.notes == values["notes"]
+        assert device.device_class == values["device_class"]
     # Umlauts stay as they are.
     assert Plant.objects.get(key="aps-mill").name == "Frässtation"
     assert Area.objects.filter(name="Netzübergang").exists()
     assert any("ä" in values["plant_name"] for values in rows)
+
+
+def test_testfactory_devices_get_their_classes(importer: User) -> None:
+    import_testfactory(importer)
+
+    assert dict(Device.objects.values_list("key", "device_class")) == TESTFACTORY_DEVICE_CLASSES
+    # Every class but "other" occurs at least once.
+    assert set(TESTFACTORY_DEVICE_CLASSES.values()) == set(DeviceClass.values) - {"other"}
 
 
 def test_second_import_of_the_same_file_changes_nothing(importer: User) -> None:
@@ -229,7 +241,9 @@ def test_columns_are_the_header_of_the_testfactory_file() -> None:
     with TESTFACTORY_DEVICES_CSV.open(encoding="utf-8", newline="") as stream:
         header = next(csv.reader(stream))
 
-    assert tuple(header) == COLUMNS
+    assert tuple(header) == COLUMNS_WITH_DEVICE_CLASS
+    assert (*COLUMNS, "device_class") == COLUMNS_WITH_DEVICE_CLASS
+    assert len(COLUMNS) == 13
 
 
 def test_byte_order_mark_is_accepted() -> None:
@@ -296,6 +310,10 @@ def test_empty_file_is_an_error() -> None:
         ["site", "area", "plant", "plant_name"],
         list(reversed(COLUMNS)),
         [*COLUMNS, "extra"],
+        [*COLUMNS_WITH_DEVICE_CLASS, "extra"],
+        [DEVICE_CLASS_COLUMN, *COLUMNS],
+        [*COLUMNS[:-1], DEVICE_CLASS_COLUMN, "notes"],
+        [*COLUMNS, "DEVICE_CLASS"],
         [column.upper() for column in COLUMNS],
         ["Standort", *COLUMNS[1:]],
     ],
@@ -305,8 +323,17 @@ def test_wrong_header_is_an_error_for_the_whole_file(header: list[str]) -> None:
 
     assert errors_of(parsed) == [(1, None)]
     assert "site, area, plant_id" in parsed.errors[0].message
+    assert "The column device_class may follow as the last one." in parsed.errors[0].message
     assert parsed.devices == []
     assert parsed.plants == []
+
+
+def test_header_error_does_not_call_device_class_unexpected() -> None:
+    header = ["site", "Bereich", *COLUMNS[2:], DEVICE_CLASS_COLUMN, "extra"]
+
+    message = parse(csv_file([row()], header=header)).errors[0].message
+
+    assert "Not expected: Bereich, extra." in message
 
 
 def test_header_error_names_missing_and_unexpected_columns() -> None:
@@ -455,14 +482,22 @@ def test_broken_quoting_is_an_error_and_stops_reading() -> None:
     assert "not checked" in parsed.errors[0].message
 
 
-@pytest.mark.parametrize("count", [12, 14])
-def test_wrong_number_of_fields_is_an_error_of_the_row(count: int) -> None:
-    text = ",".join(COLUMNS) + "\r\n" + ",".join(["x"] * count) + "\r\n"
+@pytest.mark.parametrize(
+    ("header", "count"),
+    [
+        (COLUMNS, 12),
+        (COLUMNS, 14),
+        (COLUMNS_WITH_DEVICE_CLASS, 13),
+        (COLUMNS_WITH_DEVICE_CLASS, 15),
+    ],
+)
+def test_wrong_number_of_fields_is_an_error_of_the_row(header: tuple[str, ...], count: int) -> None:
+    text = ",".join(header) + "\r\n" + ",".join(["x"] * count) + "\r\n"
 
     parsed = parse(raw_file(text))
 
     assert errors_of(parsed) == [(2, None)]
-    assert str(count) in parsed.errors[0].message
+    assert f"has {count} fields instead of {len(header)}" in parsed.errors[0].message
 
 
 @pytest.mark.parametrize("column", ["site", "area", "plant_id", "plant_name"])
@@ -480,11 +515,15 @@ def test_device_id_without_device_name_is_an_error() -> None:
 
 @pytest.mark.parametrize("column", csv_import.DEVICE_ONLY_COLUMNS)
 def test_device_columns_without_device_id_are_errors(column: str) -> None:
-    value = "192.0.2.1" if column == "ip_address" else "something"
+    value = {"ip_address": "192.0.2.1", "device_class": "plc"}.get(column, "something")
 
-    parsed = parse(csv_file([plant_row(**{column: value})]))
+    parsed = parse(csv_file([plant_row(**{column: value})], header=COLUMNS_WITH_DEVICE_CLASS))
 
     assert errors_of(parsed) == [(2, column)]
+
+
+def test_device_class_is_a_device_only_column() -> None:
+    assert DEVICE_CLASS_COLUMN in csv_import.DEVICE_ONLY_COLUMNS
 
 
 @pytest.mark.parametrize("key", ["Press", "press_1", "press 1", "presse-ä", "a" * 65])
@@ -677,3 +716,133 @@ def test_unique_key_saved_at_the_same_time_is_an_error(
     assert "A plant with this key exists already." in report.errors[0].message
     assert counts(report)["sites"] == (0, 0, 0)
     assert structure_snapshot() == before
+
+
+# --- optional column device_class (E-53) -------------------------------------
+
+
+def class_file(*rows: dict[str, str]) -> io.BytesIO:
+    """A file with the optional 14th column."""
+    return csv_file(rows, header=COLUMNS_WITH_DEVICE_CLASS)
+
+
+@pytest.mark.parametrize("device_class", DeviceClass.values)
+def test_every_device_class_is_accepted(importer: User, device_class: str) -> None:
+    report = apply(parse(class_file(row(device_class=device_class))), importer, dry_run=False)
+
+    assert report.errors == []
+    assert Device.objects.get(key="press-plc").device_class == device_class
+
+
+def test_file_with_13_columns_creates_devices_of_class_other(importer: User) -> None:
+    report = apply(parse(csv_file([row()])), importer, dry_run=False)
+
+    assert report.errors == []
+    assert Device.objects.get(key="press-plc").device_class == DeviceClass.OTHER
+
+
+def test_empty_device_class_creates_a_device_of_class_other(importer: User) -> None:
+    report = apply(parse(class_file(row(device_class=""))), importer, dry_run=False)
+
+    assert report.errors == []
+    assert Device.objects.get(key="press-plc").device_class == DeviceClass.OTHER
+
+
+@pytest.mark.parametrize("with_class_column", [False, True])
+def test_device_class_left_out_keeps_the_stored_one(
+    importer: User, with_class_column: bool
+) -> None:
+    Device.objects.create(
+        plant=stored_press(), key="press-plc", name="Press PLC", device_class=DeviceClass.PLC
+    )
+    rows = [row(manufacturer="Changed")]
+
+    parsed = parse(class_file(*rows) if with_class_column else csv_file(rows))
+    report = apply(parsed, importer, dry_run=False)
+
+    assert report.errors == []
+    assert counts(report)["devices"] == (0, 1, 0)
+    device = Device.objects.get(key="press-plc")
+    assert device.manufacturer == "Changed"
+    assert device.device_class == DeviceClass.PLC
+
+
+def test_same_device_class_again_is_unchanged(importer: User) -> None:
+    apply(parse(class_file(row(device_class="plc"))), importer, dry_run=False)
+
+    report = apply(parse(class_file(row(device_class="plc"))), importer, dry_run=False)
+
+    assert counts(report)["devices"] == (0, 0, 1)
+
+
+def test_changed_device_class_updates_the_device_with_a_log_entry(importer: User) -> None:
+    apply(parse(class_file(row(device_class="plc"))), importer, dry_run=False)
+
+    report = apply(parse(class_file(row(device_class="controller"))), importer, dry_run=False)
+
+    assert counts(report)["devices"] == (0, 1, 0)
+    device = Device.objects.get(key="press-plc")
+    assert device.device_class == DeviceClass.CONTROLLER
+    entry = LogEntry.objects.get(
+        content_type=ContentType.objects.get_for_model(Device),
+        object_id=device.pk,
+        action=LogEntry.Action.UPDATE,
+    )
+    assert entry.actor == importer
+    assert entry.changes == {"device_class": ["plc", "controller"]}
+
+
+def test_dry_run_of_a_device_class_change_changes_nothing(importer: User) -> None:
+    apply(parse(class_file(row(device_class="plc"))), importer, dry_run=False)
+    before = structure_snapshot()
+
+    report = apply(parse(class_file(row(device_class="robot"))), importer, dry_run=True)
+
+    assert counts(report)["devices"] == (0, 1, 0)
+    assert structure_snapshot() == before
+
+
+def test_spaces_around_the_device_class_are_removed() -> None:
+    parsed = parse(class_file(row(device_class="  router ")))
+
+    assert parsed.errors == []
+    assert parsed.devices[0].values["device_class"] == "router"
+
+
+@pytest.mark.parametrize("value", ["PLC", "Plc", "sps", "switch", "plc,router", "x" * 300])
+def test_unknown_device_class_is_an_error_at_its_line_and_column(
+    importer: User, value: str
+) -> None:
+    rows = [plant_row(), row(), row(device_id="press-hmi", device_class=value)]
+
+    report = apply(parse(class_file(*rows)), importer, dry_run=False)
+
+    assert [(error.line, error.column) for error in report.errors] == [(4, "device_class")]
+    message = report.errors[0].message
+    assert "is not a device class" in message
+    assert "plc, controller, computer, router, firewall, robot, other" in message
+    assert "x" * 41 not in message
+    assert report.saved is False
+    assert structure_snapshot() == []
+
+
+def test_unknown_device_classes_in_several_rows_are_all_reported() -> None:
+    rows = [
+        row(device_id="a", device_class="plc"),
+        row(device_id="b", device_class="nope"),
+        row(device_id="c", device_class="robot"),
+        row(device_id="d", device_class="other-thing"),
+    ]
+
+    parsed = parse(class_file(*rows))
+
+    assert errors_of(parsed) == [(3, "device_class"), (5, "device_class")]
+
+
+def test_testfactory_classes_survive_a_13_column_reimport(importer: User) -> None:
+    import_testfactory(importer)
+
+    report = apply(parse(csv_file(factory_rows())), importer, dry_run=False)
+
+    assert counts(report)["devices"] == (0, 0, 13)
+    assert dict(Device.objects.values_list("key", "device_class")) == TESTFACTORY_DEVICE_CLASSES

@@ -10,21 +10,38 @@ import io
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 
-from twox.assets.csv_import import COLUMNS
+from twox.assets.csv_import import COLUMNS, COLUMNS_WITH_DEVICE_CLASS, DEVICE_CLASS_COLUMN
 
 #: The device list of the test factory, mounted read-only into backend-dev
 #: (deploy/compose/compose.yaml). It is the acceptance case of M1.
 TESTFACTORY_DEVICES_CSV = Path("/testfactory/layout/devices.csv")
+
+#: Class of every device of the test factory (work order 073, E-53).
+TESTFACTORY_DEVICE_CLASSES = {
+    "dps-plc": "plc",
+    "hbw-plc": "plc",
+    "drill-plc": "plc",
+    "mill-plc": "plc",
+    "aiqs-plc": "plc",
+    "dps-txt": "controller",
+    "aiqs-txt": "controller",
+    "agv-txt": "controller",
+    "cgw-txt": "controller",
+    "ccu-rpi": "computer",
+    "aps-router": "router",
+    "ur5e": "robot",
+    "opnsense-fw": "firewall",
+}
 
 HEADER = ",".join(COLUMNS)
 
 
 def row(**values: str) -> dict[str, str]:
     """A row of the press PLC; keyword arguments replace columns."""
-    unknown = set(values) - set(COLUMNS)
+    unknown = set(values) - set(COLUMNS_WITH_DEVICE_CLASS)
     if unknown:
         raise ValueError(f"unknown columns: {sorted(unknown)}")
-    base = dict.fromkeys(COLUMNS, "")
+    base = dict.fromkeys(COLUMNS_WITH_DEVICE_CLASS, "")
     base.update(
         site="North",
         area="Line 1",
@@ -46,18 +63,25 @@ def row(**values: str) -> dict[str, str]:
 
 def plant_row(**values: str) -> dict[str, str]:
     """A row of a plant without devices; keyword arguments replace columns."""
-    empty_device = dict.fromkeys(COLUMNS[COLUMNS.index("device_id") :], "")
+    empty_device = dict.fromkeys(
+        COLUMNS_WITH_DEVICE_CLASS[COLUMNS_WITH_DEVICE_CLASS.index("device_id") :], ""
+    )
     return row(**{**empty_device, "plant_id": "charging", "plant_name": "Charging", **values})
 
 
 def csv_text(rows: Iterable[Mapping[str, str]], header: Iterable[str] = COLUMNS) -> str:
-    """The rows as CSV text with the header ``header``."""
+    """The rows as CSV text with the header ``header``.
+
+    The values are written in the order of :data:`COLUMNS`, followed by
+    ``device_class`` if the header names it.
+    """
     out = io.StringIO()
     writer = csv.writer(out)
     columns = list(header)
+    data_columns = COLUMNS_WITH_DEVICE_CLASS if DEVICE_CLASS_COLUMN in columns else COLUMNS
     writer.writerow(columns)
     for values in rows:
-        writer.writerow([values.get(column, "") for column in COLUMNS])
+        writer.writerow([values.get(column, "") for column in data_columns])
     return out.getvalue()
 
 

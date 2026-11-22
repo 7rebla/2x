@@ -53,6 +53,7 @@
     "plant": "Anlage",
     "name": "Name",
     "key": "Kennung",
+    "device_class": "Gerätetyp",
     "notes": "Notizen",
     "manufacturer": "Hersteller",
     "model": "Modell",
@@ -62,6 +63,15 @@
     "protocols": "Protokolle",
     "created_at": "Angelegt",
     "updated_at": "Zuletzt geändert"
+  },
+  "deviceClass": {
+    "plc": "SPS",
+    "controller": "Controller/Embedded",
+    "computer": "Rechner/Edge",
+    "router": "Router",
+    "firewall": "Firewall",
+    "robot": "Roboter",
+    "other": "Sonstiges"
   },
   "device": {
     "breadcrumb": "Ort des Geräts",
