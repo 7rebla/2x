@@ -1,6 +1,6 @@
 # Auftrag 055 – Oberfläche: Einlese-Übersicht
 
-Meilenstein: M2 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 

@@ -183,15 +183,16 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 052 | Such-API | C | 050, 051 | erledigt |
 | 053 | Oberfläche: Einlese-Status | B | 051 | erledigt |
 | 054 | Oberfläche: Suchseite | B | 052 | erledigt |
-| 055 | Oberfläche: Einlese-Übersicht | B | 051, 053, 054 | in Arbeit |
+| 055 | Oberfläche: Einlese-Übersicht | B | 051, 053, 054 | erledigt |
 | 056 | Suchprobe: Befehl evaluate_search | B | 050 | erledigt |
 | 057 | Messlauf in der Testumgebung (Leitstelle) | C | 048, 049, 050, 056 | wartet auf a7 |
-| 058 | Abnahmetests M2 | B | 052–055 | offen |
+| 058 | Abnahmetests M2 | B | 052–055 | in Arbeit |
 | 059 | README und ARCHITECTURE für M2 | B | 055, 056, 058 | offen |
 | 060 | Abnahmelauf M2 (Leitstelle) | C | 057, 058, 059 | offen |
 | 061 | Einbettungsaufträge im Feld `ingest` | B | 048, 051 | erledigt |
-| 062 | Seiten bei Bedarf nachladen (Bündelgröße) | B | 054, 055 | offen |
+| 062 | Seiten bei Bedarf nachladen (Bündelgröße) | B | 054, 055 | in Arbeit |
 | 063 | Gewichtung exakter Treffer in der kombinierten Suche | B | 052 | erledigt |
+| 064 | Filter „nur neuester Auftrag je Version“ | B | 055 | in Arbeit |
 - 073: Feld `device_class` (plc, controller, computer, router, firewall, robot, other) in Modell, API, Admin, Protokoll und Formular; CSV mit optionaler 14. Spalte; Testfabrik: 5 SPS, 4 Controller, je 1 Rechner, Router, Roboter, Firewall. Die Geräteseite zeigt den Typ noch nur im Bearbeiten-Formular (für 074).
 - 040: Erweiterungen `vector` und `pg_trgm` per Migration `ingest.0001_extensions`. Für M6 (Betrieb ohne Superuser): `vector` ist nicht „trusted“ – ein Administrator legt die Erweiterung vor der ersten Migration an; die Rückwärtsmigration entfernt sie und braucht dann ebenfalls einen Superuser.
 - Für M3 vorgemerkt (22.11.2026): Chat-Assistent als animierte Pixelfigur ist von a7 ausgewählt (Vorlage lokal und ungetrackt unter `docs/design/bildmarke/assistent/`). Einbau als eigener M3-Auftrag nach Freigabe; erscheint nur bei eingeschalteten KI-Funktionen (E-59). Der Name der Figur kommt wie der Produktname nicht in getrackte Dateien, bis a7 beide veröffentlicht; vorher Registerprüfung.
@@ -215,4 +216,5 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 - 052: `GET /api/v1/search/` (read; q bis 500, device/plant je bis 100, limit bis 50), Antwort `semantic` used/disabled/unavailable, Treffer mit Ausschnitt, Markierungen in Codepoints und Fundorten (mit Dateiname der Version). Ausschlüsse (`-Wort`) wirken auf alle drei Zweige, in der Vektorsuche vor dem LIMIT. Logfilter: Suchtexte stehen nicht im Zugriffsprotokoll. Eigene Zeitgrenze `TWOX_SEARCH_EMBED_TIMEOUT_SECONDS` (20 s), Modellprüfung 300 s je Prozess zwischengespeichert. Kriterium 8 (Browser) holt die Leitstelle nach 054 nach.
 - 054: Suchseite `/search` (Navigationseintrag „Suche“, Rolle read), Suchtext und Gerät in der Adresse, Treffer als Karten mit Seite, Überschriftenpfad, Marken (Exakt, Stichwort, Bedeutung), markiertem Ausschnitt und Fundorten; bei KI aus eine ruhige Zeile, Hinweis nur bei „nicht erreichbar“. Seite wird nachgeladen. Kriterium 4 von der Leitstelle in „2x“ geprüft. Kopfzeile: nur 11 px Reserve bei sechs Einträgen (Lösung in 055). Wackeliger Vitest in `session.test.tsx` → 062.
 - 063: Exakte Treffer stehen nur noch bei Anfragen absolut vorne, die im Wesentlichen aus Kennungen bestehen (Kennung plus höchstens ein Wort) oder wenn es keine Vektorliste gibt; sonst sind sie eine dritte RRF-Liste (mittlerer Platz bei Gleichstand, Gleichstand geht an die Bedeutung). Nachmessung der Leitstelle mit allen Handbüchern: question-9 27 → 12, question-10 27 → 3, kombiniert Recall@5 0,286 → 0,429, MRR 0,095 → 0,144. Option „keine exakte Liste bei Fragen“ für eine spätere Messung mit mehr Proben vorgemerkt.
+- 055: Seite `/ingest` (Navigationseintrag „Einlesen“, eigenes Icon) mit Filtern Status und Gerät in der Adresse (Vorgabe „Offen“), Tabelle mit Gerät, Datei, Status, Zeitpunkten, „Angestoßen von“ nur für Verwalter, Blättern zu 50, Abfrage alle 5 s bei laufenden Aufträgen. Kopfzeile: unter 1280 px nur Icons (Text `sr-only`, Tooltip), ab 1280 px breiterer Kopf. Folgeauftrag 064: gescheiterte ältere Versuche blieben unter „Offen“ stehen.
 - 074: Acht eigene Icons (Anlage, Gerät, sechs Gerätetypen) unter `web/src/icons/industrial/`, Zuordnung nur in `deviceClass.ts` (Rückfall: generisches Gerät). Typ als Text im Baum, als Feld „Gerätetyp“ auf der Geräteseite, als Tooltip auf der Karte. Notwendig mitgeändert: `graph.ts`, `MapPage.tsx`, `map.json`. Nicht von Hand bei 16 px gesichtet.
