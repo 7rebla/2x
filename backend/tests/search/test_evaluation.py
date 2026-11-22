@@ -10,6 +10,7 @@ import io
 import itertools
 import json
 from collections.abc import Callable, Iterator, Sequence
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -18,7 +19,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from pytest_django.fixtures import Settings
 
-from tests.search.fake_embedder import FakeEmbedder, at_angle, embed
+from tests.search.fake_embedder import FakeEmbedder, at_angle, cosine_distance, embed
 from tests.search.test_keyword_search import (
     add_sections,
     make_device,
@@ -36,8 +37,10 @@ from twox.search.evaluation import (
     AI_DISABLED_NOTE,
     CONTROL_ENTRIES,
     DEPTH,
+    DISTANCE_ENTRIES,
     MODEL_FAILED_NOTE,
     PROBE_LISTS,
+    DistanceOverview,
     ExpectedPlace,
     KindResult,
     Place,
@@ -48,6 +51,7 @@ from twox.search.evaluation import (
     Report,
     SearchKind,
     control_list,
+    entry_distance,
     evaluate,
     format_json,
     format_table,
@@ -1227,3 +1231,239 @@ def test_invalid_probe_list_name(name: str, message: str) -> None:
 
     assert str(raised.value).startswith(message)
     assert raised.value.returncode == 1
+
+
+# --- Work order 124: cosine distances ---------------------------------------------
+
+#: An own sentence that must never appear in the output.
+TEXT_CONSPICUOUS = "Aardvark choir rehearses the anthem behind the boiler."
+
+
+def distanced(sha256: str, page: int, distance: float | None) -> Place:
+    return Place(
+        sha256=sha256, page_start=page, page_end=page, device_key="plc-01", distance=distance
+    )
+
+
+def test_judge_reports_the_distance_of_the_first_correct_entry() -> None:
+    entries = [
+        [distanced(SHA_B, 1, 0.30)],  # 1
+        [distanced(SHA_A, 9, None)],  # 2: not in the vector list
+        [distanced(SHA_B, 2, 0.45), distanced(SHA_A, 2, 0.25)],  # 3: correct, smallest 0.25
+        [distanced(SHA_A, 3, 0.20)],  # 4: correct
+        *[[distanced(SHA_B, 5, 0.50)] for _ in range(6)],  # 5 to 10
+        [distanced(SHA_B, 6, 0.01)],  # 11: after the first 10
+    ]
+
+    result = judge(SearchKind.COMBINED, entries, [expected(2, 3)], 0)
+
+    assert result.first_rank == 3
+    assert result.distance == 0.25
+    assert result.min_distance == 0.20
+    assert result.first_rank_without_distance == 2
+    assert DISTANCE_ENTRIES == 10
+
+
+def test_judge_without_distances() -> None:
+    result = judge(SearchKind.KEYWORD, [[place(SHA_A, 2)]], [expected(2)], 0)
+
+    assert (result.distance, result.min_distance, result.first_rank_without_distance) == (
+        None,
+        None,
+        1,
+    )
+    assert entry_distance([place(SHA_A, 2)]) is None
+    assert entry_distance([distanced(SHA_A, 2, 0.4), distanced(SHA_A, 2, 0.3)]) == 0.3
+
+
+def test_judge_counts_the_other_edition_for_the_distance() -> None:
+    other_edition = ExpectedPlace(manifest_id="manual-a-en", sha256=SHA_B, pages=frozenset({2}))
+    entries = [[distanced(SHA_A, 7, 0.1)], [distanced(SHA_B, 2, 0.35)]]
+
+    result = judge(
+        SearchKind.VECTOR,
+        entries,
+        [expected(2), other_edition],
+        0,
+        editions={"manual-a-en": "manual-a"},
+    )
+
+    assert (result.first_rank, result.distance) == (2, 0.35)
+
+
+@pytest.mark.django_db
+def test_distances_of_vector_combined_and_control(
+    embedded_manual: list[Section], fake_embedder: FakeEmbedder
+) -> None:
+    report = evaluate(load_probes(probe_json(probe_data(), control_data())), distances=True)
+
+    # Vector: manual B (5°), pages 1 (10°), 2 (20°, first correct), 3 (30°).
+    vector = kind_result(report, "p1", SearchKind.VECTOR)
+    assert vector.first_rank == 3
+    assert vector.distance == pytest.approx(cosine_distance(20), abs=1e-6)
+    assert vector.min_distance == pytest.approx(cosine_distance(5), abs=1e-6)
+    assert vector.first_rank_without_distance is None
+    # Combined: the exact hit (page 3) first; it is also in the vector list.
+    combined = kind_result(report, "p1", SearchKind.COMBINED)
+    assert combined.first_rank == 1
+    assert combined.distance == pytest.approx(cosine_distance(30), abs=1e-6)
+    assert combined.min_distance == pytest.approx(cosine_distance(5), abs=1e-6)
+    # The keyword list has no distances.
+    keyword = kind_result(report, "p1", SearchKind.KEYWORD)
+    assert (keyword.distance, keyword.min_distance) == (None, None)
+    # The control probe: distances of its entries, nearest first.
+    _, control_vector, control_combined = report.probes[1].controls
+    for listed in (control_vector, control_combined):
+        assert [entry.distance for entry in listed.entries] == pytest.approx(
+            [cosine_distance(angle) for angle in (5, 10, 20, 30)], abs=1e-6
+        )
+        assert listed.min_distance == pytest.approx(cosine_distance(5), abs=1e-6)
+    # Overview: the control comes nearer than the found places, no gap.
+    vector_overview, combined_overview = report.distance_overview
+    assert replace(vector_overview, gap=None) == DistanceOverview(
+        kind=SearchKind.VECTOR,
+        measured=True,
+        largest_found=vector.distance,
+        largest_found_probe="p1",
+        smallest_control=control_vector.min_distance,
+        smallest_control_probe="control-1",
+    )
+    assert vector_overview.gap == pytest.approx(cosine_distance(5) - cosine_distance(20), abs=1e-6)
+    assert combined_overview.largest_found == combined.distance
+    assert combined_overview.gap is not None and combined_overview.gap < 0
+
+
+@pytest.mark.django_db
+def test_first_combined_hit_without_distance(
+    embedded_manual: list[Section], fake_embedder: FakeEmbedder
+) -> None:
+    # An exact hit that is not embedded comes second, after page 3.
+    version_a = embedded_manual[0].document_version
+    add_sections(version_a, "Ping 10.0.0.7 before the update.", page=4)
+
+    report = evaluate(load_probes(probe_json(probe_data())), distances=True)
+
+    combined = kind_result(report, "p1", SearchKind.COMBINED)
+    assert combined.first_rank_without_distance == 2
+    assert kind_result(report, "p1", SearchKind.VECTOR).first_rank_without_distance is None
+
+
+@pytest.fixture
+def conspicuous(embedded_manual: list[Section], device: Device) -> Section:
+    """A further manual whose only section is near the query and must stay unprinted."""
+    (section,) = add_sections(
+        make_document(device, title="Manual C", sha256=sha256_of("evaluation manual C")),
+        TEXT_CONSPICUOUS,
+        page=1,
+    )
+    embed(section, at_angle(7))
+    return section
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("as_json", [False, True])
+def test_command_with_distance(
+    conspicuous: Section,
+    embedded_manual: list[Section],
+    fake_embedder: FakeEmbedder,
+    as_json: bool,
+) -> None:
+    probes = probe_json(probe_data(), control_data())
+
+    output = run_command(probes, "--distance", *(["--json"] if as_json else []))
+
+    for section in [*embedded_manual, conspicuous]:
+        assert section.text not in output
+    for word in (*SECRET_WORDS, "Aardvark", "anthem", "boiler"):
+        assert word.lower() not in output.lower()
+    assert "Manual C" not in output
+    if as_json:
+        data = json.loads(output)
+        keyword, vector, combined = data["probes"][0]["kinds"]
+        assert "distance" not in keyword
+        assert vector["distance"] == pytest.approx(cosine_distance(20), abs=1e-6)
+        assert combined["distance"] == pytest.approx(cosine_distance(30), abs=1e-6)
+        assert combined["min_distance"] == pytest.approx(cosine_distance(5), abs=1e-6)
+        assert combined["first_rank_without_distance"] is None
+        control_keyword, control_vector, _ = data["probes"][1]["controls"]
+        assert "min_distance" not in control_keyword
+        assert control_vector["min_distance"] == pytest.approx(cosine_distance(5), abs=1e-6)
+        assert [entry["distance"] for entry in control_vector["entries"]] == pytest.approx(
+            [cosine_distance(angle) for angle in (5, 7, 10, 20, 30)], abs=1e-6
+        )
+        assert [item["kind"] for item in data["distance_overview"]] == ["vector", "combined"]
+        assert set(data["distance_overview"][0]) == {
+            "kind",
+            "measured",
+            "note",
+            "largest_found",
+            "largest_found_probe",
+            "smallest_control",
+            "smallest_control_probe",
+            "gap",
+        }
+    else:
+        assert "Cosine distances (smaller is nearer" in output
+        assert f"{cosine_distance(20):.4f}" in output
+        assert "Control probes: distances of the first 10 entries, identifiers only:" in output
+        assert SHA_A[:12] in output
+        assert "Largest distance of a found expected place" in output
+        assert "no gap" in output
+
+
+@pytest.mark.django_db
+def test_distance_option_leaves_the_rest_of_the_output_alone(
+    embedded_manual: list[Section], fake_embedder: FakeEmbedder
+) -> None:
+    probes = load_probes(probe_json(probe_data(), control_data()))
+
+    plain = evaluate(probes, clock=ticking_clock())
+    with_distances = evaluate(probes, clock=ticking_clock(), distances=True)
+    stripped = replace(with_distances, distances=False, distance_overview=[])
+
+    assert format_table(stripped) == format_table(plain)
+    assert format_json(stripped) == format_json(plain)
+    assert "distance" not in format_table(plain).lower()
+    assert "distance" not in format_json(plain)
+
+
+@pytest.mark.django_db
+def test_command_without_distance_prints_no_distance(
+    embedded_manual: list[Section], fake_embedder: FakeEmbedder
+) -> None:
+    probes = probe_json(probe_data(), control_data())
+
+    assert "distance" not in run_command(probes).lower()
+    assert "distance" not in run_command(probes, "--json")
+    assert "distance" not in run_command(probes, "--cutoffs", "5,8,10,12").lower()
+
+
+@pytest.mark.django_db
+def test_distance_with_ai_off_says_so_and_does_not_ask_the_model(
+    manual: list[Section], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def no_model() -> None:
+        raise AssertionError("the model service must not be asked")
+
+    monkeypatch.setattr(embeddings, "get_embedder", no_model)
+    monkeypatch.setattr(embeddings, "get_query_embedder", no_model)
+    probes = probe_json(probe_data(), control_data())
+
+    output = run_command(probes, "--distance")
+    data = json.loads(run_command(probes, "--distance", "--json"))
+
+    assert "Distances: not measured: AI features not enabled." in output
+    assert data["distance_overview"] == [
+        {
+            "kind": kind,
+            "measured": False,
+            "note": AI_DISABLED_NOTE,
+            "largest_found": None,
+            "largest_found_probe": None,
+            "smallest_control": None,
+            "smallest_control_probe": None,
+            "gap": None,
+        }
+        for kind in ("vector", "combined")
+    ]
+    assert "distance" not in data["probes"][0]["kinds"][0]

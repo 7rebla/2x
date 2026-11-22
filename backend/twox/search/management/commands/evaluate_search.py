@@ -14,12 +14,22 @@ expected place of probes with more than one place. A control probe (id
 ``control-…``, no expected place) is searched but not judged; its first 10
 entries per kind are listed with identifiers only.
 
+``--distance`` adds the cosine distances of the vector and the combined
+search (AI features on only; otherwise a note, and the model service is not
+contacted): per probe the distance of the first correct entry, the smallest
+distance among the first 10 entries and the rank of the first of them
+without a distance; the distances of the first 10 entries of a control
+probe; and per kind the largest distance of a found place against the
+smallest of a control probe (the gap for a later threshold). Without it the
+output is the same as before.
+
 Examples (the probe list given on standard input need not be in the image)::
 
     docker compose exec -T api python manage.py evaluate_search \
         < backend/twox/search/probes/m2.json
     docker compose exec -T api python manage.py evaluate_search \
         --probes m3 --cutoffs 5,8,10,12
+    docker compose exec -T api python manage.py evaluate_search --probes m3 --distance
 
 The output holds ranks, pages, checksums and identifiers only, never the
 text of a section. A probe whose files are not ingested is reported as
@@ -90,6 +100,12 @@ class Command(BaseCommand):
             help="Cut-offs of Recall@k and of the counts per probe, for example 5,8,10,12"
             " (default 5,10); also prints the first rank per expected place.",
         )
+        parser.add_argument(
+            "--distance",
+            action="store_true",
+            help="Also print the cosine distances of the vector and the combined search"
+            " (AI features only) and the gap between found places and control probes.",
+        )
 
     def handle(self, *args: object, **options: object) -> None:
         cutoffs: tuple[int, ...] | None = None
@@ -111,6 +127,6 @@ class Command(BaseCommand):
             probes = load_probes(text)
         except ProbeFormatError as error:
             raise CommandError(f"Invalid probe list: {error}") from None
-        report = evaluate(probes, cutoffs=cutoffs)
+        report = evaluate(probes, cutoffs=cutoffs, distances=bool(options.get("distance")))
         output = format_json(report) if options["json"] else format_table(report)
         self.stdout.write(output, ending="")
