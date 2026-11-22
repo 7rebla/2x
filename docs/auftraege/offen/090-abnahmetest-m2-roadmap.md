@@ -1,6 +1,6 @@
 # Auftrag 090 – Abnahmetest M2 auf das ROADMAP-Kriterium zurückführen
 
-Meilenstein: M2 · Freigabestufe: C (entschieden mit E-67) · Status: offen
+Meilenstein: M2 · Freigabestufe: C (entschieden mit E-67) · Status: zur Prüfung
 
 Voraussetzung: E-67; 058 und 067 sind auf `main`.
 
@@ -40,7 +40,9 @@ Den lokalen Teil gegen die Handbücher führt die Leitstelle danach in „2x“ 
 Keine.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+- **Was wurde gebaut?** `web/e2e/m2-acceptance.spec.ts`: `Probe` hat das Feld `required`. Prüffrage 1 und 9 bleiben Pflicht (erste 3 bzw. 5). Prüffrage 10 wird weiter gestellt, ihr Rang über alle Treffer (oder „not found“) steht als Annotation `rank` im Bericht; keine Bedingung mehr. Für jede Probe wird der Rang ausgegeben. Kommentare mit Verweis auf E-67. Übrige Schritte unverändert. `docs/ARCHITECTURE.md`, Abschnitt „Limits and known gaps / Search“: neuer Punkt „Depends on the wording“ mit Prüffrage 10 (Rang 1 bzw. 10 je nach Formulierung), Verweis auf M3.
+- **Wie wurde getestet?** Kriterium 0: `docker version` und `docker compose version` Exit 0. Kriterium 1: Web-Job (Projekt twox-090-web) lint Exit 0, typecheck Exit 0; e2e wie in `ci.yml` (Projekt twox-090, API-Port 18090, Testkonto angelegt) Exit 0, 55 bestanden, 1 übersprungen (lokaler Teil). Kriterium 2: `down -v` beider Projekte Exit 0.
+- **Zweig und Arbeitsverzeichnis:** `worktree-agent-afdbbd679a813b012`, `.claude/worktrees/agent-afdbbd679a813b012`
+- **Abweichungen:** keine. Die Rang-Annotation gilt auch für die Pflicht-Proben (zusätzliche Ausgabe, keine Änderung der Bedingung).
+
+Status: zur Prüfung
