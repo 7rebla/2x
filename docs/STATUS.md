@@ -159,3 +159,31 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 072 | Marke: Bildmarke im Kopf, Favicon | C | 070 (E-52) | offen (wartet auf 070) |
 | 073 | Gerätetyp als Feld, API, Admin, CSV-Spalte, Testfabrik | C | – (E-53) | in Arbeit |
 | 074 | Eigene Geräte-Icons in Baum, Geräteseite, Landkarte | B | 071, 073 | offen |
+
+## M2 – Einlesen und Suche (entworfen 22.11.2026)
+
+21 Aufträge 040–060 unter `docs/auftraege/offen/` (Startreihenfolge nach Abhängigkeiten, höchstens fünf gleichzeitig). 21 Fragen an a7 mit Optionen und Empfehlung: `docs/auftraege/M2-FRAGEN.md`. 057 und 060 sind Läufe der Leitstelle in der Testumgebung (dort liegen die Handbücher). Kein M2-Auftrag startet vor der Antwort (Stufe C: Datenmodell, neue Abhängigkeit pgvector, Modellwahl).
+
+| Nr. | Auftrag | Stufe | Hängt ab von | Status |
+| --- | --- | --- | --- | --- |
+| 040 | Datenbank: Erweiterungen vector und pg_trgm, Paket pgvector | C | – | offen |
+| 041 | Docling-Anbindung: Client, Probelauf, Testdaten | C | – | offen |
+| 042 | Datenmodell: Einlese-Auftrag und Abschnitt | C | 040 | offen |
+| 043 | Abschnitte aus dem Docling-Ergebnis bilden | C | 041 | offen |
+| 044 | Einbettungen über Ollama: Client und Prüfung | C | 040, 041 | offen |
+| 045 | Celery und Einlese-Einstellungen | C | 044 | offen |
+| 046 | Einlese-Ablauf im Worker | B | 042, 043, 045 | offen |
+| 047 | Such-Schnittstelle und Stichwortsuche | C | 042 | offen |
+| 048 | Einbettungs-Aufgabe im Worker | B | 046 | offen |
+| 049 | Einlesen anstoßen, Formatprüfung, Befehl | C | 046 | offen |
+| 050 | Vektorsuche und Kombination | B | 044, 047 | offen |
+| 051 | Einlese-API | C | 049 | offen |
+| 052 | Such-API | C | 050, 051 | offen |
+| 053 | Oberfläche: Einlese-Status | B | 051 | offen |
+| 054 | Oberfläche: Suchseite | B | 052 | offen |
+| 055 | Oberfläche: Einlese-Übersicht | B | 051, 053, 054 | offen |
+| 056 | Suchprobe: Befehl evaluate_search | B | 050 | offen |
+| 057 | Messlauf in der Testumgebung (Leitstelle) | C | 048, 049, 050, 056 | offen |
+| 058 | Abnahmetests M2 | B | 052–055 | offen |
+| 059 | README und ARCHITECTURE für M2 | B | 055, 056, 058 | offen |
+| 060 | Abnahmelauf M2 (Leitstelle) | C | 057, 058, 059 | offen |
