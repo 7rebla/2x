@@ -1,6 +1,6 @@
 # Auftrag 086 – Anmeldeseite als zentrierte Karte
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: C (entschieden mit E-65) · Status: zur Prüfung
+Meilenstein: Gestaltung (D1) · Freigabestufe: C (entschieden mit E-65) · Status: erledigt
 
 Voraussetzung: 077 und 080 sind auf `main`.
 

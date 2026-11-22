@@ -175,7 +175,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 083 | Strukturbaum entrümpeln (E-65) | C (entschieden) | 077 | erledigt |
 | 084 | Schriftgröße der Metadaten (E-65) | C (entschieden) | 077, 079, 083 | offen |
 | 085 | Überschriften-Animation zurücknehmen (E-65) | C (entschieden) | 076 | erledigt |
-| 086 | Anmeldeseite als zentrierte Karte (E-65) | C (entschieden) | 077, 080 | in Arbeit |
+| 086 | Anmeldeseite als zentrierte Karte (E-65) | C (entschieden) | 077, 080 | erledigt |
 | 087 | Suchtreffer kompakter | B | 077 | erledigt |
 | 088 | Einheitliche Dateiauswahl | B | 077 | erledigt |
 | 089 | Ergebniszahl als Live-Region, Brotkrumen Dateiseite | B | 077, 079, 083 | in Arbeit |
@@ -184,9 +184,10 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 092 | Wackeligen e2e-Test des Strukturbaums stabilisieren | B | 083 | in Arbeit |
 
 - 078/079/083/085/087/088 zusammengeführt am 22.11.2026. Lücke aus 078: Die Seite „keine Berechtigung“ (RequireRole) hat weder Seitentitel noch h1 – Auftrag 091.
-- Reihenfolge: 080, 081 und 091 erledigt; 082, 086, 089 und 092 laufen; zuletzt 084 (berührt fast alle Seiten).
+- Reihenfolge: 080, 081, 086 und 091 erledigt; 082, 089 und 092 laufen; zuletzt 084 (berührt fast alle Seiten).
 - 080: Hinweise aus der Prüfung – der Warnkasten der Seite „keine Berechtigung“ (091) ist jetzt auf Lesebreite begrenzt (gewollt gelassen). Gesehen vom Bearbeiter: Übersichtskarte (MiniMap) bei vielen Knoten fast leer und bei 375 px groß; Einpassen großer Strukturen zeigt die Mitte – Kandidaten für einen späteren Auftrag.
 - 081: Kartenansicht unter 768 px (E-65). Zwischen 768 und etwa 900 px scrollen Protokoll, Einlesen und Dateien noch im eigenen Kasten (Seite scrollt nicht); Grenze ließe sich mit `WIDE_TABLE_QUERY` auf 1024 px setzen – a7 gefragt, bis dahin 768 px.
+- 086: Name über der Karte steht still und ist für Screenreader verborgen (nur der Kopf tippt, E-64); `BrandMark` hat dafür `link={false}`.
 
 ## M2 – Einlesen und Suche (freigegeben 22.11.2026, E-54; abgenommen 22.11.2026, E-67)
 
