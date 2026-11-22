@@ -1,6 +1,6 @@
 # Auftrag 121 – Schnittstelle Sprachmodell
 
-Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 
