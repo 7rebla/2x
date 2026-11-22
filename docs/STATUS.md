@@ -172,10 +172,10 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 043 | Abschnitte aus dem Docling-Ergebnis bilden | C | 041 | erledigt |
 | 044 | Einbettungen über Ollama: Client und Prüfung | C | 040, 041 | erledigt |
 | 045 | Celery und Einlese-Einstellungen | C | 044 | erledigt |
-| 046 | Einlese-Ablauf im Worker | B | 042, 043, 045 | in Arbeit |
+| 046 | Einlese-Ablauf im Worker | B | 042, 043, 045 | erledigt |
 | 047 | Such-Schnittstelle und Stichwortsuche | C | 042 | erledigt |
-| 048 | Einbettungs-Aufgabe im Worker | B | 046 | offen |
-| 049 | Einlesen anstoßen, Formatprüfung, Befehl | C | 046 | offen |
+| 048 | Einbettungs-Aufgabe im Worker | B | 046 | in Arbeit |
+| 049 | Einlesen anstoßen, Formatprüfung, Befehl | C | 046 | in Arbeit |
 | 050 | Vektorsuche und Kombination | B | 044, 047 | erledigt |
 | 051 | Einlese-API | C | 049 | offen |
 | 052 | Such-API | C | 050, 051 | offen |
@@ -201,4 +201,5 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 - 045: Celery-Routen (convert/poll → ingest, embed → embed; `embed` nur bei eingeschalteter KI, sonst `QueueNotFound`), Worker ohne `--queues`, `--concurrency 4`, Prefetch 1, globale Zeitlimits 300/360 s, weiches Herunterfahren 60 s über `REMAP_SIGTERM=SIGQUIT` und `stop_grace_period: 90s`, sieben Einlese-Variablen, Startprüfung `check_ingest_timing`. Nur Aufgaben mit `acks_late` kommen beim Herunterfahren zurück in die Warteschlange. Die Docling-Grenze von 2 h steht an drei Stellen und ist nur nach unten einstellbar – nach 057 eine gemeinsame Variable vorschlagen. Socket-Zeitlimit gegen weiche Grenze: in 048 vorgemerkt.
 - 050: Vektorsuche über `embed_query` (nur bei eingeschalteter KI, sonst kein Aufruf), 50 nächste Abschnitte mit HNSW-Einstellungen `relaxed_order`/`ef_search 100` transaktionslokal, RRF k = 60 (exakte Treffer bleiben vorne), Rückfall auf Stichwortsuche bei Modellausfall. Beim Zusammenführen korrigiert: Nachsortierung über `distance + 0` (PostgreSQL 18). Bei 10 000 Abschnitten nutzt der Planer HNSW nicht; Trefferquote misst 057. An 052/054 übergeben: Ausschlüsse auch für die Vektorliste, „KI nicht aktiviert“ getrennt von „nicht erreichbar“, eigene kurze Zeitgrenze für Suchanfragen.
 - 056: Befehl `evaluate_search` (Stichwort, Vektor, zusammen; Rang der ersten richtigen Fundstelle, Recall/10, MRR, Zeit) mit Probenliste `search/probes/m2.json` (7 Proben, nur Verweise auf Manifest, Prüfsummen und Seiten). Recall zählt Proben mit mindestens einer richtigen Fundstelle unter den ersten k. Nicht eingelesene Proben werden genannt, nicht gesucht. `override_settings` im Befehl wird mit 052 durch einen Schalter ersetzt.
+- 046: Einlese-Ablauf `ingest/pipeline.py` und Aufgaben `convert`/`poll` (acks_late, reject_on_worker_lost): Übernahme nur aus `queued`, Wiederverwendung gespeicherter Docling-Antworten über SHA-256 (nur aus `done`), Wiederholungen 10/20/40/60/60 s, Frist ab erstem `started`, Abschnitte am Ende in einer Transaktion. Gemessen: BetrSichV (60 Seiten) 292 s, davon Docling 258 s. `partial_success` endet `done` mit Hinweis in `error_detail` (für 051/053). An 048 übergeben: Neuzustellungen begrenzen, Teilergebnisse nicht wiederverwenden. Hängende Aufträge nach hartem Abbruch: `--stuck` aus 049.
 - 074: Acht eigene Icons (Anlage, Gerät, sechs Gerätetypen) unter `web/src/icons/industrial/`, Zuordnung nur in `deviceClass.ts` (Rückfall: generisches Gerät). Typ als Text im Baum, als Feld „Gerätetyp“ auf der Geräteseite, als Tooltip auf der Karte. Notwendig mitgeändert: `graph.ts`, `MapPage.tsx`, `map.json`. Nicht von Hand bei 16 px gesichtet.

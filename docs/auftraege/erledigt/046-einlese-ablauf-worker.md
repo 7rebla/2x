@@ -1,6 +1,6 @@
 # Auftrag 046 – Einlese-Ablauf im Worker: Umwandeln, Abschnitte speichern
 
-Meilenstein: M2 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 
