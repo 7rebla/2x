@@ -536,15 +536,20 @@ Every deployment-specific value comes from an environment variable with the pref
 | `TWOX_CACHE_URL` | Django cache (Valkey, database 2), shared by all API processes; holds the counters of the sign-in rate limit. | `redis://valkey:6379/2` | `redis://valkey:6379/2` |
 | `TWOX_MEDIA_ROOT` | Directory of the uploaded files and Docling answers inside `api` and `worker`; must be an absolute path. Compose mounts the volume `media-data` at `/data/media`, so the two have to match. | `/data/media` | `/data/media` |
 | `TWOX_UPLOAD_MAX_BYTES` | Largest accepted upload in bytes (a whole number greater than 0). | `200000000` (200 MB, decimal) | `200000000` |
-| `TWOX_LLM_BASE_URL` | OpenAI-compatible model server: embeddings, `check_llm`, the AI part of the self-test; answers later. | `http://host.docker.internal:11434/v1` | same |
+| `TWOX_LLM_BASE_URL` | OpenAI-compatible model server: embeddings, chat (answers), `check_llm`, the AI part of the self-test. | `http://host.docker.internal:11434/v1` | same |
 | `TWOX_DOCLING_URL` | docling-serve; used by the ingestion and `check_docling`. | `http://docling:5001` | same |
-| `TWOX_AI_ENABLED` | Optional AI features (E-59): embeddings, search by meaning. Off: nothing contacts the model service, no queue `embed`. | `true` | off |
+| `TWOX_AI_ENABLED` | Optional AI features (E-59): embeddings, search by meaning, answers. Off: nothing contacts the model service, no queue `embed`. | `true` | off |
 | `TWOX_EMBED_MODEL` | Embedding model in Ollama (E-56). | `bge-m3` | `bge-m3` |
 | `TWOX_EMBED_DIMENSIONS` | Vector length of the model; must match the column (1024), checked at start (`twox.ingest.E001`/`W001`). | `1024` | `1024` |
 | `TWOX_EMBED_BATCH_SIZE` | Texts per embedding request. | `16` | `16` |
 | `TWOX_EMBED_TIMEOUT_SECONDS` | Socket time limit of one embedding request while ingesting and in `check_llm --embed`. | `120` | `120` |
 | `TWOX_SEARCH_EMBED_TIMEOUT_SECONDS` | Socket time limit for embedding a search query; after it the search falls back to keywords. | `20` | `20` |
 | `TWOX_EMBED_QUERY_PREFIX` | Text put in front of search queries only (some models need an instruction); taken unchanged, spaces at the end included. | empty | empty |
+| `TWOX_CHAT_MODEL` | Chat model in Ollama for answers. No default until the model is chosen (work order 128); empty with AI on is the warning `twox.answers.W001`, a cloud model name the error `twox.answers.E001`. | empty | empty |
+| `TWOX_CHAT_TIMEOUT_SECONDS` | Socket time limit of a chat request: the longest wait between two pieces of an answer, the first one included (loading the model). | `120` | `120` |
+| `TWOX_CHAT_MAX_TOKENS` | Most tokens generated for one answer. | `1024` | `1024` |
+| `TWOX_CHAT_TEMPERATURE` | Temperature, a number from 0 to 2. | `0` | `0` |
+| `TWOX_CHAT_REASONING_EFFORT` | `reasoning_effort` sent with every chat request: `none`, `low`, `medium` or `high`; `omit` leaves the field out. Empty means `none`. | `none` | `none` |
 | `TWOX_INGEST_MAX_RETRIES` | Retries after a temporary error before a job fails. | `5` | `5` |
 | `TWOX_INGEST_POLL_MIN_SECONDS` | Shortest wait between two status queries at Docling (and first retry wait). | `10` | `10` |
 | `TWOX_INGEST_POLL_MAX_SECONDS` | Longest wait between two status queries (and longest retry wait). | `60` | `60` |
@@ -556,7 +561,8 @@ Every deployment-specific value comes from an environment variable with the pref
 | `TWOX_EMBED_TASK_MAX_SECONDS` | Longest run of one embedding task before it continues in a new one; below the soft time limit (300). | `240` | `240` |
 | `TWOX_E2E_USERNAME`, `TWOX_E2E_PASSWORD` | Test account of the browser test. Passed only to the `e2e` container and used by the step "Create test account"; never use the values for a real account. | `e2e-manager`, a development-only password | the browser test cannot sign in |
 
-`TWOX_UPLOAD_MAX_BYTES` and every number of the embedding and ingestion settings are checked at start (whole number greater than 0); an invalid value stops `api`, `worker` and `manage.py`. `check_ingest_timing` checks the ingestion values against each other (see [Task queues](#task-queues)).
+`TWOX_UPLOAD_MAX_BYTES` and every number of the embedding, chat and ingestion settings are checked at start (whole number greater than 0; `TWOX_CHAT_TEMPERATURE` from 0 to 2; `TWOX_CHAT_REASONING_EFFORT` one of the listed values); an invalid value stops `api`, `worker` and `manage.py`. `check_ingest_timing` checks the ingestion values against each other (see [Task queues](#task-queues)).
+The chat client (`backend/twox/answers/chat.py`, protocol `ChatModel`, obtained only through `get_chat_model()`) streams `POST {TWOX_LLM_BASE_URL}/chat/completions` and shares the check "local models only" with the embedding client (`embeddings.py`) in `llm_guard.py`: the model name must not be an Ollama cloud name (before every request), and the model must be listed in `/api/tags` without `remote_host`/`remote_model` (once per client). The chat client also checks the capability `completion`, so an embedding model such as `bge-m3` is refused; Ollama 0.40.17 lists the capabilities in `/api/tags`, and only if an entry has none is `/api/show` asked, after the model list proved the model local. A server without `/api/tags` gets the name check only. With AI off nothing opens a connection; errors and log lines name neither addresses nor prompt or answer text. Tests use `FakeChatModel` (in `chat.py`) or the stand-in `fake_ollama.py`.
 `create_account` reads the password from `TWOX_ACCOUNT_PASSWORD` if it is set; it is not part of `.env` and is passed to the container as a variable name only.
 `TWOX_M2_LOCAL`, `TWOX_M2_REQUIRED` and `TWOX_M2_FAILED_FILE` are read only by the `e2e` container for the local part of the M2 acceptance test (README, "Acceptance of M2 by hand"); they are not part of `.env`.
 The image build and the browser test use two further variables internally (the path of the built web UI during `collectstatic` in `backend/Dockerfile`, and the address of `api` for Playwright in `deploy/compose/compose.web.yaml`). They have built-in defaults and are not part of `.env`.
