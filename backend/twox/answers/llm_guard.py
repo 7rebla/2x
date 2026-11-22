@@ -22,6 +22,12 @@ from typing import Final
 
 # Ollama's own list of the models on this machine (not part of /v1).
 TAGS_PATH: Final = "/api/tags"
+# Ollama's details of one model. Asked only for a model that /api/tags lists
+# as local: for a cloud model that was never pulled it asks ollama.com.
+SHOW_PATH: Final = "/api/show"
+#: The capability of a model that generates text (a chat model has it, an
+#: embedding model does not).
+COMPLETION_CAPABILITY: Final = "completion"
 # Ollama's cloud models: "gpt-oss:120b-cloud", "minimax-m2:cloud".
 _CLOUD_TAG: Final = "cloud"
 _CLOUD_TAG_SUFFIX: Final = "-cloud"
@@ -65,6 +71,20 @@ def is_timeout(error: BaseException) -> bool:
     if isinstance(error, TimeoutError):
         return True
     return isinstance(error, urllib.error.URLError) and isinstance(error.reason, TimeoutError)
+
+
+def model_capabilities(answer: Mapping[str, object]) -> frozenset[str] | None:
+    """Return the capabilities an Ollama answer names for a model, or ``None``.
+
+    ``answer`` is an entry of ``GET /api/tags`` or the answer of
+    ``POST /api/show``; both carry a list ``capabilities`` (Ollama 0.40.17,
+    e.g. ``["completion", "tools"]`` or ``["embedding"]``). ``None`` means the
+    answer says nothing about them.
+    """
+    values = answer.get("capabilities")
+    if not isinstance(values, list):
+        return None
+    return frozenset(value for value in values if isinstance(value, str))
 
 
 def find_local_model(body: bytes, model: str) -> Mapping[str, object]:

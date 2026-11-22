@@ -15,6 +15,7 @@ from twox.answers.llm_guard import (
     full_model_name,
     is_cloud_model_name,
     is_timeout,
+    model_capabilities,
     ollama_root,
 )
 
@@ -104,6 +105,20 @@ def test_unreadable_list(body: bytes) -> None:
         find_local_model(body, "bge-m3")
 
     assert str(error.value) == "unexpected answer to the model list"
+
+
+@pytest.mark.parametrize(
+    ("answer", "capabilities"),
+    [
+        ({"capabilities": ["completion", "tools"]}, frozenset({"completion", "tools"})),
+        ({"capabilities": ["embedding", 3]}, frozenset({"embedding"})),
+        ({"capabilities": []}, frozenset()),
+        ({"capabilities": "completion"}, None),
+        ({"name": "bge-m3:latest"}, None),
+    ],
+)
+def test_model_capabilities(answer: dict[str, object], capabilities: frozenset[str] | None) -> None:
+    assert model_capabilities(answer) == capabilities
 
 
 def test_is_timeout() -> None:
