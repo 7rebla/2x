@@ -6,15 +6,20 @@ fails; it is never skipped.
 
 import pytest
 from celery.exceptions import TimeoutError as CeleryTimeoutError
+from django.conf import settings
 from kombu.exceptions import OperationalError
 
+from twox.config import celery_app
 from twox.config.tasks import ping
 
 TIMEOUT_SECONDS = 10
 
+# ingest and default; embed only with the AI features on (E-59).
+QUEUE_NAMES = [queue.name for queue in settings.CELERY_TASK_QUEUES]
+
 
 @pytest.mark.worker
-@pytest.mark.parametrize("queue_name", ["default", "ingest", "embed"])
+@pytest.mark.parametrize("queue_name", QUEUE_NAMES)
 def test_ping_round_trip_through_running_worker(queue_name: str) -> None:
     try:
         # expires: a ping nobody picked up must not linger in the queue.
@@ -33,3 +38,19 @@ def test_ping_round_trip_through_running_worker(queue_name: str) -> None:
         )
 
     assert value == "pong"
+
+
+@pytest.mark.worker
+def test_running_worker_consumes_the_configured_queues_with_four_processes() -> None:
+    inspect = celery_app.control.inspect(timeout=TIMEOUT_SECONDS)
+    active_queues = inspect.active_queues()
+    stats = inspect.stats()
+
+    assert active_queues, "Celery worker not reachable: no answer to inspect active_queues."
+    assert stats, "Celery worker not reachable: no answer to inspect stats."
+    for queues in active_queues.values():
+        assert sorted(queue["name"] for queue in queues) == sorted(QUEUE_NAMES)
+    for worker_stats in stats.values():
+        # --concurrency 4 in deploy/compose/compose.yaml (E-55).
+        assert worker_stats["pool"]["max-concurrency"] == 4
+        assert worker_stats["prefetch_count"] == 4

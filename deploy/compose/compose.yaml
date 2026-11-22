@@ -21,6 +21,13 @@ x-backend-environment: &backend-environment
   TWOX_EMBED_QUERY_PREFIX: ${TWOX_EMBED_QUERY_PREFIX:-}
   TWOX_EMBED_TIMEOUT_SECONDS: ${TWOX_EMBED_TIMEOUT_SECONDS:-}
   TWOX_DOCLING_URL: ${TWOX_DOCLING_URL:-}
+  TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS: ${TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS:-}
+  TWOX_INGEST_MAX_RETRIES: ${TWOX_INGEST_MAX_RETRIES:-}
+  TWOX_INGEST_POLL_MIN_SECONDS: ${TWOX_INGEST_POLL_MIN_SECONDS:-}
+  TWOX_INGEST_POLL_MAX_SECONDS: ${TWOX_INGEST_POLL_MAX_SECONDS:-}
+  TWOX_INGEST_TIMEOUT_SECONDS: ${TWOX_INGEST_TIMEOUT_SECONDS:-}
+  TWOX_SECTION_MAX_CHARS: ${TWOX_SECTION_MAX_CHARS:-}
+  TWOX_EMBED_TASK_MAX_SECONDS: ${TWOX_EMBED_TASK_MAX_SECONDS:-}
   TWOX_MEDIA_ROOT: ${TWOX_MEDIA_ROOT:-}
   TWOX_UPLOAD_MAX_BYTES: ${TWOX_UPLOAD_MAX_BYTES:-}
 
@@ -114,8 +121,12 @@ services:
       start_interval: 1s
     restart: unless-stopped
 
-  # One worker for all three queues. Splitting it into one service per queue
-  # only needs a different -Q list.
+  # One worker for all queues (E-55): ingest, default and, with the AI
+  # features on, embed. Without --queues it consumes every queue of the
+  # settings (CELERY_TASK_QUEUES); one service per queue only needs a --queues
+  # list each. Four processes, each reserving one message at a time
+  # (prefetch 1): the heavy work runs in Docling and Ollama, the tasks only
+  # send, poll briefly and schedule themselves again.
   worker:
     build: *backend-runtime-build
     command:
@@ -123,11 +134,19 @@ services:
       - -A
       - twox.config
       - worker
-      - --queues
-      - ingest,embed,default
+      - --concurrency
+      - "4"
       - --loglevel
       - INFO
-    environment: *backend-environment
+    environment:
+      <<: *backend-environment
+      # docker stop sends SIGTERM; mapped to Celery's cold shutdown, which
+      # first waits CELERY_WORKER_SOFT_SHUTDOWN_TIMEOUT (60 s) for running
+      # tasks and then puts the unfinished ones back into the queue.
+      REMAP_SIGTERM: SIGQUIT
+    # Longer than the soft shutdown, so that Docker does not kill the worker
+    # while it is still waiting for its tasks.
+    stop_grace_period: 90s
     volumes:
       # Same volume as api: the worker reads what the API stored.
       - media-data:/data/media
