@@ -1,6 +1,6 @@
 # Auftrag 075 – Swap-Grenze für Docling
 
-Meilenstein: M2 · Freigabestufe: C (entschieden mit E-62) · Status: offen
+Meilenstein: M2 · Freigabestufe: C (entschieden mit E-62) · Status: zur Prüfung
 
 Voraussetzung: E-62; 066 ist auf `main`.
 
@@ -39,7 +39,9 @@ Voraussetzung: E-62; 066 ist auf `main`.
 Keine.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+- Was wurde gebaut? Dienst `docling` hat jetzt `memswap_limit: ${TWOX_DOCLING_MEM_LIMIT:-8g}` neben `mem_limit`. Kommentar in `compose.yaml`, `.env.example`, README (Voraussetzung „Memory“, Konfigurationstabelle) und `docs/ARCHITECTURE.md` (Docling-Grenzen, Konfigurationszeile, Known limits): Swap-Hinweis aus 066 ersetzt, die Grenze schließt Swap ein.
+- Wie wurde getestet? (0) `docker version`/`docker compose version` Exit 0. (1) `docker compose -p twox-075 config docling`: Vorgabe 8589934592/8589934592, mit `TWOX_DOCLING_MEM_LIMIT=12g` 12884901888/12884901888. (2) `docker inspect` von `twox-075-docling-1`: Memory 8589934592 = MemorySwap 8589934592. (3) backend-Job im Projekt `twox-075`: Build, up, ruff, ruff format, mypy, pytest (2341 bestanden), pytest -m worker (6), makemessages ohne Diff, makemigrations --check, Lizenzprüfung, OpenAPI-Schema ohne Diff – alle Exit 0. (4) `down -v` Exit 0.
+- Zweig und Arbeitsverzeichnis: `worktree-agent-aea37d28e2449daff`, `.claude/worktrees/agent-aea37d28e2449daff`
+- Abweichungen: keine.
+
+Status: zur Prüfung
