@@ -167,10 +167,10 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | Nr. | Auftrag | Stufe | Hängt ab von | Status |
 | --- | --- | --- | --- | --- |
 | 040 | Datenbank: Erweiterungen vector und pg_trgm, Paket pgvector | C | – | erledigt |
-| 041 | Docling-Anbindung: Client, Probelauf, Testdaten | C | – | in Arbeit |
+| 041 | Docling-Anbindung: Client, Probelauf, Testdaten | C | – | erledigt |
 | 042 | Datenmodell: Einlese-Auftrag und Abschnitt | C | 040 | in Arbeit |
-| 043 | Abschnitte aus dem Docling-Ergebnis bilden | C | 041 | offen |
-| 044 | Einbettungen über Ollama: Client und Prüfung | C | 040, 041 | offen |
+| 043 | Abschnitte aus dem Docling-Ergebnis bilden | C | 041 | in Arbeit |
+| 044 | Einbettungen über Ollama: Client und Prüfung | C | 040, 041 | in Arbeit |
 | 045 | Celery und Einlese-Einstellungen | C | 044 | offen |
 | 046 | Einlese-Ablauf im Worker | B | 042, 043, 045 | offen |
 | 047 | Such-Schnittstelle und Stichwortsuche | C | 042 | offen |
@@ -191,3 +191,4 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 - 040: Erweiterungen `vector` und `pg_trgm` per Migration `ingest.0001_extensions`. Für M6 (Betrieb ohne Superuser): `vector` ist nicht „trusted“ – ein Administrator legt die Erweiterung vor der ersten Migration an; die Rückwärtsmigration entfernt sie und braucht dann ebenfalls einen Superuser.
 - Für M3 vorgemerkt (22.11.2026): Chat-Assistent als animierte Pixelfigur ist von a7 ausgewählt (Vorlage lokal und ungetrackt unter `docs/design/bildmarke/assistent/`). Einbau als eigener M3-Auftrag nach Freigabe; erscheint nur bei eingeschalteten KI-Funktionen (E-59). Der Name der Figur kommt wie der Produktname nicht in getrackte Dateien, bis a7 beide veröffentlicht; vorher Registerprüfung.
 - 070: Theme mit Tokens, hell/dunkel/System, fünf Akzente (Aubergine Standard; Indigo, Beere, Umbra, Graphit als Vorschlag des Bearbeiters), Kontraste per Test aus `index.css` gemessen, Inter lokal, vier Text-Animationen, Seite `/settings` (Benutzermenü). Für M6: CSP-Hash des Inline-Skripts in `web/src/theme/README.md`. Beim lokalen Bauen vorher `web/dist/` löschen (Tailwind durchsucht es sonst).
+- 041: Docling-Client (`ingest/docling.py`) mit Streaming und vier Fehlerarten, `check_docling --convert`, Fixtures aus freien Testdaten. Gemessen ~5 s je PDF-Seite auf der CPU (60 Seiten in ~5 min). Für 057: 2 000 Seiten × 5 s ≈ 2,8 h überschreiten die Grenze von 2 h je Dokument (E-55) – Grenze nach dem Messlauf neu vorschlagen. Docling liefert ein abgeholtes Ergebnis noch ~300 s lang erneut aus; RapidOCR erscheint nicht im Docling-Protokoll (Nachweis über geladene ONNX-Bibliothek).
