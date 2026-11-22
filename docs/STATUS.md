@@ -166,9 +166,9 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 
 | Nr. | Auftrag | Stufe | Hängt ab von | Status |
 | --- | --- | --- | --- | --- |
-| 040 | Datenbank: Erweiterungen vector und pg_trgm, Paket pgvector | C | – | in Arbeit |
+| 040 | Datenbank: Erweiterungen vector und pg_trgm, Paket pgvector | C | – | erledigt |
 | 041 | Docling-Anbindung: Client, Probelauf, Testdaten | C | – | in Arbeit |
-| 042 | Datenmodell: Einlese-Auftrag und Abschnitt | C | 040 | offen |
+| 042 | Datenmodell: Einlese-Auftrag und Abschnitt | C | 040 | in Arbeit |
 | 043 | Abschnitte aus dem Docling-Ergebnis bilden | C | 041 | offen |
 | 044 | Einbettungen über Ollama: Client und Prüfung | C | 040, 041 | offen |
 | 045 | Celery und Einlese-Einstellungen | C | 044 | offen |
@@ -188,3 +188,4 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 059 | README und ARCHITECTURE für M2 | B | 055, 056, 058 | offen |
 | 060 | Abnahmelauf M2 (Leitstelle) | C | 057, 058, 059 | offen |
 - 073: Feld `device_class` (plc, controller, computer, router, firewall, robot, other) in Modell, API, Admin, Protokoll und Formular; CSV mit optionaler 14. Spalte; Testfabrik: 5 SPS, 4 Controller, je 1 Rechner, Router, Roboter, Firewall. Die Geräteseite zeigt den Typ noch nur im Bearbeiten-Formular (für 074).
+- 040: Erweiterungen `vector` und `pg_trgm` per Migration `ingest.0001_extensions`. Für M6 (Betrieb ohne Superuser): `vector` ist nicht „trusted“ – ein Administrator legt die Erweiterung vor der ersten Migration an; die Rückwärtsmigration entfernt sie und braucht dann ebenfalls einen Superuser.
