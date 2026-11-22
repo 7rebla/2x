@@ -1,6 +1,6 @@
 # Auftrag 125 – Kontextauswahl für Antworten
 
-Meilenstein: M3 · Freigabestufe: B · Status: offen
+Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
 
 Voraussetzung: 121 (Schnittstelle Sprachmodell), 122 (Antworttypen und Prompt, insbesondere `ContextSource` in `backend/twox/answers/types.py`) und 124 (Abstand und Volltext im Suchtreffer: `SearchRequest.include_text`, `SearchHit.semantic_distance`, `SearchHit.text`) sind auf `main`. 124 ist Stufe C (D11) – ohne dessen Zusammenführung startet dieser Auftrag nicht.
 
@@ -162,7 +162,70 @@ Keine, die den Auftrag aufhält.
 - Die Startwerte k = 8 und 20 000 Zeichen legt die Leitstelle fest; die Kalibrierung folgt in 128.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Eigenes Compose-Projekt `twox-125`, `TWOX_API_PORT=18125`. „2x“ und „twox-leit“ nicht angefasst. Keine neue Abhängigkeit, keine Migration, nichts unter `backend/twox/search/`.
+
+### Was wurde gebaut?
+
+- **`backend/twox/answers/context.py` (neu):** `ContextSelection`, `ContextDisabledError`, `ContextUnavailableError`, `select_context()` mit den verbindlichen Namen und Parametern. Ablauf wie im Auftrag: KI aus → Fehler ohne Suche; leere Frage → leere Auswahl ohne Suche; eine Suche über `get_search_backend()` mit `include_text=True` und `limit = min(MAX_LIMIT, 2·k)`; `semantic` ungleich `USED` (also `UNAVAILABLE` oder `DISABLED`) → `ContextUnavailableError`; Schwelle als Sperre (relevant: Abstand ≤ `max_distance` oder `MatchKind.EXACT`); danach Auswahl in Rangfolge der Suche.
+  - **Dubletten:** Treffer mit gleicher `sha256` und gleichem `ordinal` werden vor dem Zählen zu einer Quelle; behalten wird der beste Rang, die Fundorte aller Kopien bleiben erhalten. Fundorte werden zusätzlich auf die Eingrenzung (`device_ids`, `plant_ids`) gefiltert, bei Eingrenzung auf ein Gerät bleibt also nur dessen Kopie.
+  - **Sprachfassungen (E-61):** verschiedene Dokumente (Fundort-Dokumente disjunkt), mindestens ein gemeinsames Gerät, Kosinusabstand der gespeicherten Einbettungen (nur `embedding_model == TWOX_EMBED_MODEL`) ≤ `TWOX_ANSWER_TRANSLATION_DISTANCE`; Vergleich in Python (`math.sumprod`). Verglichen wird gegen die schon **aufgenommenen** Hauptquellen.
+  - **Budget:** Texte nie gekürzt; zu lange Abschnitte übersprungen; höchstens `k` Hauptquellen. Nachbarn (`ordinal ± 1` derselben Version, eine Abfrage mit `Q`-Verknüpfung) werden nach der Auswahl der Hauptquellen aus dem verbleibenden Budget direkt hinter ihrer Hauptquelle eingefügt (erst −1, dann +1), ohne doppelte `(version_id, ordinal)`; Fundorte per `dataclasses.replace`.
+  - Datenbank: eine Abfrage für `ordinal`/`document_version_id`/`sha256`/Einbettung aller Treffer, eine für alle Nachbarn. Log nur auf DEBUG: Trefferzahl, Quellenzahl, bester Abstand, Schwellenergebnis.
+- **`settings.py`:** neue Hilfsfunktion `env_positive_float(name, default, *, maximum)` (0 < x ≤ maximum) neben `env_float`; Block `TWOX_ANSWER_*` direkt unter dem KI-/Chat-Block mit den fünf Variablen und Startwerten 8 / 20000 / false / 0.60 / 0.15; `check_answer_settings()` bricht beim Start ab, wenn `TRANSLATION_DISTANCE >= MAX_DISTANCE`.
+- **`.env.example`**, **`deploy/compose/compose.yaml`** (`x-backend-environment`): je die fünf Zeilen.
+- **Tests:** `backend/tests/answers/test_context.py` (51 Fälle), `backend/tests/answers/conftest.py` (neu; Fixtures `no_real_model_service` und `fake_embedder`, **nicht** autouse, damit die übrigen Tests des Pakets unberührt bleiben; `fake_embedder` setzt `TWOX_EMBED_MODEL` auf das Modell der Attrappe).
+- **`docs/ARCHITECTURE.md`:** Tabellenzeile `answers` um `context.py` ergänzt; fünf Zeilen in der Tabelle „Configuration“.
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-125`.
+
+| Nr. | Ergebnis | Nachweis |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` Exit 0, `docker compose version` v5.7.0 Exit 0 |
+| 1 | erfüllt | `test_device_scope_gives_only_sources_of_that_device`, `test_plant_scope_gives_only_sources_of_that_plant` |
+| 2 | erfüllt | `test_same_place_in_another_document_of_the_device_appears_once`, `test_similar_sections_of_one_document_both_stay`, `test_sections_without_an_embedding_of_the_current_model_are_not_merged`, `test_keyword_hit_without_embedding_is_not_merged`, dazu verschiedene Geräte und Grenzwert der Übersetzungsdistanz |
+| 3 | erfüllt | `test_too_long_section_is_skipped_and_a_later_shorter_one_taken` (auch `source.text == Section.text`), `test_budget_holds_with_neighbours` (sieben Budgets) |
+| 4 | erfüllt | `test_without_neighbours_only_hits_appear`, `test_neighbours_follow_their_main_source`, `test_neighbour_that_is_a_hit_itself_appears_once`, `test_neighbours_come_from_the_same_version_only`, `test_main_sources_are_limited_but_neighbours_do_not_count` |
+| 5 | erfüllt | `test_nothing_near_enough_means_no_sources`, `test_exact_hit_lifts_the_threshold` (IP-Adresse), `test_keyword_hits_without_distance_do_not_lift_the_threshold`, `test_threshold_is_inclusive_and_can_be_given` |
+| 6 | erfüllt | `assert_numbered` in mehreren Tests, auch mit Nachbarn |
+| 7 | erfüllt | `test_two_places_of_one_document_on_different_pages_both_appear` (S. 34/36) |
+| 8 | erfüllt | `test_same_content_at_two_devices_keeps_both_locations`; Dubletten: `test_three_copies_of_a_file_are_one_source_with_all_locations` (drei Geräte, echte Suche, mit und ohne Geräteeingrenzung) und `test_copies_found_as_separate_hits_are_merged_before_counting` (Ersatz-Suche liefert die drei Kopien als getrennte Treffer) |
+| 9 | erfüllt | `test_ai_off_raises_without_search_or_embedding` (Spion auf `get_search_backend`, Attrappe ohne Aufruf), `test_failing_vector_search_raises`, `test_search_without_vector_list_raises` (`UNAVAILABLE`, `DISABLED`) |
+| 10 | erfüllt | `test_number_of_queries_does_not_grow_with_the_hits`: gleiche Zahl bei 1 und 10 Hauptquellen (3 bzw. 30 Quellen), `django_assert_max_num_queries(8)` |
+| 11 | erfüllt | `test_logs_hold_neither_question_nor_text_nor_headings` (Root und `twox` auf DEBUG) |
+| 12 | erfüllt | Unterprozess-Tests: `0`, negativ, zu groß, kein Wert, `TRANSLATION_DISTANCE` 0.6 und 0.7 bei `MAX_DISTANCE` 0.6; `check_answer_settings` direkt |
+| 12a | erfüllt | `D --profile dev config api` und `config backend-dev` zeigen alle fünf `TWOX_ANSWER_*` (8, 20000, false, 0.60, 0.15). `D run --rm -e TWOX_ANSWER_MAX_SOURCES=5 backend-dev python manage.py shell -c "from django.conf import settings; print(settings.TWOX_ANSWER_MAX_SOURCES)"` → Ausgabe `5` |
+| 13 | erfüllt | `git diff --stat main -- backend/twox/search` leer |
+| 14 | erfüllt | `makemigrations --check --dry-run` „No changes detected“, Exit 0 |
+| 15 | erfüllt | `ruff check .` „All checks passed!“, `ruff format --check .` 211 Dateien, `mypy .` 210 Dateien ohne Befund, `pytest` 2921 passed / 6 deselected, `pytest -m worker` 6 passed; außerdem `makemessages` ohne Diff, Lizenzprüfung bestanden, `spectacular` ohne Diff in `web/openapi`. (Der volle `pytest`-Lauf lief vor zwei reinen Ruff-Korrekturen – Variablenname, Zeilenumbruch –; danach erneut `tests/answers` und `tests/config/test_settings.py`: 692 passed.) |
+| 16 | erfüllt | `pyproject.toml` und `uv.lock` unverändert |
+| 17 | erfüllt | `D --profile dev down -v` Exit 0 |
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-a485ac0749dd3c402`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-a485ac0749dd3c402` (relativ zum Projektordner)
+- Nicht gepusht, nichts zusammengeführt.
+
+### Abweichungen und Hinweise
+
+1. **Schlüssel der Dubletten:** `(sha256, ordinal, text)` statt `sha256` + Seitenbereich (nach der Nachbesserung an den Schlüssel der Suche angeglichen). Mehrere Abschnitte derselben Seite einer Datei hätten denselben Seitenbereich und würden sonst fälschlich zusammengelegt; eine Kopie, die mit anderen Einstellungen in Abschnitte zerlegt wurde, hat beim gleichen `ordinal` einen anderen Text und bleibt eigene Quelle. Hinweis: Die Suche bündelt identische Inhalte (gleiche Prüfsumme, Seiten, Überschrift, Text) schon selbst (E-55); die Dubletten aus 120 stammen vermutlich aus der reinen Vektorliste der Auswertung. Das Zusammenlegen hier ist deshalb vor allem Absicherung; der Test mit getrennten Treffern prüft es direkt.
+2. **Schwelle als Sperre:** Wie im Auftrag (Schritt 5/6) entscheidet die Schwelle nur, ob überhaupt Kontext entsteht; danach werden auch Treffer oberhalb der Schwelle in Rangfolge aufgenommen. Falls 128 das ändern will (nur relevante Treffer aufnehmen), ist es eine Zeile in `select_context`.
+3. **Sprachfassungen gegen aufgenommene Quellen:** Ein Kandidat entfällt nur, wenn seine andere Sprachfassung schon aufgenommen ist. Wurde die besser platzierte Fassung wegen des Budgets übersprungen, darf die kürzere andere Fassung nachrücken.
+4. **Nachbarn nach den Hauptquellen:** Hauptquellen haben Vorrang im Budget; Nachbarn bekommen nur, was übrig bleibt (in der Reihenfolge der Hauptquellen).
+5. **Startwert der Schwelle:** Die Regel unter „Vorgaben“ (Mitte zwischen 0,5487 und 0,5095) ergäbe überkreuzte Werte und damit 0.5 mit Frage an a7. Der Auftrag legt in der Tabelle jedoch 0.60 fest (Messung 124 der Leitstelle); diese Festlegung gilt, daher keine Frage.
+6. **`ContextSource`** wie in 122 definiert; keine Abweichung. `version_id` kommt aus `Section.document_version_id` des Treffers (gleich dem Fundort mit `hit.section_id`).
+7. Zusätzlich zu den Einstellungen prüft `select_context` übergebene Werte (`max_sources`, `context_chars` ≥ 1, `0 < max_distance ≤ 2`) und wirft sonst `ValueError`.
+8. `docs/ARCHITECTURE.md`: nur Zeile `answers` und fünf neue Zeilen in „Configuration“ (vor `TWOX_INGEST_MAX_RETRIES`).
+9. Lokal bleiben die Images `twox-125-*`; die ignorierte `.env` hat `TWOX_API_PORT=18125`.
+
+Offene Fragen an a7: keine.
+
+### Nachbesserung (nach Prüfung der Leitstelle)
+
+1. `main` (mit 123 und 129) in den Zweig zusammengeführt, ohne Konflikt.
+2. Dubletten-Schlüssel in `_merge_copies` an den der Suche angeglichen: `(sha256, ordinal, text)` statt `(sha256, ordinal)`; der Text liegt am Kandidaten schon vor, keine weitere Abfrage. Docstring und Abweichung 1 angepasst.
+3. Neuer Test `test_same_checksum_and_ordinal_with_another_text_stay_two_sources`: zwei Treffer mit gleicher Prüfsumme und gleichem `ordinal`, aber verschiedenem Text, bleiben zwei Quellen. Drei echte Kopien bleiben eine Quelle (die beiden bestehenden Dubletten-Tests, unverändert grün).
+4. Prüfungen über `twox-125` wie in `ci.yml`: `ruff check`, `ruff format --check` (214 Dateien), `mypy` (213 Dateien) grün; `pytest` 3139 passed / 6 deselected; `pytest -m worker` 6 passed; `makemigrations --check` „No changes detected“; Lizenzprüfung bestanden; `makemessages` und `spectacular` ohne Diff; `down -v` Exit 0.
