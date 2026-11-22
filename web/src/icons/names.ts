@@ -39,9 +39,11 @@ import {
   Plus,
   RefreshCw,
   RotateCcwClock,
+  Scale,
   Scan,
   ScanText,
   Search,
+  SearchX,
   Settings,
   TriangleExclamationPoint,
   Upload,
@@ -119,6 +121,8 @@ const glyphs = {
   queued: Clock, // STA-08, ingest job waiting in the queue
   skipped: CircleMinus, // ingest job skipped (format not ingested); no ID in H2
   notIngested: CircleDashed, // version without any ingest job; no ID in H2
+  noEvidence: SearchX, // STA-11, answer without evidence (work order 132); no speech bubble or sparkle (B6)
+  contradiction: Scale, // STA-12, sources of an answer contradict each other (work order 132)
 } as const satisfies Record<string, Glyph>;
 
 /** Name of an icon of the interface. */
