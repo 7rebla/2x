@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "notes": "Search probes of milestone M3 (work order 120) for the command evaluate_search (--probes m3): the baseline of the search for the test questions before there is an answer feature. References only: manifest_id and sha256 name a file of testfactory/manifest.yaml, pages are page indexes of the PDF file counted from 1 ('PDF-S.'), taken from the sources of the test question in testfactory/questions.yaml (basis 'question'); every PDF page of those sources is expected. A place in the other language edition of the same manual counts as correct as well (E-61): basis 'other_language_edition' maps it to the documented place, with the same pages. The English pages of aps-documentation-en were compared with the German ones in work order 067 (pages 18, 22, 27, 31, 36, 38) and in work order 120 (page 34), by key figures only. Queries are written in the project's own words and never repeat the test question; no text of a vendor document is quoted. The probes question-1, question-3, question-7, question-9 and question-10 use the queries of m2.json, so the results can be compared with the acceptance run of M2; question-3b, question-7b and question-10b ask the same in other words, without the term that carries the first query. Sources in the git repositories of the test factory have no pages and no file checksum and are left out (D3). Test question 8 is not measurable yet: all its sources are Markdown files of aps-repository-dev, which are not ingested; its probe follows with work order 136 (decision D2) and will locate its places by file path and heading path (heading_path, path). The control probe control-11 asks for test question 11, which has no evidence; it expects no place, is searched but not judged, and lists the identifiers of its first entries. tests/search/test_probes_m3.py checks every reference.",
+  "notes": "Search probes of milestone M3 (work order 120) for the command evaluate_search (--probes m3): the baseline of the search for the test questions before there is an answer feature. References only: manifest_id and sha256 name a file of testfactory/manifest.yaml, pages are page indexes of the PDF file counted from 1 ('PDF-S.'), taken from the sources of the test question in testfactory/questions.yaml (basis 'question'); every PDF page of those sources is expected. A place in the other language edition of the same manual counts as correct as well (E-61): basis 'other_language_edition' maps it to the documented place, with the same pages. The English pages of aps-documentation-en were compared with the German ones in work order 067 (pages 18, 22, 27, 31, 36, 38) and in work order 120 (page 34), by key figures only. Queries are written in the project's own words and never repeat the test question; no text of a vendor document is quoted. The probes question-1, question-3, question-7, question-9 and question-10 use the queries of m2.json, so the results can be compared with the acceptance run of M2; question-3b, question-7b and question-10b ask the same in other words, without the term that carries the first query. Sources in the git repositories of the test factory have no pages and no file checksum and are left out (D3). Test question 8 has its sources in Markdown files of aps-repository-dev only; with decision D2 (option a, work order 136) two of them were uploaded in the test environment to the device drill-plc as documents, and its probe question-8 locates its places by file path and heading path (path, heading_path) instead of pages. docs/02-architecture.md, its third source file, is deliberately not ingested (it holds default access data). The control probe control-11 asks for test question 11, which has no evidence; it expects no place, is searched but not judged, and lists the identifiers of its first entries. tests/search/test_probes_m3.py checks every reference.",
   "probes": [
     {
       "id": "question-1",
@@ -152,6 +152,26 @@
           "manifest_id": "aps-documentation-en",
           "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
           "pages": [22, 27]
+        }
+      ]
+    },
+    {
+      "id": "question-8",
+      "query": "Über welche Kanäle des Nachrichtenbrokers bekommt die Bohrstation ihre Aufträge, und wohin meldet sie ihren Zustand?",
+      "basis": {"question": 8},
+      "notes": "Decision D2, option (a), work order 136: docs/06-modules/drill.md and docs/06-modules.md of aps-repository-dev at the pinned commit of the manifest, uploaded in the test environment to the device drill-plc as kind document; docs/02-architecture.md is deliberately not ingested (guard rail 5). The places are the sections that hold the lines of the sources in testfactory/questions.yaml (drill.md lines 31-32, 06-modules.md lines 34-46), named by heading path; Markdown has neither pages nor lines (E-55). Repository sources have no file checksum in the manifest, only tree_sha256 of the whole archive; the checksums here are those of the two files at the pinned commit, which are the checksums of the uploaded versions.",
+      "expected": [
+        {
+          "manifest_id": "aps-repository-dev",
+          "sha256": "d0b6c1563c00544aa0a8e539ae57b9830344af3a3b0ce80f195f9c5db7642a73",
+          "path": "docs/06-modules/drill.md",
+          "heading_path": ["6.3 Drilling Station (DRILL)", "MQTT Topics"]
+        },
+        {
+          "manifest_id": "aps-repository-dev",
+          "sha256": "4701411bacad65d45f3eb1a79fb20f3199503312b3a84ad176f112fda5db6cbe",
+          "path": "docs/06-modules.md",
+          "heading_path": ["6. Module-Specific Documentation", "6.2 Common Topics for All Modules"]
         }
       ]
     },
