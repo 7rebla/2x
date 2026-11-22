@@ -1,6 +1,6 @@
 # Auftrag 051 – Einlese-API: Status, Verlauf, erneut anstoßen
 
-Meilenstein: M2 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 
