@@ -1,6 +1,6 @@
 # Auftrag 077 – UI-Bausteine Knopf, Feld, Auswahl
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: offen
+Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: zur Prüfung
 
 Voraussetzung: 070 und 071 sind auf `main`.
 
@@ -49,7 +49,69 @@ Die UI-Analyse (lokal, `docs/design/bildmarke/ui-analyse.md`, Befund Ü4) zeigt:
 Keine.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Alle Kriterien 0–5 sind erfüllt; alle Läufe am 22.11.2026 im Container (Docker Compose v5.7.0). Keine neue Abhängigkeit, `web/src/index.css` nicht angefasst (die Bausteine kommen mit Tailwind-Klassen aus, kein eigener CSS-Abschnitt nötig). `BrandMark.tsx`, `TextMotion.tsx`, Raster, Tabellen, Navigation und Strukturbaum unverändert. Keine offene Frage.
+
+### Was wurde gebaut?
+
+- **Neu `web/src/components/ui/`:**
+  - `Button.tsx`: Varianten `primary`, `secondary` (Standard), `ghost`, `danger`; Größen `md` (36 px, Text 16 px, Icon 20 px) und `sm` (28 px, Text 14 px, Icon 16 px); `type` ist Pflicht (Typfehler sonst); `icon` über `web/src/icons` (dekorativ), `iconPosition` `start`/`end`; `loading` = deaktiviert, `aria-busy="true"`, drehendes `loading`-Icon am Anfang statt des eigenen Icons, Text bleibt der des Aufrufers; `disabled` einheitlich `opacity-50` und `cursor-not-allowed`, Hover nur im aktiven Zustand. `ref` und alle übrigen Attribute gehen an den nativen `<button>`. Jede Variante hat einen Rand (wo unsichtbar: transparent), damit alle Varianten einer Größe gleich groß sind. Höhe über `min-h-9`/`min-h-7`: eine Zeile genau 36/28 px, ein langer Text darf auf schmalen Bildschirmen umbrechen statt überzulaufen.
+  - `fields.tsx`: `Input` (nur Texttypen: `text`, `search`, `password`, `email`, `url`, `tel`, `number`), `Select` (ein Wert), `Textarea`. Gleiche Höhen wie die Knöpfe (`h-9`/`h-7`), Rand `line-strong`, Fehlerzustand über `invalid` → `aria-invalid` und Rand in `danger`; Größe über `size` (ersetzt das native `size`-Attribut). Label, Hinweis und Fehlerliste bleiben beim Aufrufer (`aria-describedby`).
+  - `classes.ts`: die Klassen dahinter (`buttonClasses`, `fieldClasses`, `textareaClasses`), `CONTROL_HEIGHT_PX = { md: 36, sm: 28 }`.
+  - `README.md` (Zweck, Größen, Varianten, Beispiele, Kontrast, Tests).
+- **Umstellung** aller Knöpfe, Eingaben und Auswahlfelder in Seiten und Komponenten (Texte, Testkennungen und Verhalten unverändert): Struktur (Neuer Standort, Zeilenaktionen `sm`, Suche), Formulare der Struktur (Felder, Speichern/Abbrechen), Geräteseite (Bearbeiten), Upload-Formulare, Import (Prüfen, Übernehmen), Einlesen (Filter, Blättern), Erneut einlesen (`sm`), Suche, Landkarte (Suche, Ansicht einpassen), Änderungsprotokoll (Filterleiste, Blättern), Selbsttest, Einstellungen (Sprache), Anmeldung, Benutzermenü (Menüknopf `ghost sm`, Abmelden `sm`), Sprachumschalter (`Select sm`), Seitenladefehler (Neu laden). Wo der Text beim Warten wechselte („Wird gespeichert…“ usw.), steht jetzt `loading`.
+- **Prüfung im Quelltext** `components/ui/sourceControls.test.ts`: außerhalb von `components/ui/` kein nativer `<button>`, `<select>`, `<textarea>`; native `<input>` nur für Checkbox, Radio und Datei; keine Kopie `bg-accent … px-` und kein `disabled:opacity-*` mehr (Kommentare ausgenommen).
+- **Kontrast** `theme/contrast.test.ts` um die neuen Paare ergänzt: `danger` auf `danger-line` (Text, gehoverter Gefahrknopf), `danger` als Rand auf `surface` und `canvas` (3:1). Alle Paare bestehen in beiden Modi mit allen Akzenten.
+- **Doku nachgezogen:** `web/src/pages/README.md` (Regel und Beispiel mit `Button`), `web/src/theme/README.md` (Verweis), `web/src/icons/README.md` (Beispiel ohne kopierte Knopfklassen).
+
+### Wie wurde getestet?
+
+`W` = `docker compose -p twox-077-web -f deploy/compose/compose.web.yaml`, `D` = `docker compose -p twox-077`; `.env` aus `.env.example` (ohne BOM) mit `TWOX_API_PORT=18077`. Vor den Builds `web/dist` und `web/playwright-report` gelöscht. „2x“ und „twox-leit“ nicht berührt.
+
+| AK | Ergebnis |
+| --- | --- |
+| 0 | erfüllt: `docker version` Exit 0, `docker compose version` (v5.7.0) Exit 0 |
+| 1 | erfüllt: `W --profile dev build web-dev`, `npm ci` („added 446 packages“), `lint` und `typecheck` ohne Meldung, `test`: **41 Dateien, 768 Fälle bestanden** (bestehende Tests unverändert grün), `build` Exit 0, `licenses`: „License check passed.“; `api:generate` Exit 0, `git diff --exit-code -- web/openapi web/src/api` Exit 0, `git status --porcelain` dazu leer |
+| 2 | erfüllt: `D --profile dev build migrate api worker web-dev`, `pull e2e`, `npm ci`, `up -d --wait` (alle healthy), „Create test account“ wie in `ci.yml` (Kennwort nur als Variablenname, „Created account …“), `D --profile e2e run --rm e2e`: **55 passed, 1 skipped** (der bedingte lokale Teil von `m2-acceptance.spec.ts`, wie bisher) |
+| 3 | erfüllt, siehe Suchlauf unten |
+| 4 | erfüllt, siehe Messung unten |
+| 5 | erfüllt: `D --profile dev --profile e2e down -v` Exit 0, `W --profile dev down -v` Exit 0; danach kein Container, Volume oder Netz mit `twox-077` |
+
+**Suchlauf (AK 3)** auf dem Commit-Stand:
+
+```
+git grep -nE "bg-accent( |\").*px-|disabled:opacity-|<(button|select|textarea)[ >]" -- 'web/src/*.tsx' ':!web/src/components/ui/*'
+web/src/pages/structure/forms.tsx:50:   * form action, and a <select> would otherwise fall back to the option of
+```
+
+Einziger Treffer ist ein Kommentar. `git grep -nE "bg-accent( |\")"` außerhalb von `components/ui/` findet nur die Vorschau-Kachel der Akzentfarbe in `SettingsPage.tsx:107` (eine Farbfläche, kein Knopf, ohne `px-`). Strenger prüft `sourceControls.test.ts` (siehe oben). **Ausnahmen:** native Checkboxen (Einlesen „ältere Versuche“, Landkarte „Netze anzeigen“, Einstellungen „Bewegung reduzieren“), Radio-Gruppen der Einstellungen (Darstellung, Akzent-Kacheln) und Dateiauswahl (Upload, Import) behalten ihr natives Aussehen; sie sind keine Steuerfelder mit Höhe. Die Knöpfe in der Steuerleiste von React Flow (Landkarte) gehören der Bibliothek. Navigationslinks (`nav-link`) und Links sind keine Knöpfe und bleiben unverändert.
+
+**Messung (AK 4)** im Browser (Chromium aus dem Playwright-Image des Projekts, 1280 × 800, Englisch, gegen den eigenen Dienst; Höhe aus `boundingBox()`, vorübergehende Messdatei danach gelöscht, nicht committet):
+
+| Seite | Steuerelement | Höhe |
+| --- | --- | --- |
+| Änderungsprotokoll, Filterleiste | Objekttyp (Select), Benutzer (Input), „Apply filter“, „Reset filter“ | 36 / 36 / 36 / 36 px (vorher laut Analyse 29/30/32/34) |
+| Änderungsprotokoll | „Previous page“, „Next page“ | 36 / 36 px |
+| Suche | Suchfeld, Gerät (Select), „Search“ | 36 / 36 / 36 px |
+| Anmeldung | Benutzername, Kennwort, Anmelden | 36 / 36 / 36 px (vorher 40/40/~38) |
+| zusätzlich: Einlesen | Status, Gerät | 36 / 36 px |
+| zusätzlich: Struktur | Suche, „New site“ | 36 / 36 px |
+| Kopf (sm) | Benutzermenü, Sprachumschalter | 28 / 28 px |
+
+Sichtprüfung der Bildschirmfotos (Änderungsprotokoll, Suche, Struktur): Felder und Knöpfe einer Zeile stehen bündig, Farben, Radien und Schrift wie zuvor.
+
+### Zweig und Arbeitsverzeichnis
+
+Zweig `worktree-agent-aa49c9dea9b824167`, Arbeitsverzeichnis `.claude/worktrees/agent-aa49c9dea9b824167`. Commits: Bausteine, Umstellung, dieser Bericht. Nicht gepusht, nicht zusammengeführt.
+
+Geänderte Dateien (28): `web/src/components/ui/` 7 neu · `web/src/components/` 3 · `web/src/components/files/` 2 · `web/src/pages/` 11 (davon `README.md`) · `web/src/pages/structure/` 1 · `web/src/` 1 (`LanguageSwitch.tsx`) · `web/src/theme/` 2 (`README.md`, `contrast.test.ts`) · `web/src/icons/` 1 (`README.md`).
+
+### Abweichungen und Hinweise
+
+1. **Kleine sichtbare Angleichungen**, die aus der Vereinheitlichung folgen: Anmeldefelder 40 → 36 px; Sekundärknöpfe haben jetzt überall die Fläche `surface` (Blättern und Filter-Zurücksetzen standen vorher ohne Fläche auf dem Hintergrund); Felder der Protokoll-Filterleiste und der Spracheinstellung jetzt 16 px Text und Fläche `surface` (vorher 14 px, ohne Fläche); Knopf-Icons in `md` einheitlich 20 px (wie `icons/README.md` für Knöpfe vorsieht; vorher teils 16 px); „Erneut einlesen“ 12 → 14 px Text (Größe `sm`); „Ansicht einpassen“ auf der Karte 14 → 16 px (md); Abstand Icon–Name im Benutzermenü 8 → 6 px.
+2. **Ladezustand:** Knöpfe, deren Text beim Warten wechselt, zeigen zusätzlich das drehende Lade-Icon (bei „Bewegung reduzieren“ steht es still). Beim Selbsttest dreht dadurch während der Prüfung auch im Knopf ein Icon, neben der Ladeanzeige im Inhalt.
+3. **Ausrichtung der Checkbox-Zeilen:** Bei Einlesen („Auch ältere Versuche zeigen“) und Landkarte („Netze anzeigen“) hat die Checkbox-Zeile jetzt `min-h-9`, damit sie auf der Mittellinie der 36-px-Felder steht (vorher `py-1` bzw. ohne Höhe). Sonst keine Layoutänderung.
+4. **Größen der Kopfzeile:** Benutzermenü-Knopf (`ghost sm`, 28 px wie vorher) und Sprachumschalter (`Select sm`) bleiben kompakt; „Abmelden“ im Menü ist `sm`. Wenn a7 dort `md` möchte, ist es je eine Angabe.
+5. **`index.css`** nicht geändert; ein eigener Abschnitt war nicht nötig. Damit kein Berührungspunkt mit 076.
+6. **Mögliche Konflikte beim Zusammenführen:** `components/files/IngestStatus.tsx` (nur `IngestRetryButton`) und `components/files/UploadForm.tsx` (nur Knopf und zwei Felder), falls 068 dort ändert; Struktur-, Such- und Einlese-Seite nur an den Steuerelementen.
+7. Die Größen 36/28 px sind der Vorschlag der Analyse und stehen an einer Stelle (`components/ui/classes.ts`).
