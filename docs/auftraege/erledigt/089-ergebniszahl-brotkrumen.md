@@ -1,6 +1,6 @@
 # Auftrag 089 – Ergebniszahl als Live-Region, Brotkrumen auf der Dateiseite
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 077, 079 und 083 sind auf `main`.
 
