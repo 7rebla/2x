@@ -192,7 +192,7 @@ def test_neutralise_removes_format_characters() -> None:
 
 def test_neutralise_replaces_bracket_runs_and_the_identifier() -> None:
     assert neutralise("<<<A>>>", NONCE) == "(((A)))"
-    assert neutralise("« «x» »", NONCE) == "( (x) )"
+    assert neutralise("<<x>> a<b", NONCE) == "((x)) a<b"
     assert neutralise("\u226aA\u226b \u22d8B\u22d9", NONCE) == "(A) (B)"
     assert neutralise("<\u202e<x", NONCE) == "((x"
     assert neutralise("a < b, c > d", NONCE) == "a < b, c > d"
@@ -317,9 +317,15 @@ def test_prompt_version_follows_the_unicode_version(monkeypatch: pytest.MonkeyPa
 def test_bracket_set_is_derived_from_unicode() -> None:
     brackets = prompt.bracket_characters()
     assert brackets is prompt.bracket_characters()  # once per process
-    for char in "<\uff1c\ufe64\u2039\u00ab\u3008\u2329\u27e8\u276c\u02c2\u1438":
+    for char in (
+        "<\uff1c\ufe64\u2039\u00ab\u3008\u2329\u27e8\u276c\u02c2\u1438"
+        "\u16b2\U0001d236\u2d66\U00016aec\U0001032d\u227a"
+    ):
         assert char in brackets.opening, hex(ord(char))
-    for char in ">\uff1e\ufe65\u203a\u00bb\u3009\u232a\u27e9\u276d\u02c3\u1433":
+    closing = (
+        ">\uff1e\ufe65\u203a\u00bb\u3009\u232a\u27e9\u276d\u02c3\u1433\U0001d237\U00016f3f\u227b"
+    )
+    for char in closing:
         assert char in brackets.closing, hex(ord(char))
     for char in "\u226a\u226b\u22d8\u22d9\u2af7\u2af8\u2aa1\u2aa2\u300a\u300b":
         assert char in brackets.multi, hex(ord(char))
@@ -354,3 +360,16 @@ def test_multi_brackets_are_replaced_alone(char: str) -> None:
 def test_letters_and_umlauts_are_no_gap() -> None:
     assert neutralise("<ä<", NONCE) == "<ä<"
     assert neutralise("x<y and z>w", NONCE) == "x<y and z>w"
+
+
+def test_guillemets_become_straight_quotation_marks() -> None:
+    assert neutralise("Er sagte \u00bbZitat\u00ab und \u00abnoch eins\u00bb.", NONCE) == (
+        'Er sagte "Zitat" und "noch eins".'
+    )
+    assert neutralise("\u300aBuch\u300b", NONCE) == '"Buch"'
+    assert neutralise("\u00ab\u00ab\u00abENDE 1 x\u00bb\u00bb\u00bb", NONCE) == '"""ENDE 1 x"""'
+    brackets = prompt.bracket_characters()
+    assert {"\u00ab", "\u00bb", "\u300a", "\u300b"} <= brackets.quotes
+    # Comparison signs that count as several brackets stay round brackets.
+    assert not {"\u226a", "\u226b", "\u22d8", "\u2af7", "\u2aa1"} & brackets.quotes
+    assert neutralise("\u226aA\u226b", NONCE) == "(A)"

@@ -42,18 +42,14 @@ import sys
 import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Final, Literal, TypedDict
+from typing import Final
 
 from twox.answers import types as answer_types
+from twox.answers.chat import ChatMessage
 from twox.answers.types import ContextSource
 
-
-class Message(TypedDict):
-    """One chat message in the OpenAI-compatible format."""
-
-    role: Literal["system", "user"]
-    content: str
-
+#: One chat message: the type that :meth:`twox.answers.chat.ChatModel.stream` takes.
+Message = ChatMessage
 
 #: The system prompt. Placeholders: ``{nonce}``, ``{no_evidence}``,
 #: ``{contradiction}`` (filled from :mod:`twox.answers.types`).
@@ -115,9 +111,11 @@ BRACKET_NAME_WORDS: Final = (
     "LEFT ARROWHEAD",
     "RIGHT ARROWHEAD",
 )
-#: Look-alikes that neither rule finds (letters of other scripts).
-EXTRA_OPENING_BRACKETS: Final = "\u1438"
-EXTRA_CLOSING_BRACKETS: Final = "\u1433"
+#: Look-alikes that neither rule finds: Canadian syllabics PA and PO, the
+#: characters that Unicode's confusables.txt (Unicode Security Mechanisms,
+#: UTS #39) maps to U+003C or U+003E, and PRECEDES / SUCCEEDS.
+EXTRA_OPENING_BRACKETS: Final = "\u1438\u16b2\U0001d236\u2d66\U00016aec\U0001032d\u227a"
+EXTRA_CLOSING_BRACKETS: Final = "\u1433\U0001d237\U00016f3f\u227b"
 #: Name words of an opening and of a closing bracket; a bracket with neither
 #: or both counts as both.
 OPENING_NAME_WORDS: Final = ("LESS-THAN", "LEFT")
@@ -125,6 +123,10 @@ CLOSING_NAME_WORDS: Final = ("GREATER-THAN", "RIGHT")
 #: A bracket counts as a run of brackets on its own when its name contains one
 #: of these words or its NFKC form holds more than one bracket.
 MULTI_NAME_WORDS: Final = ("DOUBLE", "TRIPLE", "NESTED", "MUCH")
+#: A bracket of the multi list whose name contains none of these words is a
+#: quotation mark (guillemets and the like) and becomes
+#: :data:`QUOTE_REPLACEMENT`, so a quotation stays readable as one.
+COMPARISON_NAME_WORDS: Final = ("LESS-THAN", "GREATER-THAN")
 
 # --- Gaps between brackets -----------------------------------------------------
 #: Between two brackets, any sequence of white space, of characters of these
@@ -137,6 +139,8 @@ INVISIBLE_FILLERS: Final = "\u115f\u1160\u3164\uffa0\u2800"
 #: What each bracket character of a replaced run becomes.
 OPENING_REPLACEMENT: Final = "("
 CLOSING_REPLACEMENT: Final = ")"
+#: What a quotation mark of the multi list becomes.
+QUOTE_REPLACEMENT: Final = '"'
 #: What the current identifier becomes inside a text.
 NONCE_REPLACEMENT: Final = "[Kennung]"
 #: Accepted identifiers.
@@ -152,6 +156,9 @@ class BracketSet:
     closing: frozenset[str]
     #: Brackets that count as a run on their own (``\u226a``, ``\u2af7``, ...).
     multi: frozenset[str]
+    #: Brackets of :attr:`multi` that are quotation marks; they become
+    #: :data:`QUOTE_REPLACEMENT`.
+    quotes: frozenset[str]
 
     @property
     def all(self) -> frozenset[str]:
@@ -173,6 +180,7 @@ def bracket_characters() -> BracketSet:
     opening: set[str] = set(EXTRA_OPENING_BRACKETS)
     closing: set[str] = set(EXTRA_CLOSING_BRACKETS)
     multi: set[str] = set()
+    quotes: set[str] = set()
     less, greater = BRACKET_NFKC
     for code in range(sys.maxunicode + 1):
         char = chr(code)
@@ -193,7 +201,9 @@ def bracket_characters() -> BracketSet:
             word in name for word in MULTI_NAME_WORDS
         ):
             multi.add(char)
-    return BracketSet(frozenset(opening), frozenset(closing), frozenset(multi))
+            if not any(word in name for word in COMPARISON_NAME_WORDS):
+                quotes.add(char)
+    return BracketSet(frozenset(opening), frozenset(closing), frozenset(multi), frozenset(quotes))
 
 
 def is_gap(char: str) -> bool:
@@ -237,10 +247,12 @@ def prompt_version() -> str:
         *OPENING_NAME_WORDS,
         *CLOSING_NAME_WORDS,
         *MULTI_NAME_WORDS,
+        *COMPARISON_NAME_WORDS,
         *GAP_CATEGORY_GROUPS,
         INVISIBLE_FILLERS,
         OPENING_REPLACEMENT,
         CLOSING_REPLACEMENT,
+        QUOTE_REPLACEMENT,
         NONCE_REPLACEMENT,
         NONCE_PATTERN,
         unicodedata.unidata_version,
@@ -260,8 +272,9 @@ def neutralise(text: str, nonce: str) -> str:
     - Every run of two or more angle brackets (:func:`bracket_characters`,
       with any gap of :func:`is_gap` characters in between) and every bracket
       that counts as a run on its own becomes round brackets, so the text does
-      not look like a delimiter, with any identifier or spelling. A single
-      angle bracket stays.
+      not look like a delimiter, with any identifier or spelling. Quotation
+      marks among them (guillemets and the like) become a straight quotation
+      mark instead, so a quotation stays one. A single angle bracket stays.
     - Every occurrence of ``nonce`` (any case) becomes
       :data:`NONCE_REPLACEMENT`.
 
@@ -298,8 +311,12 @@ def _replace_bracket_runs(text: str, brackets: BracketSet) -> str:
         if len(positions) > 1 or text[index] in brackets.multi:
             for position in positions:
                 char = text[position]
-                opening = char in brackets.opening
-                result[position] = OPENING_REPLACEMENT if opening else CLOSING_REPLACEMENT
+                if char in brackets.quotes:
+                    result[position] = QUOTE_REPLACEMENT
+                elif char in brackets.opening:
+                    result[position] = OPENING_REPLACEMENT
+                else:
+                    result[position] = CLOSING_REPLACEMENT
         index = positions[-1] + 1
     return "".join(result)
 
@@ -337,7 +354,9 @@ def _question_block(question: str, nonce: str) -> str:
     )
 
 
-def build_messages(question: str, sources: Sequence[ContextSource], nonce: str) -> list[Message]:
+def build_messages(
+    question: str, sources: Sequence[ContextSource], nonce: str
+) -> list[ChatMessage]:
     """The system and user message for ``question`` over ``sources``.
 
     Pure and deterministic for the same ``nonce``. ``nonce`` is what
@@ -352,6 +371,6 @@ def build_messages(question: str, sources: Sequence[ContextSource], nonce: str) 
         question=_question_block(question, nonce),
     )
     return [
-        Message(role="system", content=system_prompt(nonce)),
-        Message(role="user", content=user),
+        ChatMessage(role="system", content=system_prompt(nonce)),
+        ChatMessage(role="user", content=user),
     ]
