@@ -98,7 +98,7 @@ docker compose --profile dev --profile e2e down -v
 | `/login` | Sign-in | everyone |
 | `/admin/` | Django admin; deleting entries is possible only here | superusers |
 
-The language switch in the header changes between German and English; the first choice follows the browser.
+The language switch in the user menu (before sign-in: in the header) and on the settings page changes between German and English; the first choice follows the browser.
 Nothing can be deleted in the web UI or the API. A superuser can delete sites, areas, plants and devices in the admin, as long as nothing hangs below them; files, versions and the change log are read-only there.
 
 ## Device list (CSV)

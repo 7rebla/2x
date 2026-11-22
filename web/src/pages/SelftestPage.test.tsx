@@ -38,3 +38,33 @@ describe("self-test page with a failing loader", () => {
     expect(loadSelftestMock).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("self-test status with icons (work order 071)", () => {
+  it("shows each status as icon and text, never by colour alone", async () => {
+    loadSelftestMock.mockResolvedValueOnce({
+      kind: "answered",
+      selftest: {
+        database: { ok: true, server_version: "18.7", error: "" },
+        worker: { ok: false, result: "", error: "No worker answered.", duration_ms: 5000 },
+      },
+    });
+    render(<SelftestPage />);
+
+    const ok = await screen.findByTestId("database-status");
+    expect(ok.textContent).toBe("OK");
+    expect(ok.querySelector("svg")?.getAttribute("data-icon")).toBe("success");
+    expect(ok.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    const failed = screen.getByTestId("worker-status");
+    expect(failed.textContent).toBe("Failed");
+    expect(failed.querySelector("svg")?.getAttribute("data-icon")).toBe("error");
+    expect(screen.getByRole("button", { name: "Check again" }).querySelector("svg")?.getAttribute("data-icon")).toBe("retry");
+  });
+
+  it("shows an error icon before the error text", async () => {
+    loadSelftestMock.mockResolvedValueOnce({ kind: "unreachable" });
+    render(<SelftestPage />);
+    const error = await screen.findByTestId("selftest-error");
+    expect(error.querySelector("svg")?.getAttribute("data-icon")).toBe("error");
+    expect(error.textContent).toBe("The API did not respond. Is the server running?");
+  });
+});

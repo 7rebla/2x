@@ -68,6 +68,100 @@ test("an address with a parameter opens directly", async ({ page }) => {
   ).toEqual([]);
 });
 
+// Header with icons (work order 071): every entry shows an icon hidden from
+// assistive technology and a readable text; the header stays on one line in
+// English and German and does not change its height when the language changes.
+
+/** Positions of the header and of every entry of the main navigation. */
+async function headerLayout(page: Page): Promise<{ header: number; tops: number[]; overflow: number; labels: string[] }> {
+  return page.evaluate(() => {
+    const header = document.querySelector("header");
+    const nav = document.querySelector('[data-testid="main-navigation"]');
+    if (header === null || nav === null) {
+      throw new Error("no header or navigation");
+    }
+    const links = [...nav.querySelectorAll("a")];
+    return {
+      header: Math.round(header.getBoundingClientRect().height),
+      tops: links.map((link) => Math.round(link.getBoundingClientRect().top)),
+      overflow: nav.scrollWidth - nav.clientWidth,
+      labels: links.map((link) => link.textContent),
+    };
+  });
+}
+
+test("every navigation entry shows a hidden icon and a readable text", async ({ page }) => {
+  await page.goto("/");
+  const links = page.getByRole("navigation", { name: "Main navigation" }).getByRole("link");
+  await expect(links).toHaveText(["Structure", "Map", "Import", "Change log", "Self-test"]);
+  for (const link of await links.all()) {
+    const icon = link.locator("svg");
+    await expect(icon).toBeVisible();
+    await expect(icon).toHaveAttribute("aria-hidden", "true");
+    await expect(link.locator(".nav-label")).toBeVisible();
+  }
+});
+
+for (const viewport of [
+  { width: 1280, height: 800 },
+  { width: 1024, height: 768 },
+]) {
+  test(`the header stays on one line in English and German at ${String(viewport.width)} px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    const navigation = page.getByRole("navigation", { name: "Main navigation" });
+    await expect(navigation.getByRole("link", { name: "Self-test" })).toBeVisible();
+    const english = await headerLayout(page);
+    expect(english.labels).toEqual(["Structure", "Map", "Import", "Change log", "Self-test"]);
+
+    await page.getByTestId("user-menu-button").click();
+    await page.getByTestId("language-switch").selectOption("de");
+    await expect(page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("link", { name: "Selbsttest" })).toBeVisible();
+    const german = await headerLayout(page);
+    expect(german.labels).toEqual(["Struktur", "Landkarte", "Import", "Änderungsprotokoll", "Selbsttest"]);
+
+    for (const layout of [english, german]) {
+      // All entries on the same line, all texts visible, nothing to scroll.
+      expect(new Set(layout.tops).size, `tops ${layout.tops.join(", ")}`).toBe(1);
+      expect(layout.overflow).toBeLessThanOrEqual(0);
+    }
+    expect(german.header).toBe(english.header);
+    expect(german.tops).toEqual(english.tops);
+    for (const label of await page.locator('[data-testid="main-navigation"] .nav-label').all()) {
+      await expect(label).toBeVisible();
+    }
+  });
+}
+
+test.describe("on a phone", () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test("the navigation stays usable without scrolling the whole page", async ({ page }) => {
+    await page.goto("/");
+    const navigation = page.getByRole("navigation", { name: "Main navigation" });
+    await expect(navigation.getByRole("link", { name: "Structure" })).toHaveAttribute("aria-current", "page");
+    const layout = await headerLayout(page);
+    expect(new Set(layout.tops).size).toBe(1);
+    // The page itself never scrolls sideways.
+    const pageOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(pageOverflow).toBeLessThanOrEqual(0);
+    // Icons only; the texts stay as accessible names and tooltips.
+    const selftest = navigation.getByRole("link", { name: "Self-test" });
+    await expect(selftest).toHaveAttribute("title", "Self-test");
+    await expect(selftest.locator("svg")).toBeVisible();
+    await selftest.click();
+    await expect(page).toHaveURL(/\/selftest$/);
+    await expect(selftest).toHaveAttribute("aria-current", "page");
+    // The user menu still opens and fits on the screen.
+    await page.getByTestId("user-menu-button").click();
+    const menu = page.getByTestId("user-menu");
+    await expect(menu).toBeVisible();
+    const box = await menu.boundingBox();
+    expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(375);
+  });
+});
+
 test("an unknown address shows NotFound inside the frame", async ({ page }) => {
   const consoleErrors = collectConsoleErrors(page);
 

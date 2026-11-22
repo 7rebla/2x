@@ -55,6 +55,8 @@ test("signing out leads to /login and ends the session", async ({ page }) => {
   await signInThroughThePage(page, username, password);
   await expect(page.getByTestId("user-name")).toHaveText(username);
 
+  // Sign-out sits in the user menu of the header.
+  await page.getByTestId("user-menu-button").click();
   await page.getByRole("button", { name: "Sign out" }).click();
 
   await expect(page).toHaveURL(/\/login$/);
