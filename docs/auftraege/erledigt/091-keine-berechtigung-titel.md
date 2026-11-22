@@ -1,6 +1,6 @@
 # Auftrag 091 – Seite „keine Berechtigung“ mit Titel und Überschrift
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 
