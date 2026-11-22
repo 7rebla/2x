@@ -119,8 +119,9 @@ class SearchHit:
     #: The section the snippet, pages and headings come from; one of the
     #: sections in :attr:`locations`.
     section_id: int
-    #: Higher is better. Exact hits score at least 1 per identifier found,
-    #: keyword-only hits less than 1.
+    #: Higher is better. When exact hits come first (a query that is
+    #: essentially identifiers, or no vector search), they score at least 1
+    #: per identifier found and all other hits less than 1.
     score: float
     match_kinds: list[MatchKind]
     #: Plain text around the first found place, about 300 characters at most;

@@ -42,13 +42,36 @@ slow, model refused or a cloud model), the search falls back to keyword and
 exact only and says so with ``semantic = unavailable``; the server log gets
 the kind of error, never the query.
 
-Score (Reciprocal Rank Fusion, Cormack et al. 2009): the number of
-identifiers found exactly, plus ``1 / (RRF_K + rank)`` for each list the
-section is in. The keyword list is ranked by ``ts_rank`` (headings, weight A
-1.0, above text, weight B 0.4), the vector list by distance; equal values
-share a rank (``DENSE_RANK``), so the same content stored for several
-devices does not push other sections down. The fused part stays below 1, so
-exact hits always come first.
+Score (Reciprocal Rank Fusion, Cormack et al. 2009): ``1 / (RRF_K + rank)``
+for each list the section is in. The keyword list is ranked by ``ts_rank``
+(headings, weight A 1.0, above text, weight B 0.4), the vector list by
+distance; equal values share a rank (``DENSE_RANK``), so the same content
+stored for several devices does not push other sections down. Exact hits
+count in one of two ways (:func:`exact_hits_first`, 063):
+
+* **first:** the number of identifiers found exactly is added to the fused
+  part, which stays below 1, so exact hits always come first. This holds
+  when the query is essentially identifiers (an address, an error code, a
+  part number, with at most :data:`EXACT_FIRST_MAX_OTHER_WORDS` other word)
+  and whenever there is no vector list (AI features off, model service
+  failed, nothing embedded): the keyword and exact search alone keep the
+  order they had before 063.
+* **fused:** for any other query with a vector list, the exact hits are a
+  third list of the fusion, ranked by the number of identifiers found, then
+  by keyword rank, with the same ``RRF_K``. A question in plain words that
+  names a product (``Wie tausche ich beim XR7 das Getriebeöl?``) then no
+  longer puts every section that merely mentions the product above the
+  sections that answer it. This list has few distinct values, and in a
+  question the keyword search rarely finds anything (it needs every word),
+  so many different sections tie. Tied sections share the mean of the places
+  they take (two sections tied at the top have rank 1.5 each), counted over
+  distinct contents (E-55); with ``DENSE_RANK`` every one of them would get
+  the share of rank 1, which is the old precedence in another form. At equal
+  score the hit nearer in meaning comes first, so a section that only
+  names the product does not pass the best section by meaning on a tie.
+  A section that names the product and is also among the nearest by
+  meaning is in two lists and, as always with RRF, comes before a section
+  that is in one list only, even at rank 1 there.
 
 Phrases: the search vector joins six vectors (headings and text, three
 configurations each); joining shifts positions, so the last word of one copy
@@ -116,6 +139,9 @@ RANK_NORMALIZATION = 32
 #: Reciprocal Rank Fusion: a list adds ``1 / (RRF_K + rank)``, rank 1 first.
 #: 60 is the usual value (Cormack et al. 2009); the measurement in 057 checks it.
 RRF_K = 60
+#: A query is "essentially identifiers" (exact hits first, :func:`exact_hits_first`)
+#: when it has, besides its identifiers, at most this many other words.
+EXACT_FIRST_MAX_OTHER_WORDS = 1
 #: Nearest sections the vector search contributes.
 VECTOR_CANDIDATES = 50
 #: ``hnsw.ef_search`` of the vector search (pgvector default 40): the size of
@@ -236,6 +262,54 @@ def negated_parts(tsquery_text: str) -> list[str]:
         parts.append(" ".join(tokens[index:end]))
         index = end
     return parts
+
+
+#: Quotes and brackets in front of a token; ``-`` after them makes an exclusion
+#: (the same characters :mod:`twox.search.identifiers` strips).
+_TOKEN_PUNCTUATION = "\"'()[]{}<>,;!?"
+#: An excluded phrase of the web search syntax: ``-"two words"`` (open at the end).
+_EXCLUDED_PHRASE = re.compile(r'(?:^|(?<=\s))-+"[^"]*(?:"|$)')
+
+
+def other_words(query: str) -> list[str]:
+    """The words of ``query`` that are not identifiers, as typed.
+
+    Tokens are separated by white space like in
+    :func:`~twox.search.identifiers.find_identifiers`. Exclusions (``-word``,
+    ``-"two words"``) and tokens without a letter or digit (``&``, ``"``)
+    are not words.
+    """
+    words: list[str] = []
+    for raw in _EXCLUDED_PHRASE.sub(" ", query).split():
+        if raw.lstrip(_TOKEN_PUNCTUATION).startswith("-"):
+            continue
+        if not any(char.isalnum() for char in raw):
+            continue
+        if not find_identifiers(raw):
+            words.append(raw)
+    return words
+
+
+def exact_hits_first(query: str, identifiers: Sequence[Identifier], *, vector_list: bool) -> bool:
+    """Whether exact hits come before all other hits (``True``) or are fused (``False``).
+
+    Exact hits come first when the query is essentially identifiers: at least
+    one identifier and at most :data:`EXACT_FIRST_MAX_OTHER_WORDS` other
+    word (``192.168.0.5``, ``E1234``, ``Fehler E1234``, ``PLC-01 Adresse``).
+    Who types an address or a code wants the places where it stands. One word
+    beside it is allowed because that is how short lookups are written
+    (``Fehler E1234``); a second word already makes a question, and a question
+    that names a product on the side (``Wie viel trägt der UR5e?``) is
+    answered by the sections that are near in meaning, not by every section
+    that names the product.
+
+    Without a vector list (``vector_list`` false: AI features off, the model
+    service failed or nothing is embedded) exact hits always come first: the
+    keyword and exact search keep the order they had before.
+    """
+    if not vector_list or not identifiers:
+        return True
+    return len(other_words(query)) <= EXACT_FIRST_MAX_OTHER_WORDS
 
 
 def _configs() -> tuple[str, ...]:
@@ -387,12 +461,16 @@ def _search_sql(
     semantic: bool,
     filter_devices: bool,
     filter_plants: bool,
+    exact_first: bool = True,
 ) -> str:
     """The search query; user input goes in only as named parameters.
 
     With ``semantic``, the sections of the vector search come in as the
     arrays ``semantic_ids`` and ``semantic_ranks``. The excluded parts of
-    the query apply to every way a section is found.
+    the query apply to every way a section is found. ``exact_first``
+    (:func:`exact_hits_first`) adds the number of identifiers found to the
+    score; otherwise the exact hits are a list of the fusion (see
+    :data:`EXACT_FIRST_MAX_OTHER_WORDS` and the module docstring).
     """
     keyword = _keyword_condition(queries)
     exclude = _exclusion_condition(queries.exclusions())
@@ -416,6 +494,35 @@ def _search_sql(
         semantic_rank = "sem.rank"
     where = " OR ".join(conditions)
     scope = _scope_sql(filter_devices=filter_devices, filter_plants=filter_plants)
+    content_key = "sha256, page_start_key, page_end_key, heading_key, text_key"
+    exact_ctes = ""
+    exact_join = ""
+    # At equal score, a question prefers the hit nearer in meaning.
+    tie_break = ""
+    if exact_first:
+        exact_part = "r.exact_count"
+    else:
+        exact_part = "COALESCE(1.0::float8 / (%(rrf_k)s + x.exact_rank), 0.0)"
+        exact_ctes = f"""
+exact_list AS (
+    SELECT {content_key},
+        MAX(exact_count) AS exact_count, MIN(keyword_rank) AS keyword_rank
+    FROM ranked
+    WHERE exact_count > 0
+    GROUP BY {content_key}
+),
+exact_ranked AS (
+    SELECT e.*,
+        (RANK() OVER exact_order)::float8
+        + (COUNT(*) OVER (PARTITION BY e.exact_count, e.keyword_rank) - 1)::float8 / 2
+            AS exact_rank
+    FROM exact_list e
+    WINDOW exact_order AS (ORDER BY e.exact_count DESC, e.keyword_rank ASC NULLS LAST)
+),"""
+        exact_join = "LEFT JOIN exact_ranked x ON " + " AND ".join(
+            f"x.{column} = r.{column}" for column in content_key.split(", ")
+        )
+        tie_break = "semantic_key ASC NULLS LAST, "
     return f"""
 WITH {scope},
 candidates AS (
@@ -443,21 +550,23 @@ ranked AS (
             THEN DENSE_RANK() OVER (PARTITION BY c.keyword_match ORDER BY c.rank DESC)
         END AS keyword_rank
     FROM candidates c
-),
+),{exact_ctes}
 matched AS (
     SELECT r.*,
-        r.exact_count
+        {exact_part}
         + COALESCE(1.0::float8 / (%(rrf_k)s + r.keyword_rank), 0.0)
         + COALESCE(1.0::float8 / (%(rrf_k)s + r.semantic_rank), 0.0) AS score
     FROM ranked r
+    {exact_join}
 ),
 grouped AS (
     SELECT
-        sha256, page_start_key, page_end_key, heading_key, text_key,
-        MAX(score) AS score, MIN(section_id) AS representative_id
+        {content_key},
+        MAX(score) AS score, MIN(semantic_rank) AS semantic_key,
+        MIN(section_id) AS representative_id
     FROM matched
-    GROUP BY sha256, page_start_key, page_end_key, heading_key, text_key
-    ORDER BY score DESC, representative_id
+    GROUP BY {content_key}
+    ORDER BY score DESC, {tie_break}representative_id
     LIMIT %(limit)s
 )
 SELECT
@@ -478,7 +587,8 @@ JOIN files_documentversion v ON v.id = m.version_id
 JOIN files_document d ON d.id = v.document_id
 JOIN assets_device dev ON dev.id = d.device_id
 JOIN assets_plant p ON p.id = dev.plant_id
-ORDER BY g.score DESC, g.representative_id, p.key, dev.key, d.title, v.number, m.section_id
+ORDER BY g.score DESC, {tie_break}g.representative_id,
+    p.key, dev.key, d.title, v.number, m.section_id
 """
 
 
@@ -845,6 +955,7 @@ class PostgresSearchBackend:
                 semantic=bool(semantic),
                 filter_devices=bool(request.device_ids),
                 filter_plants=bool(request.plant_ids),
+                exact_first=exact_hits_first(query, identifiers, vector_list=bool(semantic)),
             )
             cursor.execute(sql, _search_params(request, queries, identifiers, semantic))
             drafts = _collect_hits(cursor.fetchall())
