@@ -35,19 +35,28 @@ export interface NavigationEntry {
   readonly requires: Role;
 }
 
-/** Order of the entries in the header. Pages with a parameter (device, file) and the sign-in page are not listed. */
+/**
+ * Order of the entries in the header. Pages with a parameter (device, file),
+ * the sign-in page and the pages of the user menu (settings, self-test) are
+ * not listed.
+ */
 export const navigation: readonly NavigationEntry[] = [
   { path: "/", textKey: "structure", icon: "structure", end: true, requires: "read" },
   // Interactive preview of the map (work order 039, E-48).
   { path: "/map", textKey: "map", icon: "map", requires: "read" },
   // Search in the ingested files (work order 054).
   { path: "/search", textKey: "search", icon: "search", requires: "read" },
+  // Questions answered from the documents (page: work order 132, entry: work
+  // order 134). Next to the search, as both lead into the documents.
+  { path: "/ask", textKey: "ask", icon: "answer", requires: "read" },
   // Overview of the ingest jobs of all devices (work order 055).
   { path: "/ingest", textKey: "ingest", icon: "ingest", requires: "read" },
   { path: "/import", textKey: "import", icon: "import", requires: "manage" },
   // The change log names users; only "manage" may read it (E-43, work order 028, question 3).
   { path: "/audit", textKey: "audit", icon: "audit", requires: "manage" },
-  { path: "/selftest", textKey: "selftest", icon: "selftest", requires: "read" },
+  // The self-test has no entry here: it is an operations page and moved to the
+  // user menu (work order 134, E-69), so /selftest needs "read" like every page
+  // without an entry.
 ];
 
 /** Entries the given role may see; none without a role. */

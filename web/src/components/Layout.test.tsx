@@ -97,22 +97,64 @@ describe("navigation with icons", () => {
       "Struktur",
       "Karte",
       "Suche",
+      "Auskunft",
       "Einlesen",
       "Import",
       "Protokoll",
-      "Selbsttest",
     ]);
     expect(within(nav).getByRole("link", { name: "Änderungsprotokoll" }).getAttribute("title")).toBe("Änderungsprotokoll");
   });
 
   it("marks the current entry without changing its icon", async () => {
     fakeApi(manager);
-    renderApp("/selftest");
+    renderApp("/ask");
     await screen.findByTestId("user-name");
-    const current = within(mainNavigation()).getByRole("link", { name: "Self-test" });
+    const current = within(mainNavigation()).getByRole("link", { name: "Ask" });
     expect(current.getAttribute("aria-current")).toBe("page");
-    expect(current.querySelector("svg")?.getAttribute("data-icon")).toBe("selftest");
+    expect(current.querySelector("svg")?.getAttribute("data-icon")).toBe("answer");
     expect(current.querySelector("svg")?.getAttribute("fill")).toBe("none");
+  });
+});
+
+describe("entry 'Ask' and the self-test in the user menu (work order 134)", () => {
+  it.each([
+    ["reader", reader],
+    ["manager", manager],
+  ])("shows 'Ask' after 'Search' to a %s; the self-test is no entry of the bar", async (_name, user) => {
+    fakeApi(user);
+    renderApp("/");
+    await screen.findByTestId("user-name");
+    const links = within(mainNavigation()).getAllByRole("link");
+    const ask = within(mainNavigation()).getByRole("link", { name: "Ask" });
+    expect(ask.getAttribute("href")).toBe("/ask");
+    expect(links.indexOf(ask)).toBe(links.findIndex((link) => link.getAttribute("href") === "/search") + 1);
+    expect(within(mainNavigation()).queryByRole("link", { name: "Self-test" })).toBeNull();
+    // The self-test sits in the user menu instead, after the settings.
+    await openUserMenu();
+    const menu = screen.getByTestId("user-menu");
+    const menuLinks = within(menu).getAllByRole("link");
+    expect(menuLinks.map((link) => link.getAttribute("href"))).toEqual(["/settings", "/selftest"]);
+  });
+
+  it("shows neither 'Ask' nor the self-test link to an account without a role", async () => {
+    fakeApi({ ...reader, role: null });
+    renderApp("/");
+    await openUserMenu();
+    expect(screen.queryByRole("navigation", { name: enNav.label })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Ask" })).toBeNull();
+    expect(screen.queryByTestId("selftest-link")).toBeNull();
+  });
+
+  it("opens the self-test from the user menu and closes the menu", async () => {
+    fakeApi(manager);
+    const { router } = renderApp("/");
+    await openUserMenu();
+    const link = within(screen.getByTestId("user-menu")).getByRole("link", { name: "Self-test" });
+    expect(link.querySelector("svg")?.getAttribute("data-icon")).toBe("selftest");
+    fireEvent.click(link);
+    expect(router.state.location.pathname).toBe("/selftest");
+    await screen.findByRole("heading", { level: 1, name: "Self-test" });
+    expect(screen.getByTestId("user-menu").hidden).toBe(true);
   });
 });
 
@@ -248,9 +290,26 @@ describe("menu below 768 px (work order 082)", () => {
     const { router } = await renderNarrow();
     fireEvent.click(menuButton());
     const panel = screen.getByTestId("navigation-menu");
-    const entry = within(panel).getByRole("link", { name: "Self-test" });
+    const entry = within(panel).getByRole("link", { name: "Ask" });
     entry.focus();
     fireEvent.click(entry);
+    expect(panel.hidden).toBe(true);
+    expect(router.state.location.pathname).toBe("/ask");
+    const heading = await screen.findByRole("heading", { level: 1, name: "Ask" });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(heading);
+    });
+  });
+
+  it("holds the self-test link in the user part of the panel (work order 134)", async () => {
+    const { router } = await renderNarrow();
+    fireEvent.click(menuButton());
+    const panel = screen.getByTestId("navigation-menu");
+    const nav = within(panel).getByRole("navigation", { name: enNav.label });
+    expect(within(nav).queryByRole("link", { name: "Self-test" })).toBeNull();
+    const link = within(panel).getByTestId("selftest-link");
+    expect(link.textContent).toBe("Self-test");
+    fireEvent.click(link);
     expect(panel.hidden).toBe(true);
     expect(router.state.location.pathname).toBe("/selftest");
     const heading = await screen.findByRole("heading", { level: 1, name: "Self-test" });
@@ -340,10 +399,10 @@ describe("menu below 768 px (work order 082)", () => {
       "Struktur",
       "Landkarte",
       "Suche",
+      "Auskunft",
       "Einlesen",
       "Import",
       "Änderungsprotokoll",
-      "Selbsttest",
     ]);
   });
 
@@ -463,6 +522,7 @@ describe("browser title (work order 078)", () => {
   it.each([
     ["/", "Structure – 2x"],
     ["/search", "Search – 2x"],
+    ["/ask", "Ask – 2x"],
     ["/ingest", "Ingestion – 2x"],
     ["/import", "Import – 2x"],
     ["/audit", "Change log – 2x"],

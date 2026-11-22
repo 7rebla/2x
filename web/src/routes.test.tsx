@@ -66,10 +66,10 @@ describe("frame", () => {
       "Struktur",
       "Landkarte",
       "Suche",
+      "Auskunft",
       "Einlesen",
       "Import",
       "Änderungsprotokoll",
-      "Selbsttest",
     ]);
     expect((await pageHeading()).textContent).toBe("Struktur");
   });

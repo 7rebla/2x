@@ -122,7 +122,7 @@ describe("navigation and role", () => {
     renderApp("/");
 
     expect((await screen.findByTestId("user-role")).textContent).toBe("Manage");
-    expect(navigationTexts()).toEqual(["Structure", "Map", "Search", "Ingestion", "Import", "Change log", "Self-test"]);
+    expect(navigationTexts()).toEqual(["Structure", "Map", "Search", "Ask", "Ingestion", "Import", "Change log"]);
     expect(screen.queryByTestId("no-role")).toBeNull();
   });
 
@@ -131,7 +131,7 @@ describe("navigation and role", () => {
     renderApp("/");
 
     expect((await screen.findByTestId("user-role")).textContent).toBe("Read");
-    expect(navigationTexts()).toEqual(["Structure", "Map", "Search", "Ingestion", "Self-test"]);
+    expect(navigationTexts()).toEqual(["Structure", "Map", "Search", "Ask", "Ingestion"]);
 
     fireEvent.change(screen.getByTestId("language-switch"), { target: { value: "de" } });
 
@@ -140,7 +140,7 @@ describe("navigation and role", () => {
       within(screen.getByRole("navigation", { name: "Hauptnavigation" }))
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Struktur", "Landkarte", "Suche", "Einlesen", "Selbsttest"]);
+    ).toEqual(["Struktur", "Landkarte", "Suche", "Auskunft", "Einlesen"]);
   });
 
   it.each(["/import", "/audit"])("a reader who opens %s directly gets a notice, no redirect", async (path) => {
@@ -206,13 +206,16 @@ describe("navigation and role", () => {
       ["/", "read"],
       ["/map", "read"],
       ["/search", "read"],
+      ["/ask", "read"],
       ["/ingest", "read"],
       ["/import", "manage"],
       ["/audit", "manage"],
-      ["/selftest", "read"],
     ]);
     expect(visibleNavigation("manage")).toHaveLength(7);
-    expect(visibleNavigation("read").map((entry) => entry.path)).toEqual(["/", "/map", "/search", "/ingest", "/selftest"]);
+    expect(visibleNavigation("read").map((entry) => entry.path)).toEqual(["/", "/map", "/search", "/ask", "/ingest"]);
+    // The self-test left the bar for the user menu (work order 134) and still needs "read".
+    expect(requiredRole("/selftest")).toBe("read");
+    expect(requiredRole("/ask")).toBe("read");
     expect(requiredRole("/search")).toBe("read");
     expect(requiredRole("/ingest")).toBe("read");
     expect(requiredRole("/map")).toBe("read");

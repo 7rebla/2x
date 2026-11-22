@@ -31,7 +31,7 @@ test("every page names itself in the browser title", async ({ page }) => {
     ["Search", "Search – 2x"],
     ["Ingestion", "Ingestion – 2x"],
     ["Change log", "Change log – 2x"],
-    ["Self-test", "Self-test – 2x"],
+    ["Ask", "Ask – 2x"],
   ] as const) {
     await navigation.getByRole("link", { name: entry }).click();
     await expect(page).toHaveTitle(title);
@@ -46,9 +46,9 @@ test("after a change of page the focus is on its heading, not on the first load"
   await expect(page.locator("body")).toBeFocused();
 
   const navigation = page.getByRole("navigation", { name: "Main navigation" });
-  await navigation.getByRole("link", { name: "Self-test" }).focus();
+  await navigation.getByRole("link", { name: "Ask" }).focus();
   await page.keyboard.press("Enter");
-  const heading = page.getByRole("heading", { level: 1, name: "Self-test" });
+  const heading = page.getByRole("heading", { level: 1, name: "Ask" });
   await expect(heading).toBeFocused();
 
   // Back in the history moves the focus as well.
