@@ -147,3 +147,13 @@ Hinweise aus Welle 1:
 - 037: Nachweis der M1-Abnahme als Browser-Test `web/e2e/m1-acceptance.spec.ts` und Backend-Test `backend/tests/acceptance/test_m1.py` (Geräteliste der Testfabrik per CSV, eine Datei mit zwei Versionen, Protokoll). Auf frischer Datenbank und im zweiten Lauf grün (20/20). Lücke für später: Die Strukturseite zeigt die Notiz einer Anlage nicht an.
 
 **M1 ist abgenommen (E-49, 22.11.2026).**
+
+## Gestaltung D1 (vorbereitet 22.11.2026)
+
+Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen lokal und ungetrackt unter `docs/design/bildmarke/` (in `.gitignore`); dort vorkommende Produktnamen kommen nicht ins Repository.
+
+| Nr. | Auftrag | Stufe | Voraussetzung | Status |
+| --- | --- | --- | --- | --- |
+| 070 | Theme, Schrift Inter, Text-Animationen, Einstellungsseite | C | Frage zur Schriftlizenz (OFL) | wartet auf a7 |
+| 071 | Icon-Schicht mit Lucide | C | 070; Frage Lucide | wartet auf a7 |
+| 072 | Marke: Bildmarke im Kopf, Favicon | C | 070; Bildmarke von a7 freigegeben | in Vorbereitung (Logo noch in Arbeit) |
