@@ -109,7 +109,8 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
               to={askPath(device.id)}
               data-testid="device-ask"
               aria-label={t("assets:actions.askDeviceNamed", { name: device.name })}
-              className={buttonClasses("secondary", "md")}
+              /* The hover of the variant uses enabled:, which a link never matches; same colour as the secondary button. */
+              className={buttonClasses("secondary", "md", "hover:bg-surface-muted")}
             >
               <Icon name="search" size={20} decorative />
               {t("assets:actions.askDevice")}

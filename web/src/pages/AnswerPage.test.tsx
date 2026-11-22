@@ -519,7 +519,10 @@ describe("limit to one device or one plant (work order 133)", () => {
     });
     expect(chip()?.getAttribute("role")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Remove limit" }));
+    // Label in name: the button is named by its visible text alone.
+    const reset = screen.getByRole("button", { name: "Remove limit" });
+    expect(reset.getAttribute("aria-label")).toBeNull();
+    fireEvent.click(reset);
     await waitFor(() => {
       expect(chip()).toBeNull();
     });

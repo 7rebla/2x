@@ -178,10 +178,12 @@ describe("device page", () => {
       fakeApi(user, fakeStructureApi().handler);
       renderApp("/devices/1000");
       await deviceHeading("Test controller");
-      const link = screen.getByRole("link", { name: "Ask a question about device Test controller" });
+      const link = screen.getByRole("link", { name: "Ask about this device: Test controller" });
       expect(link.getAttribute("href")).toBe("/ask?device=1000");
       expect(link.getAttribute("data-testid")).toBe("device-ask");
       expect(link.textContent).toBe("Ask about this device");
+      // Label in name (WCAG 2.5.3): the accessible name starts with the visible text.
+      expect(link.getAttribute("aria-label")?.startsWith(link.textContent)).toBe(true);
       cleanup();
       vi.unstubAllGlobals();
     }
@@ -193,7 +195,7 @@ describe("device page", () => {
     renderApp("/devices/1000");
     await deviceHeading("Test controller");
     const link = screen.getByTestId("device-ask");
-    expect(link.getAttribute("aria-label")).toBe("Frage zu Gerät Test controller stellen");
+    expect(link.getAttribute("aria-label")).toBe("Frage zu diesem Gerät: Test controller");
     expect(link.textContent).toBe("Frage zu diesem Gerät");
   });
 

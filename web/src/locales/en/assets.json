@@ -35,7 +35,7 @@
     "editPlant": "Edit plant {{name}}",
     "editDevice": "Edit device {{name}}",
     "askDevice": "Ask about this device",
-    "askDeviceNamed": "Ask a question about device {{name}}",
+    "askDeviceNamed": "Ask about this device: {{name}}",
     "save": "Save",
     "saving": "Saving…",
     "cancel": "Cancel"

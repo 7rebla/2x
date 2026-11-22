@@ -35,7 +35,7 @@
     "editPlant": "Anlage {{name}} bearbeiten",
     "editDevice": "Gerät {{name}} bearbeiten",
     "askDevice": "Frage zu diesem Gerät",
-    "askDeviceNamed": "Frage zu Gerät {{name}} stellen",
+    "askDeviceNamed": "Frage zu diesem Gerät: {{name}}",
     "save": "Speichern",
     "saving": "Speichert …",
     "cancel": "Abbrechen"

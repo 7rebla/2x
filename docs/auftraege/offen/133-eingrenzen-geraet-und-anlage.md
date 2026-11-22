@@ -114,3 +114,10 @@ Das ROADMAP-Merkmal von M3 „Eingrenzen auf Gerät“ (`docs/ROADMAP.md:13`) wi
 - `buttonClasses` setzt den Hover-Hintergrund nur über `enabled:`; am Link (kein `:enabled`) gibt es daher keinen Hover-Wechsel. Nicht geändert, weil `extra` nur für Layout gedacht ist.
 - Aufheben und Auswahländerung ersetzen den Verlaufseintrag (`replace`); „Zurück“ führt so zur Geräteseite zurück.
 - Folgepunkt: `IngestPage.tsx:135-149` hat noch eine eigene Kopie von `devicesByPlant` und kann auf `components/devicesByPlant.ts` umgestellt werden.
+
+**Nachbesserung (auf Hinweis der Leitstelle)**
+
+- `main` (mit 134) konfliktfrei in den Zweig zusammengeführt.
+- Label in Name (WCAG 2.5.3): Der zugängliche Name des Links auf der Geräteseite beginnt jetzt mit dem sichtbaren Text, de „Frage zu diesem Gerät: {{name}}“, en „Ask about this device: {{name}}“ (`actions.askDeviceNamed`). `DevicePage.test.tsx` prüft, dass der Name mit dem sichtbaren Text beginnt und den Gerätenamen enthält. Der Chip-Knopf „Eingrenzung aufheben“ hat kein `aria-label`, sein Name ist der sichtbare Text; `AnswerPage.test.tsx` prüft das jetzt.
+- Hover am Link: `buttonClasses("secondary", "md", "hover:bg-surface-muted")` nur in `DevicePage.tsx`, gleiche Farbe wie `enabled:hover` des Sekundärknopfs; der Baustein bleibt unverändert. README nachgezogen.
+- Prüfungen danach: Web-Job grün (`npm ci`, lint, typecheck, test mit 1132 Tests, build, licenses, `api:generate` ohne Unterschied); e2e wie in `ci.yml`: 88 bestanden, 1 übersprungen (`m2-acceptance` lokal, wie bisher); `down -v` von `twox-133` und `twox-133-web` Exit 0.

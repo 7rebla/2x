@@ -358,7 +358,8 @@ if (query.isError) return <ErrorMessage error={query.error} />;
   limit" (icon `resetFilter`). It removes `device` and `plant` from the address and resets the choices; a running
   answer goes on. The chip is not a live region.
 - Device page: next to the heading a link styled as a secondary button, "Ask about this device" (accessible name
-  "Ask a question about device <name>", icon `search`), to `/ask?device=<id>`, for the roles `read` and `manage`. It
+  "Ask about this device: <name>", which starts with the visible text, WCAG 2.5.3; icon `search`; hover like the
+  secondary button through an extra `hover:` class, since the `enabled:hover` of the variant never matches a link), to `/ask?device=<id>`, for the roles `read` and `manage`. It
   only opens the page with the limit; it stays while the AI is off (the answer page explains that state).
 - Test ids for the browser tests: `answer-device`, `answer-plant`, `answer-scope`, `answer-scope-name`,
   `answer-scope-reset`, `device-ask`.
