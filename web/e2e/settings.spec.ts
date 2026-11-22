@@ -32,6 +32,7 @@ test.describe("settings", () => {
   test("changes appearance and accent at once, and keeps them after a reload", async ({ page }) => {
     const errors = watchErrors(page);
     await page.goto("/");
+    await page.getByTestId("user-menu-button").click();
     await page.getByTestId("settings-link").click();
     await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole("heading", { level: 2, name: "Settings" })).toBeVisible();
@@ -77,12 +78,13 @@ test.describe("settings", () => {
     expect(await pageBackground(page)).toBe(DARK_CANVAS);
   });
 
-  test("shares the language with the switch in the header", async ({ page }) => {
+  test("shares the language with the switch in the user menu", async ({ page }) => {
     await page.goto("/settings");
     await page.getByRole("combobox", { name: "Language of the interface" }).selectOption("de");
     await expect(page.getByRole("heading", { level: 2, name: "Einstellungen" })).toBeVisible();
     await expect(page.getByTestId("language-switch")).toHaveValue("de");
     await expect(page.locator("html")).toHaveAttribute("lang", "de");
+    await page.getByTestId("user-menu-button").click();
     await page.getByTestId("language-switch").selectOption("en");
     await expect(page.getByRole("combobox", { name: "Language of the interface" })).toHaveValue("en");
   });

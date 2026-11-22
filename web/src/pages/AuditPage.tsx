@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { AuditTrail, auditObjectTypes } from "../components/AuditTrail.tsx";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
+import { Icon } from "../icons/Icon.tsx";
 
 /** Longest user name the API accepts as a filter (Django's username field). */
 const ACTOR_MAX_LENGTH = 150;
@@ -82,10 +83,19 @@ export function AuditPage(): ReactElement {
               }}
             />
           </div>
-          <button type="submit" className="rounded bg-accent px-3 py-1 text-on-accent hover:bg-accent-strong">
+          <button
+            type="submit"
+            className="inline-flex items-center gap-2 rounded bg-accent px-3 py-1 text-on-accent hover:bg-accent-strong"
+          >
+            <Icon name="filter" decorative />
             {t("filter.apply")}
           </button>
-          <button type="button" className="rounded border border-line-strong px-3 py-1" onClick={reset}>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded border border-line-strong px-3 py-1"
+            onClick={reset}
+          >
+            <Icon name="resetFilter" decorative />
             {t("filter.reset")}
           </button>
         </fieldset>

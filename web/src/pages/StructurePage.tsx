@@ -13,6 +13,8 @@ import {
 import { AnimatedHeading } from "../components/TextMotion.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Loading } from "../components/Loading.tsx";
+import { Icon } from "../icons/Icon.tsx";
+import type { IconName } from "../icons/names.ts";
 import { useRole } from "../session.ts";
 import { AreaForm, DeviceForm, PlantForm, SiteForm } from "./structure/forms.tsx";
 import { type AreaNode, buildTree, filterTree, type PlantNode, type SiteNode } from "./structure/tree.ts";
@@ -72,8 +74,9 @@ export function StructurePage(): ReactElement {
             onClick={() => {
               setEditor({ form: "site" });
             }}
-            className="rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong"
+            className="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong"
           >
+            <Icon name="create" size={20} decorative />
             {t("assets:actions.newSite")}
           </button>
         ) : null}
@@ -115,6 +118,7 @@ function StructureContent({ control }: { control: EditorControl }): ReactElement
       {error === null ? null : <ErrorMessage error={error} />}
       <div className="space-y-1">
         <label htmlFor={searchId} className="block text-sm text-fg-muted">
+          <Icon name="search" className="mr-1.5" decorative />
           {t("search.label")}
         </label>
         <input
@@ -180,14 +184,25 @@ function DeviceCount({ count }: { count: number }): ReactElement {
   );
 }
 
-function SmallButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }): ReactElement {
+function SmallButton({
+  label,
+  icon,
+  onClick,
+  children,
+}: {
+  label: string;
+  icon: IconName;
+  onClick: () => void;
+  children: ReactNode;
+}): ReactElement {
   return (
     <button
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="rounded border border-line-strong bg-surface px-2 py-0.5 text-sm hover:bg-surface-muted"
+      className="inline-flex items-center gap-1 self-center rounded border border-line-strong bg-surface px-2 py-0.5 text-sm hover:bg-surface-muted"
     >
+      <Icon name={icon} decorative />
       {children}
     </button>
   );
@@ -199,7 +214,13 @@ function Row({ children }: { children: ReactNode }): ReactElement {
 
 function KindLabel({ kind }: { kind: "site" | "area" | "plant" | "device" }): ReactElement {
   const { t } = useTranslation("assets");
-  return <span className="text-xs uppercase tracking-wide text-fg-muted">{t(`kind.${kind}`)}</span>;
+  // The kind's icon (16 px) before its name; the icon name equals the kind.
+  return (
+    <span className="inline-flex items-center gap-1 self-center text-xs uppercase tracking-wide text-fg-muted">
+      <Icon name={kind} decorative />
+      {t(`kind.${kind}`)}
+    </span>
+  );
 }
 
 function SiteItem({ node, control }: { node: SiteNode; control: EditorControl }): ReactElement {
@@ -220,6 +241,7 @@ function SiteItem({ node, control }: { node: SiteNode; control: EditorControl })
               onClick={() => {
                 control.open({ form: "site", site });
               }}
+              icon="edit"
             >
               {t("actions.edit")}
             </SmallButton>
@@ -228,6 +250,7 @@ function SiteItem({ node, control }: { node: SiteNode; control: EditorControl })
               onClick={() => {
                 control.open({ form: "area", siteId: site.id });
               }}
+              icon="create"
             >
               {t("actions.newArea")}
             </SmallButton>
@@ -264,6 +287,7 @@ function AreaItem({ node, control }: { node: AreaNode; control: EditorControl })
               onClick={() => {
                 control.open({ form: "area", siteId: area.site, area });
               }}
+              icon="edit"
             >
               {t("actions.edit")}
             </SmallButton>
@@ -272,6 +296,7 @@ function AreaItem({ node, control }: { node: AreaNode; control: EditorControl })
               onClick={() => {
                 control.open({ form: "plant", areaId: area.id });
               }}
+              icon="create"
             >
               {t("actions.newPlant")}
             </SmallButton>
@@ -311,6 +336,7 @@ function PlantItem({ node, control }: { node: PlantNode; control: EditorControl 
               onClick={() => {
                 control.open({ form: "plant", areaId: plant.area, plant });
               }}
+              icon="edit"
             >
               {t("actions.edit")}
             </SmallButton>
@@ -319,6 +345,7 @@ function PlantItem({ node, control }: { node: PlantNode; control: EditorControl 
               onClick={() => {
                 control.open({ form: "device", plantId: plant.id });
               }}
+              icon="create"
             >
               {t("actions.newDevice")}
             </SmallButton>

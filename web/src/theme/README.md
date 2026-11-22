@@ -17,7 +17,7 @@ All colours live in `src/index.css` as custom properties (`--twox-*`) and reach 
 | `success`, `warning`, `danger`, `info` with `-soft` and `-line` | status text, message background, message border; independent of the accent |
 | `brand` | the brand mark only: `#765477` in light mode, `#b496b8` in dark mode, independent of the accent (never `#765477` on a dark background) |
 
-Typical classes: `bg-surface border border-line`, `text-fg-muted`, `bg-accent text-on-accent hover:bg-accent-strong`, `text-accent underline hover:text-accent-strong`, `border-danger-line bg-danger-soft text-danger`. Icons (work order 071) take their colour from `currentColor`.
+Typical classes: `bg-surface border border-line`, `text-fg-muted`, `bg-accent text-on-accent hover:bg-accent-strong`, `text-accent underline hover:text-accent-strong`, `border-danger-line bg-danger-soft text-danger`. Icons (work order 071, `../icons/README.md`) take their colour from `currentColor`.
 
 Inline styles that cannot use classes (React Flow on the map) use `var(--twox-…)` directly.
 
@@ -37,7 +37,7 @@ A new accent needs a block for light and one for dark mode in `index.css` (page 
 
 ## Display settings
 
-`settings.ts` holds the rules (types, defaults, `localStorage` keys `twox.theme`, `twox.accent`, `twox.reduceMotion`, all access in `try/catch`); `store.ts` holds the live state. Components read it with `useDisplay()` or `useReducedMotion()`; the settings page (`pages/SettingsPage.tsx`, `/settings`, role `read`) changes it with `updateDisplaySettings()`. `installDisplaySettings()` (in `main.tsx`) follows changes of the operating system and of other tabs. The language keeps its own key `twox.language` (`i18n.ts`); the switch in the header and the settings page change the same setting.
+`settings.ts` holds the rules (types, defaults, `localStorage` keys `twox.theme`, `twox.accent`, `twox.reduceMotion`, all access in `try/catch`); `store.ts` holds the live state. Components read it with `useDisplay()` or `useReducedMotion()`; the settings page (`pages/SettingsPage.tsx`, `/settings`, role `read`) changes it with `updateDisplaySettings()`. `installDisplaySettings()` (in `main.tsx`) follows changes of the operating system and of other tabs. The language keeps its own key `twox.language` (`i18n.ts`); the switch in the user menu (in the header before sign-in) and the settings page change the same setting.
 
 ### Inline script in `index.html`
 
@@ -71,7 +71,7 @@ Pure CSS in `index.css`; only `opacity`, `transform`, `filter`, `background-posi
 | --- | --- | --- |
 | A, words clear up | page headings | `AnimatedHeading` (`components/TextMotion.tsx`) |
 | B, line mask | device header, file title | `MaskedTitle` |
-| C, navigation line | main navigation, settings link | class `nav-link` with `data-label` (reserves the width of the bold label) |
+| C, navigation line | main navigation, settings link | class `nav-link` around an icon and a `nav-label` with `data-label` (reserves the width of the bold label); the current entry also gets the soft accent background |
 | D, loading shimmer | `Loading`, self-test "checking" | `LoadingText` |
 
 With reduced motion (settings page or operating system) the components render plain text without animation classes, and `index.css` switches off every animation and transition.

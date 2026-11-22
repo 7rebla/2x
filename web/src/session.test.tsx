@@ -9,7 +9,7 @@ import enNav from "./locales/en/nav.json";
 import { navigation, requiredRole, visibleNavigation } from "./navigation.ts";
 import { hasRole, loginPathFor, safeNextPath, useRole } from "./session.ts";
 import { fakeApi, jsonResponse, manager, reader, roleless } from "./test/fakeApi.ts";
-import { renderApp } from "./test/renderApp.tsx";
+import { openUserMenu, renderApp } from "./test/renderApp.tsx";
 
 const SESSION = "/_allauth/browser/v1/auth/session";
 const ME = "/api/v1/me/";
@@ -198,6 +198,7 @@ describe("sign-out", () => {
     });
     const { router } = renderApp("/selftest");
 
+    await openUserMenu();
     fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
 
     expect(await screen.findByTestId("login-form")).toBeDefined();
@@ -212,6 +213,7 @@ describe("sign-out", () => {
     fakeApi(manager, () => jsonResponse({ status: 500 }, 500));
     const { router } = renderApp("/");
 
+    await openUserMenu();
     fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
 
     expect((await screen.findByTestId("sign-out-error")).textContent).toBe("Signing out failed. Please try again.");

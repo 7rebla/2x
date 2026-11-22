@@ -6,6 +6,7 @@
 // the signed-in user's role allows; routes.tsx shows "no permission" instead
 // of a page whose role is missing. Pages that later work orders build keep
 // their entry here unchanged.
+import type { IconName } from "./icons/names.ts";
 import type navCatalog from "./locales/en/nav.json";
 import { hasRole, type Role } from "./session.ts";
 
@@ -17,6 +18,8 @@ export interface NavigationEntry {
   readonly path: string;
   /** Text of the entry in the "nav" catalog. */
   readonly textKey: NavTextKey;
+  /** Icon shown before the text; on narrow screens the icon alone (work order 071). */
+  readonly icon: IconName;
   /** Marks the entry as current only for exactly this path (not for paths below it). */
   readonly end?: boolean;
   /** Role needed to see the entry and open the page ("manage" includes "read"). */
@@ -25,13 +28,13 @@ export interface NavigationEntry {
 
 /** Order of the entries in the header. Pages with a parameter (device, file) and the sign-in page are not listed. */
 export const navigation: readonly NavigationEntry[] = [
-  { path: "/", textKey: "structure", end: true, requires: "read" },
+  { path: "/", textKey: "structure", icon: "structure", end: true, requires: "read" },
   // Interactive preview of the map (work order 039, E-48).
-  { path: "/map", textKey: "map", requires: "read" },
-  { path: "/import", textKey: "import", requires: "manage" },
+  { path: "/map", textKey: "map", icon: "map", requires: "read" },
+  { path: "/import", textKey: "import", icon: "import", requires: "manage" },
   // The change log names users; only "manage" may read it (E-43, work order 028, question 3).
-  { path: "/audit", textKey: "audit", requires: "manage" },
-  { path: "/selftest", textKey: "selftest", requires: "read" },
+  { path: "/audit", textKey: "audit", icon: "audit", requires: "manage" },
+  { path: "/selftest", textKey: "selftest", icon: "selftest", requires: "read" },
 ];
 
 /** Entries the given role may see; none without a role. */

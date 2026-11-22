@@ -132,8 +132,14 @@ describe("map page", () => {
     const network = within(canvas).getByTestId("map-network");
     expect(network.textContent).toBe("Network192.0.2.0/24");
     expect(network.closest(".react-flow__node")?.getAttribute("aria-label")).toBe("Network 192.0.2.0/24 with 3 devices");
+    // Every node shows the decorative icon of its kind (work order 071).
+    expect(plants[0]?.querySelector("svg[aria-hidden='true']")?.getAttribute("data-icon")).toBe("plant");
+    expect(within(canvas).getAllByTestId("map-site")[0]?.querySelector("svg")?.getAttribute("data-icon")).toBe("site");
+    expect(within(controller).getByTestId("map-device").querySelector("svg")?.getAttribute("data-icon")).toBe("device");
+    expect(network.querySelector("svg")?.getAttribute("data-icon")).toBe("network");
     // Controls and overview with their own names; the list view stays reachable.
-    expect(screen.getByRole("button", { name: "Fit view" })).toBeDefined();
+    // "Fit view" is the button above the map, with its icon (the one of React Flow is off).
+    expect(screen.getByRole("button", { name: "Fit view" }).querySelector("svg")?.getAttribute("data-icon")).toBe("fitView");
     expect(screen.getByRole("button", { name: "Zoom in" })).toBeDefined();
     expect(screen.getByTestId("map-list-link").getAttribute("href")).toBe("/");
     expect(screen.getByText(/Dashed line: the device's address lies in this network/)).toBeDefined();

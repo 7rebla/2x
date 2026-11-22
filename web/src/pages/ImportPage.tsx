@@ -7,6 +7,7 @@ import { ApiError } from "../api/errors.ts";
 import { devicesImportMutation } from "../api/generated/@tanstack/react-query.gen.ts";
 import type { ImportReport } from "../api/generated";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
+import { Icon } from "../icons/Icon.tsx";
 import { ImportReportView } from "../components/ImportReportView.tsx";
 import { deviceClasses } from "./structure/deviceClass.ts";
 import { reloadAfterSave, save } from "./structure/save.ts";
@@ -150,8 +151,9 @@ export function ImportPage(): ReactElement {
           type="submit"
           data-testid="import-check"
           disabled={file === null || running !== null}
-          className="rounded bg-accent px-3 py-1 text-on-accent hover:bg-accent-strong disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded bg-accent px-3 py-1 text-on-accent hover:bg-accent-strong disabled:opacity-50"
         >
+          <Icon name="upload" decorative />
           {running === "check" ? t("import:file.checking") : t("import:file.check")}
         </button>
       </form>
@@ -168,13 +170,14 @@ export function ImportPage(): ReactElement {
               type="button"
               data-testid="import-apply"
               disabled={file === null || running !== null}
-              className="rounded bg-accent px-3 py-1 text-on-accent hover:bg-accent-strong disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded bg-accent px-3 py-1 text-on-accent hover:bg-accent-strong disabled:opacity-50"
               onClick={() => {
                 if (file !== null && running === null) {
                   void run("save", file);
                 }
               }}
             >
+              <Icon name="apply" decorative />
               {running === "save" ? t("import:file.saving") : t("import:file.save")}
             </button>
           ) : null}
@@ -196,7 +199,10 @@ function OutcomeView({ outcome }: { outcome: Outcome }): ReactElement {
           data-testid="import-invalid"
           className="space-y-1 rounded border border-danger-line bg-danger-soft p-4 text-danger"
         >
-          <p>{t("problem.invalid")}</p>
+          <p>
+            <Icon name="error" className="mr-2" decorative />
+            {t("problem.invalid")}
+          </p>
           {outcome.messages.length === 0 ? null : (
             <ul className="list-disc pl-5 text-sm">
               {outcome.messages.map((message, index) => (
@@ -216,7 +222,10 @@ function OutcomeView({ outcome }: { outcome: Outcome }): ReactElement {
           data-testid="import-too-large"
           className="space-y-1 rounded border border-danger-line bg-danger-soft p-4 text-danger"
         >
-          <p>{t("problem.tooLarge")}</p>
+          <p>
+            <Icon name="error" className="mr-2" decorative />
+            {t("problem.tooLarge")}
+          </p>
           {outcome.detail === null ? null : (
             <p data-testid="import-too-large-detail" className="text-sm">
               {outcome.detail}

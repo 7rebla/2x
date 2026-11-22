@@ -24,6 +24,7 @@ import {
 import type { Area, Device, Plant, Site } from "../../api/generated";
 import { ErrorMessage } from "../../components/ErrorMessage.tsx";
 import { Loading } from "../../components/Loading.tsx";
+import { Icon } from "../../icons/Icon.tsx";
 import type assetsCatalog from "../../locales/en/assets.json";
 import { DEFAULT_DEVICE_CLASS, deviceClasses, isDeviceClass } from "./deviceClass.ts";
 import { type FieldErrors, reloadAfterSave, save } from "./save.ts";
@@ -272,7 +273,10 @@ function FormShell({
       </h3>
       {state.invalid ? (
         <div role="alert" data-testid="form-invalid" className="rounded border border-danger-line bg-danger-soft p-3 text-danger">
-          <p>{t("form.invalid")}</p>
+          <p>
+            <Icon name="error" className="mr-2" decorative />
+            {t("form.invalid")}
+          </p>
           {otherErrors.length > 0 ? (
             <ul className="mt-1 list-disc pl-5 text-sm" aria-label={t("form.otherErrors")}>
               {otherErrors.map((message) => (

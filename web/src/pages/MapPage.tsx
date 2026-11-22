@@ -41,6 +41,7 @@ import {
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
+import { Icon } from "../icons/Icon.tsx";
 import { useDisplay } from "../theme/store.ts";
 import {
   buildMapGraph,
@@ -62,6 +63,7 @@ export function MapPage(): ReactElement {
         <AnimatedHeading text={t("nav:map")} />
         {/* The map does not replace the tree: the list view stays one click away. */}
         <Link to="/" data-testid="map-list-link" className="text-accent underline hover:text-accent-strong">
+          <Icon name="structure" className="mr-1.5" decorative />
           {t("map:listLink")}
         </Link>
       </div>
@@ -323,6 +325,7 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
       <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
         <div className="space-y-1">
           <label htmlFor={searchId} className="block text-sm text-fg-muted">
+            <Icon name="search" className="mr-1.5" decorative />
             {t("search.label")}
           </label>
           <input
@@ -351,9 +354,21 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
             data-testid="map-show-networks"
           />
           <label htmlFor={networksId} className="text-sm">
+            <Icon name="network" className="mr-1.5" decorative />
             {t("showNetworks")}
           </label>
         </div>
+        {/* The only "fit view" control (the one of React Flow's control bar is switched off below). */}
+        <button
+          type="button"
+          onClick={() => {
+            void fitView();
+          }}
+          className="inline-flex items-center gap-2 rounded border border-line-strong bg-surface px-3 py-1 text-sm hover:bg-surface-muted"
+        >
+          <Icon name="fitView" decorative />
+          {t("aria.fitView")}
+        </button>
       </div>
       <p className="text-sm text-fg-muted">{t("legend")}</p>
       <div
@@ -382,7 +397,7 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
           ariaLabelConfig={ariaLabelConfig}
         >
           <Background gap={24} />
-          <Controls showInteractive={false} />
+          <Controls showInteractive={false} showFitView={false} />
           <MiniMap<MapNode> pannable zoomable nodeColor={minimapColor} />
         </ReactFlow>
       </div>

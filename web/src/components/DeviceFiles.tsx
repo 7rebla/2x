@@ -5,6 +5,7 @@ import { Link } from "react-router";
 
 import type { Document } from "../api/generated";
 import { deviceDocumentsListOptions } from "../api/generated/@tanstack/react-query.gen.ts";
+import { Icon } from "../icons/Icon.tsx";
 import { useRole } from "../session.ts";
 import { ErrorMessage } from "./ErrorMessage.tsx";
 import { documentPath } from "./files/format.ts";
@@ -87,6 +88,7 @@ function FileRow({ item }: { item: Document }): ReactElement {
     <tr data-testid="device-file" data-document-id={item.id} className="border-b border-line align-top">
       <td data-testid="file-title" className="py-2 pr-4 break-words">
         <Link to={documentPath(item.id)} className="text-accent underline hover:text-accent-strong">
+          <Icon name="document" className="mr-1" decorative />
           {item.title}
         </Link>
       </td>
@@ -99,7 +101,8 @@ function FileRow({ item }: { item: Document }): ReactElement {
         </td>
       ) : (
         <>
-          <td data-testid="file-version" className="py-2 pr-4">
+          <td data-testid="file-version" className="py-2 pr-4 whitespace-nowrap">
+            <Icon name="version" className="mr-1 text-fg-muted" decorative />
             {version.number}
           </td>
           <td data-testid="file-date" className="py-2 pr-4">

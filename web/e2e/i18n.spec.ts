@@ -20,6 +20,8 @@ test("switching to German translates the page and sets <html lang>", async ({ pa
   await expect(page.getByTestId("database-heading")).toHaveText("Database");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
 
+  // The language switch sits in the user menu of the header.
+  await page.getByTestId("user-menu-button").click();
   await page.getByLabel("Language").selectOption("de");
 
   await expect(page.getByTestId("database-heading")).toHaveText("Datenbank");

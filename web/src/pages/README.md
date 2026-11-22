@@ -24,8 +24,11 @@ Routes, the frame (`../components/Layout.tsx`) and the navigation stay as they a
 
 ## Frame and navigation
 
-- `../components/Layout.tsx` draws the header (name, navigation, language switch, user area) around every page.
-  The user area shows the signed-in user, the role, the link to the settings and "Sign out" (`../components/UserMenu.tsx`).
+- `../components/Layout.tsx` draws the header (name, navigation, user menu) around every page, always on one line:
+  every navigation entry has an icon (`../navigation.ts`, `../icons/README.md`); below 1024 px only the icons show,
+  with the text as accessible name and tooltip, and a navigation that is still too wide scrolls on its own.
+  The user menu (`../components/UserMenu.tsx`) is a button with the user name; it opens a panel with the role,
+  the link to the settings, the language switch and "Sign out". Before sign-in the language switch stands in the header.
   An account without a role sees a hint above the page.
 - `../navigation.ts` lists the navigation entries as data: path, key of the text in `nav.json` and the role
   that may see the entry (`requires`). `Layout` shows only the entries the user's role allows;

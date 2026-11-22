@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import type { Duplicate, KindEnum } from "../../api/generated";
+import { Icon } from "../../icons/Icon.tsx";
 import { reloadAfterSave } from "../../pages/structure/save.ts";
 import { ErrorMessage } from "../ErrorMessage.tsx";
 import { devicePath, documentPath, formatDateTime, formatSize } from "./format.ts";
@@ -186,14 +187,20 @@ function OutcomeMessage({
     case "uploaded":
       return (
         <div role="status" data-testid="upload-success" className="space-y-1 rounded border border-success-line bg-success-soft p-3 text-success">
-          <p>{t("upload.uploaded", { number: outcome.result.version.number })}</p>
+          <p>
+            <Icon name="success" className="mr-2" decorative />
+            {t("upload.uploaded", { number: outcome.result.version.number })}
+          </p>
           {outcome.result.duplicates.length > 0 ? <DuplicateList duplicates={outcome.result.duplicates} /> : null}
         </div>
       );
     case "sameAsLatest":
       return (
         <div role="alert" data-testid="upload-same-content" className="space-y-1 rounded border border-warning-line bg-warning-soft p-3 text-warning">
-          <p>{t("upload.sameAsLatest", { number: outcome.existing.number })}</p>
+          <p>
+            <Icon name="warning" className="mr-2" decorative />
+            {t("upload.sameAsLatest", { number: outcome.existing.number })}
+          </p>
           <p className="text-sm">
             {t("upload.sameAsLatestFrom", {
               number: outcome.existing.number,
@@ -206,6 +213,7 @@ function OutcomeMessage({
     case "tooLarge":
       return (
         <div role="alert" data-testid="upload-too-large" className="rounded border border-danger-line bg-danger-soft p-3 text-danger">
+          <Icon name="error" className="mr-2" decorative />
           {outcome.limitBytes === null
             ? t("upload.tooLargeUnknown")
             : t("upload.tooLarge", { limit: formatSize(outcome.limitBytes, i18n.resolvedLanguage) })}
@@ -222,7 +230,10 @@ function OutcomeMessage({
         "kind" in outcome.fieldErrors || (configurationDocument && "non_field_errors" in outcome.fieldErrors);
       return (
         <div role="alert" data-testid="upload-invalid" className="space-y-1 rounded border border-danger-line bg-danger-soft p-3 text-danger">
-          <p>{t("upload.invalid")}</p>
+          <p>
+            <Icon name="error" className="mr-2" decorative />
+            {t("upload.invalid")}
+          </p>
           {configuration ? <p data-testid="upload-configuration-rejected">{t("upload.configurationRejected")}</p> : null}
           {otherErrors.length > 0 ? (
             <ul className="list-disc pl-5 text-sm" aria-label={t("upload.otherErrors")}>
@@ -274,7 +285,12 @@ function UploadShell({
       <div key={state.attempt} className="space-y-3">
         {children}
       </div>
-      <button type="submit" disabled={pending} className="rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong disabled:opacity-50">
+      <button
+        type="submit"
+        disabled={pending}
+        className="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong disabled:opacity-50"
+      >
+        <Icon name="upload" size={20} decorative />
         {pending ? t("upload.submitting") : t("upload.submit")}
       </button>
     </form>

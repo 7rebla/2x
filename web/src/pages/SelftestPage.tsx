@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { DatabaseCheck, WorkerCheck } from "../api/generated";
 import { loadSelftest, type SelftestOutcome } from "../api/selftest.ts";
 import { AnimatedHeading, LoadingText } from "../components/TextMotion.tsx";
+import { Icon } from "../icons/Icon.tsx";
 
 type PageState = { kind: "loading" } | SelftestOutcome;
 
@@ -44,8 +45,9 @@ export function SelftestPage(): ReactElement {
           type="button"
           onClick={recheck}
           disabled={loading}
-          className="rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong disabled:opacity-50"
         >
+          <Icon name="retry" size={20} decorative />
           {loading ? t("checking") : t("recheck")}
         </button>
       </div>
@@ -61,6 +63,7 @@ function SelftestBody({ state }: { state: PageState }): ReactElement {
     case "loading":
       return (
         <p role="status" data-testid="selftest-loading">
+          <Icon name="loading" className="mr-2 animate-spin text-fg-muted" decorative />
           <LoadingText text={t("checking")} />
         </p>
       );
@@ -95,6 +98,7 @@ function ApiError({ message }: { message: string }): ReactElement {
       data-testid="selftest-error"
       className="rounded border border-danger-line bg-danger-soft p-4 text-danger"
     >
+      <Icon name="error" className="mr-2" decorative />
       {message}
     </p>
   );
@@ -154,7 +158,9 @@ function Card({
     >
       <h3 className="flex items-center justify-between font-semibold">
         <span data-testid={`${testId}-heading`}>{heading}</span>
-        <span data-testid={`${testId}-status`} className={ok ? "text-success" : "text-danger"}>
+        {/* Status as icon and text, never by colour alone. */}
+        <span data-testid={`${testId}-status`} className={`inline-flex items-center gap-1.5 ${ok ? "text-success" : "text-danger"}`}>
+          <Icon name={ok ? "success" : "error"} decorative />
           {ok ? t("statusOk") : t("statusFailed")}
         </span>
       </h3>
