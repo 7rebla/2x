@@ -13,6 +13,7 @@ import {
   Controls,
   MiniMap,
   type NodeMouseHandler,
+  Panel,
   ReactFlow,
   ReactFlowProvider,
   useNodesState,
@@ -22,11 +23,14 @@ import {
   type FocusEvent,
   type KeyboardEvent,
   type ReactElement,
+  type RefObject,
   useCallback,
   useDeferredValue,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -146,6 +150,77 @@ function minimapColor(node: MapNode): string {
   return MINIMAP_COLORS[node.type];
 }
 
+/**
+ * Zoom limits of "fit view" (on opening and with the button, work order 080):
+ * never smaller than 0.6, so the 12 px texts of the nodes stay readable (about
+ * 7 px) instead of shrinking to 5 px on a large structure; the rest of the map
+ * is reached by panning, the overview or zooming out by hand. Never larger
+ * than 1.25, so a small structure does not fill the window with two nodes.
+ */
+const FIT_VIEW_OPTIONS = { minZoom: 0.6, maxZoom: 1.25 } as const;
+
+/** Space kept below the map: the bottom padding of the page content (`py-8` of `main`). */
+const MAP_BOTTOM_GAP_PX = 32;
+
+/**
+ * Height that lets the element reach down to the bottom of the window, from
+ * where it stands in the page (scrolled to the top). Measured again when the
+ * window or anything in the page changes its size; `null` before the first
+ * measurement. A least height comes from the element's own class.
+ */
+function useRestHeight(ref: RefObject<HTMLElement | null>): number | null {
+  const [height, setHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (element === null) {
+      return undefined;
+    }
+    const measure = (): void => {
+      const top = element.getBoundingClientRect().top + window.scrollY;
+      setHeight(Math.max(0, Math.floor(window.innerHeight - top - MAP_BOTTOM_GAP_PX)));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    // The header and the controls above the map change their height with fonts, language and width.
+    const observer = new ResizeObserver(measure);
+    observer.observe(document.body);
+    return () => {
+      window.removeEventListener("resize", measure);
+      observer.disconnect();
+    };
+  }, [ref]);
+  return height;
+}
+
+/** Legend in the top corner of the map: what the dashed line means. */
+function MapLegend(): ReactElement {
+  const { t } = useTranslation("map");
+  return (
+    <Panel
+      position="top-right"
+      data-testid="map-legend"
+      aria-label={t("legend.label")}
+      role="note"
+      className="max-w-60 rounded border border-line bg-surface/90 px-3 py-2 text-[13px] text-fg-muted shadow-sm"
+    >
+      <p className="flex items-start gap-2 text-fg">
+        {/* The same dash as the network lines (6 4). */}
+        <svg aria-hidden="true" width="28" height="10" viewBox="0 0 28 10" className="mt-1.5 shrink-0">
+          <line x1="0" y1="5" x2="28" y2="5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="6 4" />
+        </svg>
+        <span>
+          <span className="sr-only">{t("legend.dashed")} </span>
+          {t("legend.inNetwork")}
+        </span>
+      </p>
+      {/* Below 640 px the details are for screen readers only, so the legend leaves the narrow map free. */}
+      <p data-testid="map-legend-detail" className="mt-1 max-sm:sr-only">
+        {t("legend.detail")}
+      </p>
+    </Panel>
+  );
+}
+
 function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
   const { t } = useTranslation(["map", "assets"]);
   const navigate = useNavigate();
@@ -159,6 +234,8 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
   const [focusedId, setFocusedId] = useState<string | null>(null);
   // React Flow's own colours (controls, minimap) follow the shown colour mode.
   const { theme } = useDisplay();
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const restHeight = useRestHeight(canvasRef);
 
   const deviceIdByNode = useMemo(
     () =>
@@ -375,20 +452,22 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
           type="button"
           icon="fitView"
           onClick={() => {
-            void fitView();
+            void fitView(FIT_VIEW_OPTIONS);
           }}
         >
           {t("aria.fitView")}
         </Button>
       </div>
-      <p className="text-sm text-fg-muted">{t("legend")}</p>
+      {/* The whole width of the page grid and the rest of the window's height (70vh until measured). */}
       <div
+        ref={canvasRef}
         role="region"
         aria-label={t("label")}
         data-testid="map-canvas"
         onKeyDown={onKeyDown}
         onFocus={onFocus}
         onBlur={onBlur}
+        style={restHeight === null ? undefined : { height: `${String(restHeight)}px` }}
         className="twox-map h-[70vh] min-h-[28rem] w-full overflow-hidden rounded border border-line bg-surface"
       >
         <ReactFlow
@@ -398,6 +477,7 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
           onNodesChange={onNodesChange}
           onNodeClick={onNodeClick}
           fitView
+          fitViewOptions={FIT_VIEW_OPTIONS}
           minZoom={0.05}
           maxZoom={2}
           nodesConnectable={false}
@@ -410,6 +490,7 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
           <Background gap={24} />
           <Controls showInteractive={false} showFitView={false} />
           <MiniMap<MapNode> pannable zoomable nodeColor={minimapColor} />
+          <MapLegend />
         </ReactFlow>
       </div>
     </div>

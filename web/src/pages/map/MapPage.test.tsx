@@ -149,7 +149,42 @@ describe("map page", () => {
     expect(screen.getByRole("button", { name: "Fit view" }).querySelector("svg")?.getAttribute("data-icon")).toBe("fitView");
     expect(screen.getByRole("button", { name: "Zoom in" })).toBeDefined();
     expect(screen.getByTestId("map-list-link").getAttribute("href")).toBe("/");
-    expect(screen.getByText(/Dashed line: the device's address lies in this network/)).toBeDefined();
+    // The legend stands in a corner of the map (work order 080), no longer as a paragraph above it.
+    const legend = within(canvas).getByRole("note", { name: "Legend" });
+    expect(legend).toBe(within(canvas).getByTestId("map-legend"));
+    expect(legend.textContent).toBe(
+      "Dashed line: the device's address lies in this networkIPv4 by /24, IPv6 by /64. No other connections are drawn.",
+    );
+    expect(legend.classList.contains("top")).toBe(true);
+    expect(legend.classList.contains("right")).toBe(true);
+    expect(legend.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    expect(legend.querySelector("line")?.getAttribute("stroke-dasharray")).toBe("6 4");
+    // On a phone only the line and its meaning show; the details stay for screen readers.
+    expect(within(legend).getByTestId("map-legend-detail").classList.contains("max-sm:sr-only")).toBe(true);
+  });
+
+  it("fills the rest of the window's height below the controls", async () => {
+    vi.spyOn(window, "innerHeight", "get").mockReturnValue(900);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      // Only the map is measured; it starts 300 px below the top of the page.
+      const top = this.dataset.testid === "map-canvas" ? 300 : 0;
+      return DOMRect.fromRect({ x: 0, y: top, width: 0, height: 0 });
+    });
+    fakeApi(reader, fakeStructureApi().handler);
+    renderApp("/map");
+    const canvas = await openMap();
+
+    // 900 px window - 300 px above the map - 32 px padding below it.
+    await waitFor(() => {
+      expect(canvas.style.height).toBe("568px");
+    });
+    expect(canvas.className.split(/\s+/)).toEqual(expect.arrayContaining(["w-full", "min-h-[28rem]"]));
+
+    vi.spyOn(window, "innerHeight", "get").mockReturnValue(700);
+    act(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+    expect(canvas.style.height).toBe("368px");
   });
 
   it("is in the navigation for the role read", async () => {
@@ -303,5 +338,8 @@ describe("map page", () => {
     expect(within(deviceNode(/^Gerät Test controller/)).getByTestId("map-device-class").getAttribute("title")).toBe("SPS");
     expect(screen.getByTestId("map-network").textContent).toBe("Netz192.0.2.0/24");
     expect(screen.getByTestId("map-list-link").textContent).toBe("Struktur als Liste ansehen");
+    expect(screen.getByRole("note", { name: "Legende" }).textContent).toBe(
+      "Gestrichelte Linie: Die Adresse des Geräts liegt in diesem NetzIPv4 nach /24, IPv6 nach /64. Andere Verbindungen werden nicht gezeichnet.",
+    );
   });
 });
