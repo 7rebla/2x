@@ -396,6 +396,10 @@ export type IngestJob = {
      * User name of the user who started the job; null for the system, and always null for the role read.
      */
     readonly requested_by: string | null;
+    /**
+     * Whether this is the newest job of its version (the job in the field ingest of the version); false for an older attempt.
+     */
+    readonly is_latest: boolean;
 };
 
 /**
@@ -1323,6 +1327,10 @@ export type IngestJobsListData = {
          * Only jobs of the document with this id.
          */
         document?: number;
+        /**
+         * Only the newest job of each version (is_latest); the other filters apply to these. Default false: every attempt.
+         */
+        latest?: boolean;
         /**
          * A page number within the paginated result set.
          */

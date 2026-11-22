@@ -646,6 +646,13 @@ paths:
         schema:
           type: integer
         description: Only jobs of the document with this id.
+      - in: query
+        name: latest
+        schema:
+          type: boolean
+          default: false
+        description: 'Only the newest job of each version (is_latest); the other filters
+          apply to these. Default false: every attempt.'
       - name: page
         required: false
         in: query
@@ -1761,6 +1768,11 @@ components:
           readOnly: true
           description: User name of the user who started the job; null for the system,
             and always null for the role read.
+        is_latest:
+          type: boolean
+          readOnly: true
+          description: Whether this is the newest job of its version (the job in the
+            field ingest of the version); false for an older attempt.
       required:
       - created_at
       - device
@@ -1769,6 +1781,7 @@ components:
       - error_detail
       - finished_at
       - id
+      - is_latest
       - page_count
       - partly_converted
       - requested_by

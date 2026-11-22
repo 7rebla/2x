@@ -106,6 +106,7 @@ test("the navigation leads to the ingest overview, which lists the open jobs by 
   const answer = await list;
   expect(answer.status()).toBe(200);
   expect(new URL(answer.url()).searchParams.getAll("status")).toEqual(["failed", "running", "queued"]);
+  expect(new URL(answer.url()).searchParams.get("latest")).toBe("true");
   await expect(page.getByTestId("ingest-filter-status")).toHaveValue("open");
   await expect(page.getByTestId("ingest-page-status")).toHaveText(/^Page 1 of \d+$/);
 
@@ -165,7 +166,7 @@ test("an uploaded plain-text file appears under All as skipped, with its device 
   expect(consoleErrors, "errors in the browser console").toEqual([]);
 });
 
-test("a manager starts the ingestion again from the overview; the older attempt is marked", async ({ page }) => {
+test("a manager starts the ingestion again from the overview; the older attempt shows with the switch", async ({ page }) => {
   const consoleErrors = collectConsoleErrors(page);
   const device = await newDevice(page, 56);
   await uploadText(page, device.id);
@@ -173,22 +174,109 @@ test("a manager starts the ingestion again from the overview; the older attempt 
   const rows = page.getByTestId("ingest-job");
   await expect(rows).toHaveCount(1);
   await expect(rows.getByTestId("ingest-status")).toHaveAttribute("data-status", "skipped");
+  const firstJob = await rows.getAttribute("data-job");
 
   const answer = page.waitForResponse(
     (received) => received.request().method() === "POST" && /\/api\/v1\/document-versions\/\d+\/ingest\/$/.test(received.url()),
   );
   await rows.getByRole("button", { name: "Ingest version 1 again" }).click();
-  expect((await answer).status()).toBe(202);
+  const started = await answer;
+  expect(started.status()).toBe(202);
+  const newJob = String(((await started.json()) as { id: number }).id);
 
-  // The real new job is listed on top; the format check skips it again (the
-  // page polls while it is queued).
+  // By default only the newest job of the version is listed: the real new
+  // job, which the format check skips again (the page polls while it is queued).
+  await expect(rows).toHaveCount(1);
+  await expect(rows).toHaveAttribute("data-job", newJob);
+  await expect(rows.getByTestId("ingest-status")).toHaveAttribute("data-status", "skipped");
+  await expect(rows.getByRole("button", { name: "Ingest version 1 again" })).toBeVisible();
+
+  // The switch lists the older attempt as well, marked and without a button.
+  // (A click, not check(): the box follows the address, which the router
+  // updates a moment after the click.)
+  await page.getByLabel("Also show older attempts").click();
+  await expect(page.getByTestId("ingest-filter-older")).toBeChecked();
+  await expect(page).toHaveURL(new RegExp(`/ingest\\?status=all&device=${String(device.id)}&older=1$`));
   await expect(rows).toHaveCount(2);
-  await expect(rows.first().getByTestId("ingest-status")).toHaveAttribute("data-status", "skipped");
-  await expect(rows.nth(1).getByTestId("ingest-superseded")).toHaveText(
-    "Older attempt: a newer job of this version is listed above.",
-  );
+  await expect(rows.first()).toHaveAttribute("data-job", newJob);
+  await expect(rows.nth(1)).toHaveAttribute("data-job", firstJob ?? "");
+  await expect(rows.nth(1).getByTestId("ingest-superseded")).toHaveText("Older attempt: this version has a newer job.");
   await expect(rows.nth(1).getByTestId("ingest-retry")).toHaveCount(0);
-  await expect(rows.first().getByRole("button", { name: "Ingest version 1 again" })).toBeVisible();
+  await expect(rows.first().getByTestId("ingest-superseded")).toHaveCount(0);
+
+  expect(consoleErrors, "errors in the browser console").toEqual([]);
+});
+
+test("the switch for older attempts asks the API for every attempt (answers of the test)", async ({ page }) => {
+  const consoleErrors = collectConsoleErrors(page);
+  const requests: URLSearchParams[] = [];
+  const device = { id: 990_001, key: "e2e-route-device", name: "Route test device" };
+  const version = { id: 990_011, number: 2, original_filename: "e2e-route-manual.pdf" };
+  const base = {
+    step: "convert",
+    partly_converted: false,
+    section_count: null,
+    page_count: null,
+    document: { id: 990_021, title: "Route test manual" },
+    version,
+    device,
+    requested_by: null,
+  };
+  const newer = {
+    ...base,
+    id: 990_102,
+    status: "done",
+    step: "sections",
+    error_code: "",
+    error_detail: "",
+    section_count: 4,
+    page_count: 2,
+    created_at: "2026-11-01T09:00:00Z",
+    finished_at: "2026-11-01T09:01:00Z",
+    is_latest: true,
+  };
+  const older = {
+    ...base,
+    id: 990_101,
+    status: "failed",
+    error_code: "docling_unavailable",
+    error_detail: "converter not reachable (test answer)",
+    created_at: "2026-11-01T08:00:00Z",
+    finished_at: "2026-11-01T08:05:00Z",
+    is_latest: false,
+  };
+  await page.route("**/api/v1/ingest-jobs/**", async (route) => {
+    const query = new URL(route.request().url()).searchParams;
+    requests.push(query);
+    // Like the API: with latest=true only the newest job, then the status filter.
+    const jobs = (query.get("latest") === "true" ? [newer] : [newer, older]).filter(
+      (job) => query.getAll("status").length === 0 || query.getAll("status").includes(job.status),
+    );
+    await route.fulfill({ json: { count: jobs.length, next: null, previous: null, results: jobs } });
+  });
+
+  await page.goto("/ingest");
+  // The failed attempt is followed by an ingested one: nothing is open.
+  await expect(page.getByTestId("ingest-empty")).toHaveText("Nothing open: no job has failed, none is running or queued.");
+  expect(requests.at(-1)?.get("latest")).toBe("true");
+  await expect(page.getByTestId("ingest-filter-older")).not.toBeChecked();
+
+  await page.getByLabel("Also show older attempts").click();
+  await expect(page.getByTestId("ingest-filter-older")).toBeChecked();
+  await expect(page).toHaveURL(/\/ingest\?older=1$/);
+  const rows = page.getByTestId("ingest-job");
+  await expect(rows).toHaveCount(1);
+  await expect(rows).toHaveAttribute("data-job", String(older.id));
+  await expect(rows.getByTestId("ingest-superseded")).toHaveText("Older attempt: this version has a newer job.");
+  await expect(rows.getByTestId("ingest-retry")).toHaveCount(0);
+  expect(requests.at(-1)?.get("latest")).toBeNull();
+  expect(requests.at(-1)?.getAll("status")).toEqual(["failed", "running", "queued"]);
+
+  // Back switches older attempts off again.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/ingest$/);
+  await expect(page.getByTestId("ingest-empty")).toBeVisible();
+  await expect(page.getByTestId("ingest-filter-older")).not.toBeChecked();
 
   expect(consoleErrors, "errors in the browser console").toEqual([]);
 });

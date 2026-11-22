@@ -47,6 +47,7 @@ JOB_FIELDS = {
     "version",
     "device",
     "requested_by",
+    "is_latest",
 }
 
 #: A cleaned technical text as the ingest flow writes it (046).
@@ -404,6 +405,8 @@ def test_filter_by_device_document_and_version(two_devices: dict[str, IngestJob]
         ("?device=abc", "device"),
         ("?document=0", "document"),
         ("?version=-1", "version"),
+        ("?latest=maybe", "latest"),
+        ("?latest=", "latest"),
     ],
 )
 def test_invalid_filter_is_400(query: str, field: str) -> None:
@@ -411,6 +414,184 @@ def test_invalid_filter_is_400(query: str, field: str) -> None:
 
     assert response.status_code == 400
     assert field in response.json()
+
+
+# --- newest job of each version: is_latest and ?latest=true (work order 064) --------
+
+
+@pytest.fixture
+def attempts() -> dict[str, IngestJob]:
+    """Several attempts per version, on two devices.
+
+    - ``a``: failed, then done (the done one is the newest);
+    - ``b``: done, then a failed embedding job (048, ``embed_sections``), newest;
+    - ``c``: one failed attempt only;
+    - ``d`` (other device): skipped, then failed, both at the same moment, so
+      the higher id decides like in the field ``ingest``.
+    """
+    a = make_version(device="dps-plc")
+    b = make_version(b"%PDF-1.7 b\n", document=a.document, number=2)
+    c = make_version(b"%PDF-1.7 c\n", device="vgr-plc")
+    d = make_version(b"%PDF-1.7 d\n", device="hbw-plc")
+    jobs = {
+        "a_failed": failed_job(a),
+        "a_done": make_job(a, status=IngestStatus.DONE, step=IngestStep.SECTIONS),
+        "b_done": make_job(b, status=IngestStatus.DONE, step=IngestStep.SECTIONS),
+        "b_embed_failed": make_job(
+            b,
+            status=IngestStatus.FAILED,
+            step=IngestStep.EMBED,
+            error_code=IngestErrorCode.EMBEDDING_UNAVAILABLE,
+        ),
+        "c_failed": failed_job(c),
+        "d_skipped": make_job(d, status=IngestStatus.SKIPPED),
+        "d_failed": failed_job(d),
+    }
+    same_moment = jobs["d_skipped"].created_at
+    IngestJob.objects.filter(pk=jobs["d_failed"].pk).update(created_at=same_moment)
+    return jobs
+
+
+def newest_ids(jobs: dict[str, IngestJob]) -> set[int]:
+    return {jobs[name].pk for name in ("a_done", "b_embed_failed", "c_failed", "d_failed")}
+
+
+@pytest.mark.parametrize("kind", ["read", "manage"])
+def test_every_row_says_whether_it_is_the_newest_job_of_its_version(
+    kind: str, attempts: dict[str, IngestJob]
+) -> None:
+    items = results(client_for(kind))
+
+    assert len(items) == len(attempts)
+    assert {item["id"] for item in items if item["is_latest"]} == newest_ids(attempts)
+    assert all(isinstance(item["is_latest"], bool) for item in items)
+
+
+def test_is_latest_follows_the_rule_of_the_field_ingest(attempts: dict[str, IngestJob]) -> None:
+    # The field ingest of the files API names the same job as newest.
+    client = client_for("read")
+    from_files_api: set[int] = set()
+    for document_id in {job.document_version.document_id for job in attempts.values()}:
+        detail = client.get(f"/api/v1/documents/{document_id}/").json()
+        from_files_api |= {version["ingest"]["id"] for version in detail["versions"]}
+
+    listed = {item["id"] for item in results(client, "?latest=true")}
+
+    assert listed == from_files_api == newest_ids(attempts)
+
+
+def test_latest_lists_only_the_newest_job_of_each_version(attempts: dict[str, IngestJob]) -> None:
+    client = client_for("read")
+
+    newest = results(client, "?latest=true")
+    every = results(client, "?latest=false")
+
+    assert ids(newest) == newest_ids(attempts)
+    assert all(item["is_latest"] for item in newest)
+    assert ids(every) == ids(results(client)) == {job.pk for job in attempts.values()}
+    # Still newest first.
+    order = list(IngestJob.objects.order_by("-created_at", "-pk").values_list("pk", flat=True))
+    assert [item["id"] for item in newest] == [pk for pk in order if pk in newest_ids(attempts)]
+
+
+def test_other_filters_apply_to_the_newest_jobs(attempts: dict[str, IngestJob]) -> None:
+    client = client_for("read")
+    first_device = attempts["a_failed"].document_version.document.device_id
+    other_device = attempts["d_failed"].document_version.document.device_id
+    open_query = "&status=failed&status=running&status=queued"
+
+    # The failed attempt of a is followed by a done one: not open any more.
+    assert ids(results(client, "?latest=true" + open_query)) == {
+        attempts["b_embed_failed"].pk,
+        attempts["c_failed"].pk,
+        attempts["d_failed"].pk,
+    }
+    assert ids(results(client, "?latest=false" + open_query)) == {
+        attempts["a_failed"].pk,
+        attempts["b_embed_failed"].pk,
+        attempts["c_failed"].pk,
+        attempts["d_failed"].pk,
+    }
+    assert ids(results(client, f"?latest=true&device={first_device}")) == {
+        attempts["a_done"].pk,
+        attempts["b_embed_failed"].pk,
+    }
+    assert ids(results(client, f"?latest=true&device={first_device}&status=failed")) == {
+        attempts["b_embed_failed"].pk
+    }
+    assert results(client, f"?latest=true&device={other_device}&status=skipped") == []
+    assert ids(results(client, f"?device={other_device}&status=skipped")) == {
+        attempts["d_skipped"].pk
+    }
+    version = attempts["a_failed"].document_version_id
+    assert ids(results(client, f"?latest=1&version={version}")) == {attempts["a_done"].pk}
+    document = attempts["a_failed"].document_version.document_id
+    assert ids(results(client, f"?latest=true&document={document}&status=done")) == {
+        attempts["a_done"].pk
+    }
+
+
+def test_a_new_attempt_becomes_the_newest_job(
+    attempts: dict[str, IngestJob], ingest_messages: IngestMessages
+) -> None:
+    client = client_for("manage")
+    version = attempts["c_failed"].document_version
+
+    started = client.post(ingest_url(version.pk))
+    items = {item["id"]: item for item in results(client)}
+
+    assert started.status_code == 202
+    assert started.json()["is_latest"] is True
+    assert items[started.json()["id"]]["is_latest"] is True
+    assert items[attempts["c_failed"].pk]["is_latest"] is False
+    assert attempts["c_failed"].pk not in ids(results(client, "?latest=true"))
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected"),
+    [("anonymous", 403), ("no_role", 403), ("read", 200), ("manage", 200), ("superuser", 200)],
+)
+def test_latest_needs_a_role_like_the_list(kind: str, expected: int) -> None:
+    make_job(make_version())
+
+    assert client_for(kind).get(JOBS_URL + "?latest=true").status_code == expected
+
+
+@pytest.mark.parametrize(("kind", "shown"), [("manage", True), ("read", False)])
+def test_latest_keeps_requested_by_for_manage_only(kind: str, shown: bool) -> None:
+    starter = User.objects.create_user("ingest-starter")
+    job = failed_job(make_version(), starter)
+
+    [item] = results(client_for(kind), "?latest=true")
+
+    assert item["id"] == job.pk
+    assert item["requested_by"] == ("ingest-starter" if shown else None)
+
+
+def test_latest_needs_no_further_query() -> None:
+    client = client_for("manage")
+    manager = User.objects.get(username="manage")
+
+    def count_queries(query: str) -> int:
+        with CaptureQueriesContext(connection) as queries:
+            response = client.get(JOBS_URL + query)
+        assert response.status_code == 200
+        assert response.json()["results"]
+        return len(queries)
+
+    first = make_version(device="dps-plc")
+    failed_job(first, manager)
+    few = (count_queries(""), count_queries("?latest=true"))
+    for number in range(10):
+        version = make_version(f"other {number}".encode(), device=f"device-{number}")
+        failed_job(version, manager)
+        make_job(version, status=IngestStatus.DONE)
+    many = (count_queries(""), count_queries("?latest=true"))
+
+    # One query for the page, one for the count; the newest jobs are a
+    # subquery of both, not a query of their own.
+    assert few == many
+    assert few[0] == few[1]
 
 
 # --- requested_by and error_detail per role ----------------------------------------
@@ -502,7 +683,10 @@ def test_schema_lists_the_ingest_endpoints_and_fields() -> None:
     assert set(start["responses"]) == {"202", "400", "403", "404", "409"}
     assert set(listing["responses"]) >= {"200", "400", "403"}
     parameters = {parameter["name"]: parameter for parameter in listing["parameters"]}
-    assert set(parameters) == {"status", "device", "document", "version", "page"}
+    assert set(parameters) == {"status", "device", "document", "version", "latest", "page"}
+    assert parameters["latest"]["schema"] == {"type": "boolean", "default": False}
+    assert components["IngestJob"]["properties"]["is_latest"]["type"] == "boolean"
+    assert "is_latest" in components["IngestJob"]["required"]
     assert parameters["status"]["schema"]["type"] == "array"
     assert set(parameters["status"]["schema"]["items"]["enum"]) == set(IngestStatus.values)
     assert set(components["IngestJob"]["properties"]) == JOB_FIELDS
@@ -512,6 +696,7 @@ def test_schema_lists_the_ingest_endpoints_and_fields() -> None:
         "version",
         "device",
         "requested_by",
+        "is_latest",
     }
     assert set(components["IngestStatusEnum"]["enum"]) == set(IngestStatus.values)
     assert set(components["IngestJobDevice"]["properties"]) == {"id", "key", "name"}

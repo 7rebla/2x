@@ -50,8 +50,19 @@ function job(id: number, status: IngestStatusEnum, more: Partial<IngestJob> = {}
     version: { id: 71, number: 2, original_filename: "test-manual-v2.pdf" },
     device: DEVICES[1000],
     requested_by: "test-manager",
+    // The fake API sets it from the other jobs of the version (isNewest).
+    is_latest: true,
     ...more,
   };
+}
+
+/** Whether `item` is the newest job of its version among `jobs`: by creation, then id, like the API. */
+function isNewest(item: IngestJob, jobs: readonly IngestJob[]): boolean {
+  return !jobs.some(
+    (other) =>
+      other.version.id === item.version.id &&
+      (other.created_at > item.created_at || (other.created_at === item.created_at && other.id > item.id)),
+  );
 }
 
 /** Five jobs, one per state, on different files; newest first like the API. */
@@ -103,9 +114,10 @@ interface FakeIngestApi {
 }
 
 /**
- * GET /api/v1/ingest-jobs/ with the filters status (repeatable) and device and
- * 50 jobs per page; POST …/ingest/ adds a queued job (202). Everything else
- * goes to the structure API (device list of the filter).
+ * GET /api/v1/ingest-jobs/ with the filters latest, status (repeatable) and
+ * device, is_latest on every job and 50 jobs per page; POST …/ingest/ adds a
+ * queued job (202). Everything else goes to the structure API (device list of
+ * the filter).
  */
 function fakeIngestApi(jobs: IngestJob[] = sampleJobs(), listAnswer?: () => Response): FakeIngestApi {
   const lists: URLSearchParams[] = [];
@@ -120,11 +132,16 @@ function fakeIngestApi(jobs: IngestJob[] = sampleJobs(), listAnswer?: () => Resp
       }
       const statuses = url.searchParams.getAll("status");
       const device = url.searchParams.get("device");
-      const matching = jobs.filter(
-        (item) =>
-          (statuses.length === 0 || statuses.includes(item.status)) &&
-          (device === null || String(item.device.id) === device),
-      );
+      const latest = url.searchParams.get("latest") === "true";
+      // The newest job is chosen among all jobs of a version, before the other filters.
+      const matching = jobs
+        .map((item) => ({ ...item, is_latest: isNewest(item, jobs) }))
+        .filter(
+          (item) =>
+            (!latest || item.is_latest) &&
+            (statuses.length === 0 || statuses.includes(item.status)) &&
+            (device === null || String(item.device.id) === device),
+        );
       const page = Number(url.searchParams.get("page") ?? "1");
       const results = matching.slice((page - 1) * 50, page * 50);
       return jsonResponse({
@@ -180,18 +197,30 @@ function lastList(api: FakeIngestApi): URLSearchParams {
 }
 
 describe("address", () => {
-  it("reads the status and the device, and falls back to the open jobs and all devices", () => {
-    expect(readIngestAddress(new URLSearchParams(""))).toEqual({ status: "open", device: null });
-    expect(readIngestAddress(new URLSearchParams("status=all&device=1000"))).toEqual({ status: "all", device: 1000 });
-    expect(readIngestAddress(new URLSearchParams("status=skipped"))).toEqual({ status: "skipped", device: null });
-    expect(readIngestAddress(new URLSearchParams("status=broken&device=abc"))).toEqual({ status: "open", device: null });
-    expect(readIngestAddress(new URLSearchParams("device=0"))).toEqual({ status: "open", device: null });
+  it("reads the status, the device and the switch, and falls back to the open, newest jobs of all devices", () => {
+    expect(readIngestAddress(new URLSearchParams(""))).toEqual({ status: "open", device: null, older: false });
+    expect(readIngestAddress(new URLSearchParams("status=all&device=1000"))).toEqual({
+      status: "all",
+      device: 1000,
+      older: false,
+    });
+    expect(readIngestAddress(new URLSearchParams("status=skipped"))).toEqual({ status: "skipped", device: null, older: false });
+    expect(readIngestAddress(new URLSearchParams("status=broken&device=abc"))).toEqual({
+      status: "open",
+      device: null,
+      older: false,
+    });
+    expect(readIngestAddress(new URLSearchParams("device=0"))).toEqual({ status: "open", device: null, older: false });
+    expect(readIngestAddress(new URLSearchParams("older=1"))).toEqual({ status: "open", device: null, older: true });
+    expect(readIngestAddress(new URLSearchParams("older=yes")).older).toBe(false);
+    expect(readIngestAddress(new URLSearchParams("older=0")).older).toBe(false);
   });
 
   it("writes only what differs from the defaults", () => {
-    expect(ingestAddressParams({ status: "open", device: null }).toString()).toBe("");
-    expect(ingestAddressParams({ status: "failed", device: 1001 }).toString()).toBe("status=failed&device=1001");
-    expect(ingestAddressParams({ status: "all", device: null }).toString()).toBe("status=all");
+    expect(ingestAddressParams({ status: "open", device: null, older: false }).toString()).toBe("");
+    expect(ingestAddressParams({ status: "failed", device: 1001, older: false }).toString()).toBe("status=failed&device=1001");
+    expect(ingestAddressParams({ status: "all", device: null, older: false }).toString()).toBe("status=all");
+    expect(ingestAddressParams({ status: "all", device: 1000, older: true }).toString()).toBe("status=all&device=1000&older=1");
   });
 
   it("asks the API for failed, running and queued jobs by default, for one state, or for all", () => {
@@ -210,6 +239,10 @@ describe("filter", () => {
     expect(lastList(api).getAll("status")).toEqual(["failed", "running", "queued"]);
     expect(lastList(api).get("device")).toBeNull();
     expect(lastList(api).get("page")).toBeNull();
+    // Only the newest job of each version by default (work order 064).
+    expect(lastList(api).get("latest")).toBe("true");
+    expect(screen.getByTestId<HTMLInputElement>("ingest-filter-older").checked).toBe(false);
+    expect(screen.getByTestId("ingest-filter").textContent).toContain("Also show older attempts");
     expect(screen.getByTestId<HTMLSelectElement>("ingest-filter-status").value).toBe("open");
     expect(screen.getByTestId<HTMLSelectElement>("ingest-filter-device").value).toBe("");
     expect(screen.getAllByTestId("ingest-job").map((item) => item.dataset.status)).toEqual(["failed", "running", "queued"]);
@@ -245,6 +278,7 @@ describe("filter", () => {
 
     expect(await rows()).toHaveLength(5);
     expect(lastList(api).getAll("status")).toEqual([]);
+    expect(lastList(api).get("latest")).toBe("true");
     expect(within(row(12)).getByTestId("ingest-status").textContent).toBe("Ingested");
     expect(within(row(12)).getByTestId("ingest-counts").textContent).toBe("60 pages, 140 sections");
     expect(within(row(11)).getByTestId("ingest-status").textContent).toBe("Skipped");
@@ -305,6 +339,94 @@ describe("filter", () => {
         "Device no. 4242",
       );
     });
+  });
+});
+
+describe("older attempts", () => {
+  /** The sample jobs plus a later, ingested attempt (17) of version 71, whose failed attempt is job 15. */
+  function withRetry(): IngestJob[] {
+    return [
+      job(17, "done", { step: "sections", page_count: 3, section_count: 5, finished_at: "2026-11-01T08:20:00Z" }),
+      ...sampleJobs(),
+    ];
+  }
+
+  it("by default leaves out a failed attempt that a later one has ingested", async () => {
+    const { api } = await openOverview(reader, "/ingest", fakeIngestApi(withRetry()));
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("ingest-job").map((item) => item.dataset.job)).toEqual(["14", "13"]);
+    });
+    expect(lastList(api).get("latest")).toBe("true");
+    expect(screen.queryAllByTestId("ingest-superseded")).toHaveLength(0);
+  });
+
+  it("the switch goes into the address, lists every attempt and marks the older one; Back restores", async () => {
+    const { api, router } = await openOverview(manager, "/ingest", fakeIngestApi(withRetry()));
+    await rows();
+
+    fireEvent.click(screen.getByTestId("ingest-filter-older"));
+
+    await waitFor(() => {
+      expect(router.state.location.search).toBe("?older=1");
+    });
+    await waitFor(() => {
+      expect(screen.getAllByTestId("ingest-job").map((item) => item.dataset.job)).toEqual(["15", "14", "13"]);
+    });
+    expect(lastList(api).get("latest")).toBeNull();
+    expect(lastList(api).getAll("status")).toEqual(["failed", "running", "queued"]);
+    expect(screen.getByTestId<HTMLInputElement>("ingest-filter-older").checked).toBe(true);
+    expect(within(row(15)).getByTestId("ingest-superseded").textContent).toBe("Older attempt: this version has a newer job.");
+    expect(within(row(15)).queryByTestId("ingest-retry")).toBeNull();
+    expect(within(row(14)).queryByTestId("ingest-superseded")).toBeNull();
+
+    await act(() => router.navigate(-1));
+    await waitFor(() => {
+      expect(screen.getAllByTestId("ingest-job").map((item) => item.dataset.job)).toEqual(["14", "13"]);
+    });
+    expect(screen.getByTestId<HTMLInputElement>("ingest-filter-older").checked).toBe(false);
+    expect(lastList(api).get("latest")).toBe("true");
+  });
+
+  it("marks an older attempt by is_latest even when the newer job is not listed", async () => {
+    await openOverview(manager, "/ingest?status=failed&older=1", fakeIngestApi(withRetry()));
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("ingest-job").map((item) => item.dataset.job)).toEqual(["15"]);
+    });
+    expect(within(row(15)).getByTestId("ingest-superseded")).toBeDefined();
+    expect(within(row(15)).queryByTestId("ingest-retry")).toBeNull();
+  });
+
+  it("trusts is_latest from the API, not the order of the page", async () => {
+    // Two jobs of different versions; the API says the first is not the newest of its version.
+    const api = fakeIngestApi([job(31, "failed"), job(30, "failed", { version: { id: 72, number: 3, original_filename: "x.pdf" } })]);
+    const original = api.handler;
+    const handler: Handler = async (request) => {
+      const answer = await original(request);
+      if (new URL(request.url).pathname !== JOBS_PATH) {
+        return answer;
+      }
+      const body = (await answer.json()) as { results: IngestJob[] };
+      return jsonResponse({ ...body, results: body.results.map((item) => ({ ...item, is_latest: item.id !== 31 })) });
+    };
+    await openOverview(manager, "/ingest?older=1", { ...api, handler });
+    await rows();
+
+    expect(within(row(31)).getByTestId("ingest-superseded")).toBeDefined();
+    expect(within(row(30)).queryByTestId("ingest-superseded")).toBeNull();
+    expect(within(row(30)).getByTestId("ingest-retry")).toBeDefined();
+  });
+
+  it("is translated into German", async () => {
+    await changeLanguage("de");
+    await openOverview(manager, "/ingest?older=1", fakeIngestApi(withRetry()));
+    await rows();
+
+    expect(screen.getByTestId("ingest-filter").textContent).toContain("Auch ältere Versuche zeigen");
+    expect(within(row(15)).getByTestId("ingest-superseded").textContent).toBe(
+      "Älterer Versuch: Zu dieser Version gibt es einen neueren Auftrag.",
+    );
   });
 });
 
@@ -508,7 +630,7 @@ describe("roles", () => {
     }
   });
 
-  it("ingests again, lists the new job and marks the older attempt", async () => {
+  it("ingests again and lists the new job in place of the older attempt", async () => {
     const { api } = await openOverview(manager);
     await rows();
     const before = api.lists.length;
@@ -519,14 +641,30 @@ describe("roles", () => {
       expect(api.ingests).toEqual([71]);
     });
     await waitFor(() => {
-      expect(screen.getAllByTestId("ingest-job").map((item) => item.dataset.job)).toEqual(["16", "15", "14", "13"]);
+      expect(screen.getAllByTestId("ingest-job").map((item) => item.dataset.job)).toEqual(["16", "14", "13"]);
     });
     expect(api.lists.length).toBeGreaterThan(before);
     expect(within(row(16)).getByTestId("ingest-status").textContent).toBe("Queued");
     expect(within(row(16)).queryByTestId("ingest-retry")).toBeNull();
+  });
+
+  it("with older attempts shown, ingests again, lists the new job and marks the older attempt", async () => {
+    const { api } = await openOverview(manager, "/ingest?older=1");
+    await rows();
+
+    fireEvent.click(within(row(15)).getByTestId("ingest-retry"));
+
+    await waitFor(() => {
+      expect(api.ingests).toEqual([71]);
+    });
+    await waitFor(() => {
+      expect(screen.getAllByTestId("ingest-job").map((item) => item.dataset.job)).toEqual(["16", "15", "14", "13"]);
+    });
+    expect(within(row(16)).getByTestId("ingest-status").textContent).toBe("Queued");
+    expect(within(row(16)).queryByTestId("ingest-retry")).toBeNull();
     expect(within(row(15)).queryByTestId("ingest-retry")).toBeNull();
     expect(within(row(15)).getByTestId("ingest-superseded").textContent).toBe(
-      "Older attempt: a newer job of this version is listed above.",
+      "Older attempt: this version has a newer job.",
     );
   });
 });

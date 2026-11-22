@@ -3,14 +3,16 @@
 // lists what needs attention: failed, running and queued jobs. "All" adds the
 // ingested and the skipped ones.
 //
-// Status and device stand in the browser address (/ingest?status=…&device=…),
-// so a view can be linked, reloaded and reached with Back. While a listed job
-// is queued or running, the page asks again every 5 seconds; otherwise it
-// does not poll.
+// Status, device and the switch for older attempts stand in the browser
+// address (/ingest?status=…&device=…&older=1), so a view can be linked,
+// reloaded and reached with Back. While a listed job is queued or running,
+// the page asks again every 5 seconds; otherwise it does not poll.
 //
-// Every job is one attempt (E-55): after "ingest again" the older attempt of
-// the same version stays in the list. A row with a newer job of its version on
-// the same page says so and has no button.
+// Every job is one attempt (E-55). By default the page lists only the newest
+// job of each version (latest=true, work order 064), so a failed attempt that
+// a later one has ingested is not "open" any more. The switch "Also show older
+// attempts" lists every attempt; a row that is not the newest job of its
+// version (is_latest false) says so and has no button.
 //
 // Device names, file titles, file names and error_detail are data: React
 // renders them as text, they never go through the interpolation of i18next.
@@ -58,32 +60,42 @@ export interface IngestAddress {
   readonly status: StatusFilter;
   /** Id of the device, null for all devices. */
   readonly device: number | null;
+  /** Also list older attempts; false (the default) lists only the newest job of each version. */
+  readonly older: boolean;
 }
+
+/** Value of ?older= that switches older attempts on. */
+const OLDER_ON = "1";
 
 function isStatusFilter(value: string): value is StatusFilter {
   return (STATUS_FILTERS as readonly string[]).includes(value);
 }
 
 /**
- * Reads ?status= and ?device= from the address. A missing or unknown status
- * means the open jobs; a device value that cannot be an id means all devices.
+ * Reads ?status=, ?device= and ?older= from the address. A missing or unknown
+ * status means the open jobs; a device value that cannot be an id means all
+ * devices; older attempts show only with ?older=1.
  */
 export function readIngestAddress(params: URLSearchParams): IngestAddress {
   const status = params.get("status") ?? "";
   return {
     status: isStatusFilter(status) ? status : "open",
     device: parseId(params.get("device") ?? undefined),
+    older: params.get("older") === OLDER_ON,
   };
 }
 
-/** The address parameters of a view; the defaults (open jobs, all devices) are left out. */
-export function ingestAddressParams({ status, device }: IngestAddress): URLSearchParams {
+/** The address parameters of a view; the defaults (open jobs, all devices, newest jobs only) are left out. */
+export function ingestAddressParams({ status, device, older }: IngestAddress): URLSearchParams {
   const params = new URLSearchParams();
   if (status !== "open") {
     params.set("status", status);
   }
   if (device !== null) {
     params.set("device", String(device));
+  }
+  if (older) {
+    params.set("older", OLDER_ON);
   }
   return params;
 }
@@ -98,6 +110,9 @@ export function statusesFor(filter: StatusFilter): IngestStatusEnum[] | undefine
 
 function queryFor(address: IngestAddress, page: number): NonNullable<IngestJobsListData["query"]> {
   const query: NonNullable<IngestJobsListData["query"]> = {};
+  if (!address.older) {
+    query.latest = true;
+  }
   const statuses = statusesFor(address.status);
   if (statuses !== undefined) {
     query.status = statuses;
@@ -201,26 +216,22 @@ function IngestFilter({
             ))}
           </select>
         </div>
+        <label className="flex max-w-full min-w-0 items-center gap-2 py-1 text-sm">
+          <input
+            type="checkbox"
+            data-testid="ingest-filter-older"
+            className="size-4 shrink-0 accent-accent"
+            checked={address.older}
+            onChange={(event) => {
+              onChange({ ...address, older: event.target.checked });
+            }}
+          />
+          {t("filter.older")}
+        </label>
       </fieldset>
       {devices.isError ? <ErrorMessage error={devices.error} /> : null}
     </form>
   );
-}
-
-/** The newest job of every version among `jobs` (by creation, then id). */
-function newestJobs(jobs: readonly IngestJob[]): Map<number, IngestJob> {
-  const newest = new Map<number, IngestJob>();
-  for (const job of jobs) {
-    const known = newest.get(job.version.id);
-    if (
-      known === undefined ||
-      job.created_at > known.created_at ||
-      (job.created_at === known.created_at && job.id > known.id)
-    ) {
-      newest.set(job.version.id, job);
-    }
-  }
-  return newest;
 }
 
 /** One page of jobs at a time, with "previous" and "next"; a new filter starts on page 1 (key in IngestPage). */
@@ -250,7 +261,6 @@ function IngestJobs({ address }: { address: IngestAddress }): ReactElement {
   const pages = Math.max(1, Math.ceil(count / INGEST_PAGE_SIZE));
   const busy = query.isPlaceholderData;
   const polling = results.some((job) => isIngestActive(job));
-  const newest = newestJobs(results);
 
   return (
     <div data-testid="ingest-jobs" className="space-y-3" aria-busy={busy}>
@@ -291,7 +301,7 @@ function IngestJobs({ address }: { address: IngestAddress }): ReactElement {
             </thead>
             <tbody>
               {results.map((job) => (
-                <IngestJobRow key={job.id} job={job} newest={newest.get(job.version.id) ?? job} canManage={canManage} />
+                <IngestJobRow key={job.id} job={job} canManage={canManage} />
               ))}
             </tbody>
           </table>
@@ -331,18 +341,10 @@ function IngestJobs({ address }: { address: IngestAddress }): ReactElement {
   );
 }
 
-function IngestJobRow({
-  job,
-  newest,
-  canManage,
-}: {
-  job: IngestJob;
-  /** The newest job of the same version on this page (the job itself if there is none newer). */
-  newest: IngestJob;
-  canManage: boolean;
-}): ReactElement {
+function IngestJobRow({ job, canManage }: { job: IngestJob; canManage: boolean }): ReactElement {
   const { t } = useTranslation("ingest");
-  const superseded = newest.id !== job.id;
+  // The API says whether a newer job of the same version exists, on any page.
+  const superseded = !job.is_latest;
 
   return (
     <tr data-testid="ingest-job" data-job={job.id} data-status={job.status} className="border-b border-line align-top">
