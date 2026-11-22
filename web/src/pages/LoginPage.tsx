@@ -6,6 +6,7 @@ import { Navigate, useSearchParams } from "react-router";
 import { type SignInResult, signIn } from "../api/auth.ts";
 import { openServerPage } from "../browserLocation.ts";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
+import { BrandMark } from "../components/BrandMark.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { Button } from "../components/ui/Button.tsx";
 import { Input } from "../components/ui/fields.tsx";
@@ -16,10 +17,15 @@ import { usePageTitle } from "../hooks/usePageTitle.ts";
 /** Why the last sign-in did not work; "missing-input" is checked before anything is sent. */
 type Failure = Exclude<SignInResult, { kind: "signed-in" }> | { kind: "missing-input" };
 
+/** Edge of the brand mark above the sign-in card (px); larger than in the header (36 px). */
+export const CARD_BRAND_SIZE = 48;
+
 /**
  * Sign-in page (address /login). Signs in through django-allauth and then
  * continues to ?next= (a path of this application only, see safeNextPath).
- * A user who is signed in already continues at once.
+ * A user who is signed in already continues at once. The form is a centred
+ * card (`max-w-sm`) with the brand mark and the name above it (work order
+ * 086, E-65 point 7); fields and button are equally high and equally wide.
  */
 export function LoginPage(): ReactElement {
   const { t } = useTranslation("auth");
@@ -35,11 +41,21 @@ export function LoginPage(): ReactElement {
     return <Continue to={next} />;
   }
   return (
-    <section className="w-full max-w-sm space-y-4">
-      <AnimatedHeading text={t("heading")} />
-      <p className="text-fg-muted">{t("intro")}</p>
-      {session.status === "error" ? <ErrorMessage error={session.error} /> : null}
-      <LoginForm />
+    <section data-testid="login-page" className="mx-auto w-full max-w-sm space-y-6 sm:pt-8">
+      {/*
+        The brand above the card (E-65 point 7). Only the name in the header types (E-64), so this one stands
+        still. It repeats the link "2x" of the header and holds nothing focusable, so it is hidden from
+        assistive technology; otherwise "2x" would be read twice.
+      */}
+      <div data-testid="login-brand" aria-hidden="true" className="flex justify-center text-4xl font-semibold tracking-tight">
+        <BrandMark size={CARD_BRAND_SIZE} link={false} />
+      </div>
+      <div data-testid="login-card" className="space-y-4 rounded-lg border border-line bg-surface p-6 shadow-sm">
+        <AnimatedHeading text={t("heading")} />
+        <p className="text-fg-muted">{t("intro")}</p>
+        {session.status === "error" ? <ErrorMessage error={session.error} /> : null}
+        <LoginForm />
+      </div>
     </section>
   );
 }
@@ -129,7 +145,7 @@ function LoginForm(): ReactElement {
         />
       </label>
       {failure === null ? null : <SignInError failure={failure} />}
-      <Button type="submit" variant="primary" loading={pending}>
+      <Button type="submit" variant="primary" loading={pending} className="w-full">
         {pending ? t("submitting") : t("submit")}
       </Button>
     </form>
