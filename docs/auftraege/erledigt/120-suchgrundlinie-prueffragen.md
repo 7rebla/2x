@@ -1,6 +1,6 @@
 # Auftrag 120 – Suchgrundlinie für die Prüffragen
 
-Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung (Messung in „2x“ durch die Leitstelle nach dem Zusammenführen)
+Meilenstein: M3 · Freigabestufe: B · Status: erledigt (Messung in „2x“ durch die Leitstelle nach dem Zusammenführen)
 
 Voraussetzung: keine. Läuft in Welle 1 parallel zu 121, 122 und 123 (siehe „Abgrenzung“).
 
@@ -177,6 +177,29 @@ Lauf im eigenen Projekt ohne Handbücher: `D run --rm -T backend-dev python mana
    `docker compose -p 2x --env-file <.env des Projektordners> --profile dev run --rm --no-deps backend-dev python manage.py evaluate_search --probes m3 --cutoffs 5,8,10,12` und dasselbe mit `--json`.
 3. Nachher dieselbe Zählung wie in 1 (muss gleich sein).
 4. Eintragen: Tabelle Probe × k (5/8/10/12) × Modus (kombiniert, Vektor; Stichwort informativ) mit Rang, Recall@k, MRR und Kopfzeile (Modell, `TWOX_SECTION_MAX_CHARS`); für `question-6` und `question-7`/`-7b` die Zeilen „First rank per expected place“ (S. 34/36/38 bzw. 22/27); für jede Probe ohne Beleg unter den ersten 10 (kombiniert) eine vermutete Ursache; für `control-11` die Liste der ersten 10 (Rang, `section_id`, Handbuch über die Prüfsumme, Seiten). Die Ausgabe enthält keine Texte; Seite 38 der APS-Dokumentation trotzdem nicht zitieren.
+
+### Messung der Leitstelle in „2x“ (22.11.2026, nach dem Zusammenführen)
+
+Befehl wie oben, nur lesend; vorher und nachher je 5 044 Abschnitte, 156 Versionen, 226 Einlese-Aufträge (unverändert). `check_llm`: OK. KI an, bge-m3, 2 000 Zeichen.
+
+| Probe | Bester Rang (kombiniert) | in Top 10 |
+| --- | --- | --- |
+| question-1 | 1 (en S. 38; de S. 38 Rang 1, S. 18 Rang 2) | ja |
+| question-2 | 1 | ja |
+| question-3 | – | nein |
+| question-3b | – | nein |
+| question-4 | – | nein |
+| question-5 | 2 | ja |
+| question-6 | 4 (S. 34 Rang 4, S. 38 Rang 6, S. 36 –) | ja |
+| question-7 | 7 (S. 22 Rang 7, S. 27 –) | ja |
+| question-7b | – | nein |
+| question-9 | 1 (S. 16; S. 101 Rang 37) | ja |
+| question-10 | 1 (SW-Handbuch en S. 46; Benutzerhandbuch S. 84 Rang 14) | ja |
+| question-10b | 7 | ja |
+
+Gesamt kombiniert: Recall@5 0,50, Recall@8/10/12 0,67, MRR 0,42 (12 Proben). Die Stichwortsuche findet bei ganzen Fragen nichts (alle Werte 0); alles kommt aus der Vektorsuche. Kontrollprobe: Treffer auf Seiten ohne Wartungsangaben, darunter derselbe Abschnitt an elf Geräten (Dubletten, siehe Hinweis an 125).
+
+Vermutete Ursachen: Fragen 3 und 4 (S. 36/38 der APS-Doku, Protokolle MQTT/OPC UA) – die Fachbegriffe stehen in Tabellen und Abbildungsunterschriften, die Frage ist allgemein formuliert; die Kopien einer Datei an elf Geräten belegen viele Plätze. Folgerung nach D12: zuerst mehr Kontext und Zusammenfassen der Dubletten (125), dann neu messen (128); bleiben 3 und 4 außerhalb, Folgeauftrag „Überschriften stärker gewichten“. Für die Abnahme (8 von 10) bleibt wenig Spielraum: Ohne 3 und 4 sind höchstens 8 Fragen belegbar (1, 2, 5, 6, 7, 8, 9, 10), Frage 8 erst mit 136.
 
 ### Zweig und Arbeitsverzeichnis
 

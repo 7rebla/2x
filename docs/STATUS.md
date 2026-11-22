@@ -223,7 +223,7 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 
 | Nr. | Auftrag | Stufe | Voraussetzung | Status |
 | --- | --- | --- | --- | --- |
-| 120 | Suchgrundlinie Prüffragen | B | – | in Arbeit |
+| 120 | Suchgrundlinie Prüffragen | B | – | erledigt |
 | 121 | Schnittstelle Sprachmodell | B | – | in Arbeit |
 | 122 | Antworttypen und Prompt mit Injektionsschutz | B | – | in Arbeit |
 | 123 | Zitatprüfung und feste Absage | B | – | in Arbeit |
