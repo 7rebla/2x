@@ -1,6 +1,6 @@
 # Auftrag 088 – Einheitliche Dateiauswahl
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 077 ist auf `main`.
 

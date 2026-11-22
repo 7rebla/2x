@@ -1,6 +1,6 @@
 # Auftrag 085 – Überschriften-Animation zurücknehmen
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: C (entschieden mit E-65) · Status: zur Prüfung
+Meilenstein: Gestaltung (D1) · Freigabestufe: C (entschieden mit E-65) · Status: erledigt
 
 Voraussetzung: 076 ist auf `main` (dieselben Dateien).
 

@@ -1,6 +1,6 @@
 # Auftrag 079 – Tabellen am Desktop lesbar
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 077 ist auf `main`.
 

@@ -167,19 +167,22 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 074 | Eigene Geräte-Icons in Baum, Geräteseite, Landkarte | B | 071, 073 | erledigt |
 | 076 | Schriftzug in der Kopfzeile tippt sich (E-64) | C (entschieden) | 070, 072 | erledigt |
 | 077 | UI-Bausteine Knopf, Feld, Auswahl (UI-Analyse Prio 1) | B | 070, 071 | erledigt |
-| 078 | Barrierefreiheit: Sprunglink, Seitentitel, Überschriften, Fokus | B | 077 | in Arbeit |
-| 079 | Tabellen am Desktop lesbar | B | 077 | in Arbeit |
-| 080 | Einheitliches Seitenraster (E-65) | C (entschieden) | 077 | offen |
-| 081 | Tabellen auf schmalen Bildschirmen als Karten (E-65) | C (entschieden) | 079 | offen |
+| 078 | Barrierefreiheit: Sprunglink, Seitentitel, Überschriften, Fokus | B | 077 | erledigt |
+| 079 | Tabellen am Desktop lesbar | B | 077 | erledigt |
+| 080 | Einheitliches Seitenraster (E-65) | C (entschieden) | 077 | in Arbeit |
+| 081 | Tabellen auf schmalen Bildschirmen als Karten (E-65) | C (entschieden) | 079 | in Arbeit |
 | 082 | Navigation unter 1280 px (E-65) | C (entschieden) | 080 | offen |
-| 083 | Strukturbaum entrümpeln (E-65) | C (entschieden) | 077 | in Arbeit |
+| 083 | Strukturbaum entrümpeln (E-65) | C (entschieden) | 077 | erledigt |
 | 084 | Schriftgröße der Metadaten (E-65) | C (entschieden) | 077, 079, 083 | offen |
-| 085 | Überschriften-Animation zurücknehmen (E-65) | C (entschieden) | 076 | in Arbeit |
+| 085 | Überschriften-Animation zurücknehmen (E-65) | C (entschieden) | 076 | erledigt |
 | 086 | Anmeldeseite als zentrierte Karte (E-65) | C (entschieden) | 077, 080 | offen |
-| 087 | Suchtreffer kompakter | B | 077 | in Arbeit |
-| 088 | Einheitliche Dateiauswahl | B | 077 | in Arbeit |
+| 087 | Suchtreffer kompakter | B | 077 | erledigt |
+| 088 | Einheitliche Dateiauswahl | B | 077 | erledigt |
 | 089 | Ergebniszahl als Live-Region, Brotkrumen Dateiseite | B | 077, 079, 083 | offen |
 | 090 | Abnahmetest M2 auf das ROADMAP-Kriterium (E-67) | C (entschieden) | 058, 067 | erledigt |
+
+- 078/079/083/085/087/088 zusammengeführt am 22.11.2026. Lücke aus 078: Die Seite „keine Berechtigung“ (RequireRole) hat weder Seitentitel noch h1 – kleiner Folgeauftrag nach 082.
+- Reihenfolge: 080 und 081 laufen; danach 089 (dieselben Dateien wie 081), 082 und 086 (auf 080), zuletzt 084 (berührt fast alle Seiten).
 
 ## M2 – Einlesen und Suche (freigegeben 22.11.2026, E-54; abgenommen 22.11.2026, E-67)
 
