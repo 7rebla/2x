@@ -1,6 +1,6 @@
 # Auftrag 047 – Such-Schnittstelle und Stichwortsuche in PostgreSQL
 
-Meilenstein: M2 · Freigabestufe: C · Status: offen
+Meilenstein: M2 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -91,7 +91,143 @@ Voraussetzung: 042 ist nach `main` zusammengeführt. Frage 1 hier und Frage 4 in
    Empfehlung: (a). Die Suche hängt an vorhandenen Abschnitten, nicht am Status des letzten Auftrags: Dokumente bleiben während eines erneuten Einlesens und nach einem Ausfall von Ollama auffindbar. Veraltete Treffer sind gekennzeichnet; (c) passt später zum Änderungsvergleich (M8).
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Läufe am 22.11.2026 im Container (Docker Engine 29.9.3, Compose v5.7.0). Keine neue Abhängigkeit. Ergebnis der Akzeptanzkriterien in der Tabelle unter „Wie wurde getestet?“.
+
+### Was wurde gebaut?
+
+- `backend/twox/search/interface.py`: `SearchRequest` (`query`, `device_ids`, `plant_ids`, `limit`; Grenze 1–100, Standard 20; Anfrage höchstens 1 000 Zeichen, sonst `ValueError`), `HitLocation` (Abschnitt, Dokument mit Titel, Version mit Nummer und `is_latest_version`, Gerät und Anlage je mit ID, Schlüssel und Name), `Highlight` (`start`, `end`), `SearchHit` (`section_id`, `score`, `match_kinds`, `snippet`, `highlights`, `page_start`, `page_end`, `heading_path`, `locations`), `SearchResult` (`hits`, `semantic_used`), `MatchKind` (`exact`, `keyword`, `semantic`), Protokoll `SearchBackend`, `get_search_backend()`. Alles unveränderliche Dataclasses mit einfachen Werten; keine Querysets oder Modellobjekte.
+- `backend/twox/search/identifiers.py`: Erkennen von Kennungen in der Anfrage und reguläre Ausdrücke dafür (PostgreSQL `~*` und Python `re`, beide mit maskierter Eingabe).
+- `backend/twox/search/postgres.py`: `PostgresSearchBackend` mit höchstens drei Abfragen je Suche: (1) `websearch_to_tsquery` je Konfiguration, (2) die Suche selbst als eine SQL-Abfrage mit benannten Parametern, (3) Fundstellen der Wörter für die Hervorhebung. Ausschnitt und Hervorhebungen entstehen in Python.
+
+**Suchregeln in Kürze**
+
+- *Stichwort:* `websearch_to_tsquery` in `simple`, `german`, `english`, mit ODER verbunden, auf `Section.search_vector` (GIN-Index).
+- *Exakt:* Jede Kennung der Anfrage (höchstens 10) wird zusätzlich mit `text ~* <Muster>` gesucht (Trigramm-Index). Erkannt werden IPv4 mit optionalem Präfix (Oktette ≤ 255, Präfix ≤ 32), IPv6 (geprüft mit `ipaddress`, optionales Präfix), MAC mit `:` oder `-`, sonst ASCII-Buchstaben und Ziffern, optional verbunden durch `-`, `_`, `.`, `/`, mit mindestens einer Ziffer und mindestens einem Buchstaben oder Verbinder (`PLC-01`, `E1234`, `S7-1200`, `3.5`). Reine Zahlen (`1200`) bleiben der Volltextsuche überlassen. Klammern, Anführungszeichen und Satzzeichen um eine Kennung werden entfernt; ein Wort mit führendem `-` ist ein Ausschluss und wird nicht exakt gesucht.
+- *Wortgrenzen:* Vor und nach der Kennung steht kein Buchstabe, keine Ziffer, kein `_` und kein `.`/`-`, auf das ein weiteres Zeichen dieser Art folgt; bei IPv6 und MAC zählt auch `:` als Verbinder. Damit trifft `192.168.0.5` den Text `IP:192.168.0.5`, `192.168.0.5/24`, `192.168.0.5:502`, `… 192.168.0.5.` und `| 192.168.0.5 |`, aber nicht `192.168.0.50`, `10.192.168.0.5` oder `192.168.0.5.1`. Groß- und Kleinschreibung zählt nicht. Schreibvarianten derselben Adresse (`fe80::1` / `fe80:0::1`, MAC mit `-` statt `:`) werden nicht vereinheitlicht.
+- *Gewichtung:* `score` = Zahl der exakt gefundenen Kennungen + (bei Stichworttreffer) `ts_rank(search_vector, Anfrage, 32)`. Normierung 32 heißt `rank/(rank+1)`, also unter 1; exakte Treffer stehen damit immer vor reinen Stichworttreffern. `ts_rank` mit den Standardgewichten: Überschrift (A) 1,0, Text (B) 0,4. Gleicher Wert: kleinere Abschnitts-ID zuerst.
+- *Versionsregel (Frage 1, E-57):* je Dokument der Art `document` die höchste Version, zu der es Abschnitte gibt; der Auftragsstatus spielt keine Rolle. `is_latest_version` ist `false`, wenn es eine höhere Versionsnummer ohne Abschnitte gibt.
+- *Filter:* `device_ids` und `plant_ids`; leer heißt kein Filter, beide zusammen schränken gemeinsam ein (UND).
+- *Zusammenfassen (E-55):* gleiche Prüfsumme der Version, gleiche Seiten (ohne Seiten: gleicher Überschriftentext) und gleicher Text (`md5`) ergeben einen Treffer; `LIMIT` zählt zusammengefasste Treffer. Vertreter ist der Abschnitt mit der kleinsten ID; Fundorte sind nach Anlage, Gerät, Titel, Version sortiert, je Version einer.
+- *Phrasen (Hinweis aus 042, geprüft):* Der verkettete Suchvektor hat Nahtstellen; z. B. passt `"öffnen Ventil"` auf den Text „Ventil öffnen“, weil „öffnen“ (Kopie `simple`) direkt vor „Ventil“ (Kopie `german`) steht – im Test nachgewiesen. Enthält eine Anfrage einen Phrasenoperator (`<->`, auch bei `PLC-01` oder `fe80::1`), wird ein Treffer je Konfiguration nachgeprüft: `(to_tsvector(cfg, heading_text) || to_tsvector(cfg, text)) @@ Anfrage(cfg)`. Der GIN-Index grenzt vorher ein. Folge: Eine Phrase gilt innerhalb der Überschriften oder innerhalb des Textes, nicht von der Überschrift in den Text.
+- *Ausschnitt:* höchstens 300 Zeichen des Textes ab etwa 80 Zeichen vor der ersten Fundstelle, an Leerraum geschnitten, „…“ an Schnittstellen. Hervorhebungen: exakte Kennungen über den Python-Ausdruck, Stichwörter über `ts_headline(…, HighlightAll=true)` mit privaten Markierungszeichen, die in keinem der Texte vorkommen; das Ergebnis von `ts_headline` wird nur ausgewertet, nie weitergegeben. Liegt die Fundstelle nur in der Überschrift, beginnt der Ausschnitt am Textanfang ohne Hervorhebung.
+- *Robustheit:* Leere Anfrage ergibt ohne SQL ein leeres Ergebnis; NUL wird durch Leerzeichen ersetzt; Anfragen nur aus Sonderzeichen oder Stoppwörtern ohne Kennung ergeben ein leeres Ergebnis.
+- *E-59:* Die Stichwortsuche braucht kein Modell und keine Einbettung; `semantic_used` ist immer `false`. Der Code liest `TWOX_AI_ENABLED` nicht (die Einstellung entsteht in 044/045); die Vektorsuche kommt mit 050.
+
+**Prüfung im Datenbank-Container vor dem Bau** (`D exec -T db sh -c 'psql … -c "…"'`):
+
+```
+SELECT * FROM ts_debug('german','192.168.0.50')
+  alias  |  description   |    token     | dictionaries | dictionary |    lexemes
+ version | Version number | 192.168.0.50 | {simple}     | simple     | {192.168.0.50}
+
+SELECT * FROM ts_debug('german','PLC-01')
+   alias   |   description   | token | dictionaries  | dictionary  | lexemes
+ asciiword | Word, all ASCII | PLC   | {german_stem} | german_stem | {plc}
+ int       | Signed integer  | -01   | {simple}      | simple      | {-01}
+
+SELECT * FROM ts_debug('german','10.0.0.1/24')
+  alias  |    description    |  token   | dictionaries | dictionary |  lexemes
+ version | Version number    | 10.0.0.1 | {simple}     | simple     | {10.0.0.1}
+ file    | File or path name | /24      | {simple}     | simple     | {/24}
+
+SELECT * FROM ts_debug('german','fe80::1')
+  alias  |       description        | token | dictionaries | dictionary | lexemes
+ numword | Word, letters and digits | fe80  | {simple}     | simple     | {fe80}
+ blank   | Space symbols            | ::    | {}           |            |
+ uint    | Unsigned integer         | 1     | {simple}     | simple     | {1}
+
+\dF+ german
+Text search configuration "pg_catalog.german"
+Parser: "pg_catalog.default"
+      Token      | Dictionaries
+ asciihword      | german_stem
+ asciiword       | german_stem
+ email           | simple
+ file            | simple
+ float           | simple
+ host            | simple
+ hword           | german_stem
+ hword_asciipart | german_stem
+ hword_numpart   | simple
+ hword_part      | german_stem
+ int             | simple
+ numhword        | simple
+ numword         | simple
+ sfloat          | simple
+ uint            | simple
+ url             | simple
+ url_path        | simple
+ version         | simple
+ word            | german_stem
+```
+
+Folgerung: Der Parser behandelt IPv4 als `version` (ganzes Lexem, `.5` trifft `.50` schon im Volltext nicht), zerlegt aber `PLC-01` in `plc` und `-01`, `10.0.0.1/24` in zwei Teile und `fe80::1` in `fe80` und `1` (`::` fällt weg). Deshalb die zusätzliche exakte Suche mit Wortgrenzen.
+
+- Tests: `backend/tests/search/test_identifiers.py` und `backend/tests/search/test_keyword_search.py`, zusammen 167 Fälle (mit Parametrisierung), alle Texte selbst geschrieben:
+  - Kennungen: Erkennung je Art, Satzzeichen, Ausschlüsse, Doppelte, Höchstzahl; 27 Grenzfälle der Wortgrenzen jeweils in Python **und** in PostgreSQL (gleiches Ergebnis); Maskierung.
+  - IP findet genau den Abschnitt (`.5` nicht `.50`, nicht `10.192.168.0.5`), auch in einer Tabellenzeile mit ` | `; Präfix, IPv6, MAC, `PLC-01`, `E1234` wörtlich; exakte Treffer vor Stichworttreffern; Kennung allein zusätzlich zu Wörtern.
+  - „Steuerungen“ findet „Steuerung“, „pump runs“ findet „pumps are running“; Überschrift und Text zusammen; Überschrift rankt vor Text.
+  - Phrasen: Nahtstelle im gespeicherten Vektor nachgewiesen und durch die Nachprüfung ausgeschlossen; Phrase mit Wortformen; Phrase nicht über Überschrift und Text.
+  - Art `configuration` erscheint nicht; Versionsregel (neueste Version mit Abschnitten; ältere mit `is_latest_version = false`, wenn die neuere keinen, einen wartenden, laufenden, gescheiterten oder übersprungenen Auftrag hat); Abschnitte werden gefunden, während derselbe Version ein Auftrag `queued` bzw. `running` ist; ohne Einbettung (Auftrag gescheitert oder fertig) und mit Einbettung.
+  - Filter nach Gerät, Anlage und beidem; vollständiger Fundort; zwei Geräte mit derselben Datei ergeben einen Treffer mit zwei Fundorten, mit Gerätefilter nur den passenden; andere Seite oder anderer Text bleibt getrennt; ohne Seiten nach Überschriften; verschiedene Dateien mit gleichem Text bleiben getrennt; `limit` zählt zusammengefasste Treffer.
+  - 19 leere bzw. Sonderzeichen-Anfragen (`'`, `\`, `(`, `"`, NUL, SQL-artige Eingabe, `%s`, Operatoren) ohne Fehler; leere Anfrage ohne SQL; Verbindung danach nutzbar; Prüfung von `limit` und Länge.
+  - Hervorhebungen liegen auf der Fundstelle (auch in langem Text mit „…“ an beiden Enden), Ausschnittregeln, Markierungszeichen im Text stören nicht.
+  - Schnittstelle: `get_search_backend()`, Ergebnis enthält nur einfache Werte; höchstens drei Abfragen je Suche (drei bei Treffern, unabhängig von ihrer Zahl).
+  - E-59: Stichwortsuche mit `TWOX_AI_ENABLED` aus und an jeweils gleich, `semantic_used = false`, kein Netzaufruf aus Python (Socket gesperrt).
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-047`, `.env` aus `.env.example` (ohne BOM, mit dem Write-Werkzeug) mit `TWOX_API_PORT=18047`. Die Umgebungen „2x“ und „twox-leit“ wurden nicht berührt.
+
+| AK | Ergebnis |
+| --- | --- |
+| 0 | erfüllt: `docker version` (Engine 29.9.3) und `docker compose version` (v5.7.0), Exit 0 |
+| 1 | erfüllt: Bau Exit 0, `up -d --wait` Exit 0 (am Anfang und nach dem letzten Commit erneut) |
+| 2 | erfüllt: `pytest tests/search -v` 167 bestanden; `pytest` `1510 passed, 4 deselected`, mit `-rs` kein übersprungener Test; `pytest -m worker` `4 passed` |
+| 3 | erfüllt: `All checks passed!`; `152 files already formatted`; `Success: no issues found in 151 source files` |
+| 4 | erfüllt: `makemessages`, danach `git diff -I POT-Creation-Date -- backend/locale` ohne Unterschied und `git status` leer; `makemigrations --check --dry-run`: `No changes detected`; `License check passed.`; `spectacular` Exit 0, `git diff -- web/openapi` ohne Unterschied |
+| 5 | erfüllt: `ts_debug` und `\dF+ german` oben, Abfrageplan unten |
+| 6 | erfüllt: `D --profile dev down -v` Exit 0 |
+
+**Abfrageplan (Kriterium 5).** 10 000 Abschnitte (100 Geräte, je ein Dokument mit 100 Abschnitten, 60–160 zufällige Wörter aus einer eigenen Wortliste, je eine Adresse `192.168.0–9.x` zweimal im Text, eine Tabellenzeile) per Skript außerhalb des Repositorys in die Entwicklungsdatenbank geschrieben, danach `ANALYZE`; Suche nach `192.168.3.17` (zwei Abschnitte enthalten sie). Die SQL-Abfrage ist die des Backends mit eingesetzten Parametern (`mogrify`), ausgeführt mit `EXPLAIN (ANALYZE, BUFFERS)` über `psql` im Datenbank-Container, ohne `enable_seqscan=off`. Gekürzt auf die Knoten der Abschnittssuche; der übrige Plan sind Hash-Joins über 100 Versionen und Index-Scans über Primärschlüssel für die zwei Treffer:
+
+```
+Sort  (cost=646.11..646.12 rows=1 width=819) (actual time=36.000..36.005 rows=2.00 loops=1)
+  CTE matched
+    ->  Hash Join  (actual time=20.482..35.897 rows=2.00 loops=1)
+          Hash Cond: (s.document_version_id = sv.version_id)
+          ->  Bitmap Heap Scan on ingest_section s  (cost=120.20..548.79 rows=150 width=901) (actual time=19.267..34.643 rows=2.00 loops=1)
+                Recheck Cond: ((search_vector @@ '''192.168.3.17'' | ''192.168.3.17'' | ''192.168.3.17'''::tsquery) OR (text ~* '(?<![[:alnum:]_])(?<![[:alnum:]_][\.\-])192\.168\.3\.17(?![[:alnum:]_])(?![\.\-][[:alnum:]_])'::text))
+                Rows Removed by Index Recheck: 1200
+                Heap Blocks: exact=768
+                ->  BitmapOr  (actual time=0.833..0.833 rows=0.00 loops=1)
+                      ->  Bitmap Index Scan on ingest_section_search_gin  (cost=0.00..30.93 rows=149 width=0) (actual time=0.080..0.080 rows=2.00 loops=1)
+                            Index Cond: (search_vector @@ '''192.168.3.17'' | ''192.168.3.17'' | ''192.168.3.17'''::tsquery)
+                      ->  Bitmap Index Scan on ingest_section_text_trgm  (cost=0.00..89.20 rows=1 width=0) (actual time=0.752..0.752 rows=1202.00 loops=1)
+                            Index Cond: (text ~* '(?<![[:alnum:]_])(?<![[:alnum:]_][\.\-])192\.168\.3\.17(?![[:alnum:]_])(?![\.\-][[:alnum:]_])'::text)
+          ->  Hash  (rows=100)  -- searchable: DISTINCT ON über 100 Versionen, EXISTS per Index Only Scan auf ingest_section_version_ordinal_unique
+  ->  Nested Loop … HashAggregate über matched (2 Zeilen), Limit 20, Index Scans auf ingest_section_pkey, files_documentversion_pkey, files_document_pkey, assets_device_pkey, assets_plant_pkey
+Planning Time: 4.988 ms
+Execution Time: 36.297 ms
+```
+
+Der Planer nutzt beide Indizes (`BitmapOr` aus GIN auf dem Suchvektor und Trigramm-Index auf dem Text). Der Trigramm-Index liefert 1 202 Kandidaten, weil `192` und `168` in jedem Abschnitt stehen und `3`, `17` zu kurz für eigene Trigramme sind; 1 200 fallen bei der Nachprüfung des Ausdrucks heraus. Das kostet hier rund 35 ms; in echten Unterlagen mit weniger gleichförmigen Adressen ist die Kandidatenmenge kleiner.
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-a7b47d69d9f4b2ced`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-a7b47d69d9f4b2ced`
+- Commits: `a1e995c` (Schnittstelle, Kennungen, PostgreSQL-Suche), `e564afe` (Tests), dazu dieser Kurzbericht. Nicht gepusht, nichts zusammengeführt.
+
+### Abweichungen und Hinweise
+
+1. **`ts_headline` intern:** Die Fundstellen der Stichwörter (mit Wortformen aller drei Konfigurationen) bestimmt `ts_headline` mit `HighlightAll=true` und privaten Markierungszeichen; Python sucht die markierten Wörter im Originaltext und schneidet den Ausschnitt selbst. Es wird kein `ts_headline`-HTML ausgegeben. Eine reine Python-Lösung müsste die Stammformen von PostgreSQL nachbauen.
+2. **Phrasen-Nachprüfung über den Umfang hinaus** (Hinweis aus 042): nur bei Anfragen mit Phrasenoperator; rechnet `to_tsvector` für die Kandidaten des GIN-Index neu. Eine Phrase spannt nicht von der Überschrift in den Text (das tut sie auch im gespeicherten Vektor nicht). Positionen eines tsvector enden bei 16 383; in sehr langen Abschnitten (mehrere tausend Wörter) werden Phrasen am Ende der späteren Kopien nicht mehr gefunden. Eine Lücke zwischen den Kopien im Suchvektor wäre eine Änderung am Datenmodell (042) und ist nicht gemacht.
+3. **Exakte Suche nur im Text, nicht in der Überschrift:** Der Trigramm-Index liegt nur auf `text`. Kennungen in Überschriften findet die Volltextsuche (Treffer der Art `keyword`).
+4. **Zusätzliche Felder** in `HitLocation`: `section_id` des jeweiligen Abschnitts sowie `device_key` und `plant_key` (die Schlüssel aus M1) neben IDs und Namen. `Highlight` als eigene kleine Dataclass.
+5. **Grenzen in `SearchRequest`:** `limit` 1–100, Anfrage höchstens 1 000 Zeichen (sonst `ValueError`; die API in 052 soll das als 400 melden); höchstens 10 Kennungen je Anfrage werden exakt gesucht.
+6. **Reine Ausschlussanfrage** (`-pumpe`) ist nach `websearch_to_tsquery` gültig und findet alle Abschnitte ohne das Wort; der GIN-Index hilft dabei nicht (sequenzieller Lauf, begrenzt durch `limit`). Für 052 vorgemerkt: solche Anfragen eventuell abweisen.
+7. **`get_search_backend()`** liefert fest `PostgresSearchBackend`; eine Einstellung zur Wahl des Backends gibt es nicht (Einstellungen gehören in diesem Zeitraum 044). Der Schalter `TWOX_AI_ENABLED` wird hier nicht gelesen: Die Stichwortsuche hängt von ihm nicht ab; der Test setzt ihn per `settings`-Fixture auf an und aus.
+8. Keine Änderung an `README.md` oder `docs/ARCHITECTURE.md`; die Suchregeln stehen in den Modul-Docstrings, die Doku folgt mit 059 (dort auch die Grenze „keine Rechte je Gerät in M2“).
+9. Keine offene Frage an a7.

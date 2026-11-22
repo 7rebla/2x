@@ -31,6 +31,7 @@ Ein Endpunkt macht die Suche über die Such-Schnittstelle für die Oberfläche n
 - neu: `backend/tests/search/test_api.py`, `backend/tests/config/test_logging.py`
 - `backend/locale/de/LC_MESSAGES/django.po`
 - `web/openapi/schema.yml`, `web/src/api/generated/**`
+- Nachtrag Leitstelle (Prüfung 047): `backend/twox/search/interface.py`, `backend/twox/search/postgres.py`, `backend/tests/search/test_keyword_search.py` – nur für die beiden Punkte unten
 
 ## Akzeptanzkriterien (prüfbar)
 
@@ -70,6 +71,8 @@ Voraussetzung: 050 und 051 sind nach `main` zusammengeführt (051 wegen `urls.py
 - Dass Django-`LOGGING` den Logger `uvicorn.access` nach dem Start von uvicorn noch erreicht, ist ungeprüft; Kriterium 7 belegt es. Klappt es nicht, anhalten und den Befund in den Auftrag schreiben (Ausweichweg wäre `--no-access-log` oder `--log-config` im `backend/Dockerfile`, das ist eine neue Frage).
 - Konflikte in `web/src/api/generated` und `schema.yml` durch Neuerzeugen lösen.
 - `docs/DECISIONS.md` und `docs/STATUS.md` ändert nur die Leitstelle. Kein Push (E-14).
+
+- **Nachtrag der Leitstelle (Prüfung 047):** (1) `HitLocation` hat keinen Dateinamen der Version. Ergänze `version_filename: str` (aus `files_documentversion.original_filename`) in der Schnittstelle und in `postgres.py`, mit Test; die API liefert ihn als `version.original_filename`. (2) Ausschlüsse mit `-Wort` wirken bisher nur auf den Stichwortzweig, nicht auf exakte Kennungstreffer (`192.168.0.5 -pump` findet auch Abschnitte mit „pump“). Ausschlüsse sollen für alle Treffer gelten; dafür den negierten Teil der Anfrage auch auf den exakten Zweig anwenden, Test „Kennung -Wort“.
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
