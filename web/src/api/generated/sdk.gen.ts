@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AreasCreateData, AreasCreateResponses, AreasListData, AreasListResponses, AreasPartialUpdateData, AreasPartialUpdateResponses, AreasRetrieveData, AreasRetrieveResponses, AreasUpdateData, AreasUpdateResponses, AuditLogListData, AuditLogListResponses, DeviceDocumentsCreateData, DeviceDocumentsCreateErrors, DeviceDocumentsCreateResponses, DeviceDocumentsListData, DeviceDocumentsListErrors, DeviceDocumentsListResponses, DevicesCreateData, DevicesCreateResponses, DevicesImportData, DevicesImportErrors, DevicesImportResponses, DevicesListData, DevicesListResponses, DevicesPartialUpdateData, DevicesPartialUpdateResponses, DevicesRetrieveData, DevicesRetrieveResponses, DevicesUpdateData, DevicesUpdateResponses, DocumentRetrieveData, DocumentRetrieveErrors, DocumentRetrieveResponses, DocumentVersionCreateData, DocumentVersionCreateErrors, DocumentVersionCreateResponses, DocumentVersionDownloadData, DocumentVersionDownloadErrors, DocumentVersionDownloadResponses, HealthRetrieveData, HealthRetrieveResponses, MeRetrieveData, MeRetrieveResponses, PlantsCreateData, PlantsCreateResponses, PlantsListData, PlantsListResponses, PlantsPartialUpdateData, PlantsPartialUpdateResponses, PlantsRetrieveData, PlantsRetrieveResponses, PlantsUpdateData, PlantsUpdateResponses, SelftestRetrieveData, SelftestRetrieveResponses, SitesCreateData, SitesCreateResponses, SitesListData, SitesListResponses, SitesPartialUpdateData, SitesPartialUpdateResponses, SitesRetrieveData, SitesRetrieveResponses, SitesUpdateData, SitesUpdateResponses } from './types.gen';
+import type { AreasCreateData, AreasCreateResponses, AreasListData, AreasListResponses, AreasPartialUpdateData, AreasPartialUpdateResponses, AreasRetrieveData, AreasRetrieveResponses, AreasUpdateData, AreasUpdateResponses, AuditLogListData, AuditLogListResponses, DeviceDocumentsCreateData, DeviceDocumentsCreateErrors, DeviceDocumentsCreateResponses, DeviceDocumentsListData, DeviceDocumentsListErrors, DeviceDocumentsListResponses, DevicesCreateData, DevicesCreateResponses, DevicesImportData, DevicesImportErrors, DevicesImportResponses, DevicesListData, DevicesListResponses, DevicesPartialUpdateData, DevicesPartialUpdateResponses, DevicesRetrieveData, DevicesRetrieveResponses, DevicesUpdateData, DevicesUpdateResponses, DocumentRetrieveData, DocumentRetrieveErrors, DocumentRetrieveResponses, DocumentVersionCreateData, DocumentVersionCreateErrors, DocumentVersionCreateResponses, DocumentVersionDownloadData, DocumentVersionDownloadErrors, DocumentVersionDownloadResponses, DocumentVersionIngestData, DocumentVersionIngestErrors, DocumentVersionIngestResponses, HealthRetrieveData, HealthRetrieveResponses, IngestJobsListData, IngestJobsListErrors, IngestJobsListResponses, MeRetrieveData, MeRetrieveResponses, PlantsCreateData, PlantsCreateResponses, PlantsListData, PlantsListResponses, PlantsPartialUpdateData, PlantsPartialUpdateResponses, PlantsRetrieveData, PlantsRetrieveResponses, PlantsUpdateData, PlantsUpdateResponses, SelftestRetrieveData, SelftestRetrieveResponses, SitesCreateData, SitesCreateResponses, SitesListData, SitesListResponses, SitesPartialUpdateData, SitesPartialUpdateResponses, SitesRetrieveData, SitesRetrieveResponses, SitesUpdateData, SitesUpdateResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -251,6 +251,23 @@ export const documentVersionDownload = <ThrowOnError extends boolean = false>(op
 });
 
 /**
+ * Create a new ingest job for the version; the requester is the signed-in user.
+ *
+ * A file outside the ingested formats gets a job that is ``skipped`` at
+ * once, missing content a ``failed`` one (``content_missing``); both
+ * answer 202 as well. A queued job is sent to the worker after the commit.
+ */
+export const documentVersionIngest = <ThrowOnError extends boolean = false>(options: Options<DocumentVersionIngestData, ThrowOnError>): RequestResult<DocumentVersionIngestResponses, DocumentVersionIngestErrors, ThrowOnError> => (options.client ?? client).post<DocumentVersionIngestResponses, DocumentVersionIngestErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/document-versions/{version_id}/ingest/',
+    ...options
+});
+
+/**
  * The file with all versions, oldest first.
  */
 export const documentRetrieve = <ThrowOnError extends boolean = false>(options: Options<DocumentRetrieveData, ThrowOnError>): RequestResult<DocumentRetrieveResponses, DocumentRetrieveErrors, ThrowOnError> => (options.client ?? client).get<DocumentRetrieveResponses, DocumentRetrieveErrors, ThrowOnError>({
@@ -312,6 +329,22 @@ export const devicesImport = <ThrowOnError extends boolean = false>(options: Opt
         'Content-Type': null,
         ...options.headers
     }
+});
+
+/**
+ * Every ingest job, newest first, 50 per page.
+ *
+ * For both roles. ``requested_by`` names the user for the role ``manage``
+ * only and is ``null`` for the role ``read``.
+ */
+export const ingestJobsList = <ThrowOnError extends boolean = false>(options?: Options<IngestJobsListData, ThrowOnError>): RequestResult<IngestJobsListResponses, IngestJobsListErrors, ThrowOnError> => (options?.client ?? client).get<IngestJobsListResponses, IngestJobsListErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/ingest-jobs/',
+    ...options
 });
 
 /**

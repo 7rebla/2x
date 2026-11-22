@@ -428,6 +428,56 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
           description: Not found.
+  /api/v1/document-versions/{version_id}/ingest/:
+    post:
+      operationId: document_version_ingest
+      description: |-
+        Create a new ingest job for the version; the requester is the signed-in user.
+
+        A file outside the ingested formats gets a job that is ``skipped`` at
+        once, missing content a ``failed`` one (``content_missing``); both
+        answer 202 as well. A queued job is sent to the worker after the commit.
+      parameters:
+      - in: path
+        name: version_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - document-versions
+      security:
+      - cookieAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestJob'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestRequestError'
+          description: The version belongs to a configuration, which is not ingested.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: No role, or not allowed.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Not found.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestConflict'
+          description: The version has a queued or running ingest job already.
   /api/v1/documents/{document_id}/:
     get:
       operationId: document_retrieve
@@ -577,6 +627,69 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
           description: Larger than TWOX_UPLOAD_MAX_BYTES.
+  /api/v1/ingest-jobs/:
+    get:
+      operationId: ingest_jobs_list
+      description: |-
+        Every ingest job, newest first, 50 per page.
+
+        For both roles. ``requested_by`` names the user for the role ``manage``
+        only and is ``null`` for the role ``read``.
+      parameters:
+      - in: query
+        name: device
+        schema:
+          type: integer
+        description: Only jobs of documents of the device with this id.
+      - in: query
+        name: document
+        schema:
+          type: integer
+        description: Only jobs of the document with this id.
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - done
+            - failed
+            - queued
+            - running
+            - skipped
+        description: Only jobs in one of these states; repeat the parameter for more.
+        explode: true
+      - in: query
+        name: version
+        schema:
+          type: integer
+        description: Only jobs of the document version with this id.
+      tags:
+      - ingest-jobs
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedIngestJobList'
+          description: ''
+        '400':
+          description: Invalid filter value.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: No role, or not allowed.
   /api/v1/me/:
     get:
       operationId: me_retrieve
@@ -974,6 +1087,9 @@ components:
       - object_repr
       - object_type
       - timestamp
+    BlankEnum:
+      enum:
+      - ''
     DatabaseCheck:
       type: object
       properties:
@@ -1276,10 +1392,18 @@ components:
           type: string
           format: date-time
           readOnly: true
+        ingest:
+          allOf:
+          - $ref: '#/components/schemas/IngestJobSummary'
+          nullable: true
+          readOnly: true
+          description: The newest ingest job of the version; null if it was never
+            ingested.
       required:
       - content_type
       - created_at
       - id
+      - ingest
       - number
       - original_filename
       - sha256
@@ -1325,6 +1449,30 @@ components:
       - code
       - detail
       - existing_version
+    ErrorCodeEnum:
+      enum:
+      - docling_unavailable
+      - docling_rejected
+      - conversion_failed
+      - content_missing
+      - unsupported_format
+      - embedding_unavailable
+      - embedding_rejected
+      - embedding_dimension_mismatch
+      - timeout
+      - internal
+      type: string
+      description: |-
+        * `docling_unavailable` - converter unavailable
+        * `docling_rejected` - converter rejected the file
+        * `conversion_failed` - conversion failed
+        * `content_missing` - stored content missing
+        * `unsupported_format` - unsupported format
+        * `embedding_unavailable` - embedding service unavailable
+        * `embedding_rejected` - embedding service rejected the request
+        * `embedding_dimension_mismatch` - embedding has the wrong number of dimensions
+        * `timeout` - time limit exceeded
+        * `internal` - internal error
     ErrorDetail:
       type: object
       description: An error with a message, for example 404 or 413.
@@ -1338,9 +1486,14 @@ components:
       description: Shape of the health response, used for the OpenAPI schema.
       properties:
         status:
-          $ref: '#/components/schemas/StatusEnum'
+          $ref: '#/components/schemas/HealthStatusEnum'
       required:
       - status
+    HealthStatusEnum:
+      enum:
+      - ok
+      type: string
+      description: '* `ok` - ok'
     ImportCounts:
       type: object
       description: What an import did, or would do in a dry run, at one level of the
@@ -1411,6 +1564,283 @@ components:
       - column
       - line
       - message
+    IngestConflict:
+      type: object
+      description: '409: the version has a queued or running ingest job already.'
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+        job:
+          allOf:
+          - $ref: '#/components/schemas/IngestJobSummary'
+          description: The queued or running job.
+      required:
+      - code
+      - detail
+      - job
+    IngestJob:
+      type: object
+      description: |-
+        An ingest job with its document, version and device.
+
+        ``requested_by`` is the user name only when the context says so
+        (:data:`SHOW_REQUESTED_BY`, the role ``manage``); otherwise ``null``.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/IngestStatusEnum'
+          readOnly: true
+          default: queued
+        step:
+          readOnly: true
+          description: |-
+            Step the job is in or failed in; empty before the first step.
+
+            * `convert` - convert
+            * `sections` - sections
+            * `embed` - embed
+          oneOf:
+          - $ref: '#/components/schemas/StepEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        error_code:
+          readOnly: true
+          description: |-
+            Kind of error of a failed or skipped job; empty otherwise.
+
+            * `docling_unavailable` - converter unavailable
+            * `docling_rejected` - converter rejected the file
+            * `conversion_failed` - conversion failed
+            * `content_missing` - stored content missing
+            * `unsupported_format` - unsupported format
+            * `embedding_unavailable` - embedding service unavailable
+            * `embedding_rejected` - embedding service rejected the request
+            * `embedding_dimension_mismatch` - embedding has the wrong number of dimensions
+            * `timeout` - time limit exceeded
+            * `internal` - internal error
+          oneOf:
+          - $ref: '#/components/schemas/ErrorCodeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        error_detail:
+          type: string
+          readOnly: true
+          description: Technical detail in English. Set for failed and skipped jobs,
+            and for a done job that was converted only in part (then it starts with
+            'converted with ').
+        partly_converted:
+          type: boolean
+          readOnly: true
+          description: True for a done job that was converted only in part; see error_detail.
+        section_count:
+          type: integer
+          readOnly: true
+          nullable: true
+        page_count:
+          type: integer
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        finished_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        document:
+          allOf:
+          - $ref: '#/components/schemas/IngestJobDocument'
+          readOnly: true
+        version:
+          allOf:
+          - $ref: '#/components/schemas/IngestJobVersion'
+          readOnly: true
+        device:
+          allOf:
+          - $ref: '#/components/schemas/IngestJobDevice'
+          readOnly: true
+        requested_by:
+          type: string
+          nullable: true
+          readOnly: true
+          description: User name of the user who started the job; null for the system,
+            and always null for the role read.
+      required:
+      - created_at
+      - device
+      - document
+      - error_code
+      - error_detail
+      - finished_at
+      - id
+      - page_count
+      - partly_converted
+      - requested_by
+      - section_count
+      - status
+      - step
+      - version
+    IngestJobDevice:
+      type: object
+      description: The device the document of an ingest job belongs to.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        key:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - key
+      - name
+    IngestJobDocument:
+      type: object
+      description: The document of an ingest job.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - title
+    IngestJobSummary:
+      type: object
+      description: |-
+        State of one ingest job of a version (work order 051).
+
+        ``error_code`` is a fixed key that the web UI translates; ``error_detail``
+        is a short English technical text, cleaned of paths, addresses and file
+        names (046). Every role sees both (E-57).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/IngestStatusEnum'
+          readOnly: true
+        step:
+          readOnly: true
+          description: |-
+            Step the job is in or failed in; empty before the first step.
+
+            * `convert` - convert
+            * `sections` - sections
+            * `embed` - embed
+          oneOf:
+          - $ref: '#/components/schemas/StepEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        error_code:
+          readOnly: true
+          description: |-
+            Kind of error of a failed or skipped job; empty otherwise.
+
+            * `docling_unavailable` - converter unavailable
+            * `docling_rejected` - converter rejected the file
+            * `conversion_failed` - conversion failed
+            * `content_missing` - stored content missing
+            * `unsupported_format` - unsupported format
+            * `embedding_unavailable` - embedding service unavailable
+            * `embedding_rejected` - embedding service rejected the request
+            * `embedding_dimension_mismatch` - embedding has the wrong number of dimensions
+            * `timeout` - time limit exceeded
+            * `internal` - internal error
+          oneOf:
+          - $ref: '#/components/schemas/ErrorCodeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        error_detail:
+          type: string
+          readOnly: true
+          description: Technical detail in English. Set for failed and skipped jobs,
+            and for a done job that was converted only in part (then it starts with
+            'converted with ').
+        partly_converted:
+          type: boolean
+          readOnly: true
+          description: True for a done job that was converted only in part; see error_detail.
+        section_count:
+          type: integer
+          readOnly: true
+          nullable: true
+        page_count:
+          type: integer
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        finished_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - created_at
+      - error_code
+      - error_detail
+      - finished_at
+      - id
+      - page_count
+      - partly_converted
+      - section_count
+      - status
+      - step
+    IngestJobVersion:
+      type: object
+      description: The document version of an ingest job.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        number:
+          type: integer
+          readOnly: true
+        original_filename:
+          type: string
+          readOnly: true
+          title: Original file name
+      required:
+      - id
+      - number
+      - original_filename
+    IngestRequestError:
+      type: object
+      description: '400: the version cannot be ingested (a configuration).'
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+      required:
+      - code
+      - detail
+    IngestStatusEnum:
+      enum:
+      - queued
+      - running
+      - done
+      - failed
+      - skipped
+      type: string
+      description: |-
+        * `queued` - queued
+        * `running` - running
+        * `done` - done
+        * `failed` - failed
+        * `skipped` - skipped
     KindEnum:
       enum:
       - document
@@ -1462,6 +1892,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AuditLogEntry'
+    PaginatedIngestJobList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/IngestJob'
     PatchedArea:
       type: object
       description: An area of a site. ``site`` is the id of the site.
@@ -1663,11 +2116,16 @@ components:
       required:
       - id
       - name
-    StatusEnum:
+    StepEnum:
       enum:
-      - ok
+      - convert
+      - sections
+      - embed
       type: string
-      description: '* `ok` - ok'
+      description: |-
+        * `convert` - convert
+        * `sections` - sections
+        * `embed` - embed
     UploadResult:
       type: object
       description: 'Answer to an upload: the document, the new version and other places

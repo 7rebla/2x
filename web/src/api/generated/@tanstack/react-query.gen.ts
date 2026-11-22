@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { areasCreate, areasList, areasPartialUpdate, areasRetrieve, areasUpdate, auditLogList, deviceDocumentsCreate, deviceDocumentsList, devicesCreate, devicesImport, devicesList, devicesPartialUpdate, devicesRetrieve, devicesUpdate, documentRetrieve, documentVersionCreate, documentVersionDownload, healthRetrieve, meRetrieve, type Options, plantsCreate, plantsList, plantsPartialUpdate, plantsRetrieve, plantsUpdate, selftestRetrieve, sitesCreate, sitesList, sitesPartialUpdate, sitesRetrieve, sitesUpdate } from '../sdk.gen';
-import type { AreasCreateData, AreasCreateResponse, AreasListData, AreasListResponse, AreasPartialUpdateData, AreasPartialUpdateResponse, AreasRetrieveData, AreasRetrieveResponse, AreasUpdateData, AreasUpdateResponse, AuditLogListData, AuditLogListResponse, DeviceDocumentsCreateData, DeviceDocumentsCreateError, DeviceDocumentsCreateResponse, DeviceDocumentsListData, DeviceDocumentsListError, DeviceDocumentsListResponse, DevicesCreateData, DevicesCreateResponse, DevicesImportData, DevicesImportError, DevicesImportResponse, DevicesListData, DevicesListResponse, DevicesPartialUpdateData, DevicesPartialUpdateResponse, DevicesRetrieveData, DevicesRetrieveResponse, DevicesUpdateData, DevicesUpdateResponse, DocumentRetrieveData, DocumentRetrieveError, DocumentRetrieveResponse, DocumentVersionCreateData, DocumentVersionCreateError, DocumentVersionCreateResponse, DocumentVersionDownloadData, DocumentVersionDownloadError, DocumentVersionDownloadResponse, HealthRetrieveData, HealthRetrieveResponse, MeRetrieveData, MeRetrieveResponse, PlantsCreateData, PlantsCreateResponse, PlantsListData, PlantsListResponse, PlantsPartialUpdateData, PlantsPartialUpdateResponse, PlantsRetrieveData, PlantsRetrieveResponse, PlantsUpdateData, PlantsUpdateResponse, SelftestRetrieveData, SelftestRetrieveResponse, SitesCreateData, SitesCreateResponse, SitesListData, SitesListResponse, SitesPartialUpdateData, SitesPartialUpdateResponse, SitesRetrieveData, SitesRetrieveResponse, SitesUpdateData, SitesUpdateResponse } from '../types.gen';
+import { areasCreate, areasList, areasPartialUpdate, areasRetrieve, areasUpdate, auditLogList, deviceDocumentsCreate, deviceDocumentsList, devicesCreate, devicesImport, devicesList, devicesPartialUpdate, devicesRetrieve, devicesUpdate, documentRetrieve, documentVersionCreate, documentVersionDownload, documentVersionIngest, healthRetrieve, ingestJobsList, meRetrieve, type Options, plantsCreate, plantsList, plantsPartialUpdate, plantsRetrieve, plantsUpdate, selftestRetrieve, sitesCreate, sitesList, sitesPartialUpdate, sitesRetrieve, sitesUpdate } from '../sdk.gen';
+import type { AreasCreateData, AreasCreateResponse, AreasListData, AreasListResponse, AreasPartialUpdateData, AreasPartialUpdateResponse, AreasRetrieveData, AreasRetrieveResponse, AreasUpdateData, AreasUpdateResponse, AuditLogListData, AuditLogListResponse, DeviceDocumentsCreateData, DeviceDocumentsCreateError, DeviceDocumentsCreateResponse, DeviceDocumentsListData, DeviceDocumentsListError, DeviceDocumentsListResponse, DevicesCreateData, DevicesCreateResponse, DevicesImportData, DevicesImportError, DevicesImportResponse, DevicesListData, DevicesListResponse, DevicesPartialUpdateData, DevicesPartialUpdateResponse, DevicesRetrieveData, DevicesRetrieveResponse, DevicesUpdateData, DevicesUpdateResponse, DocumentRetrieveData, DocumentRetrieveError, DocumentRetrieveResponse, DocumentVersionCreateData, DocumentVersionCreateError, DocumentVersionCreateResponse, DocumentVersionDownloadData, DocumentVersionDownloadError, DocumentVersionDownloadResponse, DocumentVersionIngestData, DocumentVersionIngestError, DocumentVersionIngestResponse, HealthRetrieveData, HealthRetrieveResponse, IngestJobsListData, IngestJobsListError, IngestJobsListResponse, MeRetrieveData, MeRetrieveResponse, PlantsCreateData, PlantsCreateResponse, PlantsListData, PlantsListResponse, PlantsPartialUpdateData, PlantsPartialUpdateResponse, PlantsRetrieveData, PlantsRetrieveResponse, PlantsUpdateData, PlantsUpdateResponse, SelftestRetrieveData, SelftestRetrieveResponse, SitesCreateData, SitesCreateResponse, SitesListData, SitesListResponse, SitesPartialUpdateData, SitesPartialUpdateResponse, SitesRetrieveData, SitesRetrieveResponse, SitesUpdateData, SitesUpdateResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -367,6 +367,27 @@ export const documentVersionDownloadOptions = (options: Options<DocumentVersionD
     queryKey: documentVersionDownloadQueryKey(options)
 });
 
+/**
+ * Create a new ingest job for the version; the requester is the signed-in user.
+ *
+ * A file outside the ingested formats gets a job that is ``skipped`` at
+ * once, missing content a ``failed`` one (``content_missing``); both
+ * answer 202 as well. A queued job is sent to the worker after the commit.
+ */
+export const documentVersionIngestMutation = (options?: Partial<Options<DocumentVersionIngestData>>): UseMutationOptions<DocumentVersionIngestResponse, DocumentVersionIngestError, Options<DocumentVersionIngestData>> => {
+    const mutationOptions: UseMutationOptions<DocumentVersionIngestResponse, DocumentVersionIngestError, Options<DocumentVersionIngestData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await documentVersionIngest({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
 export const documentRetrieveQueryKey = (options: Options<DocumentRetrieveData>) => createQueryKey('documentRetrieve', options);
 
 /**
@@ -445,6 +466,60 @@ export const devicesImportMutation = (options?: Partial<Options<DevicesImportDat
         }
     };
     return mutationOptions;
+};
+
+export const ingestJobsListQueryKey = (options?: Options<IngestJobsListData>) => createQueryKey('ingestJobsList', options);
+
+/**
+ * Every ingest job, newest first, 50 per page.
+ *
+ * For both roles. ``requested_by`` names the user for the role ``manage``
+ * only and is ``null`` for the role ``read``.
+ */
+export const ingestJobsListOptions = (options?: Options<IngestJobsListData>) => queryOptions<IngestJobsListResponse, IngestJobsListError, IngestJobsListResponse, ReturnType<typeof ingestJobsListQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await ingestJobsList({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: ingestJobsListQueryKey(options)
+});
+
+export const ingestJobsListInfiniteQueryKey = (options?: Options<IngestJobsListData>): QueryKey<Options<IngestJobsListData>> => createQueryKey('ingestJobsList', options, true);
+
+/**
+ * Every ingest job, newest first, 50 per page.
+ *
+ * For both roles. ``requested_by`` names the user for the role ``manage``
+ * only and is ``null`` for the role ``read``.
+ */
+export const ingestJobsListInfiniteOptions = (options?: Options<IngestJobsListData>) => {
+    const opts = infiniteQueryOptions<IngestJobsListResponse, IngestJobsListError, InfiniteData<IngestJobsListResponse>, QueryKey<Options<IngestJobsListData>>, number | Pick<QueryKey<Options<IngestJobsListData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
+    // @ts-ignore
+    {
+        queryFn: async ({ pageParam, queryKey, signal }) => {
+            // @ts-ignore
+            const page: Pick<QueryKey<Options<IngestJobsListData>>[0], 'body' | 'headers' | 'path' | 'query'> = typeof pageParam === 'object' ? pageParam : {
+                query: {
+                    page: pageParam
+                }
+            };
+            const params = createInfiniteParams(queryKey, page);
+            const { data } = await ingestJobsList({
+                ...options,
+                ...params,
+                signal,
+                throwOnError: true
+            });
+            return data;
+        },
+        queryKey: ingestJobsListInfiniteQueryKey(options)
+    });
+    return opts as Omit<typeof opts, 'initialData'>;
 };
 
 export const meRetrieveQueryKey = (options?: Options<MeRetrieveData>) => createQueryKey('meRetrieve', options);
