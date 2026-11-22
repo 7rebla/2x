@@ -350,6 +350,21 @@ LOGGING: dict[str, Any] = {
     "loggers": {"twox": {"handlers": ["console"], "level": "INFO"}},
 }
 
-# Defined here, used by later milestones.
+# OpenAI-compatible model service (Ollama on the host by default).
 TWOX_LLM_BASE_URL = env_str("TWOX_LLM_BASE_URL", "http://host.docker.internal:11434/v1")
 TWOX_DOCLING_URL = env_str("TWOX_DOCLING_URL", "http://docling:5001")
+
+# AI features are optional and off by default (E-59): embeddings and vector
+# search, later answers with a language model. Off means the model service is
+# never contacted; everything else (ingestion, keyword search) works without it.
+TWOX_AI_ENABLED = env_bool("TWOX_AI_ENABLED", default=False)
+# Embedding model (E-56): bge-m3 with 1024 dimensions, matching the vector
+# column of the sections. TWOX_EMBED_QUERY_PREFIX goes in front of search
+# queries only (empty for bge-m3; qwen3-embedding needs an instruction there).
+TWOX_EMBED_MODEL = env_str("TWOX_EMBED_MODEL", "bge-m3")
+TWOX_EMBED_DIMENSIONS = env_positive_int("TWOX_EMBED_DIMENSIONS", 1024)
+TWOX_EMBED_BATCH_SIZE = env_positive_int("TWOX_EMBED_BATCH_SIZE", 16)
+TWOX_EMBED_QUERY_PREFIX = os.environ.get("TWOX_EMBED_QUERY_PREFIX", "")
+# Socket time limit of one request in seconds; the first request after a
+# start of Ollama also loads the model.
+TWOX_EMBED_TIMEOUT_SECONDS = env_positive_int("TWOX_EMBED_TIMEOUT_SECONDS", 120)
