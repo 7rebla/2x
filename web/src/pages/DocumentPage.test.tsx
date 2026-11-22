@@ -64,6 +64,83 @@ function upload(form: HTMLElement, content: string, name = "test-version.txt"): 
   fireEvent.click(within(form).getByRole("button", { name: "Upload" }));
 }
 
+describe("breadcrumb (work order 089)", () => {
+  function crumbs(name: string): (string | null)[] {
+    const breadcrumb = screen.getByRole("navigation", { name });
+    return within(breadcrumb)
+      .getAllByRole("listitem")
+      .map((item) => item.textContent);
+  }
+
+  it("shows the place of the file like the device page: structure, site, area, plant, device, file", async () => {
+    await openDocument(reader);
+
+    await waitFor(() => {
+      expect(crumbs("Location of the file")).toEqual([
+        "Structure",
+        "Test site A",
+        "Test area A1",
+        "Test plant one (test-plant-1)",
+        "Test controller",
+        "Test manual",
+      ]);
+    });
+    const breadcrumb = screen.getByRole("navigation", { name: "Location of the file" });
+    expect(breadcrumb.dataset.testid).toBe("document-breadcrumb");
+    expect(within(breadcrumb).getByRole("link", { name: "Structure" }).getAttribute("href")).toBe("/");
+    // The device is a link to its page; the file is the page itself.
+    expect(within(breadcrumb).getByRole("link", { name: "Test controller" }).getAttribute("href")).toBe(
+      "/devices/1000",
+    );
+    expect(within(breadcrumb).getAllByRole("link")).toHaveLength(2);
+    const file = screen.getByTestId("breadcrumb-document");
+    expect(file.getAttribute("aria-current")).toBe("page");
+    expect(file.querySelector("svg")?.getAttribute("data-icon")).toBe("document");
+    expect(screen.getByTestId("breadcrumb-device").querySelector("svg")?.getAttribute("data-icon")).toBe("devicePlc");
+    expect(screen.getByTestId("breadcrumb-plant").querySelector("svg")?.getAttribute("data-icon")).toBe("plant");
+    // The breadcrumb stands above the only heading of the page.
+    expect(
+      breadcrumb.compareDocumentPosition(screen.getByRole("heading", { level: 1 })) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("names the device by its id while the device cannot be loaded", async () => {
+    const files = fakeFilesApi(fakeStructureApi().handler);
+    fakeApi(reader, (request) => {
+      const path = new URL(request.url).pathname;
+      if (path === "/api/v1/devices/1000/") {
+        return jsonResponse({ detail: "Server error" }, 500);
+      }
+      return path === AUDIT_PATH
+        ? jsonResponse({ count: 0, next: null, previous: null, results: [] })
+        : files.handler(request);
+    });
+    renderApp("/documents/7");
+    await screen.findByTestId("document-title");
+
+    expect(crumbs("Location of the file")).toEqual(["Structure", "Device 1000", "Test manual"]);
+    expect(
+      within(screen.getByTestId("document-breadcrumb")).getByRole("link", { name: "Device 1000" }).getAttribute("href"),
+    ).toBe("/devices/1000");
+    expect(screen.getByTestId("breadcrumb-document").getAttribute("aria-current")).toBe("page");
+  });
+
+  it("is translated into German", async () => {
+    await changeLanguage("de");
+    await openDocument(reader);
+    await waitFor(() => {
+      expect(crumbs("Ort der Datei")).toEqual([
+        "Struktur",
+        "Test site A",
+        "Test area A1",
+        "Test plant one (test-plant-1)",
+        "Test controller",
+        "Test manual",
+      ]);
+    });
+  });
+});
+
 describe("file page", () => {
   it("shows the file and all versions, newest first, with download links", async () => {
     await openDocument(reader);

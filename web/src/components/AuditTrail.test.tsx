@@ -434,7 +434,7 @@ describe("pages", () => {
 
     expect(await rows()).toHaveLength(50);
     expect(screen.getByTestId("audit-page-status").textContent).toBe("Page 1 of 3");
-    expect(screen.getByTestId("audit-total").textContent).toBe("Entries: 120");
+    expect(screen.getByTestId("audit-total").textContent).toBe("120 entries found");
     const previous = screen.getByRole("button", { name: "Previous page" });
     const next = screen.getByRole("button", { name: "Next page" });
     expect(previous.hasAttribute("disabled")).toBe(true);
@@ -525,6 +525,72 @@ describe("filters", () => {
 
     expect(await screen.findByText("Page 1 of 2")).toBeDefined();
     expect(queryOf(api, 2)).toEqual({ object_type: "assets.site" });
+  });
+});
+
+describe("result count (work order 089)", () => {
+  it("announces the number of entries in one live region that stays while a new filter loads", async () => {
+    let release: () => void = () => undefined;
+    auditApi((query) => {
+      if (query.get("object_type") === "assets.site") {
+        return new Promise<Response>((resolve) => {
+          release = () => {
+            resolve(jsonResponse(pageOf([], 0)));
+          };
+        });
+      }
+      return jsonResponse(pageOf([entry(1), entry(2)], 120, "next"));
+    });
+    const { rerender } = renderTrail({ objectType: "assets.device" });
+
+    const region = screen.getByTestId("audit-result-count");
+    expect(region.getAttribute("role")).toBe("status");
+    // Empty until the list has loaded, then the number of all pages.
+    expect(region.textContent).toBe("");
+    await rows();
+    expect(region.textContent).toBe("120 entries found");
+    expect(within(region).getByTestId("audit-total").className).toContain("text-fg-muted");
+
+    // A new filter: the same region empties while loading and then says "none".
+    rerender({ objectType: "assets.site" });
+    expect(await screen.findByTestId("loading")).toBeDefined();
+    expect(screen.getByTestId("audit-result-count")).toBe(region);
+    expect(region.textContent).toBe("");
+    await act(async () => {
+      release();
+      await Promise.resolve();
+    });
+    expect((await within(region).findByTestId("audit-empty")).textContent).toBe("No entries found.");
+    expect(screen.getByTestId("audit-result-count")).toBe(region);
+  });
+
+  it("keeps the number while turning pages", async () => {
+    auditApi((query) =>
+      jsonResponse(pageOf([entry(Number(query.get("page") ?? "1"))], 60, query.has("page") ? null : "next")),
+    );
+    renderTrail();
+    await rows();
+    const region = screen.getByTestId("audit-result-count");
+    expect(region.textContent).toBe("60 entries found");
+
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    expect(await screen.findByText("Page 2 of 2")).toBeDefined();
+    expect(screen.getByTestId("audit-result-count")).toBe(region);
+    expect(region.textContent).toBe("60 entries found");
+  });
+
+  it("counts in the singular and in German", async () => {
+    auditApi(() => jsonResponse(pageOf([entry(1)], 1)));
+    renderTrail();
+    await rows();
+    expect(screen.getByTestId("audit-result-count").textContent).toBe("1 entry found");
+
+    cleanup();
+    await changeLanguage("de");
+    auditApi(() => jsonResponse(pageOf([entry(1), entry(2)], 1234)));
+    renderTrail();
+    await rows();
+    expect(screen.getByTestId("audit-result-count").textContent).toBe("1.234 Einträge gefunden");
   });
 });
 

@@ -83,11 +83,12 @@
     "delete": "removed"
   },
   "empty": "No entries found.",
+  "resultCount_one": "{{count, number}} entry found",
+  "resultCount_other": "{{count, number}} entries found",
   "pagination": {
     "label": "Pages of the change log",
     "previous": "Previous page",
     "next": "Next page",
-    "status": "Page {{page}} of {{pages}}",
-    "total": "Entries: {{count, number}}"
+    "status": "Page {{page}} of {{pages}}"
   }
 }

@@ -138,12 +138,16 @@ test("an uploaded plain-text file appears under All as skipped, with its device 
   await expect(page.getByTestId("ingest-filter-device")).toHaveValue(String(device.id));
   // A skipped job is not open: the default view of this device stays empty.
   await expect(page.getByTestId("ingest-empty")).toHaveText("No ingest job matches this filter.");
+  // The result count is one polite live region above the list (work order 089).
+  const resultCount = page.getByRole("status").filter({ has: page.getByTestId("ingest-empty") });
+  await expect(resultCount).toHaveAttribute("data-testid", "ingest-result-count");
 
   await page.getByTestId("ingest-filter-status").selectOption({ label: "All" });
   await expect(page).toHaveURL(new RegExp(`/ingest\\?status=all&device=${String(device.id)}$`));
 
   const row = page.getByTestId("ingest-job");
   await expect(row).toHaveCount(1);
+  await expect(page.getByTestId("ingest-result-count")).toHaveText("1 job found");
   await expect(row.getByTestId("ingest-status")).toHaveAttribute("data-status", "skipped");
   await expect(row.getByTestId("ingest-status")).toHaveText("Skipped");
   await expect(row.getByTestId("ingest-error-message")).toHaveText(/^This format is not ingested/);

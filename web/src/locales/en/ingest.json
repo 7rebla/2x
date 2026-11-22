@@ -37,11 +37,12 @@
     "open": "Nothing open: no job has failed, none is running or queued.",
     "filtered": "No ingest job matches this filter."
   },
+  "resultCount_one": "{{count, number}} job found",
+  "resultCount_other": "{{count, number}} jobs found",
   "pagination": {
     "label": "Pages of the ingest jobs",
     "previous": "Previous page",
     "next": "Next page",
-    "status": "Page {{page}} of {{pages}}",
-    "total": "Jobs: {{count, number}}"
+    "status": "Page {{page}} of {{pages}}"
   }
 }

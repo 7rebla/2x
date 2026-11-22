@@ -1,20 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 
 import { ApiError } from "../api/errors.ts";
 import type { Device } from "../api/generated";
 import { devicesRetrieveOptions } from "../api/generated/@tanstack/react-query.gen.ts";
+import { Breadcrumb, useDeviceCrumbs } from "../components/Breadcrumb.tsx";
 import { DeviceFiles } from "../components/DeviceFiles.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { NotFound } from "../components/NotFound.tsx";
 import { Button } from "../components/ui/Button.tsx";
 import { Icon } from "../icons/Icon.tsx";
-import type { IconName } from "../icons/names.ts";
 import { useRole } from "../session.ts";
-import { deviceClassIcon, PLANT_ICON } from "./structure/deviceClass.ts";
+import { deviceClassIcon } from "./structure/deviceClass.ts";
 import { DeviceForm, type FieldName } from "./structure/forms.tsx";
 import { AnimatedHeading, MaskedTitle } from "../components/TextMotion.tsx";
 import { usePageTitle } from "../hooks/usePageTitle.ts";
@@ -82,27 +82,12 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
   const [editing, setEditing] = useState(false);
   const dateFormat = new Intl.DateTimeFormat(i18n.resolvedLanguage, { dateStyle: "medium", timeStyle: "short" });
   const icon = deviceClassIcon(device.device_class);
+  const crumbs = useDeviceCrumbs(device);
 
   return (
     <section className="space-y-4">
-      <nav aria-label={t("assets:device.breadcrumb")} data-testid="device-breadcrumb">
-        <ol className="flex flex-wrap gap-x-2 text-sm text-fg-muted">
-          <Crumb icon="structure">
-            <Link to="/" className="text-accent underline hover:text-accent-strong">
-              {t("nav:structure")}
-            </Link>
-          </Crumb>
-          <Crumb icon="site" testId="breadcrumb-site">{device.site.name}</Crumb>
-          <Crumb icon="area" testId="breadcrumb-area">{device.area.name}</Crumb>
-          <Crumb icon={PLANT_ICON} testId="breadcrumb-plant">
-            {device.plant.name} <span className="tabular-nums slashed-zero">({device.plant.key})</span>
-          </Crumb>
-          <li data-testid="breadcrumb-device" aria-current="page" className="font-semibold text-fg">
-            <Icon name={icon} className="mr-1" decorative />
-            {device.name}
-          </li>
-        </ol>
-      </nav>
+      {/* The device is the last level: the page itself, no link. */}
+      <Breadcrumb label={t("assets:device.breadcrumb")} testId="device-breadcrumb" crumbs={crumbs} />
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         {/* The class icon before the name; the class itself is written out in the field list. */}
@@ -175,16 +160,6 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
 
       <DeviceFiles deviceId={device.id} />
     </section>
-  );
-}
-
-/** One level of the breadcrumb, with the icon of its kind (site, area, plant). */
-function Crumb({ icon, testId, children }: { icon: IconName; testId?: string; children: ReactNode }): ReactElement {
-  return (
-    <li data-testid={testId} className="after:ml-2 after:content-['›']">
-      <Icon name={icon} className="mr-1" decorative />
-      {children}
-    </li>
   );
 }
 

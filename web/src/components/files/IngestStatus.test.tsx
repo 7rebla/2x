@@ -229,15 +229,17 @@ describe("IngestError", () => {
       error_detail: "converted with 1 errors on pages 3",
     });
     render(<IngestError job={job} />);
-    expect(screen.getByTestId("ingest-error-message").textContent).toBe(
-      "Converted only in part: some pages or elements could not be read.",
-    );
-    expect(screen.getByTestId("ingest-error-message").className).toContain("text-warning");
+    const hint = screen.getByTestId("ingest-partly-converted");
+    expect(hint.textContent).toBe("Converted only in part: some pages or elements could not be read.");
+    expect(hint.className).toContain("text-warning");
+    expect(hint.querySelector("svg")?.getAttribute("data-icon")).toBe("warning");
+    // A done job has no error message, only the hint.
+    expect(screen.queryByTestId("ingest-error-message")).toBeNull();
     expect(screen.getByTestId("ingest-error-detail").textContent).toBe("converted with 1 errors on pages 3");
     cleanup();
     await changeLanguage("de");
     render(<IngestError job={job} />);
-    expect(screen.getByTestId("ingest-error-message").textContent).toMatch(/^Nur teilweise umgewandelt/);
+    expect(screen.getByTestId("ingest-partly-converted").textContent).toMatch(/^Nur teilweise umgewandelt/);
   });
 
   it("hints at a partial conversion of an embedding job after a failed embedding", () => {
@@ -249,10 +251,36 @@ describe("IngestError", () => {
       error_detail: "converted with 2 errors",
     });
     render(<IngestError job={job} />);
-    expect(screen.getByTestId("ingest-error-message").textContent).toBe(
+    expect(screen.getByTestId("ingest-partly-converted").textContent).toBe(
       "Converted only in part: some pages or elements could not be read.",
     );
   });
+
+  it.each(["queued", "running"] as const)(
+    "hints at a partial conversion of a %s embedding job",
+    async (status) => {
+      // The embedding job of a version converted only in part carries the count
+      // from its start (E-62), before it has done anything.
+      const job = ingestJob(status, {
+        step: status === "running" ? "embed" : "",
+        partly_converted: true,
+        conversion_error_count: 2,
+        error_detail: "converted with 2 errors",
+      });
+      render(<IngestError job={job} />);
+      expect(screen.getByTestId("ingest-partly-converted").textContent).toBe(
+        "Converted only in part: some pages or elements could not be read.",
+      );
+      expect(screen.queryByTestId("ingest-error-message")).toBeNull();
+      expect(screen.getByTestId("ingest-error-detail").textContent).toBe("converted with 2 errors");
+      cleanup();
+      await changeLanguage("de");
+      render(<IngestError job={job} />);
+      expect(screen.getByTestId("ingest-partly-converted").textContent).toBe(
+        "Nur teilweise umgewandelt: Einzelne Seiten oder Elemente konnten nicht gelesen werden.",
+      );
+    },
+  );
 
   it("shows the embedding error of a failed job that was converted only in part", () => {
     const job = ingestJob("failed", {
@@ -264,7 +292,23 @@ describe("IngestError", () => {
     });
     render(<IngestError job={job} />);
     expect(screen.getByTestId("ingest-error").dataset.code).toBe("embedding_unavailable");
-    expect(screen.getByTestId("ingest-error-message").className).toContain("text-danger");
+    const message = screen.getByTestId("ingest-error-message");
+    expect(message.className).toContain("text-danger");
+    expect(message.textContent).not.toMatch(/Converted only in part/);
+    // The hint stands below the error, in its own paragraph and colour (work order 089).
+    const hint = screen.getByTestId("ingest-partly-converted");
+    expect(hint.textContent).toBe("Converted only in part: some pages or elements could not be read.");
+    expect(hint.className).toContain("text-warning");
+    expect(message.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId("ingest-error-detail").textContent).toBe(
+      "cannot reach the model service (gave up after 5 retries)",
+    );
+  });
+
+  it("shows no hint for a failed job that was converted completely", () => {
+    render(<IngestError job={ingestJob("failed", { error_code: "conversion_failed" })} />);
+    expect(screen.getByTestId("ingest-error-message")).toBeDefined();
+    expect(screen.queryByTestId("ingest-partly-converted")).toBeNull();
   });
 
   it.each(["queued", "running", "done"] as const)("shows nothing for a %s job without a hint", (status) => {

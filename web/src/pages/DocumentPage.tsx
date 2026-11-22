@@ -4,9 +4,10 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 
 import { ApiError } from "../api/errors.ts";
-import type { DocumentDetail, DocumentVersion } from "../api/generated";
+import type { Device, DocumentDetail, DocumentVersion } from "../api/generated";
 import { devicesRetrieveOptions, documentRetrieveOptions } from "../api/generated/@tanstack/react-query.gen.ts";
 import { AuditTrail } from "../components/AuditTrail.tsx";
+import { Breadcrumb, type Crumb, useDeviceCrumbs } from "../components/Breadcrumb.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { devicePath, parseId } from "../components/files/format.ts";
 import {
@@ -89,6 +90,43 @@ function DeviceLink({ deviceId }: { deviceId: number }): ReactElement {
   );
 }
 
+/** The file as the last level of the breadcrumb. */
+function fileCrumb(document: DocumentDetail): Crumb {
+  return { key: "document", icon: "document", label: document.title, testId: "breadcrumb-document" };
+}
+
+/**
+ * Where the file sits (work order 089): Structure › site › area › plant ›
+ * device › file, like the breadcrumb of the device page, with the device as a
+ * link. Until the device is loaded (or if it cannot be), the device stands
+ * there by its id.
+ */
+function DocumentBreadcrumb({ document }: { document: DocumentDetail }): ReactElement {
+  const { t } = useTranslation(["files", "nav"]);
+  const query = useQuery(devicesRetrieveOptions({ path: { id: document.device } }));
+  if (query.data !== undefined) {
+    return <DeviceDocumentBreadcrumb device={query.data} document={document} />;
+  }
+  const crumbs: Crumb[] = [
+    { key: "structure", icon: "structure", label: t("nav:structure"), to: "/" },
+    {
+      key: "device",
+      icon: "device",
+      label: t("files:document.deviceFallback", { id: document.device }),
+      to: devicePath(document.device),
+      testId: "breadcrumb-device",
+    },
+    fileCrumb(document),
+  ];
+  return <Breadcrumb label={t("files:document.breadcrumb")} testId="document-breadcrumb" crumbs={crumbs} />;
+}
+
+function DeviceDocumentBreadcrumb({ device, document }: { device: Device; document: DocumentDetail }): ReactElement {
+  const { t } = useTranslation("files");
+  const crumbs = [...useDeviceCrumbs(device), fileCrumb(document)];
+  return <Breadcrumb label={t("document.breadcrumb")} testId="document-breadcrumb" crumbs={crumbs} />;
+}
+
 function DocumentView({ document, error }: { document: DocumentDetail; error: unknown }): ReactElement {
   const { t } = useTranslation("files");
   const { canManage } = useRole();
@@ -97,10 +135,7 @@ function DocumentView({ document, error }: { document: DocumentDetail; error: un
 
   return (
     <section className="space-y-4">
-      <p className="text-sm text-fg-muted">
-        <Icon name="document" className="mr-1" decorative />
-        {t("document.heading")}
-      </p>
+      <DocumentBreadcrumb document={document} />
       <MaskedTitle text={document.title} className="text-2xl font-semibold break-words" testId="document-title" />
 
       {/* A failed reload keeps the last data on screen and says so. */}
