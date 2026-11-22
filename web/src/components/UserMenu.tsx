@@ -8,6 +8,7 @@ import type { Me } from "../api/generated";
 import { Icon } from "../icons/Icon.tsx";
 import { LanguageSwitch } from "../LanguageSwitch.tsx";
 import { dropUserData, forgetSession, hasRole, LOGIN_PAGE_PATH } from "../session.ts";
+import { Button } from "./ui/Button.tsx";
 
 /**
  * User menu in the page header: a button with the user name opens a small
@@ -75,9 +76,11 @@ export function UserMenu({ user }: { user: Me }): ReactElement {
 
   return (
     <div ref={rootRef} className="relative" onKeyDown={onKeyDown}>
-      <button
+      <Button
         ref={buttonRef}
         type="button"
+        variant="ghost"
+        size="sm"
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={`${t("userMenu")}: ${user.username}`}
@@ -85,14 +88,15 @@ export function UserMenu({ user }: { user: Me }): ReactElement {
         onClick={() => {
           setOpenOn(open ? null : location.key);
         }}
-        className="inline-flex max-w-48 items-center gap-2 whitespace-nowrap rounded px-2 py-1 text-sm text-fg hover:bg-surface-muted"
+        className="max-w-48 whitespace-nowrap"
       >
+        {/* The header uses 20 px icons, so this one is a child and not the 16 px icon of size sm. */}
         <Icon name="user" size={20} decorative />
         {/* On narrow screens only the icon shows; the button keeps its name through aria-label. */}
         <strong data-testid="user-name" className="truncate font-semibold max-sm:sr-only">
           {user.username}
         </strong>
-      </button>
+      </Button>
       <div
         id={panelId}
         hidden={!open}
@@ -119,16 +123,16 @@ export function UserMenu({ user }: { user: Me }): ReactElement {
           </NavLink>
         ) : null}
         <LanguageSwitch />
-        <button
+        <Button
           type="button"
+          size="sm"
+          icon="signOut"
           onClick={() => void onSignOut()}
-          disabled={pending}
+          loading={pending}
           data-testid="sign-out"
-          className="inline-flex items-center gap-2 rounded border border-line-strong px-3 py-1 text-fg hover:bg-surface-muted disabled:opacity-50"
         >
-          <Icon name="signOut" decorative />
           {pending ? t("signingOut") : t("signOut")}
-        </button>
+        </Button>
         {failed ? (
           <p role="alert" data-testid="sign-out-error" className="text-danger">
             <Icon name="error" className="mr-2" decorative />

@@ -24,6 +24,8 @@ import {
 import type { Area, Device, Plant, Site } from "../../api/generated";
 import { ErrorMessage } from "../../components/ErrorMessage.tsx";
 import { Loading } from "../../components/Loading.tsx";
+import { Button } from "../../components/ui/Button.tsx";
+import { Input, Select, Textarea } from "../../components/ui/fields.tsx";
 import { Icon } from "../../icons/Icon.tsx";
 import type assetsCatalog from "../../locales/en/assets.json";
 import { DEFAULT_DEVICE_CLASS, deviceClasses, isDeviceClass } from "./deviceClass.ts";
@@ -97,9 +99,6 @@ function useSaveAction(
   );
 }
 
-const inputClass =
-  "w-full rounded border border-line-strong bg-surface px-3 py-2 aria-[invalid=true]:border-danger";
-
 function FieldFrame({
   name,
   errors,
@@ -141,29 +140,29 @@ function TextField({
   multiline?: boolean;
   identifier?: boolean;
 }): ReactElement {
-  const className = identifier ? `${inputClass} tabular-nums slashed-zero` : inputClass;
+  const className = identifier ? "w-full tabular-nums slashed-zero" : "w-full";
   return (
     <FieldFrame name={name} errors={state.fieldErrors[name] ?? []}>
       {({ id, invalid, describedBy }) =>
         multiline ? (
-          <textarea
+          <Textarea
             id={id}
             name={name}
             rows={4}
             defaultValue={text(state.values, name)}
-            aria-invalid={invalid}
+            invalid={invalid}
             aria-describedby={describedBy}
             className={className}
           />
         ) : (
-          <input
+          <Input
             id={id}
             name={name}
             type="text"
             autoComplete="off"
             spellCheck={false}
             defaultValue={text(state.values, name)}
-            aria-invalid={invalid}
+            invalid={invalid}
             aria-describedby={describedBy}
             className={className}
           />
@@ -191,13 +190,13 @@ function SelectField({
   return (
     <FieldFrame name={name} errors={state.fieldErrors[name] ?? []}>
       {({ id, invalid, describedBy }) => (
-        <select
+        <Select
           id={id}
           name={name}
           defaultValue={text(state.values, name)}
-          aria-invalid={invalid}
+          invalid={invalid}
           aria-describedby={describedBy}
-          className={inputClass}
+          className="w-full"
         >
           <option value="">{t("form.choose")}</option>
           {choices.map((choice) => (
@@ -205,7 +204,7 @@ function SelectField({
               {choice.label}
             </option>
           ))}
-        </select>
+        </Select>
       )}
     </FieldFrame>
   );
@@ -217,20 +216,20 @@ function DeviceClassField({ state }: { state: FormState }): ReactElement {
   return (
     <FieldFrame name="device_class" errors={state.fieldErrors.device_class ?? []}>
       {({ id, invalid, describedBy }) => (
-        <select
+        <Select
           id={id}
           name="device_class"
           defaultValue={text(state.values, "device_class")}
-          aria-invalid={invalid}
+          invalid={invalid}
           aria-describedby={describedBy}
-          className={inputClass}
+          className="w-full"
         >
           {deviceClasses.map((value) => (
             <option key={value} value={value}>
               {t(`deviceClass.${value}`)}
             </option>
           ))}
-        </select>
+        </Select>
       )}
     </FieldFrame>
   );
@@ -292,12 +291,12 @@ function FormShell({
         {children}
       </div>
       <div className="flex gap-2">
-        <button type="submit" disabled={pending} className="rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong disabled:opacity-50">
+        <Button type="submit" variant="primary" loading={pending}>
           {pending ? t("actions.saving") : t("actions.save")}
-        </button>
-        <button type="button" onClick={onCancel} className="rounded border border-line-strong px-4 py-2">
+        </Button>
+        <Button type="button" onClick={onCancel}>
           {t("actions.cancel")}
-        </button>
+        </Button>
       </div>
     </form>
   );

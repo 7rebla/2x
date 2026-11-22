@@ -17,7 +17,7 @@ All colours live in `src/index.css` as custom properties (`--twox-*`) and reach 
 | `success`, `warning`, `danger`, `info` with `-soft` and `-line` | status text, message background, message border; independent of the accent |
 | `brand` | the brand mark only: `#765477` in light mode, `#b496b8` in dark mode, independent of the accent (never `#765477` on a dark background) |
 
-Typical classes: `bg-surface border border-line`, `text-fg-muted`, `bg-accent text-on-accent hover:bg-accent-strong`, `text-accent underline hover:text-accent-strong`, `border-danger-line bg-danger-soft text-danger`. Icons (work order 071, `../icons/README.md`) take their colour from `currentColor`.
+Typical classes: `bg-surface border border-line`, `text-fg-muted`, `text-accent underline hover:text-accent-strong`, `border-danger-line bg-danger-soft text-danger`. Buttons and form fields take their classes from the building blocks in `../components/ui/` (work order 077), not from copies. Icons (work order 071, `../icons/README.md`) take their colour from `currentColor`.
 
 Inline styles that cannot use classes (React Flow on the map) use `var(--twox-…)` directly.
 

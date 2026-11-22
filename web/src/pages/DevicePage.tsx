@@ -10,6 +10,7 @@ import { DeviceFiles } from "../components/DeviceFiles.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { NotFound } from "../components/NotFound.tsx";
+import { Button } from "../components/ui/Button.tsx";
 import { Icon } from "../icons/Icon.tsx";
 import type { IconName } from "../icons/names.ts";
 import { useRole } from "../session.ts";
@@ -107,17 +108,17 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
           <MaskedTitle text={device.name} testId="device-title" />
         </div>
         {canManage && !editing ? (
-          <button
+          <Button
             type="button"
+            variant="primary"
+            icon="edit"
             aria-label={t("assets:actions.editDevice", { name: device.name })}
             onClick={() => {
               setEditing(true);
             }}
-            className="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong"
           >
-            <Icon name="edit" size={20} decorative />
             {t("assets:actions.edit")}
-          </button>
+          </Button>
         ) : null}
       </div>
 

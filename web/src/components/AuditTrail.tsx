@@ -4,9 +4,9 @@ import { useTranslation } from "react-i18next";
 
 import { auditLogListOptions } from "../api/generated/@tanstack/react-query.gen.ts";
 import type { AuditLogEntry, AuditLogListData } from "../api/generated";
-import { Icon } from "../icons/Icon.tsx";
 import { ErrorMessage } from "./ErrorMessage.tsx";
 import { Loading } from "./Loading.tsx";
+import { Button } from "./ui/Button.tsx";
 
 // Change log entries as a table (GET /api/v1/audit-log/, only for "manage").
 //
@@ -135,29 +135,28 @@ function AuditTrailPages(props: AuditTrailProps): ReactElement {
         </div>
       )}
       <nav aria-label={t("pagination.label")} className="flex flex-wrap items-center gap-3">
-        <button
+        <Button
           type="button"
-          className="inline-flex items-center gap-1 rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+          icon="previous"
           disabled={busy || shownPage <= 1}
           onClick={() => {
             setPage(shownPage - 1);
           }}
         >
-          <Icon name="previous" decorative />
           {t("pagination.previous")}
-        </button>
+        </Button>
         <span data-testid="audit-page-status">{t("pagination.status", { page: shownPage, pages })}</span>
-        <button
+        <Button
           type="button"
-          className="inline-flex items-center gap-1 rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+          icon="next"
+          iconPosition="end"
           disabled={busy || next === null || next === undefined}
           onClick={() => {
             setPage(shownPage + 1);
           }}
         >
           {t("pagination.next")}
-          <Icon name="next" decorative />
-        </button>
+        </Button>
         <span data-testid="audit-total" className="text-fg-muted">
           {t("pagination.total", { count })}
         </span>

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { Icon } from "../icons/Icon.tsx";
 import { Loading } from "./Loading.tsx";
+import { Button } from "./ui/Button.tsx";
 
 /**
  * The loading state appears only after this many milliseconds, so a page that
@@ -55,15 +56,9 @@ export function PageLoadFailed({ onReload = reloadApplication }: { onReload?: ()
         {t("pageLoad.failed")}
       </p>
       <p className="text-sm text-fg">{t("pageLoad.failedHint")}</p>
-      <button
-        type="button"
-        onClick={onReload}
-        data-testid="page-reload"
-        className="inline-flex items-center gap-2 rounded border border-line-strong bg-surface px-3 py-1 text-fg hover:bg-surface-muted"
-      >
-        <Icon name="retry" decorative />
+      <Button type="button" icon="retry" onClick={onReload} data-testid="page-reload">
         {t("pageLoad.reload")}
-      </button>
+      </Button>
     </div>
   );
 }

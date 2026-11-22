@@ -17,6 +17,8 @@ import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { parseId } from "../components/files/format.ts";
 import { Loading } from "../components/Loading.tsx";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
+import { Button } from "../components/ui/Button.tsx";
+import { Input, Select } from "../components/ui/fields.tsx";
 import { Icon } from "../icons/Icon.tsx";
 import { SearchHitView } from "./search/SearchHitView.tsx";
 
@@ -104,11 +106,10 @@ function SearchForm({
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex min-w-64 flex-1 flex-col gap-1 text-sm">
           <label htmlFor={queryId}>{t("form.query")}</label>
-          <input
+          <Input
             id={queryId}
             data-testid="search-query"
             type="search"
-            className="rounded border border-line-strong bg-surface px-2 py-1 text-base"
             value={query}
             maxLength={QUERY_MAX_LENGTH}
             placeholder={t("form.queryHint")}
@@ -121,10 +122,10 @@ function SearchForm({
         </div>
         <div className="flex flex-col gap-1 text-sm">
           <label htmlFor={deviceId}>{t("form.device")}</label>
-          <select
+          <Select
             id={deviceId}
             data-testid="search-device"
-            className="max-w-72 rounded border border-line-strong bg-surface px-2 py-1 text-base"
+            className="max-w-72"
             value={device}
             aria-busy={devices.isPending}
             onChange={(event) => {
@@ -144,15 +145,11 @@ function SearchForm({
                 ))}
               </optgroup>
             ))}
-          </select>
+          </Select>
         </div>
-        <button
-          type="submit"
-          className="inline-flex items-center gap-2 rounded bg-accent px-3 py-1 text-on-accent hover:bg-accent-strong"
-        >
-          <Icon name="search" decorative />
+        <Button type="submit" variant="primary" icon="search">
           {t("form.submit")}
-        </button>
+        </Button>
       </div>
       {devices.isError ? <ErrorMessage error={devices.error} /> : null}
     </form>

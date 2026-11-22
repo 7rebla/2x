@@ -38,6 +38,8 @@ import {
 import { DateTime } from "../components/files/parts.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
+import { Button } from "../components/ui/Button.tsx";
+import { Select } from "../components/ui/fields.tsx";
 import { Icon } from "../icons/Icon.tsx";
 import { useRole } from "../session.ts";
 
@@ -171,10 +173,10 @@ function IngestFilter({
         <legend className="sr-only">{t("filter.legend")}</legend>
         <div className="flex max-w-full min-w-0 flex-col gap-1 text-sm">
           <label htmlFor={statusId}>{t("filter.status")}</label>
-          <select
+          <Select
             id={statusId}
             data-testid="ingest-filter-status"
-            className="max-w-full rounded border border-line-strong bg-surface px-2 py-1 text-base"
+            className="max-w-full"
             value={address.status}
             onChange={(event) => {
               const value = event.target.value;
@@ -186,14 +188,14 @@ function IngestFilter({
                 {t(`statusFilter.${filter}`)}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div className="flex max-w-full min-w-0 flex-col gap-1 text-sm">
           <label htmlFor={deviceId}>{t("filter.device")}</label>
-          <select
+          <Select
             id={deviceId}
             data-testid="ingest-filter-device"
-            className="max-w-full rounded sm:max-w-72 border border-line-strong bg-surface px-2 py-1 text-base"
+            className="max-w-full sm:max-w-72"
             value={address.device === null ? "" : String(address.device)}
             aria-busy={devices.isPending}
             onChange={(event) => {
@@ -214,9 +216,10 @@ function IngestFilter({
                 ))}
               </optgroup>
             ))}
-          </select>
+          </Select>
         </div>
-        <label className="flex max-w-full min-w-0 items-center gap-2 py-1 text-sm">
+        {/* As high as the choices (36 px), so the check box sits on their middle line. */}
+        <label className="flex min-h-9 max-w-full min-w-0 items-center gap-2 text-sm">
           <input
             type="checkbox"
             data-testid="ingest-filter-older"
@@ -308,31 +311,30 @@ function IngestJobs({ address }: { address: IngestAddress }): ReactElement {
         </div>
       )}
       <nav aria-label={t("pagination.label")} className="flex flex-wrap items-center gap-3">
-        <button
+        <Button
           type="button"
+          icon="previous"
           data-testid="ingest-previous"
-          className="inline-flex items-center gap-1 rounded border border-line-strong px-3 py-1 disabled:opacity-50"
           disabled={busy || shownPage <= 1}
           onClick={() => {
             setPage(shownPage - 1);
           }}
         >
-          <Icon name="previous" decorative />
           {t("pagination.previous")}
-        </button>
+        </Button>
         <span data-testid="ingest-page-status">{t("pagination.status", { page: shownPage, pages })}</span>
-        <button
+        <Button
           type="button"
+          icon="next"
+          iconPosition="end"
           data-testid="ingest-next"
-          className="inline-flex items-center gap-1 rounded border border-line-strong px-3 py-1 disabled:opacity-50"
           disabled={busy || next === null || next === undefined}
           onClick={() => {
             setPage(shownPage + 1);
           }}
         >
           {t("pagination.next")}
-          <Icon name="next" decorative />
-        </button>
+        </Button>
         <span data-testid="ingest-total" className="text-fg-muted">
           {t("pagination.total", { count })}
         </span>

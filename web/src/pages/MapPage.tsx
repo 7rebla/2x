@@ -41,6 +41,8 @@ import {
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
+import { Button } from "../components/ui/Button.tsx";
+import { Input } from "../components/ui/fields.tsx";
 import { Icon } from "../icons/Icon.tsx";
 import { useDisplay } from "../theme/store.ts";
 import {
@@ -335,7 +337,7 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
             <Icon name="search" className="mr-1.5" decorative />
             {t("search.label")}
           </label>
-          <input
+          <Input
             id={searchId}
             type="search"
             value={query}
@@ -344,13 +346,14 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
               setQuery(event.target.value);
             }}
             data-testid="map-search"
-            className="w-72 max-w-full rounded border border-line-strong bg-surface px-3 py-2"
+            className="w-72 max-w-full"
           />
         </div>
         <p role="status" data-testid="map-search-status" className="min-h-6 text-sm text-fg-muted">
           {status}
         </p>
-        <div className="flex items-center gap-2">
+        {/* As high as the controls next to it (36 px), so the check box sits on their middle line. */}
+        <div className="flex min-h-9 items-center gap-2">
           <input
             id={networksId}
             type="checkbox"
@@ -366,16 +369,15 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
           </label>
         </div>
         {/* The only "fit view" control (the one of React Flow's control bar is switched off below). */}
-        <button
+        <Button
           type="button"
+          icon="fitView"
           onClick={() => {
             void fitView();
           }}
-          className="inline-flex items-center gap-2 rounded border border-line-strong bg-surface px-3 py-1 text-sm hover:bg-surface-muted"
         >
-          <Icon name="fitView" decorative />
           {t("aria.fitView")}
-        </button>
+        </Button>
       </div>
       <p className="text-sm text-fg-muted">{t("legend")}</p>
       <div

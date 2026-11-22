@@ -1,6 +1,7 @@
 import type { ChangeEvent, ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Select } from "./components/ui/fields.tsx";
 import { changeLanguage, currentLanguage, isLanguage, supportedLanguages } from "./i18n.ts";
 
 /** Language switch in the page header; the choice is remembered in the browser. */
@@ -19,18 +20,13 @@ export function LanguageSwitch(): ReactElement {
   return (
     <label className="flex items-center gap-2 text-sm text-fg-muted">
       {t("language.label")}
-      <select
-        value={language}
-        onChange={onChange}
-        data-testid="language-switch"
-        className="rounded border border-line-strong bg-surface px-2 py-1 text-fg"
-      >
+      <Select size="sm" value={language} onChange={onChange} data-testid="language-switch">
         {supportedLanguages.map((option) => (
           <option key={option} value={option} lang={option}>
             {t(`language.${option}`)}
           </option>
         ))}
-      </select>
+      </Select>
     </label>
   );
 }

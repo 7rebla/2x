@@ -6,6 +6,7 @@ import { type ChangeEvent, type ReactElement, useId } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AnimatedHeading } from "../components/TextMotion.tsx";
+import { Select } from "../components/ui/fields.tsx";
 import { changeLanguage, currentLanguage, isLanguage, supportedLanguages } from "../i18n.ts";
 import { type Accent, accents, defaultSettings, themeModes } from "../theme/settings.ts";
 import { updateDisplaySettings, useDisplay } from "../theme/store.ts";
@@ -135,20 +136,19 @@ function LanguageSetting(): ReactElement {
         <label htmlFor={selectId} className="block text-sm text-fg-muted">
           {t("settings:language.label")}
         </label>
-        <select
+        <Select
           id={selectId}
           value={currentLanguage()}
           onChange={onChange}
           aria-describedby={hintId}
           data-testid="settings-language-select"
-          className="rounded border border-line-strong bg-surface px-2 py-1 text-fg"
         >
           {supportedLanguages.map((option) => (
             <option key={option} value={option} lang={option}>
               {t(`common:language.${option}`)}
             </option>
           ))}
-        </select>
+        </Select>
         <p id={hintId} className="text-sm text-fg-muted">
           {t("settings:language.hint")}
         </p>

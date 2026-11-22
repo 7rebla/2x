@@ -13,6 +13,8 @@ import {
 import { AnimatedHeading } from "../components/TextMotion.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Loading } from "../components/Loading.tsx";
+import { Button } from "../components/ui/Button.tsx";
+import { Input } from "../components/ui/fields.tsx";
 import { Icon } from "../icons/Icon.tsx";
 import type { IconName } from "../icons/names.ts";
 import { useRole } from "../session.ts";
@@ -70,16 +72,16 @@ export function StructurePage(): ReactElement {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <AnimatedHeading text={t("nav:structure")} />
         {canManage ? (
-          <button
+          <Button
             type="button"
+            variant="primary"
+            icon="create"
             onClick={() => {
               setEditor({ form: "site" });
             }}
-            className="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong"
           >
-            <Icon name="create" size={20} decorative />
             {t("assets:actions.newSite")}
-          </button>
+          </Button>
         ) : null}
       </div>
       <p className="text-fg-muted">{t("assets:structure.intro")}</p>
@@ -122,7 +124,7 @@ function StructureContent({ control }: { control: EditorControl }): ReactElement
           <Icon name="search" className="mr-1.5" decorative />
           {t("search.label")}
         </label>
-        <input
+        <Input
           id={searchId}
           type="search"
           value={query}
@@ -131,7 +133,7 @@ function StructureContent({ control }: { control: EditorControl }): ReactElement
             setQuery(event.target.value);
           }}
           data-testid="structure-search"
-          className="w-full max-w-md rounded border border-line-strong bg-surface px-3 py-2"
+          className="w-full max-w-md"
         />
       </div>
       {tree.length === 0 ? (
@@ -197,15 +199,9 @@ function SmallButton({
   children: ReactNode;
 }): ReactElement {
   return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      className="inline-flex items-center gap-1 self-center rounded border border-line-strong bg-surface px-2 py-0.5 text-sm hover:bg-surface-muted"
-    >
-      <Icon name={icon} decorative />
+    <Button type="button" size="sm" icon={icon} aria-label={label} onClick={onClick} className="self-center">
       {children}
-    </button>
+    </Button>
   );
 }
 
