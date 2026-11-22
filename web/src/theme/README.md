@@ -53,7 +53,7 @@ script-src 'self' 'sha256-21Q8MBuGgh+LjfmXBiHrboYdShIdCd3JR1T2Q7yFueI=';
 
 Inter 4.1 (`assets/fonts/inter/InterVariable.woff2`, unchanged from github.com/rsms/inter, `docs/font-files/`, tag `v4.1`; SIL Open Font License 1.1 in `LICENSE.txt` next to it). One variable file for weights 100–900, `font-display: swap`; the stylistic set `ss02` (I, l and 1 distinguishable) is on for the whole interface.
 
-Identifiers, IP addresses, versions and number columns use the interface font with `tabular-nums slashed-zero`; monospace (`font-mono`) is only for checksums.
+Identifiers, IP addresses, versions and number columns use the interface font with `tabular-nums slashed-zero`; monospace (`font-mono`) is only for checksums and the raw data of a change log entry (work order 079).
 
 ## Brand mark, favicon and touch icon (E-52)
 

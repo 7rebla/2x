@@ -129,11 +129,19 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 
 - `../components/DeviceFiles.tsx` (on the device page) lists the files of the device with their newest version:
   title (link to the file page), kind, number, date, size, user, the checksum shortened (a click shows all of it)
-  and a download link. Managers upload new files there; the kind "configuration" is shown but cannot be chosen,
+  and a download button. Managers upload new files there; the kind "configuration" is shown but cannot be chosen,
   because configurations are rejected until redaction arrives in M5 (E-42); the form says so.
 - `DocumentPage.tsx` (`/documents/:documentId`) shows one file with all versions, newest first, each with a
-  download link, the form for a new version (managers) and the change log of the file (`AuditTrail`, managers only,
+  download button, the form for a new version (managers) and the change log of the file (`AuditTrail`, managers only,
   because the change log API is readable for managers only).
+- Tables on the desktop (work order 079): version, date, size and user never wrap (`whitespace-nowrap`). The user
+  stands as a detail line below the upload time ("Uploaded"), the checksum as a quiet detail line ("SHA-256 1a2b…",
+  no disclosure triangle, full value as tooltip and on click) below the title or the file name. Download is an icon
+  button (`DownloadIconLink`, 28 px, name in `aria-label` and tooltip); its column heading is for screen readers only.
+  File names (`FileName`) wrap at word boundaries (`break-words`, never `break-all`) and are cut after two lines with
+  the full name as tooltip; the text content stays the full name. The building blocks are in
+  `../components/files/parts.tsx`. A scroll box around a table with screen-reader texts is `relative`, so those
+  absolute texts do not widen the page on a phone.
 - Ingestion state (work order 053): the building blocks are in `../components/files/IngestStatus.tsx` and are meant to
   be reused (055). `IngestStatusBadge` shows the newest job of a version (field `ingest`): queued, ingesting (with the
   step), ingested (pages and sections), error, skipped, or not ingested; `compact` leaves out step and counts (device
@@ -155,6 +163,18 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 - File names, titles and user names are rendered as text, never through the interpolation of i18next.
 - Tests fake the file API with `../components/files/testData.ts`. Under jsdom, Node's Request cannot read
   jsdom files, so tests use `textFile()` and `fakeUploadApi()`, which send forms as multipart text.
+
+## Change log entries
+
+- `../components/AuditTrail.tsx` shows the entries of `/api/v1/audit-log/` on `/audit` and on the file page. Time,
+  user, action and object type never wrap.
+- Changes (work order 079): known field names are translated (`field` in `audit.json`, the API name as tooltip;
+  `auditFieldNames` lists them, taken from the logged models in `backend/twox/accounts/audit.py`); an unknown field
+  shows its name as it came. Technical fields (`TECHNICAL_AUDIT_FIELDS`: id, storage key, checksum and the ids of other
+  objects) are folded away under "Technical details" / "Technische Angaben", like the technical text of an ingest
+  error. Runs of 32 or more hex digits are cut like the checksums of the file table, with the full value as tooltip.
+- Nothing is lost: "Technical details" also holds the raw `changes` of the entry exactly as the API sent them, as JSON
+  with one field per line (`rawJson()`), including the pairs that are empty on both sides and therefore not listed.
 
 ## Device list import
 
