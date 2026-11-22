@@ -69,7 +69,7 @@ Nichts davon hält die laufende Arbeit auf.
 13. ~~Client-Adresse~~ – entschieden mit E-62 (Auftrag 069). Frühere Beschreibung: **Client-Adresse im Zugriffsprotokoll (Prüfung 059; Stufe C, Anmeldung/Datenschutz).** Das Zugriffsprotokoll von uvicorn enthält bei jeder Anfrage die Client-Adresse, auch bei fehlgeschlagenen Anmeldungen; die Doku sagte bisher „nie mit IP-Adresse“ (wird mit 059 berichtigt). Optionen: (a) Client-Adresse im Zugriffsprotokoll entfernen oder kürzen (z. B. letztes Oktett), wie schon die Suchtexte – Empfehlung, passt zu „Betrieb mit möglichst wenig personenbezogenen Daten“; (b) so lassen und als Betriebsinformation dokumentieren (hilft bei der Fehlersuche und gegen Anmeldeversuche).
 14. ~~Abnahmelauf 060 – Befunde zur Suchgüte~~ – entschieden mit E-61 (Auftrag 067, danach 060 wiederholen). Frühere Beschreibung: Alles andere ist erfüllt (Handbücher eingelesen, Fehler sichtbar). (1) IP-Probe: Die richtige Stelle steht auf Rang 2 – in der englischen APS-Dokumentation (gleiche Seite 38); Probe und Test zählen nur die deutsche (Rang 4). Empfehlung: beide Sprachfassungen als richtige Fundstelle werten (Probe `m2.json` und Abnahmetest ergänzen). (2) Prüffrage 9: Vektor Rang 1, zusammen Rang 12 (verlangt: unter den ersten 5). Empfehlung: Folgeauftrag „bei Fragen keine eigene exakte Liste“ (Option B aus 063), danach 060 wiederholen. Alternative: Grenze für Fragen im Abnahmetest auf 15 lockern – nicht empfohlen.
 15. ~~Swap~~ – entschieden mit E-62 (Auftrag 075). Frühere Beschreibung: **Swap für Docling (Auftrag 066; Stufe C).** `mem_limit: 8g` begrenzt nur den Arbeitsspeicher; Docker erlaubt zusätzlich Swap (bis zur gleichen Menge, hier begrenzt durch 4 GiB Swap der Docker-VM). Optionen: (a) so lassen; (b) `memswap_limit` auf denselben Wert setzen, dann ist bei 8 GiB wirklich Schluss – Empfehlung (Swap verlangsamt die Umwandlung stark, die Variable soll die ganze Grenze bedeuten).
-16. **Abnahme M2 (Stufe C).** Wiederholung von 060 nach 067: Handbücher eingelesen, Fehler sichtbar, IP-Adresse auf Rang 2, Prüffrage 9 auf Rang 1 – das ROADMAP-Kriterium ist erfüllt. Der Abnahmetest scheitert nur noch an Prüffrage 10 in seiner eigenen Formulierung (Rang 10 statt ≤ 5; in der Formulierung der Probe Rang 1). Optionen: (a) M2 abnehmen, Prüffrage 10 als Thema für M3 (Antwort mit Quellen) vormerken und den Abnahmetest auf das ROADMAP-Kriterium (eine sinngemäße Frage) zurückführen – Empfehlung; (b) vor der Abnahme die Suche weiter verbessern (z. B. Abschnittsüberschriften stärker gewichten, Rangfolge mit einem Reranker – neue Abhängigkeit) und 060 erneut laufen lassen.
+16. ~~Abnahme M2~~ – abgenommen mit E-67. Frühere Beschreibung: Wiederholung von 060 nach 067: Handbücher eingelesen, Fehler sichtbar, IP-Adresse auf Rang 2, Prüffrage 9 auf Rang 1 – das ROADMAP-Kriterium ist erfüllt. Der Abnahmetest scheitert nur noch an Prüffrage 10 in seiner eigenen Formulierung (Rang 10 statt ≤ 5; in der Formulierung der Probe Rang 1). Optionen: (a) M2 abnehmen, Prüffrage 10 als Thema für M3 (Antwort mit Quellen) vormerken und den Abnahmetest auf das ROADMAP-Kriterium (eine sinngemäße Frage) zurückführen – Empfehlung; (b) vor der Abnahme die Suche weiter verbessern (z. B. Abschnittsüberschriften stärker gewichten, Rangfolge mit einem Reranker – neue Abhängigkeit) und 060 erneut laufen lassen.
 
 ## Offene Abnahmebedingungen M0
 
@@ -179,8 +179,9 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 087 | Suchtreffer kompakter | B | 077 | offen |
 | 088 | Einheitliche Dateiauswahl | B | 077 | offen |
 | 089 | Ergebniszahl als Live-Region, Brotkrumen Dateiseite | B | 077, 079, 083 | offen |
+| 090 | Abnahmetest M2 auf das ROADMAP-Kriterium (E-67) | C (entschieden) | 058, 067 | in Arbeit |
 
-## M2 – Einlesen und Suche (freigegeben 22.11.2026, E-54)
+## M2 – Einlesen und Suche (freigegeben 22.11.2026, E-54; abgenommen 22.11.2026, E-67)
 
 21 Aufträge 040–060 unter `docs/auftraege/offen/` (Startreihenfolge nach Abhängigkeiten, höchstens fünf gleichzeitig). 21 Fragen an a7 mit Optionen und Empfehlung: `docs/auftraege/M2-FRAGEN.md`. 057 und 060 sind Läufe der Leitstelle in der Testumgebung (dort liegen die Handbücher). Kein M2-Auftrag startet vor der Antwort (Stufe C: Datenmodell, neue Abhängigkeit pgvector, Modellwahl).
 
@@ -206,7 +207,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 057 | Messlauf in der Testumgebung (Leitstelle) | C | 048, 049, 050, 056 | erledigt |
 | 058 | Abnahmetests M2 | B | 052–055 | erledigt |
 | 059 | README und ARCHITECTURE für M2 | B | 055, 056, 058 | erledigt |
-| 060 | Abnahmelauf M2 (Leitstelle) | C | 057, 058, 059 | wartet auf a7 |
+| 060 | Abnahmelauf M2 (Leitstelle) | C | 057, 058, 059 | erledigt |
 | 061 | Einbettungsaufträge im Feld `ingest` | B | 048, 051 | erledigt |
 | 062 | Seiten bei Bedarf nachladen (Bündelgröße) | B | 054, 055 | erledigt |
 | 063 | Gewichtung exakter Treffer in der kombinierten Suche | B | 052 | erledigt |

@@ -1,6 +1,6 @@
 # Auftrag 060 – Abnahmelauf M2 in der Testumgebung
 
-Meilenstein: M2 · Freigabestufe: C · Status: wartet auf a7
+Meilenstein: M2 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 
