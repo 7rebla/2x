@@ -53,4 +53,6 @@ def test_running_worker_consumes_the_configured_queues_with_four_processes() -> 
     for worker_stats in stats.values():
         # --concurrency 4 in deploy/compose/compose.yaml (E-55).
         assert worker_stats["pool"]["max-concurrency"] == 4
-        assert worker_stats["prefetch_count"] == 4
+        # Prefetch 1 x 4 processes; Celery raises the count for every reserved
+        # message with a countdown (polls of running ingest jobs, 046).
+        assert worker_stats["prefetch_count"] >= 4

@@ -76,6 +76,8 @@ Voraussetzung: 046 ist nach `main` zusammengeführt.
 
 - **Nachtrag der Leitstelle (Prüfung 045):** Das Socket-Zeitlimit des Einbettungs-Clients (120 s) kann zusammen mit `TWOX_EMBED_TASK_MAX_SECONDS` (240) die weiche Grenze von 300 s überschreiten. Beginne keinen neuen Stapel, wenn bis zur weichen Grenze weniger Zeit bleibt als das Socket-Zeitlimit; Test dafür. Beim kalten Herunterfahren kommen nur Aufgaben mit `acks_late` zurück in die Warteschlange (Celery 5.7.0, `cancel_active_requests`).
 
+- **Nachtrag der Leitstelle (Prüfung 046):** Zwei Grenzen aus 046 in `pipeline.py`/`tasks.py` mit beheben, je mit Test: (1) `reject_on_worker_lost` ohne Zähler kann eine Nachricht, deren Verarbeitung den Prozess immer wieder abstürzen lässt (z. B. Speichermangel in `load_result`), endlos neu zustellen. Neuzustellungen begrenzen (z. B. über `attempts` oder `delivery_info['redelivered']`) und danach mit `failed`/`internal` enden. (2) Ergebnisse, die Docling wegen `document_timeout` nur teilweise liefert (`partial_success`), nicht für gleichen Inhalt wiederverwenden; Wiederverwendung nur bei vollständigem Erfolg.
+
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
 **Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).

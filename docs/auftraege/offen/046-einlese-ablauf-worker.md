@@ -1,6 +1,6 @@
 # Auftrag 046 – Einlese-Ablauf im Worker: Umwandeln, Abschnitte speichern
 
-Meilenstein: M2 · Freigabestufe: B · Status: offen
+Meilenstein: M2 · Freigabestufe: B · Status: zur Prüfung
 
 ## Ziel
 
@@ -98,7 +98,77 @@ Voraussetzung: 042, 043 und 045 sind nach `main` zusammengeführt (041 und 044 s
 Keine. (Grundlage sind die Entscheidungen zu 041 bis 045.)
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Läufe am 22.11.2026 im Container, Projekt `twox-046`, Port 18046, Docker Engine 29.9.3, Compose v5.7.0. Alle Akzeptanzkriterien 0 bis 9 erfüllt. Keine neue Abhängigkeit, keine Migration, keine Änderung an `settings.py`, `compose.yaml`, `twox/files/` oder `search/`. Eine zusätzliche Hilfsdatei im Testordner und eine Verschärfung der Wiederverwendung (siehe Abweichungen).
+
+### Was wurde gebaut?
+
+- `backend/twox/ingest/pipeline.py` (Logik ohne Celery):
+  - `convert(job_id)`: ungültige oder unbekannte ID → Warnung, Ergebnis `missing`, keine Ausnahme. Übernahme nur von `queued` per bedingtem `UPDATE` (`running`, Schritt `convert`, `started_at`); sonst `ignored`. Wiederverwendung: neuester andere Auftrag mit gleicher SHA-256, Status `done`, `result_blob_key` und vorhandenem Blob → `reused_from`, `result_blob_key`, Schritt `sections`, sofort Abschnitte. Sonst `open_blob` und `submit` mit `version-<id><endung>` und `document_timeout=TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS`.
+  - `poll(job_id)`: nur bei `running`. Ohne Docling-Aufgabe (Upload gescheitert oder Aufgabe verloren) wird hier neu eingereicht. Sonst genau eine Abfrage; erster `started` setzt `docling_started_at`; Frist `TWOX_INGEST_TIMEOUT_SECONDS` ab dort, vor jeder Abfrage geprüft. Abstand der Abfragen: ein Viertel der Laufzeit des Auftrags, zwischen `POLL_MIN` und `POLL_MAX` (10 → 60 s). Bei Ende: `fetch` in `tempfile.TemporaryFile`, sofort `store_blob`, `result_blob_key` speichern, erst dann `load_result`.
+  - Schritt `sections`: `build_sections` mit `TWOX_SECTION_MAX_CHARS`; in einer Transaktion mit `select_for_update` auf den Auftrag: alte Abschnitte der Version löschen, `bulk_create` über `section_rows`, `done`, `section_count`, `page_count` (Zahl der Seiten im DoclingDocument, `None` bei Markdown), `finished_at`. Kommentar an der Stelle, an der 048 den Schritt `embed` anhängt.
+  - Fehler: `DoclingUnavailableError` → neuer Versuch nach 10, 20, 40, 60, 60 s, danach `failed`/`docling_unavailable`; `DoclingTaskLostError` → Aufgabe vergessen und neu einreichen, zählt mit; `DoclingRejectedError` → sofort `docling_rejected`; `DoclingConversionError`, `UnsupportedDocumentError` → `conversion_failed` (bei Status `failure`/`skipped` mit den Fehlertexten aus der Docling-Antwort); `BlobNotFoundError` → `content_missing`; Frist → `timeout`; `SoftTimeLimitExceeded` → `timeout`; alles andere → `internal` mit festem Text, Einzelheiten nur per `logger.exception`. `finished_at` immer gesetzt. Zähler der Versuche ist `attempts` (über den ganzen Auftrag, nicht je Schritt).
+  - `sanitize_error_detail(text, filenames=...)`: entfernt Dateiname (auch letzter Pfadteil und Stamm ab 4 Zeichen), URLs, Windows-, UNC- und POSIX-Pfade, MAC- (drei Schreibweisen), IPv6- (über `ipaddress` geprüft, damit Uhrzeiten bleiben) und IPv4-Adressen, Steuerzeichen; kürzt auf 2 000 Zeichen. Rohtext geht per `logger.warning` ins Server-Protokoll.
+  - `partial_success` endet `done`; `error_detail` enthält dann einen Hinweis wie „converted with 1 errors on pages 3“.
+- `backend/twox/ingest/tasks.py`: `twox.ingest.convert` und `twox.ingest.poll` mit `acks_late=True`, `reject_on_worker_lost=True`, `soft_time_limit`/`time_limit` aus 045 (300/360). Die Aufgabe plant `poll` mit `countdown` neu ein und liefert das Ergebnis als Text (`missing`, `ignored`, `polling`, `done`, `failed`).
+- Tests:
+  - `backend/tests/ingest/fake_converter.py` (neu, Hilfsdatei): `FakeConverter` mit den echten Docling-Ergebnissen aus 041, `NoDocling`, Fixture `isolated_services` (eigener Blob-Speicher, Docling- und Ollama-Adresse ins Leere, `get_document_converter` und `get_embedder` lassen jeden Test scheitern, der sie erreicht).
+  - `test_pipeline.py` (44 Testfunktionen, 56 Fälle): ganzer Ablauf PDF (Abschnitte mit Seiten 1–5, Zähler, Zeiten) und Markdown (ohne Seiten); neutraler Name und gesendeter Inhalt; Antwort gespeichert; Wiederverwendung (anderes Gerät, neue Version, fehlender Blob, gescheiterter Auftrag); `content_missing`; Unavailable mit wachsendem Abstand bis `failed`; Unavailable mit Erholung; TaskLost beim Abfragen und beim Abholen → neu eingereicht; TaskLost dauerhaft → `docling_unavailable`, nie `docling_rejected`; Rejected; Docling-Fehlerantwort mit Pfad, URL, IP und Dateiname bereinigt; `skipped`; Antwort ohne Dokument; unbekanntes Schema; `partial_success`; unerwartete Ausnahme nur im Protokoll; weiche Zeitgrenze; Frist (`pending` lange ohne `timeout`, `started` lange mit `timeout`, erster Start gemerkt); Idempotenz (zweites `convert`/`poll` auf `done`/`failed`/`running`/`queued`, wiederholte Nachricht nach Absturz baut aus dem gespeicherten Ergebnis); unbekannte und ungültige IDs; erneutes Einlesen ersetzt die Abschnitte erst am Ende; `sanitize_error_detail`; beide Zustände von `TWOX_AI_ENABLED`.
+  - `test_tasks_worker.py`: Namen, Route `ingest`, `acks_late`/`reject_on_worker_lost`/Zeitlimits, Celerys `Request.on_failure` mit `WorkerLostError` legt die Nachricht zurück (`requeue=True`); Aufgabenkette im Prozess bis `done` für KI an und aus ohne weitere Nachricht an den Broker; unbekannte ID; `pytest -m worker`: `convert` mit unbekannter ID über den echten Worker → `missing` aus dem Ergebnisspeicher.
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-046`, `.env` aus `.env.example` (ohne BOM) mit `TWOX_API_PORT=18046`, also KI an.
+
+| Nr. | Ergebnis | Tatsächliche Ausgabe (gekürzt) |
+| --- | --- | --- |
+| 0 | erfüllt | Engine 29.9.3, Compose v5.7.0, Exit 0 |
+| 1 | erfüllt | Bau Exit 0 (zweimal, zuletzt mit dem neuen Code); `up -d --wait …` Exit 0, alle `Healthy` |
+| 2 | erfüllt | `pytest tests/ingest`: `322 passed, 1 deselected`; `pytest`: `1852 passed, 6 deselected`, mit `-rs` nichts übersprungen; `pytest -m worker`: `6 passed` (einschließlich des neuen Tests). Zusätzlich mit `-e TWOX_AI_ENABLED=false`: `pytest tests/ingest tests/config/test_celery.py` `343 passed` |
+| 3 | erfüllt | `All checks passed!`; `162 files already formatted`; `Success: no issues found in 161 source files` |
+| 4 | erfüllt | `makemessages` ohne Unterschied in `backend/locale`; `No changes detected`; `License check passed.`; `spectacular` ohne Unterschied in `web/openapi` |
+| 5 | erfüllt | siehe unten |
+| 6 | erfüllt | Auftrag 6 (BetrSichV.pdf an Gerät 2): `done` in 0,22 s, `reused_from` 1, 60 Seiten, 140 Abschnitte; `D logs docling` zählt weiter 5 Einreichungen (`POST /v1/convert/file/async`), keine sechste |
+| 7 | erfüllt | Auftrag 7 (veränderte Kopie, siehe unten): `D restart docling` 80 s nach dem Einreichen. Protokoll: `retry 1 of 5 after: docling-serve refused the connection`, `retry 2 of 5 after: docling-serve does not know the task`, neu eingereicht, `done` mit 60 Seiten und 140 Abschnitten, `attempts` 2; kein `docling_rejected` |
+| 8 | erfüllt | `D stop docling`, Auftrag 8: nach 5 Wiederholungen (≈ 3,5 min) `failed`/`docling_unavailable`, Detail `the host name of docling-serve does not resolve (gave up after 5 retries)`. `ping_worker(10)` liefert `pong` während des Laufs und danach |
+| 9 | erfüllt | `D --profile dev down -v` Exit 0; keine Container und Volumes `twox-046*` mehr |
+
+Kriterium 5: fünf Uploads über die Datei-API (`POST /api/v1/devices/<id>/documents/`, jeweils 201), dann fünf `IngestJob` und fünf `convert.delay` unmittelbar hintereinander:
+
+| Auftrag | Datei | Status | Seiten | Abschnitte | Seiten der Abschnitte | Laufzeit |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | BetrSichV.pdf | done | 60 | 140 | 1–60 | 291,7 s (Docling: 257,8 s) |
+| 2 | backups.md | done | – | 4 | – | 291,5 s |
+| 3 | firewall_groups.md | done | – | 2 | – | 291,5 s |
+| 4 | sftp-backup.md | done | – | 4 | – | 291,5 s |
+| 5 | updates.md | done | – | 4 | – | 291,4 s |
+
+Keiner `timeout`, `attempts` überall 0. Docling hat einen lokalen Worker (E-55): Die Markdown-Dateien warteten in Docling hinter der PDF und waren dann in je unter 0,2 s umgewandelt; die Laufzeit ab `started_at` enthält diese Wartezeit, die Frist nicht.
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-af2861b16f105df85`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-af2861b16f105df85` (relativ zum Projektordner)
+- Commits: `Run ingest jobs in the worker: convert, poll, reuse, sections`, `Test the ingest flow and its tasks with a stand-in converter`, dazu dieser Kurzbericht. Nicht gepusht, nichts zusammengeführt.
+
+### Abweichungen und Hinweise
+
+1. **Wiederverwendung nur von `done`-Aufträgen.** Der Auftrag nennt nur „gespeicherte Docling-Antwort“. Ein Auftrag, dessen gespeicherte Antwort beim Lesen scheiterte (`conversion_failed` im Schritt `sections`), hat ebenfalls einen `result_blob_key`; würde er wiederverwendet, bekäme derselbe Inhalt nie wieder eine Chance bei Docling. Antworten von Fehlerstatus (`failure`, `skipped`) werden gar nicht gespeichert, nur gelesen.
+2. **Zusätzliche Datei `backend/tests/ingest/fake_converter.py`** (Attrappe und Hilfen für beide Testdateien), wie `fake_docling.py` in 041.
+3. **Uploads für Kriterium 5 bis 8** liefen über die echten API-Views mit Djangos Testclient im `api`-Container (angemeldet mit `force_login` als Konto mit Rolle `manage`, ohne Kennwort), nicht über einen Socket. Für 7 und 8 brauchte es Inhalte, die Docling noch nicht kannte (sonst greift die Wiederverwendung): zwei Kopien von `BetrSichV.pdf` mit angehängter Kommentarzeile, nur im Container erzeugt, nicht eingecheckt.
+4. **`page_count` ist `None` bei Formaten ohne Seiten** (Markdown), wie `page_start`/`page_end` der Abschnitte.
+5. **`partial_success` endet `done`** mit Hinweis in `error_detail` (Zahl der Fehler, Seiten). Falls die Oberfläche `error_detail` nur bei `failed` zeigen soll, bitte in 051/053 berücksichtigen.
+6. **Beobachtung zu `tests/config/test_worker.py` (045):** Im ersten Gesamtlauf schlug `test_running_worker_consumes_the_configured_queues_with_four_processes` fehl, weil gleichzeitig Einlese-Aufträge liefen: Celery erhöht `prefetch_count` für reservierte Nachrichten mit Countdown, die Prüfung auf genau 4 stimmt dann nicht. Ohne laufende Aufträge grün (`6 passed`). In der CI laufen keine Aufträge; bei lokalen Läufen mit aktivem Einlesen tritt es wieder auf. Vorschlag für einen späteren Auftrag: dort `prefetch_count >= 4` oder die Prüfung über `pool.max-concurrency` allein.
+7. **e2e nicht gelaufen:** Compose und Worker-Start sind unverändert; der Worker registriert nur zwei Aufgaben mehr.
+
+Grenzen (wie im Auftrag vorgegeben, dazu eigene):
+
+- Bleibt ein Auftrag nach einem harten Abbruch ohne geplante Nachricht in `running` oder `queued` stehen (z. B. Absturz zwischen Übernahme und Einreichen in `convert`, Broker beim Neueinplanen nicht erreichbar, Datenbank weg beim Schreiben von `failed`), hilft erst `ingest_versions --stuck` (049). `convert` auf einen `running` Auftrag tut absichtlich nichts.
+- Nach `failed`/`timeout` rechnet Docling weiter (kein Abbrechen über die API); ebenso die verwaiste Aufgabe nach einem Neueinreichen.
+- Scheitert das Speichern des Auftrags nach `store_blob`, bleibt eine Antwort ohne Verweis im Speicher (wie die M1-Grenze „Content without version“).
+- `load_result` hält die Antwort einmal im Speicher; `build_sections` und die Abschnittszeilen ebenso.
+- `reject_on_worker_lost`: Stirbt ein Prozess immer wieder an derselben Nachricht (z. B. Speichermangel beim Lesen einer riesigen Antwort), wird sie immer wieder eingereiht. Die harte Zeitgrenze bestätigt dagegen die Nachricht (`acks_on_timeout`), dort gibt es keine Schleife.
+- Doppelte Nachrichten (z. B. von Hand erneut gesendet) führen zu parallelen Abfrageketten; sie enden gemeinsam, weil der letzte Schritt den Auftrag sperrt, kosten aber zusätzliche Abfragen und zählen Versuche doppelt.
+- Der Zähler `attempts` gilt für den ganzen Auftrag; viele kurze Ausfälle während einer sehr langen Umwandlung können ihn aufbrauchen.
+
+Keine offene Frage an a7.
