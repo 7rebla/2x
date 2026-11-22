@@ -231,14 +231,14 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 125 | Kontextauswahl für Antworten | B | 121, 122, 124 | erledigt |
 | 126 | Antwortdienst und Befehl ask | B | 121, 122, 123, 125 | erledigt |
 | 127 | Messwerkzeug evaluate_answers | B | 120, 126 | erledigt |
-| 128 | Messlauf Chat-Modell | C | 126, 127 | offen |
+| 128 | Messlauf Chat-Modell | C | 126, 127 | in Arbeit |
 | 129 | Selbsttest und check_llm für Chat | B | 121 | erledigt |
 | 130 | Antwort-API mit SSE und Status | C | 126, 129 | in Arbeit |
 | 131 | Oberfläche Antwortstrom und Hook | B | 130 | offen |
 | 132 | Seite Auskunft mit Quellenanzeige | B | 131 | offen |
 | 133 | Eingrenzen auf Gerät und Anlage | B | 132 | offen |
 | 134 | Navigation Auskunft | C | 132 | offen |
-| 135 | Prüffragen in der CI mit Aufzeichnungen | C | 126, 127 | offen |
+| 135 | Prüffragen in der CI mit Aufzeichnungen | C | 126, 127 | in Arbeit |
 | 136 | Beleg für Prüffrage 8 | C | 120 | erledigt |
 | 137 | Abnahmetests M3 und Browserfluss | B | 127, 130, 133, 134 | offen |
 | 138 | Abnahmelauf M3 | C | 128, 135, 136, 137 | offen |
