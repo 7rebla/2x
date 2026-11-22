@@ -1,6 +1,14 @@
 // Test helper: a fake of the file API behind fetch, on top of the structure fake.
 // Titles and file names are plain test names; checksums are made up from the content.
-import type { Document, DocumentDetail, DocumentVersion, Duplicate, KindEnum } from "../../api/generated";
+import type {
+  Document,
+  DocumentDetail,
+  DocumentVersion,
+  Duplicate,
+  IngestJobSummary,
+  IngestStatusEnum,
+  KindEnum,
+} from "../../api/generated";
 import { vi } from "vitest";
 
 import type { Me } from "../../api/generated";
@@ -32,6 +40,27 @@ export function version(
     uploaded_by: "test-manager",
     created_at: STAMP,
     ingest: null,
+    ...more,
+  };
+}
+
+let nextJobId = 500;
+
+/** An ingest job as the API sends it in the field `ingest` of a version (work order 051). */
+export function ingestJob(status: IngestStatusEnum, more: Partial<Omit<IngestJobSummary, "status">> = {}): IngestJobSummary {
+  nextJobId += 1;
+  const finished = status === "done" || status === "failed" || status === "skipped";
+  return {
+    id: nextJobId,
+    status,
+    step: status === "running" ? "convert" : "",
+    error_code: "",
+    error_detail: "",
+    partly_converted: false,
+    section_count: status === "done" ? 40 : null,
+    page_count: status === "done" ? 12 : null,
+    created_at: STAMP,
+    finished_at: finished ? STAMP : null,
     ...more,
   };
 }
@@ -197,11 +226,16 @@ export interface FakeFilesApi {
   duplicatesOfNextUpload: (duplicates: Duplicate[]) => void;
   /** The forms sent to the upload endpoints, in order. */
   readonly uploads: { path: string; form: Map<string, FormPart> }[];
+  /** Answer of the next POST …/ingest/ instead of starting a job (for example a 409). */
+  rejectNextIngest: (status: number, body: unknown) => void;
+  /** Ids of the versions sent to POST …/ingest/, in order. */
+  readonly ingestRequests: number[];
 }
 
 const DEVICE_DOCUMENTS = /^\/api\/v1\/devices\/(\d+)\/documents\/$/;
 const DOCUMENT = /^\/api\/v1\/documents\/(\d+)\/$/;
 const VERSIONS = /^\/api\/v1\/documents\/(\d+)\/versions\/$/;
+const INGEST = /^\/api\/v1\/document-versions\/(\d+)\/ingest\/$/;
 
 interface SentFile {
   readonly name: string;
@@ -224,6 +258,8 @@ function fileOf(form: Map<string, FormPart>): SentFile | null {
  */
 export function fakeFilesApi(fallback: Handler, documents: StoredDocument[] = sampleDocuments()): FakeFilesApi {
   let rejection: Answer | null = null;
+  let ingestRejection: Answer | null = null;
+  const ingestRequests: number[] = [];
   let nextDuplicates: Duplicate[] = [];
   let nextId = 9000;
   const uploads: { path: string; form: Map<string, FormPart> }[] = [];
@@ -249,6 +285,36 @@ export function fakeFilesApi(fallback: Handler, documents: StoredDocument[] = sa
     const list = DEVICE_DOCUMENTS.exec(path);
     const single = DOCUMENT.exec(path);
     const versions = VERSIONS.exec(path);
+    const ingest = INGEST.exec(path);
+
+    if (ingest !== null && request.method === "POST") {
+      const versionId = Number(ingest[1]);
+      ingestRequests.push(versionId);
+      const answer = ingestRejection;
+      ingestRejection = null;
+      if (answer !== null) {
+        return jsonResponse(answer.body, answer.status);
+      }
+      const owner = documents.find((item) => item.versions.some((entry) => entry.id === versionId));
+      const target = owner?.versions.find((entry) => entry.id === versionId);
+      if (owner === undefined || target === undefined) {
+        return jsonResponse({ detail: "Not found." }, 404);
+      }
+      if (owner.kind === "configuration") {
+        return jsonResponse(
+          { detail: "Configuration files are not ingested.", code: "configuration_not_ingested" },
+          400,
+        );
+      }
+      if (target.ingest?.status === "queued" || target.ingest?.status === "running") {
+        return jsonResponse(
+          { detail: "This document version is being ingested already.", code: "ingest_active", job: target.ingest },
+          409,
+        );
+      }
+      target.ingest = ingestJob("queued");
+      return jsonResponse({ ...target.ingest, requested_by: "test-manager" }, 202);
+    }
 
     if (list !== null && request.method === "GET") {
       const deviceId = Number(list[1]);
@@ -314,5 +380,9 @@ export function fakeFilesApi(fallback: Handler, documents: StoredDocument[] = sa
     duplicatesOfNextUpload: (duplicates) => {
       nextDuplicates = duplicates;
     },
+    rejectNextIngest: (status, body) => {
+      ingestRejection = { status, body };
+    },
+    ingestRequests,
   };
 }

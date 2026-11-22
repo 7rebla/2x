@@ -13,8 +13,11 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleCheck,
+  CircleDashed,
+  CircleMinus,
   CircleUser,
   CircleX,
+  Clock,
   Download,
   FileText,
   Funnel,
@@ -105,6 +108,9 @@ const glyphs = {
   loading: LoaderCircle, // STA-04
   noPermission: Lock, // STA-05
   info: Info, // STA-07
+  queued: Clock, // STA-08, ingest job waiting in the queue
+  skipped: CircleMinus, // ingest job skipped (format not ingested); no ID in H2
+  notIngested: CircleDashed, // version without any ingest job; no ID in H2
 } as const satisfies Record<string, Glyph>;
 
 /** Name of an icon of the interface. */

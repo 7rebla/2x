@@ -30,7 +30,7 @@ import { Icon } from "../icons/Icon.tsx";
 | Objects | `site`, `area`, `plant` (own), `device` (own, generic), `network`, `document`, `version` |
 | Device classes (own) | `devicePlc`, `deviceController`, `deviceComputer`, `deviceRouter`, `deviceRobot`, `deviceFirewall` |
 | Actions | `create`, `edit`, `upload`, `download`, `retry`, `apply`, `filter`, `resetFilter`, `search`, `fitView`, `previous`, `next`, `signOut` |
-| Status | `success`, `error`, `warning`, `loading`, `noPermission`, `info` |
+| Status | `success`, `error`, `warning`, `loading`, `noPermission`, `info`, `queued`, `skipped`, `notIngested` (the last three for ingest jobs, work order 053) |
 
 The navigation entries name their icon in `../navigation.ts` (`icon`).
 
