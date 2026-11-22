@@ -15,7 +15,8 @@ opens a connection: :func:`get_embedder` and every request raise
 :class:`EmbeddingDisabledError` first.
 
 No text may leave the house (Leitplanke 6). Before the first request an
-embedder makes sure that its model is not a cloud model of Ollama:
+embedder makes sure that its model is not a cloud model of Ollama (the check
+is shared with the chat client, :mod:`twox.answers.llm_guard`):
 
 1. by name - Ollama names its cloud models ``<name>:<size>-cloud`` or
    ``<name>:cloud``;
@@ -55,18 +56,26 @@ from urllib.parse import urlsplit
 
 from django.conf import settings
 
+from twox.answers.llm_guard import (
+    TAGS_PATH,
+    ModelListError,
+    ModelNotLoadedError,
+    RemoteModelError,
+    find_local_model,
+    is_timeout,
+    ollama_root,
+)
+
+# Kept importable from here (explicit re-export): callers and tests of the
+# embedding client import it from this module.
+from twox.answers.llm_guard import is_cloud_model_name as is_cloud_model_name
+
 logger = logging.getLogger(__name__)
 
 EMBEDDINGS_PATH: Final = "/embeddings"
-# Ollama's own list of the models on this machine (not part of /v1).
-TAGS_PATH: Final = "/api/tags"
 # One batch of 16 vectors with 1024 values is about 350 kB of JSON; the model
 # list is small. Protects against an endless answer.
 MAX_ANSWER_BYTES: Final = 64 * 1024 * 1024
-# Ollama's cloud models: "gpt-oss:120b-cloud", "minimax-m2:cloud".
-_CLOUD_TAG: Final = "cloud"
-_CLOUD_TAG_SUFFIX: Final = "-cloud"
-_OLLAMA_API_SUFFIX: Final = "/v1"
 #: How long the query embedder trusts its check against the model list, in seconds.
 QUERY_MODEL_CHECK_SECONDS: Final = 300.0
 
@@ -115,33 +124,6 @@ class Embedder(Protocol):
     def embed_query(self, text: str) -> list[float]:
         """Return the vector of a search query (with the query prefix, if any)."""
         ...
-
-
-def is_cloud_model_name(model: str) -> bool:
-    """Return whether ``model`` is named like an Ollama cloud model."""
-    tag = model.rpartition(":")[2] if ":" in model else model
-    tag = tag.strip().lower()
-    return tag == _CLOUD_TAG or tag.endswith(_CLOUD_TAG_SUFFIX)
-
-
-def _ollama_root(base_url: str) -> str:
-    """Return the address of Ollama's own API for an OpenAI-compatible base URL."""
-    root = base_url.rstrip("/")
-    if root.endswith(_OLLAMA_API_SUFFIX):
-        root = root[: -len(_OLLAMA_API_SUFFIX)]
-    return root
-
-
-def _full_model_name(model: str) -> str:
-    """Return ``model`` with Ollama's default tag, as /api/tags lists it."""
-    return model if ":" in model else f"{model}:latest"
-
-
-def _is_timeout(error: BaseException) -> bool:
-    """Return whether ``error`` is a time limit, also when urllib wrapped it."""
-    if isinstance(error, TimeoutError):
-        return True
-    return isinstance(error, urllib.error.URLError) and isinstance(error.reason, TimeoutError)
 
 
 def _check_ai_enabled() -> None:
@@ -254,7 +236,7 @@ class OpenAICompatibleEmbedder:
             or monotonic() - checked_at < self._model_check_seconds
         ):
             return
-        status, body = self._request("GET", _ollama_root(self._base_url) + TAGS_PATH, None)
+        status, body = self._request("GET", ollama_root(self._base_url) + TAGS_PATH, None)
         if status == 200:
             self._check_model_list(body)
         else:
@@ -265,29 +247,13 @@ class OpenAICompatibleEmbedder:
 
     def _check_model_list(self, body: bytes) -> None:
         try:
-            listing = json.loads(body)
-        except ValueError as error:
-            raise EmbeddingUnavailableError("unexpected answer to the model list") from error
-        models = listing.get("models") if isinstance(listing, dict) else None
-        if not isinstance(models, list):
-            raise EmbeddingUnavailableError("unexpected answer to the model list")
-        wanted = _full_model_name(self._model)
-        for entry in models:
-            if not isinstance(entry, dict):
-                continue
-            names = {entry.get("name"), entry.get("model")}
-            if wanted not in names and self._model not in names:
-                continue
-            if entry.get("remote_host") or entry.get("remote_model"):
-                raise EmbeddingRemoteModelError(
-                    f"model {self._model!r} runs remotely (Ollama cloud model);"
-                    " only local models are allowed"
-                )
-            return
-        raise EmbeddingRejectedError(
-            f"model {self._model!r} is not loaded in Ollama;"
-            f" load it with: ollama pull {self._model}"
-        )
+            find_local_model(body, self._model)
+        except ModelListError as error:
+            raise EmbeddingUnavailableError(str(error)) from error
+        except RemoteModelError as error:
+            raise EmbeddingRemoteModelError(str(error)) from error
+        except ModelNotLoadedError as error:
+            raise EmbeddingRejectedError(str(error)) from error
 
     def _embed_batch(self, batch: list[str]) -> list[list[float]]:
         payload = {"model": self._model, "input": batch}
@@ -358,7 +324,7 @@ class OpenAICompatibleEmbedder:
                 ) from error
             return error.code, b""
         except (urllib.error.URLError, HTTPException, OSError) as error:
-            if _is_timeout(error):
+            if is_timeout(error):
                 raise EmbeddingUnavailableError(
                     f"no answer from the model service within {self._timeout:g}s"
                 ) from error

@@ -234,6 +234,17 @@ docker compose exec -T api python manage.py evaluate_search < backend/twox/searc
 
 The probes refer to the manuals of the test factory (by manifest id and checksum). A place in the other language edition of the same manual counts as correct as well (E-61): the probes on the documentation of the production line expect the same pages in the German and the English edition. Where they are not uploaded the output lists them as `not ingested` and ends with `Not ingested: 7 of 7 probes`. `--json` prints the same as JSON.
 
+The probe lists that ship with the application can be named instead of piped in, and other cut-offs than 5 and 10 can be asked for:
+
+```sh
+docker compose exec -T api python manage.py evaluate_search --probes m3 --cutoffs 5,8,10,12
+```
+
+- `--probes NAME` reads `backend/twox/search/probes/NAME.json` (`m2`: the probes of M2; `m3`: the baseline of M3 with one probe per test question, questions 3, 7 and 10 also in other words).
+- `--cutoffs` takes whole numbers from 1 to 50 in ascending order; the output then shows Recall@k and the correct hits per k, and for probes with several expected pages the first rank of each page.
+- A **control probe** (id `control-…`, empty list `expected`) asks for something no document answers (`control-11`). It is searched but not judged and does not count in Recall or MRR; the output lists its first 10 hits per kind with identifiers only (section, version, checksum, pages, device).
+- A place in a Markdown file has no pages; a probe gives it by `heading_path` (the headings from the top, matched as a prefix) and `path` (the file in the repository) instead of `pages`.
+
 ### Acceptance of M2 by hand
 
 In a test environment with the manuals of the test factory uploaded to their devices (`testfactory/fetch.py` downloads them; vendor material never goes into the repository), Docling running and an account with the role `manage`:
