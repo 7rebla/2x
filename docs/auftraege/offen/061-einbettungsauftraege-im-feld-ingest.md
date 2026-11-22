@@ -59,4 +59,10 @@ Keine.
   - Die Konstante liegt in `backend/twox/ingest/models.py`, das nicht unter „Betroffene Bereiche“ steht. Der Grund: Ein Import aus `pipeline.py` hätte keinen Zyklus erzeugt, aber Celery, den Docling-Client und den Einbettungs-Client in die API geladen. Die Leitstelle hatte das als Ausweichstelle genannt.
   - Kleine Folgeänderung in `pipeline.py`: Die eigene Definition wurde durch einen Re-Export ersetzt.
   - Keine Migration, keine neue Abhängigkeit.
+- **Nachbesserung nach Prüfung der Leitstelle:**
+  - Als fertige Umwandlung zählt jetzt auch ein Auftrag mit `failed`, Schritt `embed` und gespeicherter Antwort. Das ist der häufigste Nachhol-Fall: Die Umwandlung gelang, das Einbetten scheiterte. Der neueste Auftrag gewinnt, auch gegen eine ältere `done`-Umwandlung.
+  - Sein `error_detail` (Einbettungsfehler, ohne Präfix) wird nicht übernommen.
+  - Grenze: `pipeline._fail` überschreibt einen Teilumwandlungs-Hinweis eines solchen Auftrags. Der Hinweis ist dann verloren, und der neue Einbettungsauftrag zeigt `partly_converted` false. Das lässt sich nur mit einem eigenen Feld beheben (siehe unten).
+  - Ein gescheiterter Einbettungsauftrag aus `embed_sections` hat keine eigene Antwort. Dann zählt die Umwandlung davor, mit ihrem Hinweis.
+  - Zwei weitere Tests mit KI an und aus. Alle backend-Prüfungen erneut grün.
 - **Offen (nicht blockierend, schon unter 048 vermerkt):** Ein eigenes Feld statt des Textpräfixes wäre robuster (Stufe C).
