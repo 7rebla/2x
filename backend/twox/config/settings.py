@@ -75,6 +75,22 @@ def env_float(name: str, default: float, *, minimum: float, maximum: float) -> f
     return value
 
 
+def env_positive_float(name: str, default: float, *, maximum: float) -> float:
+    """Return the variable ``name`` as a number greater than zero and at most ``maximum``."""
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        value = math.nan
+    if not 0 < value <= maximum:
+        raise ImproperlyConfigured(
+            f"Environment variable {name} must be a number greater than 0 and at most {maximum:g}."
+        )
+    return value
+
+
 #: Values of TWOX_CHAT_REASONING_EFFORT that are sent as they are.
 _CHAT_REASONING_EFFORTS = ("none", "low", "medium", "high")
 #: The value of TWOX_CHAT_REASONING_EFFORT that leaves the field out.
@@ -498,6 +514,43 @@ TWOX_CHAT_TEMPERATURE = env_float("TWOX_CHAT_TEMPERATURE", 0.0, minimum=0.0, max
 # reasoning_effort sent with every request: none, low, medium or high; "omit"
 # leaves the field out (None). Unset or empty means none.
 TWOX_CHAT_REASONING_EFFORT = env_reasoning_effort("TWOX_CHAT_REASONING_EFFORT", "none")
+
+# Context of an answer (M3, twox/answers/context.py). Starting values,
+# calibrated in work order 128.
+# Most main sources (k); neighbouring sections do not count against it.
+TWOX_ANSWER_MAX_SOURCES = env_positive_int("TWOX_ANSWER_MAX_SOURCES", 8)
+# Characters of all source texts together (8 sections of at most 2,000
+# characters plus room for two neighbours).
+TWOX_ANSWER_CONTEXT_CHARS = env_positive_int("TWOX_ANSWER_CONTEXT_CHARS", 20000)
+# Load the sections right before and after each main source as well.
+TWOX_ANSWER_NEIGHBOURS = env_bool("TWOX_ANSWER_NEIGHBOURS", default=False)
+# Relevance threshold, a cosine distance (0 < x <= 2): without a hit at most
+# this far from the question (or an exact hit) the model is not asked. The
+# measurement of 124 shows no gap between expected places (up to 0.549) and
+# the control question (from 0.510); this value only turns away the clearly
+# remote.
+TWOX_ANSWER_MAX_DISTANCE = env_positive_float("TWOX_ANSWER_MAX_DISTANCE", 0.60, maximum=2.0)
+# Largest cosine distance of the stored embeddings of two sections from
+# different documents of the same device that count as the same place in
+# another language (E-61); less than TWOX_ANSWER_MAX_DISTANCE.
+TWOX_ANSWER_TRANSLATION_DISTANCE = env_positive_float(
+    "TWOX_ANSWER_TRANSLATION_DISTANCE", 0.15, maximum=2.0
+)
+
+
+def check_answer_settings(*, max_distance: float, translation_distance: float) -> None:
+    """Raise ImproperlyConfigured unless the distances of the answer context fit together."""
+    if translation_distance >= max_distance:
+        raise ImproperlyConfigured(
+            f"TWOX_ANSWER_TRANSLATION_DISTANCE ({translation_distance:g}) must be less than "
+            f"TWOX_ANSWER_MAX_DISTANCE ({max_distance:g})."
+        )
+
+
+check_answer_settings(
+    max_distance=TWOX_ANSWER_MAX_DISTANCE,
+    translation_distance=TWOX_ANSWER_TRANSLATION_DISTANCE,
+)
 
 CELERY_TASK_QUEUES = task_queues(ai_enabled=TWOX_AI_ENABLED)
 
