@@ -1,0 +1,39 @@
+{
+  "intro": "Search the ingested files for a term, an identifier such as an IP address or a part number, or a question. \"-word\" leaves out hits with that word, \"two words\" in quotes is a phrase.",
+  "form": {
+    "label": "Search the files",
+    "query": "Search for",
+    "queryHint": "Term, identifier or question",
+    "device": "Device",
+    "allDevices": "All devices",
+    "unknownDevice": "Device no. {{id}}",
+    "submit": "Search"
+  },
+  "empty": "Enter a term, an identifier or a question and press Enter.",
+  "loading": "Searching…",
+  "noHits": "No hits. Try other words, or search all devices.",
+  "hitCount_one": "{{count}} hit, best first",
+  "hitCount_other": "{{count}} hits, best first",
+  "resultsLabel": "Hits",
+  "semantic": {
+    "unavailable": "Keyword search only – language model not reachable",
+    "disabled": "Keyword search (AI features not enabled)"
+  },
+  "matchKind": {
+    "label": "Found by",
+    "exact": "Exact",
+    "keyword": "Keyword",
+    "semantic": "Meaning"
+  },
+  "page": {
+    "one": "p. {{page}}",
+    "range": "pp. {{start}}–{{end}}"
+  },
+  "headingPath": "Section",
+  "locations": "Stored in",
+  "version": "Version {{number}}",
+  "olderVersion": "Older version",
+  "olderVersionHint": "This file has a newer version that is not searchable yet.",
+  "device": "Device",
+  "plant": "Plant"
+}
