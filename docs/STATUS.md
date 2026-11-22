@@ -119,7 +119,7 @@ Nichts davon hält die laufende Arbeit auf.
 | 034 | Backend-Übersetzung (gettext) | C | 7 | erledigt |
 | 035 | Oberfläche: CSV-Import | B | 7 | erledigt |
 | 036 | Oberfläche: Dateien | B | 7 | erledigt |
-| 037 | Nachweis der M1-Abnahme | B | 8 | in Arbeit |
+| 037 | Nachweis der M1-Abnahme | B | 8 | erledigt |
 | 038 | README und ARCHITECTURE für M1 | B | 8 | erledigt |
 | 039 | Landkarte als interaktive Vorschau (M1b, E-48) | C | – | erledigt |
 
@@ -144,3 +144,6 @@ Hinweise aus Welle 1:
 - 036: Dateien je Gerät hochladen, Versionen ansehen, herunterladen. Die Dateiseite zeigt nur Protokolleinträge zu `files.document`, neue Versionen erscheinen nur unter `/audit` (für 037). `files.heading` und `files.placeholder` in `assets.json` sind ungenutzt. Hilfen aus `pages/structure/save.ts` werden auch von `components/files/` genutzt – später an einen gemeinsamen Ort ziehen. Bündel knapp unter 500 kB.
 - 034: Backend-Meldungen auf Deutsch (73 Einträge, `backend/locale/de/LC_MESSAGES/django.po`, Fundstellen ohne Zeilennummern). `.mo` entsteht nur im Build (Stufe `locale-build`) und in den Tests; gettext ist nicht im Laufzeit-Image (geprüft). Unübersetzt bleiben Verwaltungsbefehle, Selbsttest-Diagnosen, OpenAPI-Texte und Djangos „No … matches the given query.“
 - 039: Landkarte unter `/map` (React Flow 13.0.2, per `lazy()` geladen). Mit den Testfabrik-Daten 28 Knoten, 7 Netzkanten. Grenzen: gleiche private Netze an verschiedenen Standorten werden zu einem Netzknoten zusammengelegt; IPv4-gemappte IPv6-Adressen landen in `::/64`; Netzkanten laufen über die Gruppe „Netzübergang“. Die React-Flow-Namensnennung bleibt sichtbar. Version 13 ist sehr jung (13.0.0 vom 16.11.2026), aber mit Herkunftsnachweis und ohne Installationsskripte veröffentlicht; Rückwechsel auf 12.x wäre ein kleiner Auftrag.
+- 037: Nachweis der M1-Abnahme als Browser-Test `web/e2e/m1-acceptance.spec.ts` und Backend-Test `backend/tests/acceptance/test_m1.py` (Geräteliste der Testfabrik per CSV, eine Datei mit zwei Versionen, Protokoll). Auf frischer Datenbank und im zweiten Lauf grün (20/20). Lücke für später: Die Strukturseite zeigt die Notiz einer Anlage nicht an.
+
+**M1 ist bereit zur Abnahme durch a7.** Alle Aufträge 016–039 sind auf `main`.
