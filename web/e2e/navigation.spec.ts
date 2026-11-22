@@ -78,7 +78,7 @@ test("an address with a parameter opens directly", async ({ page }) => {
 
 const ENGLISH_ENTRIES = ["Structure", "Map", "Search", "Ingestion", "Import", "Change log", "Self-test"];
 const GERMAN_ENTRIES = ["Struktur", "Landkarte", "Suche", "Einlesen", "Import", "Änderungsprotokoll", "Selbsttest"];
-const ENGLISH_SHORT = ["Structure", "Map", "Search", "Ingest", "Import", "Log", "Self-test"];
+const ENGLISH_SHORT = ["Structure", "Map", "Search", "Ingestion", "Import", "Log", "Self-test"];
 const GERMAN_SHORT = ["Struktur", "Karte", "Suche", "Einlesen", "Import", "Protokoll", "Selbsttest"];
 
 interface HeaderLayout {
@@ -208,6 +208,46 @@ for (const { viewport, texts } of [
   });
 }
 
+test("at 768 px in German a user name as wide as its button covers nothing and widens nothing", async ({ page }) => {
+  // The answer of /api/v1/me/ gets a user name longer than the button can show (max-w-48, cut off with an
+  // ellipsis). The real answer is read in the browser (only the browser reaches the API under "localhost").
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.goto("/");
+  const me = await page.evaluate(async () => (await fetch("/api/v1/me/")).json() as Promise<Record<string, unknown>>);
+  await page.route(
+    (url) => url.pathname === "/api/v1/me/",
+    async (route) => {
+      await route.fulfill({ json: { ...me, username: "e2e-manager-with-a-very-long-user-name" } });
+    },
+  );
+  await page.reload();
+  await page.getByTestId("user-menu-button").click();
+  await page.getByTestId("language-switch").selectOption("de");
+  await page.getByTestId("user-menu-button").click();
+  const navigation = page.getByRole("navigation", { name: "Hauptnavigation" });
+  await expect(navigation.getByRole("link", { name: "Selbsttest" })).toBeVisible();
+  const button = page.getByTestId("user-menu-button");
+  await expect(button).toHaveAccessibleName("Benutzermenü: e2e-manager-with-a-very-long-user-name");
+
+  const layout = await headerLayout(page);
+  const [navBox, buttonBox, headerBox] = await Promise.all([
+    navigation.boundingBox(),
+    button.boundingBox(),
+    page.getByRole("banner").boundingBox(),
+  ]);
+  // The button is as wide as it may be (192 px); the navigation ends before it and does not scroll.
+  expect(Math.round(buttonBox?.width ?? 0)).toBe(192);
+  expect((navBox?.x ?? 0) + (navBox?.width ?? 0)).toBeLessThanOrEqual(buttonBox?.x ?? 0);
+  expect(layout.overflow).toBeLessThanOrEqual(0);
+  expect(layout.free).toBeGreaterThanOrEqual(0);
+  expect(new Set(layout.tops).size).toBe(1);
+  expect(layout.shorts).toEqual(GERMAN_SHORT);
+  // Same header height as everywhere (76 px), and the page does not scroll sideways.
+  expect(Math.round(headerBox?.height ?? 0)).toBe(76);
+  expect(await pageOverflows(page)).toBe(false);
+  test.info().annotations.push({ type: "free width", description: `de, long user name: ${String(layout.free)} px at 768 px` });
+});
+
 test("at 1024 px the icon of an entry opens its page and keeps its name", async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   await page.goto("/");
@@ -311,6 +351,27 @@ test.describe("on a phone", () => {
     await expect(page).toHaveURL(/\/search$/);
     await expect(panel).toBeHidden();
     await expect(page.getByRole("heading", { level: 1, name: "Search" })).toBeFocused();
+
+    // Tab after the last control of the panel ("Sign out") closes it; the focus goes on into the page,
+    // never onto content hidden under the panel (WCAG 2.4.11), and is not taken back to the button.
+    await button.focus();
+    await page.keyboard.press("Enter");
+    await expect(panel).toBeVisible();
+    await panel.getByRole("button", { name: "Sign out" }).focus();
+    await page.keyboard.press("Tab");
+    await expect(panel).toBeHidden();
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+    await expect(button).not.toBeFocused();
+    const focused = page.locator(":focus");
+    await expect(focused).toHaveCount(1);
+    expect(await focused.evaluate((element) => document.querySelector("main")?.contains(element) ?? false)).toBe(true);
+    await expect(focused).toBeInViewport();
+    // Shift+Tab from the button leaves it closed as well.
+    await button.focus();
+    await page.keyboard.press("Enter");
+    await expect(panel).toBeVisible();
+    await page.keyboard.press("Shift+Tab");
+    await expect(panel).toBeHidden();
   });
 
   test("the menu speaks German and changes the language", async ({ page }) => {

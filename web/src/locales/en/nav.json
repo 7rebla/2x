@@ -16,7 +16,7 @@
     "structure": "Structure",
     "map": "Map",
     "search": "Search",
-    "ingest": "Ingest",
+    "ingest": "Ingestion",
     "import": "Import",
     "audit": "Log",
     "selftest": "Self-test"

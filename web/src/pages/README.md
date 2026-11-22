@@ -45,17 +45,23 @@ loaded when it is opened (work order 062): `routes.tsx` wraps it with `lazyPage(
   Three forms (E-65 point 3, work order 082):
   - From 1280 px (`xl`) icon and text side by side; the seven entries of M2 fit on one line in German and English
     (work order 055), a navigation that is still too wide scrolls on its own.
-  - From 768 to 1279 px the icon above a short text (`text-xs`, `nav:short.*` in `locales/*/nav.json`, at most ten
-    characters and part of the full text, e.g. "Protokoll" for "Änderungsprotokoll"). The full text stays the
-    link's text, accessible name and tooltip; the short text is drawn by CSS (`.nav-short` in `../index.css`) inside
-    an `aria-hidden` element.
+  - From 768 to 1279 px the icon above a short text (13 px on a 16 px line, E-65 point 5; `nav:short.*` in
+    `locales/*/nav.json`, at most ten characters and part of the full text). The full text stays the link's text,
+    accessible name and tooltip; the short text is drawn by CSS (`.nav-short` in `../index.css`) inside an
+    `aria-hidden` element. Where it fits, the short text is a whole word of the full name (English: the full names,
+    "Log" for "Change log"). Two German compounds are cut to their last part, because the whole word does not fit
+    at 768 px next to a user name as wide as its button: "Karte" for "Landkarte" (29 px more) and "Protokoll" for
+    "Änderungsprotokoll". If the entries still do not fit, the navigation scrolls on its own instead of covering
+    the user menu or widening the page; the focus ring of an entry is then drawn inside it (`-outline-offset-2`), so
+    the scroll box does not cut it off.
   - Below 768 px (`NARROW_QUERY`, read with `matchMedia`) the header holds only the name and the button "Menu"
     (`aria-expanded`, `aria-controls`). It opens a panel under the header with every entry (icon and full text, one
     per line) and the content of the user menu (`UserMenuContent`). The panel closes on Escape (focus back on the
-    button), on a click outside, on a choice (focus on the button, then on the new page's heading) and when the window
+    button), as soon as the focus leaves button and panel (Tab after "Sign out", Shift+Tab before the button; the
+    focus stays where it went, WAI-ARIA disclosure navigation), on a click outside, on a choice (focus on the button, then on the new page's heading) and when the window
     grows to 768 px.
-  `../../e2e/navigation.spec.ts` checks one line at 768, 1024 and 1280 px in German and English and the menu at 375 px,
-  also with the keyboard alone.
+  `../../e2e/navigation.spec.ts` checks one line at 768, 1024 and 1280 px in German and English, 768 px in German
+  with a long user name, and the menu at 375 px, also with the keyboard alone.
 - Page grid (work order 080, E-65 point 1): header and page content share one grid, `PAGE_GRID` in
   `../components/Layout.tsx` (`max-w-7xl`, at most 1280 px, `px-4`), so the brand mark and the page heading start on
   the same line at every width (`../../e2e/layout.spec.ts` measures 375, 1024 and 1600 px). Tables, cards and the map
