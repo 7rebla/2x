@@ -181,6 +181,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 089 | Ergebniszahl als Live-Region, Brotkrumen Dateiseite | B | 077, 079, 083 | offen |
 | 090 | Abnahmetest M2 auf das ROADMAP-Kriterium (E-67) | C (entschieden) | 058, 067 | erledigt |
 | 091 | Seite „keine Berechtigung“ mit Titel und h1 | B | 078 | erledigt |
+| 092 | Wackeligen e2e-Test des Strukturbaums stabilisieren | B | 083 | in Arbeit |
 
 - 078/079/083/085/087/088 zusammengeführt am 22.11.2026. Lücke aus 078: Die Seite „keine Berechtigung“ (RequireRole) hat weder Seitentitel noch h1 – Auftrag 091.
 - Reihenfolge: 080 und 091 erledigt; 081, 082 und 086 laufen; danach 089 (dieselben Dateien wie 081), zuletzt 084 (berührt fast alle Seiten).
