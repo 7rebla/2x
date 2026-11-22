@@ -1,6 +1,6 @@
 # Auftrag 045 – Celery und Einlese-Einstellungen für lange Aufträge
 
-Meilenstein: M2 · Freigabestufe: C · Status: offen
+Meilenstein: M2 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -84,7 +84,77 @@ Voraussetzung: 044 ist nach `main` zusammengeführt (dieselben Dateien `settings
    Empfehlung: (a). Die Rechenlast liegt in Docling und Ollama; die Aufgaben fragen nur kurz ab und planen sich neu ein, kein Prozess wartet lange. (b) ist später nur eine andere `--queues`-Liste.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Alle Akzeptanzkriterien sind erfüllt; die Läufe fanden am 22.11.2026 im Container statt. Keine neue Abhängigkeit. Zwei Festlegungen über den Wortlaut hinaus (Warteschlange `embed` nur bei KI an; `REMAP_SIGTERM` und `stop_grace_period` am Worker) stehen unter „Abweichungen“ zur Entscheidung.
+
+### Was wurde gebaut?
+
+- `backend/twox/config/settings.py`, Celery-Abschnitt:
+  - `CELERY_TASK_ROUTES`: `twox.ingest.convert` und `twox.ingest.poll` → `ingest`, `twox.ingest.embed` → `embed`; alles andere weiter `default`.
+  - `CELERY_WORKER_PREFETCH_MULTIPLIER = 1`.
+  - `TWOX_BROKER_VISIBILITY_TIMEOUT_SECONDS = 3600`, `CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 3600}`.
+  - Konstanten `TWOX_TASK_SOFT_TIME_LIMIT = 300`, `TWOX_TASK_TIME_LIMIT = 360`; zusätzlich als `CELERY_TASK_SOFT_TIME_LIMIT`/`CELERY_TASK_TIME_LIMIT` für alle Aufgaben gesetzt (Sicherheitsnetz: keine Aufgabe überlebt den `visibility_timeout`; einzelne Aufgaben können kürzere Werte setzen).
+  - `CELERY_WORKER_SOFT_SHUTDOWN_TIMEOUT = 60.0`.
+  - `task_queues(ai_enabled)`: `CELERY_TASK_QUEUES` ist `ingest`, `embed`, `default` bei KI an und nur `ingest`, `default` bei KI aus (E-59, siehe Abweichungen).
+- Einlese-Einstellungen (Umgebungsvariable, Vorgabe): `TWOX_INGEST_MAX_RETRIES` (5), `TWOX_INGEST_POLL_MIN_SECONDS` (10), `TWOX_INGEST_POLL_MAX_SECONDS` (60), `TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS` (7 200), `TWOX_INGEST_TIMEOUT_SECONDS` (9 000), `TWOX_SECTION_MAX_CHARS` (2 000), `TWOX_EMBED_TASK_MAX_SECONDS` (240). Dazu die Konstante `TWOX_DOCLING_MAX_DOCUMENT_TIMEOUT_SECONDS = 7200` (Grenze des Docling-Dienstes).
+- Prüfung beim Start: `check_ingest_timing(...)` (nur Schlüsselwort-Argumente), am Ende von `settings.py` aufgerufen; eine Verletzung wirft `ImproperlyConfigured` mit beiden Namen und Werten und stoppt API, Worker und jeden `manage.py`-Befehl. Geprüft: alle Werte ganze Zahlen > 0 (auch `bool` abgewiesen); `DOCLING_DOCUMENT_TIMEOUT` ≤ Docling-Grenze; `INGEST_TIMEOUT` > `DOCLING_DOCUMENT_TIMEOUT`; `POLL_MIN` ≤ `POLL_MAX`; `POLL_MAX` < `visibility_timeout` (zusätzlich, siehe unten); `EMBED_TASK_MAX` < `TASK_SOFT_TIME_LIMIT` < `TASK_TIME_LIMIT` < `visibility_timeout`.
+- `deploy/compose/compose.yaml`: sieben neue Variablen in `x-backend-environment`; Dienst `worker` mit `--concurrency 4`, ohne `--queues` (verbraucht alle Warteschlangen aus `CELERY_TASK_QUEUES`), `REMAP_SIGTERM: SIGQUIT` nur am Worker, `stop_grace_period: 90s`.
+- `.env.example`: die sieben Variablen mit Kommentar.
+- Tests:
+  - `backend/tests/config/test_celery.py`: Routen über `celery_app.amqp.router` (in frischem Interpreter je Zustand KI an/aus), `embed` bei KI aus → `QueueNotFound`, `task_routes`, Prefetch, `visibility_timeout`, Zeitlimits, weiches Herunterfahren; `test_three_queues_are_configured` ersetzt durch `test_queues_match_the_ai_switch`.
+  - `backend/tests/config/test_settings.py`: Vorgaben, Übernahme aus der Umgebung, ungültige Zahlen je Variable, Startabbruch bei `TWOX_INGEST_TIMEOUT_SECONDS=60` und `TWOX_EMBED_TASK_MAX_SECONDS=300`; `check_ingest_timing` mit gültigen Werten, mit gleichen Abfragegrenzen und jede Bedingung einzeln verletzt (7 Fälle) sowie jeder Wert einzeln ungültig (10 Namen × 5 Werte).
+  - `backend/tests/config/test_worker.py` (Markierung `worker`): Rundweg je konfigurierter Warteschlange statt fester Liste; neu: laufender Worker verbraucht genau die konfigurierten Warteschlangen, `max-concurrency` 4, `prefetch_count` 4.
+
+### Zeitwerte mit Begründung (Kriterium 7)
+
+| Wert | Größe | Begründung |
+| --- | --- | --- |
+| `visibility_timeout` (Redis-Transport) | 3 600 s | Vorgabe von Celery, ausdrücklich gesetzt. Größte Grenze: keine Aufgabe und kein Countdown darf ihn erreichen, sonst liefert Valkey die Nachricht doppelt aus |
+| `TWOX_TASK_TIME_LIMIT` / `CELERY_TASK_TIME_LIMIT` | 360 s | harte Grenze je Aufgabe, ein Zehntel des `visibility_timeout`; Prozess wird ersetzt |
+| `TWOX_TASK_SOFT_TIME_LIMIT` / `CELERY_TASK_SOFT_TIME_LIMIT` | 300 s | 60 s vor der harten Grenze: Zeit zum Aufräumen und Neueinplanen |
+| `TWOX_EMBED_TASK_MAX_SECONDS` | 240 s | Einbettungs-Aufgabe hört rechtzeitig vor der weichen Grenze auf; 60 s Puffer für einen laufenden Stapel (Socket-Zeitlimit je Anfrage 120 s aus 044 – siehe offene Frage 2) |
+| `CELERY_WORKER_SOFT_SHUTDOWN_TIMEOUT` | 60 s | Abfragen und Senden an Docling enden darin; längere Aufgaben werden abgebrochen und sofort wieder eingereiht statt nach 1 h |
+| `stop_grace_period` (Worker) | 90 s | länger als das weiche Herunterfahren, sonst tötet Docker den Worker vorher |
+| `TWOX_INGEST_POLL_MIN_SECONDS` / `_MAX_SECONDS` | 10 s / 60 s | Docling braucht ~5 s je Seite (041); bei kurzen Dokumenten schnelle Rückmeldung, bei langen höchstens eine Abfrage je Minute. Countdown < `visibility_timeout` |
+| `TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS` | 7 200 s | E-55: 2 h je Dokument, gleich `DOCLING_SERVE_MAX_DOCUMENT_TIMEOUT`; darf nur kleiner gestellt werden |
+| Docling-Grenze (`DOCLING_SERVE_MAX_DOCUMENT_TIMEOUT`, `DEFAULT_DOCUMENT_TIMEOUT_SECONDS` in `docling.py`, `TWOX_DOCLING_MAX_DOCUMENT_TIMEOUT_SECONDS`) | 7 200 s | aus 041/E-55; nach 057 ggf. anheben (2 000 Seiten × 5 s ≈ 2,8 h) |
+| `TWOX_INGEST_TIMEOUT_SECONDS` | 9 000 s | 2,5 h ab Status `started`: 30 min über `document_timeout`, damit Docling seinen eigenen Fehler zuerst meldet; Wartezeit in der Docling-Warteschlange zählt nicht |
+| `TWOX_INGEST_MAX_RETRIES` | 5 | vorübergehende Fehler (Docling, Ollama nicht erreichbar) |
+| Selbsttest (010/017) | 5 s | unverändert |
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-045` im Wurzelverzeichnis des Arbeitsverzeichnisses, `.env` aus `.env.example` mit `TWOX_API_PORT=18045`, Docker Engine 29.9.3, Compose v5.7.0.
+
+| Nr. | Ergebnis | Tatsächliche Ausgabe (gekürzt) |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` 29.9.3, `docker compose version` v5.7.0, beide Exit-Code 0 |
+| 1 | erfüllt | Build Exit-Code 0; `up -d --wait`: `migrate-1 Exited`, `db`, `valkey`, `api`, `worker` `Healthy`, Exit-Code 0 |
+| 2 | erfüllt | `pytest tests/config`: `339 passed, 5 deselected`, Exit 0. `pytest` (KI an, aus `.env`): `1613 passed, 5 deselected`, Exit 0, nichts übersprungen. Zusätzlich mit `TWOX_AI_ENABLED=false`: `1612 passed, 4 deselected`, Exit 0. `pytest -m worker`: `5 passed` (KI an), `4 passed` (KI aus, Worker mit KI aus neu gestartet) |
+| 3 | erfüllt | `All checks passed!`; `151 files already formatted`, Exit 0; `Success: no issues found in 150 source files` |
+| 4 | erfüllt | `makemessages` + `git diff … backend/locale` Exit 0; `makemigrations --check --dry-run`: `No changes detected`; `License check passed.`; `spectacular` + `git diff -- web/openapi` Exit 0 |
+| 5 | erfüllt | `inspect active_queues`: `default`, `embed`, `ingest`; `inspect stats`: `max-concurrency` 4, 4 Einträge in `pool.processes`, `prefetch_count` 4. Mit KI aus: nur `default`, `ingest` |
+| 6 | erfüllt | `django.core.exceptions.ImproperlyConfigured: TWOX_INGEST_TIMEOUT_SECONDS (60) must be greater than TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS (7200), the document_timeout sent to Docling; …`, Exit-Code 1 (Traceback davor, Meldung in der letzten Zeile) |
+| 7 | erfüllt | Tabelle oben |
+| 8 | erfüllt | `D --profile dev --profile e2e down -v` und `D --profile dev down -v` Exit 0; keine Container und Volumes von `twox-045` mehr |
+
+Zusätzlich: e2e wie in `ci.yml` (Worker-Start geändert): Testkonto angelegt, Playwright `41 passed`. `D stop worker` dauerte 3 s, Protokoll `worker: Cold shutdown (MainProcess)`, Exit 0 – SIGTERM löst also den kalten Ablauf mit weichem Herunterfahren aus. **Nicht geprüft:** das Warten von 60 s mit einer laufenden Aufgabe, weil es noch keine lange Aufgabe gibt (046/048). `git status` nach den Läufen sauber. Die Testumgebung „2x“ und „twox-leit“ sind nicht berührt.
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-af8c7bf3d2030762b`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-af8c7bf3d2030762b` (relativ zum Projektordner)
+
+### Abweichungen und Hinweise
+
+1. **Warteschlange `embed` nur bei KI an (E-59, Nachtrag).** Die Aufgaben gibt es erst in 048; damit bei „aus“ keine Einbettungs-Aufgabe eingeplant werden kann, fehlt dann die Warteschlange `embed`. Wegen `CELERY_TASK_CREATE_MISSING_QUEUES = False` scheitert das Einplanen sofort mit `QueueNotFound` statt eine Nachricht liegen zu lassen. Der Worker startet deshalb ohne `--queues`. 048 prüft den Schalter trotzdem selbst vor dem Einplanen. Kriterium 5 nennt `embed`, weil `.env.example` KI an hat; mit KI aus fehlt `embed` absichtlich.
+2. **`REMAP_SIGTERM: SIGQUIT` und `stop_grace_period: 90s` am Worker.** Laut Celery 5.7.0 (`celery/apps/worker.py`, `celery/worker/worker.py`) wirkt `worker_soft_shutdown_timeout` nur beim kalten Herunterfahren (SIGQUIT). `docker stop` schickt SIGTERM, das ohne Umleitung ein warmes Herunterfahren ohne Zeitgrenze ist, und Docker tötet nach 10 s. Ohne die beiden Zeilen hätte die Einstellung keine Wirkung.
+3. **Zeitlimits global gesetzt** (`CELERY_TASK_SOFT_TIME_LIMIT`/`CELERY_TASK_TIME_LIMIT`), nicht nur als Konstanten für die Einlese-Aufgaben.
+4. **Zusätzliche Prüfung** `TWOX_INGEST_POLL_MAX_SECONDS` < `visibility_timeout`: Bei Redis wird eine Aufgabe mit Countdown über den `visibility_timeout` hinaus doppelt ausgeliefert. Und `TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS` ≤ 7 200 (Grenze des Dienstes, laut Auftrag „höchstens“).
+5. **`test_worker.py`** liegt nicht in der Liste der betroffenen Dateien, musste aber mit: Die feste Liste `default, ingest, embed` schlägt bei KI aus fehl.
+6. **Lokal vorhanden:** Images `twox-045-*`, `web/node_modules` (ignoriert, für den e2e-Lauf).
+
+### Offene Fragen an a7
+
+1. **Docling-Grenze einstellbar machen?** `TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS` ist einstellbar, aber nur bis 7 200. Die Grenze selbst steht an drei Stellen: `DOCLING_SERVE_MAX_DOCUMENT_TIMEOUT` in `compose.yaml`, `DEFAULT_DOCUMENT_TIMEOUT_SECONDS` in `twox/ingest/docling.py` (lehnt größere Werte ab) und `TWOX_DOCLING_MAX_DOCUMENT_TIMEOUT_SECONDS` in `settings.py`. Optionen: (a) so lassen und nach 057 an allen drei Stellen ändern; (b) Folgeauftrag: eine Variable `TWOX_DOCLING_MAX_DOCUMENT_TIMEOUT_SECONDS` in `.env`, die Compose an Docling weitergibt und die `docling.py` liest. Empfehlung: (b) zusammen mit dem Ergebnis von 057 (berührt `ingest/docling.py`, nicht Teil dieses Auftrags).
+2. **Einbettung und Socket-Zeitlimit:** `TWOX_EMBED_TIMEOUT_SECONDS` (120 s, 044) wird nicht gegen `TWOX_EMBED_TASK_MAX_SECONDS` + Puffer geprüft. Ein Stapel, der bei 239 s beginnt und 120 s braucht, überschreitet die weiche Grenze von 300 s. Empfehlung: 048 beginnt einen neuen Stapel nur, wenn noch `TWOX_EMBED_TIMEOUT_SECONDS` bis zur weichen Grenze bleiben; oder eine Prüfung `EMBED_TIMEOUT` < `TASK_SOFT_TIME_LIMIT − EMBED_TASK_MAX` hier nachziehen (würde mit den heutigen Vorgaben 120 < 60 scheitern, also Werte anpassen).
