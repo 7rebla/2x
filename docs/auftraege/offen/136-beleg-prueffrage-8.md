@@ -1,6 +1,6 @@
 # Auftrag 136 – Beleg für Prüffrage 8
 
-Meilenstein: M3 · Freigabestufe: C · Status: offen
+Meilenstein: M3 · Freigabestufe: C · Status: wartet auf a7 (Frage an die Leitstelle zum Test aus 120, siehe Kurzbericht)
 
 Voraussetzung: 120 (Suchgrundlinie Prüffragen) ist nach `main` zusammengeführt; `backend/twox/search/probes/m3.json` und das erweiterte Probe-Format mit Fundstelle über den Überschriftenpfad liegen dort vor. Start erst nach Entscheidung D2 durch a7 (siehe „Fragen an a7“). Der Umfang hängt von der gewählten Option ab: Nur bei Option (a) wird hochgeladen und eine Probe ergänzt, bei (b) oder (c) entsteht nur ein Vermerk.
 
@@ -120,7 +120,130 @@ Bei Option (b) oder (c): Vermerk im Kurzbericht; `git diff main --stat` zeigt nu
 **Empfehlung: (a).** Ohne (a) bleibt bei 8 von 10 nur ein weiterer Fehlschlag Spielraum, und Frage 3 fand die Suche in 060 in keiner Liste. Die Quelle ist dann Datei plus Überschrift ohne Zeile; das ist bis M5 hinnehmbar (E-55).
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+Bearbeitet nach Option (a) (E-69, D2). Testumgebung „2x“ mit Ausnahme-Freigabe durch a7 benutzt: genau zwei Uploads, sonst nur lesend; kein `down`, kein Neustart, keine Migration, kein Löschen.
+
+### Was wurde gebaut?
+
+- **Testumgebung „2x“:** zwei neue Dokumente der Art „Dokument“ am Gerät 4 `drill-plc` „SPS Bohrstation“, je eine Version:
+  - Dokument 157 „APS Modulbeschreibung DRILL (Repository-Dokumentation)“, Datei `drill.md`, Version 157, Einlese-Auftrag 227 `done`, **9 Abschnitte** (alle eingebettet).
+  - Dokument 158 „APS Modul?bersicht (Repository-Dokumentation)“, Datei `06-modules.md`, Version 158, Einlese-Auftrag 228 `done`, **18 Abschnitte** (alle eingebettet). Zum Titel siehe Abweichung 2.
+- **`backend/twox/search/probes/m3.json`:** neue Probe `question-8` (Anfrage in eigenen Worten, `basis` `{"question": 8}`, `notes` mit Herkunft) mit zwei Fundstellen über Datei und Überschriftenpfad; `notes` der Liste: Satz „Test question 8 is not measurable yet …“ ersetzt durch Herkunft D2/136 und den Vermerk, dass `docs/02-architecture.md` bewusst nicht eingelesen ist.
+
+| Datei (`aps-repository-dev`) | SHA-256 | Belegzeilen laut `questions.yaml` | `heading_path` der Probe |
+| --- | --- | --- | --- |
+| `docs/06-modules/drill.md` | `d0b6c1563c00544aa0a8e539ae57b9830344af3a3b0ce80f195f9c5db7642a73` | 31-32 | `6.3 Drilling Station (DRILL)` > `MQTT Topics` |
+| `docs/06-modules.md` | `4701411bacad65d45f3eb1a79fb20f3199503312b3a84ad176f112fda5db6cbe` | 34-46 | `6. Module-Specific Documentation` > `6.2 Common Topics for All Modules` |
+
+Zuordnung über die Überschriften der Dateien (`grep -nE '^#{1,6} '`, nur Überschriftenzeilen): In `drill.md` beginnt „MQTT Topics“ in Z. 28, die nächste Überschrift in Z. 34 – Z. 31-32 liegen darin. In `06-modules.md` beginnt „6.2 Common Topics for All Modules“ in Z. 32, die nächste Überschrift gleicher Ebene in Z. 51; Z. 34-46 liegen darin (einschließlich der zwei Unterabschnitte ab Z. 36 und Z. 42, die der Präfixvergleich mit abdeckt). Die Überschriftenpfade der eingelesenen Abschnitte (`Section.heading_path`) stimmen damit überein. Zeile 8 von `drill.md` (Seriennummer, Abschnitt „Overview“) ist keine erwartete Fundstelle, weil der Auftrag nur Z. 31-32 nennt.
+
+### Wie wurde getestet?
+
+**Schritt 1 – Archiv und Dateien (nur lesend, vor dem Upload)**
+
+- Archiv geprüft über `tree_sha256`: `docker run --rm --network none` mit dem Python-Image aus `deploy/compose/testfactory.yaml`, `testfactory/` des Arbeitsverzeichnisses und das Archiv aus dem Hauptordner je **nur lesend** eingebunden, `testfactory.manifest_tools.tree_sha256('/archive')` → `77ecff44…fad2`, gleich `manifest.yaml` (Eintrag `aps-repository-dev`). Exit 0. Keine Codeänderung nötig.
+- Zeilenzahlen: `drill.md` 140, `06-modules.md` 323 (passen zu den Fundstellen).
+- SHA-256 mit `sha256sum` in Git Bash (Werte oben); gleich den Prüfsummen, die der Upload meldete.
+- **Kennwort-Prüfung vor dem Upload (AK 1):** `grep -ciE '<Muster>' <Datei>` je Muster, nur Zahlen:
+
+| Muster | `drill.md` | `06-modules.md` |
+| --- | --- | --- |
+| `passw` | 0 | 0 |
+| `kennw` | 0 | 0 |
+| `passwort` | 0 | 0 |
+| `pwd` | 0 | 0 |
+| `credential` | 0 | 0 |
+| `secret` | 0 | 0 |
+| `token` | 0 | 0 |
+| `login` | 0 | 0 |
+| `user(name)?[:=]` | 0 | 0 |
+| `api[_-]?key` | 0 | 0 |
+| `private key` | 0 | 0 |
+| `BEGIN .*KEY` | 0 | 0 |
+
+- Leitplanke 4: `grep -ciE 'ignore (all|previous)|prompt|assistant|language model|llm|claude|chatgpt|you are an? '` → je 0. Keinen an ein Modell gerichteten Text gefunden; Fließtext wurde nicht gelesen, nur Überschriften und Zahlen.
+
+**Schritt 2 – Upload (AK 2, AK 4)**
+
+- Vorher: `docker compose -p 2x ps` – `api`, `db`, `docling`, `valkey`, `worker` laufen; `.env` des Hauptordners `TWOX_AI_ENABLED=true`. `check_docling`: OK (docling-serve 1.38.2), `check_llm`: OK (4 Modelle). Beide Exit 0.
+- Anmeldung als `e2e-manager` (Rolle `manage`) über die Headless-API (`/_allauth/browser/v1/auth/login`), Kennwort aus `.env.example` nur in einer Shell-Variable, nicht in Dateien. Upload je `POST /api/v1/devices/4/documents/` (multipart, `kind=document`, Dateiname `drill.md` bzw. `06-modules.md`), je HTTP 201, `duplicates: []`. Cookie-Datei danach gelöscht.
+- Zählung (ORM, nur lesend) vorher → nachher:
+
+| | vorher | nachher | Differenz |
+| --- | --- | --- | --- |
+| Dokumente | 156 | 158 | +2 |
+| Versionen | 156 | 158 | +2 |
+| Abschnitte | 5 044 | 5 071 | +27 (= 9 + 18) |
+| Einlese-Aufträge | 226 | 228 | +2 |
+
+- Dokumente am Gerät `drill-plc` nach dem Upload (Titel, Dateiname) – `docs/02-architecture.md` ist nicht dabei:
+  - Anleitung: IP-Adresse eines Moduls ändern über TIA (Deutsch) – `anleitung-ip-adresse-eines-moduls-ndern-ber-tia.pdf`
+  - Changing the IP Address of a module via TIA (English) – `changing-the-ip-address-of-a-module-via-tia-en.pdf`
+  - Betriebssicherheitsverordnung (Einlesetest) – `BetrSichV.pdf`
+  - Quick Start Guide Agile Production Simulation (Deutsch) – `quick-start-guide-agile-production-simulation_de.pdf`
+  - Dokumentation Agile Production Simulation 24V (Handbuch, Deutsch) – `dokumentation_aps_de-02-2025.pdf`
+  - Belegungspläne Agile Production Simulation (Deutsch) – `belegungsplaene_de-09-2024.pdf`
+  - Fehlersuche Agile Production Simulation (Deutsch) – `troubleshooting-aps_2025-02-03_de.pdf`
+  - Software-Versionen: Welche Software Version habe ich? (Deutsch) – `software-info-aps_de.pdf`
+  - Anleitung Software-Update Agile Production Simulation (Deutsch) – `software-update-aps_de.pdf`
+  - Quick Start Guide Agile Production Simulation (English) – `quick-start-guide-agile-production-simulation_en.pdf`
+  - Documentation Agile Production Simulation 24V (manual, English) – `documentation_aps_en-02-2025.pdf`
+  - Assignment Plans Agile Production Simulation (English) – `assignmentplans_aps_en-09-2024.pdf`
+  - Troubleshooting Agile Production Simulation (English) – `troubleshooting_aps_2025-02-03_en.pdf`
+  - Software versions: which software version do I have? (English) – `software-info-aps-en.pdf`
+  - Software update instructions Agile Production Simulation (English) – `software-update-aps_en.pdf`
+  - Abnahme 060: Docling aus – `abnahme-060-docling-aus.pdf`
+  - Abnahme 060: defekte PDF – `abnahme-060-defekt.pdf`
+  - APS Modulbeschreibung DRILL (Repository-Dokumentation) – `drill.md` (neu)
+  - APS Modul?bersicht (Repository-Dokumentation) – `06-modules.md` (neu)
+
+**Schritt 3 – Kennwort-Prüfung nach dem Einlesen (AK 3)**
+
+`docker compose -p 2x exec -T api python manage.py shell < <Skript>`; das Skript zählt je Muster `Section.objects.filter(document_version__sha256=<SHA>).filter(Q(text__iregex=<Muster>) | Q(heading_text__iregex=<Muster>)).count()` und gibt nur Zahlen und Überschriftenpfade aus. Ergebnis: alle zwölf Muster in beiden Versionen **0** (`drill.md` 9 Abschnitte, `06-modules.md` 18 Abschnitte, alle mit Einbettung).
+
+**Schritt 5 – Messung (AK 5)**
+
+Befehl wie in 120 (Einmal-Container mit dem Code dieses Zweigs gegen die Datenbank von „2x“, nur lesend): `docker compose -p 2x --env-file <.env des Projektordners> --profile dev run --rm --no-deps -T backend-dev python manage.py evaluate_search --probes m3 --cutoffs 5,8,10,12` (Text und `--json`). Kopfzeile: 14 Proben, KI an, bge-m3, `TWOX_SECTION_MAX_CHARS` 2000, Tiefe 50. „Not ingested: 0 of 14“.
+
+| Probe `question-8` | Rang | top 5 | top 8 | top 10 | top 12 | RR |
+| --- | --- | --- | --- | --- | --- | --- |
+| kombiniert | 9 | 0 | 0 | 1 | 1 | 0,111 |
+| nur Vektor | 9 | 0 | 0 | 1 | 1 | 0,111 |
+| Stichwort (informativ) | – | 0 | 0 | 0 | 0 | 0 |
+
+Rang je Fundstelle (kombiniert und Vektor gleich): `drill.md` „6.3 Drilling Station (DRILL) > MQTT Topics“ Rang 9; `06-modules.md` „6. Module-Specific Documentation > 6.2 Common Topics for All Modules“ nicht unter den ersten 50.
+
+Gesamt mit `question-8` (13 bewertete Proben): kombiniert Recall@5 0,462, Recall@8 0,615, Recall@10 0,692, Recall@12 0,692, MRR 0,396; nur Vektor Recall@5/8/10/12 0,462/0,615/0,692/0,692, MRR 0,398; Stichwort überall 0.
+
+Übrige Proben: Grundmessung unmittelbar vor dem Upload (gleicher Befehl, `--json`) und Messung danach verglichen – **alle Ränge (kombiniert, Vektor, je Fundstelle) unverändert**. Einzige Änderung in der Kontrollprobe `control-11`: Rang 10 der Vektorliste ist jetzt ein Abschnitt aus `drill.md` (Abschnitt 11026, Version 157); die kombinierte Liste der ersten 10 Einträge ist gleich.
+
+Vermutete Ursache für Rang 9 statt weiter oben und dafür, dass „6.2 Common Topics“ fehlt: englischer Text gegen deutsche Anfrage; die Belegabschnitte sind sehr kurz (88 bis 264 Zeichen) und bestehen überwiegend aus Topic-Zeichenketten, die das Einbettungsmodell schlecht mit „Kanäle/Aufträge/Zustand“ verbindet; die Stichwortsuche trifft bei ganzen Fragen nichts (wie in 120). Die Kopien des APS-Handbuchs an elf Geräten belegen weiterhin viele vordere Plätze.
+
+**Tests und Prüfungen (Projekt `twox-136`, `.env` aus `.env.example` mit `TWOX_API_PORT=18136`)**
+
+- `ruff check .` Exit 0; `ruff format --check .` „197 files already formatted“, Exit 0; `mypy .` „Success: no issues found in 196 source files“.
+- `pytest tests/search`: **1 failed, 399 passed**; Gesamtlauf `pytest`: **1 failed, 2459 passed, 6 deselected** – derselbe eine Test, siehe Abweichung 1 und Frage F-136-1.
+- Danach `docker compose -p twox-136 --profile dev down -v`.
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-ae803e6bb771ef642`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-ae803e6bb771ef642` (relativ zum Projektordner)
+- Nicht gepusht, nichts zusammengeführt.
+
+### Abweichungen
+
+1. **Test aus 120 schlägt fehl (AK 7 nicht erfüllt):** `tests/search/test_probes_m3.py::test_the_list_with_a_probe_for_question_8_is_accepted` hängt an die geladene `m3.json` eine eigene Probe `question-8` (`markdown_probe()`) an. Seit `m3.json` selbst `question-8` enthält, kommt die Kennung doppelt vor, und `load_probes` meldet `probes: the id 'question-8' occurs twice`. Alle anderen Tests, auch `test_every_place_is_documented`, `test_probe_list_is_valid` und `test_question_8_is_missing_with_a_reason_or_located_by_heading_path`, sind grün – das Format nimmt die Probe also an. Nach Schritt 4 ändere ich weder Test noch Code; Status „wartet auf a7“.
+2. **Titel von Dokument 158 mit Ersatzzeichen:** Beim zweiten Upload hat die Windows-Kommandozeile den Titel nicht als UTF-8 an curl übergeben; gespeichert ist der Titel mit dem Ersatzzeichen U+FFFD an der Stelle des „ü“ (geprüft mit `ascii(title)` in der Django-Shell). Eine API zum Umbenennen gibt es nicht; ein Schreibzugriff auf die Datenbank wäre über die Freigabe hinausgegangen. Dateiname, Prüfsumme, Abschnitte und Messung sind davon nicht betroffen. Hier im Bericht steht dafür „?“.
+3. Die Grundmessung vor dem Upload und die Messung danach liefen über den Einmal-Container `backend-dev` des Projekts „2x“ mit dem Code dieses Zweigs (wie in 120 beschrieben); das vorhandene Image `2x-backend-dev` wurde benutzt, nichts neu gebaut, kein Dienst von „2x“ neu gestartet.
+4. `pytest -m worker` sowie die Jobs `web`, `testfactory` und `e2e` nicht ausgeführt: Der Auftrag ändert nur eine JSON-Datei des Backends und diese Auftragsdatei.
+
+### Fragen an die Leitstelle / a7
+
+**F-136-1 – Test `test_the_list_with_a_probe_for_question_8_is_accepted` nach dem Ergänzen von `question-8`**
+
+- (a) Den Test aus 120 anpassen (Bereich von 120, kleine Korrektur beim Zusammenführen): Er prüft die erweiterte Liste nur, solange `m3.json` noch keine Probe für Frage 8 hat, oder ersetzt eine vorhandene `question-8` durch `markdown_probe()` statt sie anzuhängen. Die echte Probe prüfen dann `test_every_place_is_documented` und `test_question_8_is_missing_with_a_reason_or_located_by_heading_path`.
+- (b) Die Probe in `m3.json` anders nennen (z. B. `question-8a`); weicht vom Auftrag ab, der `question-8` vorgibt, und verdeckt das Problem nur.
+- **Empfehlung: (a).**
+
+**F-136-2 – Titel von Dokument 158:** Umbenennen auf „APS Modulübersicht (Repository-Dokumentation)“ nur mit Freigabe (z. B. über die Django-Shell der Testumgebung), oder so lassen. Empfehlung: umbenennen, wenn 138 die Dokumentliste in der Oberfläche zeigt; für Suche und Messung ist es ohne Belang.
