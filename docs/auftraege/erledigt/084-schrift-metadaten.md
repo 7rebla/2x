@@ -1,6 +1,6 @@
 # Auftrag 084 – Schriftgröße der Metadaten
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: C (entschieden mit E-65) · Status: zur Prüfung
+Meilenstein: Gestaltung (D1) · Freigabestufe: C (entschieden mit E-65) · Status: erledigt
 
 Voraussetzung: 077, 079 und 083 sind auf `main` (dieselben Dateien).
 
