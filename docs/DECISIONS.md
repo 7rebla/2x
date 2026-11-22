@@ -60,6 +60,7 @@ Quelle der Einträge E-01 bis E-13: `STARTUNTERLAGE.md`, Entwurf 2 vom 21.11.202
 | E-50 | Die UI-Schrift Inter 4.1 (SIL OFL 1.1) ist als benannte Ausnahme zugelassen: Schriftdatei unverändert mit Lizenztext ausgeliefert (Auftrag 070) | ✔ | 22.11.2026 |
 | E-51 | Lucide (`lucide-react`, ISC) ist die Icon-Bibliothek für Navigation, Aktionen und Status; eigene Industrie-Icons kommen hinzu, sobald Geräte ein Typfeld haben (Auftrag 071) | ✔ | 22.11.2026 |
 | E-52 | Gestaltung: alle vier Text-Animationsmuster dezent und über „Bewegung reduzieren“ abschaltbar; im Kopf der Oberfläche steht bis zur Veröffentlichung des neuen Produktnamens die freigegebene Bildmarke mit dem Schriftzug „2x“ (Auftrag 072); die Bildmarke wird damit öffentlich | ✔ | 22.11.2026 |
+| E-53 | Geräte bekommen ein Feld „Gerätetyp“ (`device_class`) mit fester Auswahl (SPS, Controller, Rechner, Router, Firewall, Roboter, Sonstiges), pflegbar in Formular und Admin; der CSV-Import erhält eine optionale 14. Spalte `device_class`, die Geräteliste der Testfabrik wird ergänzt (ändert E-44). Grundlage für die acht bestätigten Geräte-Icons (Aufträge 073, 074) | ✔ | 22.11.2026 |
 
 ## Begründungen
 

@@ -157,3 +157,5 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 070 | Theme, Schrift Inter, Text-Animationen, Einstellungsseite | C | – (E-50, E-52) | in Arbeit |
 | 071 | Icon-Schicht mit Lucide | C | 070 (E-51) | offen (wartet auf 070) |
 | 072 | Marke: Bildmarke im Kopf, Favicon | C | 070 (E-52) | offen (wartet auf 070) |
+| 073 | Gerätetyp als Feld, API, Admin, CSV-Spalte, Testfabrik | C | – (E-53) | in Arbeit |
+| 074 | Eigene Geräte-Icons in Baum, Geräteseite, Landkarte | B | 071, 073 | offen |
