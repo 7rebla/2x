@@ -1,6 +1,6 @@
 # Auftrag 123 – Zitatprüfung und feste Absage
 
-Meilenstein: M3 · Freigabestufe: B · Status: offen
+Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
 
 ## Ziel
 
@@ -154,7 +154,12 @@ Alle Befehle laufen in Git Bash im Wurzelverzeichnis des Arbeitsverzeichnisses, 
    - Empfehlung: (a) und (c). Lokale Modelle neigen dazu, Belege zu erfinden; eine Regel nur im Prompt reicht für die Kontrollfrage nicht. Bis zur Entscheidung gilt „entfernen und kennzeichnen“ (`drop_unsupported=True`, verworfene Sätze in `removed_sentences`). Variante (d) ließe sich im Dienst aus `removed_sentences` ableiten, ohne dieses Modul zu ändern.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+- **Was wurde gebaut?** `backend/twox/answers/citations.py` mit der verbindlichen Schnittstelle (`NO_EVIDENCE_TEXT`, `CONTRADICTION_PHRASE`, `VerdictStatus`, `IssueReason`, `SentenceIssue`, `Verdict`, `verify`) sowie den öffentlichen Konstanten `UNITS` und `ABBREVIATIONS`. Reine Funktion ohne Datenbank, Netz, Modell, Einstellung und Protokollausgabe. Satzzerlegung über Positionen im Original (je Zeile, Listenmarken nicht Teil des Satzes), Quellennummern `[n]`, `[n, m]`, `[n; m]`, `[n][m]` (höchstens sechs Ziffern), Prüfkennzeichen aus eigenen Ausdrücken (Zahl mit Einheit, Port, Version) und `find_identifiers` (IP, MAC, Typbezeichnungen; nur importiert). Vergleich auf vereinheitlichtem Text ohne Leerraum und `-`, wobei gemerkt wird, wo Leerraum oder `-` stand, damit die Grenzregeln (`192.168.0.5` ≠ `192.168.0.50`, `5 kg` ≠ `25 kg`) trotz Entfernen gelten. Kein Wert aus Antwort oder Quelle geht in ein Muster (Suche mit `str.find`). Die Regeln stehen auf Englisch im Modul-Docstring, einschließlich der Einheitenliste. Konstanten mit gleichem Wortlaut wie in 122 (`types.py`), dort als maßgeblich vorgesehen; beim Zusammenführen auf Import aus `types.py` umstellen.
+- **Wie wurde getestet?** `tests/answers/test_citations.py`, 94 Fälle, tabellengetrieben, ohne Datenbank, nur selbst geschriebene Texte zu einem erfundenen Greifer G-12. Abgedeckt: alle Fälle 2.1–2.12 der Akzeptanzkriterien, dazu Grenzfälle (IPv6, MAC, Port hinter Adresse, `24 V` gegen `24 VDC`, `V18` gegen `Version 18`, geschützte Bindestriche), Regex-Sonderzeichen als reiner Text, Docstring nennt jede Einheit, Laufzeit typisch ca. 4 ms und sechs ungünstige Eingaben mit je 20 000 Zeichen unter 50 ms. Im Container (`docker compose -p twox-123`, Port 18123): Build und `up --wait` Exit 0; `pytest tests/answers/test_citations.py -v` 94 bestanden; `pytest` 2486 bestanden, 0 fehlgeschlagen; `pytest -m worker` 6 bestanden; `ruff check .` „All checks passed!“; `ruff format --check .` Exit 0; `mypy .` „Success: no issues found in 197 source files“; `makemessages` Exit 0 ohne Unterschied unter `backend/locale`; `makemigrations --check --dry-run` „No changes detected“; `check-licenses.sh` Exit 0; `spectacular` Exit 0 ohne Unterschied unter `web/openapi`; `git diff --stat main...` nur die zwei neuen Dateien; `--profile dev down -v` Exit 0.
+- **Zweig und Arbeitsverzeichnis:** `worktree-agent-ae3973aba54a10337`, `.claude/worktrees/agent-ae3973aba54a10337`.
+- **Abweichungen und Auslegungen:**
+  1. Ein belegter Satz mit erfundener Nummer (`[2][9]`) bleibt im Text (ohne `[9]`) und steht trotzdem in `removed_sentences`, mit Grund `unknown_citation` und `invalid_numbers == (9,)`. Anders lässt sich `invalid_numbers` für diesen Fall nicht melden, ohne die verbindlichen Felder zu ändern. Folge für 126: `removed_sentences=len(...)` zählt solche gekennzeichneten Sätze mit. Bei `no_evidence` enthält `removed_sentences` nur die verworfenen Sätze.
+  2. Als Ausnahme gilt der Absagesatz auch dann, wenn er Nummern trägt (`… Unterlagen [2].` zählt nicht als Beleg). Der Satz, der nur aus der Widerspruchs-Wendung besteht, ist nur ohne Nummer ausgenommen. Ausgenommene Sätze sind weder belegt noch gelistet. Eine Antwort nur aus der Widerspruchs-Wendung ergibt deshalb `no_evidence`.
+  3. Bewusst großzügig: Steht in der Antwort `S7 1200` (mit Leerzeichen), wird nur `S7` als Kennzeichen erkannt; das gilt auch in einer Quelle mit `S7-1500` als gefunden. Umgekehrt (`S7-1200` in der Antwort) wird streng verglichen. `in` und `t` fehlen in der Einheitenliste (zu oft gewöhnliche Wörter). `24 V DC` wird als `24 V` geprüft, ein folgendes `AC`/`DC` in der Quelle verlängert den Wert nicht.
+  4. `usw.` und weitere Abkürzungen beenden nie einen Satz, auch nicht am echten Satzende; dann werden zwei Sätze gemeinsam geprüft.
+  5. `docs/ARCHITECTURE.md` nicht geändert (wie vorgegeben). Keine neue Abhängigkeit, keine offene Frage an a7.
