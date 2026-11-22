@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 2x\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-22 01:02+0000\n"
+"POT-Creation-Date: 2026-11-22 01:39+0000\n"
 "PO-Revision-Date: 2026-11-22 00:00+0000\n"
 "Last-Translator: 2x project\n"
 "Language-Team: German\n"
@@ -169,11 +169,11 @@ msgstr "Es gibt schon ein Gerät mit dieser Kennung."
 msgid "Use only lowercase letters, digits and hyphens."
 msgstr "Verwenden Sie nur Kleinbuchstaben, Ziffern und Bindestriche."
 
-#: twox/assets/models.py twox/files/models.py
+#: twox/assets/models.py twox/files/models.py twox/ingest/models.py
 msgid "created at"
 msgstr "angelegt am"
 
-#: twox/assets/models.py
+#: twox/assets/models.py twox/ingest/models.py
 msgid "updated at"
 msgstr "zuletzt geändert am"
 
@@ -359,7 +359,7 @@ msgstr "ursprünglicher Dateiname"
 msgid "uploaded by"
 msgstr "hochgeladen von"
 
-#: twox/files/models.py
+#: twox/files/models.py twox/ingest/models.py
 msgid "document version"
 msgstr "Dokumentversion"
 
@@ -386,3 +386,206 @@ msgid ""
 "The file is identical to the newest version %(number)d of this document."
 msgstr ""
 "Die Datei ist identisch mit der neuesten Version %(number)d dieses Dokuments."
+
+#: twox/ingest/admin.py twox/ingest/models.py
+msgid "embedding"
+msgstr "Einbettung"
+
+#: twox/ingest/admin.py
+msgid "with embedding"
+msgstr "mit Einbettung"
+
+#: twox/ingest/admin.py
+msgid "without embedding"
+msgstr "ohne Einbettung"
+
+#: twox/ingest/admin.py
+msgid "has embedding"
+msgstr "Einbettung vorhanden"
+
+#: twox/ingest/models.py
+msgid "queued"
+msgstr "wartet"
+
+#: twox/ingest/models.py
+msgid "running"
+msgstr "läuft"
+
+#: twox/ingest/models.py
+msgid "done"
+msgstr "fertig"
+
+#: twox/ingest/models.py
+msgid "failed"
+msgstr "fehlgeschlagen"
+
+#: twox/ingest/models.py
+msgid "skipped"
+msgstr "übersprungen"
+
+#: twox/ingest/models.py
+msgid "convert"
+msgstr "Umwandeln"
+
+#: twox/ingest/models.py
+msgid "sections"
+msgstr "Abschnitte"
+
+#: twox/ingest/models.py
+msgid "embed"
+msgstr "Einbetten"
+
+#: twox/ingest/models.py
+msgid "converter unavailable"
+msgstr "Umwandlungsdienst nicht erreichbar"
+
+#: twox/ingest/models.py
+msgid "converter rejected the file"
+msgstr "Umwandlungsdienst hat die Datei abgewiesen"
+
+#: twox/ingest/models.py
+msgid "conversion failed"
+msgstr "Umwandlung fehlgeschlagen"
+
+#: twox/ingest/models.py
+msgid "stored content missing"
+msgstr "gespeicherter Inhalt fehlt"
+
+#: twox/ingest/models.py
+msgid "unsupported format"
+msgstr "Format nicht unterstützt"
+
+#: twox/ingest/models.py
+msgid "embedding service unavailable"
+msgstr "Einbettungsdienst nicht erreichbar"
+
+#: twox/ingest/models.py
+msgid "embedding service rejected the request"
+msgstr "Einbettungsdienst hat die Anfrage abgewiesen"
+
+#: twox/ingest/models.py
+msgid "embedding has the wrong number of dimensions"
+msgstr "Einbettung hat die falsche Zahl von Dimensionen"
+
+#: twox/ingest/models.py
+msgid "time limit exceeded"
+msgstr "Zeitgrenze überschritten"
+
+#: twox/ingest/models.py
+msgid "internal error"
+msgstr "interner Fehler"
+
+#: twox/ingest/models.py
+msgid "Enter a key of the blob storage."
+msgstr "Geben Sie einen Schlüssel des Dateispeichers ein."
+
+#: twox/ingest/models.py
+#, python-format
+msgid "An embedding must have %(expected)d dimensions, not %(actual)d."
+msgstr "Eine Einbettung muss %(expected)d Dimensionen haben, nicht %(actual)d."
+
+#: twox/ingest/models.py
+msgid "status"
+msgstr "Status"
+
+#: twox/ingest/models.py
+msgid "step"
+msgstr "Schritt"
+
+#: twox/ingest/models.py
+msgid "error code"
+msgstr "Fehlerart"
+
+#: twox/ingest/models.py
+msgid "error detail"
+msgstr "Fehlertext"
+
+#: twox/ingest/models.py
+msgid "attempts"
+msgstr "Versuche"
+
+#: twox/ingest/models.py
+msgid "requested by"
+msgstr "angestoßen von"
+
+#: twox/ingest/models.py
+msgid "converter task ID"
+msgstr "Aufgaben-ID des Umwandlungsdienstes"
+
+#: twox/ingest/models.py
+msgid "converter started at"
+msgstr "Umwandlung begonnen am"
+
+#: twox/ingest/models.py
+msgid "result blob key"
+msgstr "Speicherschlüssel des Ergebnisses"
+
+#: twox/ingest/models.py
+msgid "reused from"
+msgstr "übernommen von"
+
+#: twox/ingest/models.py
+msgid "page count"
+msgstr "Seitenzahl"
+
+#: twox/ingest/models.py
+msgid "section count"
+msgstr "Zahl der Abschnitte"
+
+#: twox/ingest/models.py
+msgid "started at"
+msgstr "begonnen am"
+
+#: twox/ingest/models.py
+msgid "finished at"
+msgstr "beendet am"
+
+#: twox/ingest/models.py
+msgid "ingest job"
+msgstr "Einlese-Auftrag"
+
+#: twox/ingest/models.py
+msgid "ingest jobs"
+msgstr "Einlese-Aufträge"
+
+#: twox/ingest/models.py
+msgid "This document version already has a queued or running ingest job."
+msgstr ""
+"Für diese Dokumentversion gibt es schon einen wartenden oder laufenden "
+"Einlese-Auftrag."
+
+#: twox/ingest/models.py
+msgid "ordinal"
+msgstr "laufende Nummer"
+
+#: twox/ingest/models.py
+msgid "first page"
+msgstr "erste Seite"
+
+#: twox/ingest/models.py
+msgid "last page"
+msgstr "letzte Seite"
+
+#: twox/ingest/models.py
+msgid "heading path"
+msgstr "Überschriftenpfad"
+
+#: twox/ingest/models.py
+msgid "heading text"
+msgstr "Überschriften"
+
+#: twox/ingest/models.py
+msgid "text"
+msgstr "Text"
+
+#: twox/ingest/models.py
+msgid "search vector"
+msgstr "Suchvektor"
+
+#: twox/ingest/models.py
+msgid "embedding model"
+msgstr "Einbettungsmodell"
+
+#: twox/ingest/models.py
+msgid "section"
+msgstr "Abschnitt"
