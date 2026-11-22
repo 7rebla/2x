@@ -8,7 +8,11 @@
   queued or running job, 400 for a configuration.
 
 The state of the newest job of each version also comes with the files API
-(field ``ingest`` of a version, :mod:`twox.files.serializers`).
+(field ``ingest`` of a version, :mod:`twox.files.serializers`). Every row of
+the list says whether it is that newest job (``is_latest``, work order 064),
+by the same rule (:func:`twox.files.serializers.newest_ingest_jobs`, so
+embedding jobs count as well); ``?latest=true`` lists only those, and the
+other filters then apply to them.
 
 Who started a job (``requested_by``) is shown to the role ``manage`` only,
 like the change log (E-43); the role ``read`` always gets ``null``. The
@@ -20,7 +24,7 @@ here depends on embeddings, and nothing here calls the model service.
 
 from typing import Any, Final
 
-from django.db.models import QuerySet
+from django.db.models import BooleanField, ExpressionWrapper, Q, QuerySet
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext
 from drf_spectacular.types import OpenApiTypes
@@ -43,7 +47,11 @@ from twox.accounts.roles import MANAGE, user_role
 from twox.assets.models import Device
 from twox.assets.views import id_parameter, query_id
 from twox.files.models import Document, DocumentVersion
-from twox.files.serializers import ErrorDetailSerializer, IngestJobSummarySerializer
+from twox.files.serializers import (
+    ErrorDetailSerializer,
+    IngestJobSummarySerializer,
+    newest_ingest_jobs,
+)
 from twox.ingest.models import IngestJob, IngestStatus
 from twox.ingest.services import IngestAlreadyActiveError, IngestNotAllowedError, request_ingest
 
@@ -101,6 +109,13 @@ class IngestJobSerializer(IngestJobSummarySerializer):
             "and always null for the role read."
         )
     )
+    is_latest = serializers.BooleanField(
+        read_only=True,
+        help_text=(
+            "Whether this is the newest job of its version (the job in the field "
+            "ingest of the version); false for an older attempt."
+        ),
+    )
 
     class Meta(IngestJobSummarySerializer.Meta):
         fields = (
@@ -109,6 +124,7 @@ class IngestJobSerializer(IngestJobSummarySerializer):
             "version",
             "device",
             "requested_by",
+            "is_latest",
         )
         read_only_fields = fields
 
@@ -140,10 +156,19 @@ class IngestJobPagination(PageNumberPagination):
 
 
 def ingest_jobs() -> QuerySet[IngestJob]:
-    """All ingest jobs, newest first, with document, device and requester in the same query."""
-    return IngestJob.objects.select_related(
-        "document_version__document__device", "requested_by"
-    ).order_by("-created_at", "-pk")
+    """All ingest jobs, newest first, with document, device and requester in the same query.
+
+    Each job carries ``is_latest``: whether it is the newest job of its
+    version. The rule is the one of the field ``ingest`` of a version
+    (:func:`newest_ingest_jobs`, ``DISTINCT ON`` the version, newest by
+    creation, then id); it is a subquery of the same query.
+    """
+    newest = newest_ingest_jobs().values("pk")
+    return (
+        IngestJob.objects.select_related("document_version__document__device", "requested_by")
+        .annotate(is_latest=ExpressionWrapper(Q(pk__in=newest), output_field=BooleanField()))
+        .order_by("-created_at", "-pk")
+    )
 
 
 def shows_requested_by(request: Request) -> bool:
@@ -163,6 +188,18 @@ def query_statuses(request: Request) -> list[str]:
     return values
 
 
+def query_flag(request: Request, name: str) -> bool:
+    """The truth value in the query parameter ``name``; false if it is missing, 400 if invalid."""
+    raw = request.query_params.get(name)
+    if raw is None:
+        return False
+    try:
+        value: bool = serializers.BooleanField().run_validation(raw)
+    except serializers.ValidationError as error:
+        raise serializers.ValidationError({name: error.detail}) from error
+    return value
+
+
 @extend_schema_view(
     get=extend_schema(
         operation_id="ingest_jobs_list",
@@ -179,6 +216,16 @@ def query_statuses(request: Request) -> list[str]:
             id_parameter("device", "Only jobs of documents of the device with this id."),
             id_parameter("document", "Only jobs of the document with this id."),
             id_parameter("version", "Only jobs of the document version with this id."),
+            OpenApiParameter(
+                "latest",
+                OpenApiTypes.BOOL,
+                OpenApiParameter.QUERY,
+                default=False,
+                description=(
+                    "Only the newest job of each version (is_latest); the other filters "
+                    "apply to these. Default false: every attempt."
+                ),
+            ),
         ],
         responses={
             200: IngestJobSerializer(many=True),
@@ -200,6 +247,11 @@ class IngestJobListView(generics.ListAPIView[IngestJob]):
 
     def get_queryset(self) -> QuerySet[IngestJob]:
         queryset = ingest_jobs()
+        # The newest job is chosen among all jobs of a version, before the
+        # other filters: a failed attempt followed by a done one is not listed
+        # under ?latest=true&status=failed.
+        if query_flag(self.request, "latest"):
+            queryset = queryset.filter(is_latest=True)
         statuses = query_statuses(self.request)
         if statuses:
             queryset = queryset.filter(status__in=statuses)
