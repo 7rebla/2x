@@ -2,29 +2,28 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createQueryClient } from "./api/queryClient.ts";
 import { fakeFilesApi } from "./components/files/testData.ts";
 import { Layout } from "./components/Layout.tsx";
+import { lazyPage, PageLoadBoundary } from "./components/PageLoading.tsx";
 import { RouteError } from "./components/RouteError.tsx";
 import { changeLanguage } from "./i18n.ts";
 import enNav from "./locales/en/nav.json";
 import { navigation } from "./navigation.ts";
+import { LoginPage } from "./pages/LoginPage.tsx";
+import { StructurePage } from "./pages/StructurePage.tsx";
 import { fakeStructureApi } from "./pages/structure/testData.ts";
+import { routes } from "./routes.tsx";
 import { fakeApi, manager } from "./test/fakeApi.ts";
 import { renderApp } from "./test/renderApp.tsx";
 
 // Routing inside the frame for a signed-in manager (who may see every page).
 // Sign-in, redirects and roles: session.test.tsx.
 
-// The map, search and ingest pages are loaded lazily; importing them once here keeps the
-// first click on their entries within the usual waiting time.
-beforeAll(async () => {
-  await import("./pages/MapPage.tsx");
-  await import("./pages/SearchPage.tsx");
-  await import("./pages/IngestPage.tsx");
-});
+// Every page except sign-in and structure is loaded lazily; test/renderApp.tsx
+// loads their code once before the first test (preloadPages).
 
 afterEach(async () => {
   cleanup();
@@ -239,6 +238,69 @@ describe("render errors", () => {
       "Something went wrong on this page. Please try again.",
     );
     expect(screen.getByTestId("error-message").textContent).not.toContain("broken page");
+    expect(await screen.findByRole("navigation", { name: enNav.label })).toBeDefined();
+  });
+});
+
+/** The routes below the session guard, by path ("" for the start page). */
+function sessionRoutes(): Map<string, unknown> {
+  const frame = routes[0]?.children?.[0]?.children ?? [];
+  const guarded = frame.find((route) => route.path === undefined)?.children ?? [];
+  return new Map(guarded.map((route) => [route.path ?? "", route.element]));
+}
+
+/** Type of the page inside <RequireRole>, or of the element itself. */
+function pageType(element: unknown): unknown {
+  const outer = element as ReactElement<{ children?: unknown }>;
+  const inner = outer.props.children as ReactElement | undefined;
+  return inner?.type ?? outer.type;
+}
+
+describe("loading on demand (work order 062)", () => {
+  it("loads every page except sign-in and structure when it is opened", () => {
+    const pages = sessionRoutes();
+    const lazy = [...pages].filter(([, element]) => pageType(element) === PageLoadBoundary).map(([path]) => path);
+
+    expect(lazy).toEqual([
+      "map",
+      "search",
+      "ingest",
+      "devices/:deviceId",
+      "documents/:documentId",
+      "import",
+      "audit",
+      "selftest",
+      "settings",
+    ]);
+    expect(pageType(pages.get(""))).toBe(StructurePage);
+    const login = routes[0]?.children?.[0]?.children?.find((route) => route.path === "login");
+    expect(pageType(login?.element)).toBe(LoginPage);
+  });
+
+  it("a page whose code cannot be loaded shows a notice with Reload and keeps the frame", async () => {
+    // React logs the caught error; that is expected here.
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    fakeApi(manager);
+    const page = lazyPage(() => Promise.reject(new TypeError("Failed to fetch dynamically imported module")));
+    const router = createMemoryRouter(
+      [
+        {
+          path: "/",
+          element: <Layout />,
+          children: [{ errorElement: <RouteError />, children: [{ index: true, element: page.element }] }],
+        },
+      ],
+      { initialEntries: ["/"] },
+    );
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+
+    expect((await screen.findByTestId("page-load-failed-summary")).textContent).toBe("This page could not be loaded.");
+    expect(screen.getByRole("button", { name: "Reload" })).toBeDefined();
+    expect(screen.queryByTestId("error-message")).toBeNull();
     expect(await screen.findByRole("navigation", { name: enNav.label })).toBeDefined();
   });
 });
