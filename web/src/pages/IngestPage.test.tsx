@@ -6,6 +6,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { IngestJob, IngestStatusEnum, Me } from "../api/generated";
 import { changeLanguage } from "../i18n.ts";
 import { fakeApi, type FakeApi, type Handler, jsonResponse, manager, reader } from "../test/fakeApi.ts";
+import { WIDE_TABLE_QUERY } from "../components/ui/ResponsiveTable.tsx";
+import { fakeMatchMedia } from "../test/fakeMatchMedia.ts";
 import { renderApp } from "../test/renderApp.tsx";
 import { ingestAddressParams, readIngestAddress, statusesFor } from "./IngestPage.tsx";
 import { fakeStructureApi } from "./structure/testData.ts";
@@ -748,5 +750,68 @@ describe("navigation entry", () => {
     expect(link.getAttribute("aria-current")).toBe("page");
     expect(link.querySelector("svg")?.getAttribute("data-icon")).toBe("ingest");
     expect(screen.queryByTestId("no-permission")).toBeNull();
+  });
+});
+
+describe("narrow screens (work order 081)", () => {
+  it("lists the jobs as cards below 768 px: file as heading, state, then device, version and times", async () => {
+    fakeMatchMedia({ [WIDE_TABLE_QUERY]: false });
+    await openOverview(reader);
+    await rows();
+
+    expect(screen.queryByRole("table")).toBeNull();
+    const list = screen.getByRole("list", { name: "Ingest jobs" });
+    // Below the page heading (h1), one h2 per job.
+    const headings = within(list).getAllByRole("heading", { level: 2 });
+    expect(headings).toHaveLength(screen.getAllByTestId("ingest-job").length);
+
+    const failed = row(15);
+    expect(failed.tagName).toBe("LI");
+    expect(failed.dataset.status).toBe("failed");
+    const heading = within(failed).getByRole("heading", { level: 2 });
+    expect(heading.textContent).toBe("Test manual");
+    expect(within(heading).getByTestId("ingest-job-document-link").getAttribute("href")).toBe("/documents/7");
+    expect(within(failed).getByTestId("ingest-job-status").textContent).toContain("Status: Error");
+    expect(within(failed).getByTestId("ingest-error-detail").textContent).toBe("converter not reachable after 5 attempts");
+    expect(Array.from(failed.querySelectorAll("dt")).map((term) => term.textContent)).toEqual([
+      "Device",
+      "Version",
+      "Times",
+    ]);
+    expect(within(failed).getByRole("link", { name: "Test controller" }).getAttribute("href")).toBe("/devices/1000");
+    expect(within(failed).getByTestId("ingest-job-version").textContent).toBe("Version 2 · test-manual-v2.pdf");
+    expect(within(failed).getByTestId("ingest-job-times").querySelectorAll("time")).toHaveLength(2);
+    expect(within(failed).queryByRole("button")).toBeNull();
+  });
+
+  it("adds who started the job and the button for managers", async () => {
+    fakeMatchMedia({ [WIDE_TABLE_QUERY]: false });
+    await openOverview(manager);
+    await rows();
+
+    const failed = row(15);
+    expect(Array.from(failed.querySelectorAll("dt")).map((term) => term.textContent)).toEqual([
+      "Device",
+      "Version",
+      "Times",
+      "Started by",
+    ]);
+    expect(within(failed).getByTestId("ingest-job-requested-by")).toBeDefined();
+    expect(within(within(failed).getByTestId("ingest-job-status")).getByRole("button")).toBeDefined();
+  });
+
+  it("names the pairs in German", async () => {
+    fakeMatchMedia({ [WIDE_TABLE_QUERY]: false });
+    await changeLanguage("de");
+    await openOverview(manager);
+    await rows();
+
+    expect(screen.getByRole("list", { name: "Einlese-Aufträge" })).toBeDefined();
+    expect(Array.from(row(15).querySelectorAll("dt")).map((term) => term.textContent)).toEqual([
+      "Gerät",
+      "Version",
+      "Zeitpunkte",
+      "Angestoßen von",
+    ]);
   });
 });

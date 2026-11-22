@@ -28,6 +28,7 @@ import {
 import { NewVersionForm } from "../components/files/UploadForm.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { NotFound } from "../components/NotFound.tsx";
+import { ResponsiveTable, type TableColumn } from "../components/ui/ResponsiveTable.tsx";
 import { Icon } from "../icons/Icon.tsx";
 import { useRole } from "../session.ts";
 import { AnimatedHeading, MaskedTitle } from "../components/TextMotion.tsx";
@@ -134,7 +135,12 @@ function DocumentView({ document, error }: { document: DocumentDetail; error: un
       {canManage ? (
         <section className="space-y-3" data-testid="document-history">
           <h2 className="font-semibold">{t("document.history")}</h2>
-          <AuditTrail objectType="files.document" objectId={document.id} label={t("document.history")} />
+          <AuditTrail
+            objectType="files.document"
+            objectId={document.id}
+            label={t("document.history")}
+            cardHeadingLevel={3}
+          />
         </section>
       ) : null}
     </section>
@@ -145,6 +151,9 @@ function DocumentView({ document, error }: { document: DocumentDetail; error: un
  * Version table (work order 079): the user stands below the upload time, the
  * checksum below the file name; version, date, size and user never wrap. The
  * download is an icon button whose column has a heading for screen readers only.
+ * Below 768 px every version is a card (work order 081): "Version N" as
+ * heading, the download button next to it, the ingest state below, then the
+ * pairs and the checksum.
  */
 function VersionTable({
   versions,
@@ -154,55 +163,109 @@ function VersionTable({
   canIngest: boolean;
 }): ReactElement {
   const { t } = useTranslation("files");
+  const columns: TableColumn<DocumentVersion>[] = [
+    {
+      key: "version",
+      header: t("columns.version"),
+      headerClassName: "py-2 pr-4 font-normal whitespace-nowrap",
+      className: "py-2 pr-4 whitespace-nowrap",
+      testId: "version-number",
+      card: "title",
+      cell: (version) => (
+        <>
+          <Icon name="version" className="mr-1 text-fg-muted" decorative />
+          {version.number}
+        </>
+      ),
+      // On a card the number alone would be a poor heading: "Version 3".
+      cardCell: (version) => (
+        <>
+          <Icon name="version" className="mr-1 text-fg-muted" decorative />
+          {t("versionNumber", { number: version.number })}
+        </>
+      ),
+    },
+    {
+      key: "date",
+      header: t("columns.date"),
+      headerClassName: "py-2 pr-4 font-normal whitespace-nowrap",
+      className: "py-2 pr-4 whitespace-nowrap",
+      cell: (version) => (
+        <>
+          <span data-testid="version-date" className="block">
+            <DateTime iso={version.created_at} />
+          </span>
+          <UploadedBy name={version.uploaded_by} testId="version-user" />
+        </>
+      ),
+    },
+    {
+      key: "size",
+      header: t("columns.size"),
+      headerClassName: "py-2 pr-4 font-normal whitespace-nowrap",
+      className: "py-2 pr-4 whitespace-nowrap",
+      testId: "version-size",
+      cell: (version) => <Size bytes={version.size} />,
+    },
+    {
+      key: "filename",
+      header: t("columns.filename"),
+      headerClassName: "py-2 pr-4 font-normal",
+      className: "min-w-40 py-2 pr-4",
+      cell: (version) => (
+        <>
+          <FileName name={version.original_filename} testId="version-filename" />
+          <Checksum sha256={version.sha256} />
+        </>
+      ),
+      cardCell: (version) => <FileName name={version.original_filename} testId="version-filename" />,
+    },
+    {
+      key: "ingest",
+      header: t("columns.ingest"),
+      headerClassName: "py-2 pr-4 font-normal",
+      className: "min-w-48 space-y-1 py-2 pr-4",
+      testId: "version-ingest",
+      card: "status",
+      cell: (version) => (
+        <>
+          <IngestStatusBadge job={version.ingest} />
+          <IngestError job={version.ingest} />
+          {canIngest ? <IngestRetryButton version={version} /> : null}
+        </>
+      ),
+    },
+    {
+      key: "download",
+      header: t("columns.download"),
+      headerHidden: true,
+      headerClassName: "py-2 font-normal",
+      className: "py-2",
+      card: "action",
+      cell: (version) => <DownloadIconLink versionId={version.id} number={version.number} />,
+    },
+    {
+      // In the table the checksum stands below the file name; on a card at the end.
+      key: "checksum",
+      header: t("columns.checksum"),
+      table: false,
+      card: "detail",
+      cell: (version) => <Checksum sha256={version.sha256} />,
+    },
+  ];
   return (
-    // relative: the screen-reader texts (absolute) stay inside the scroll box.
-    <div className="relative overflow-x-auto">
-      <table aria-label={t("document.versionsLabel")} data-testid="document-versions" className="w-full text-left text-sm tabular-nums">
-        <thead>
-          <tr className="border-b border-line text-fg-muted">
-            <th className="py-2 pr-4 font-normal whitespace-nowrap">{t("columns.version")}</th>
-            <th className="py-2 pr-4 font-normal whitespace-nowrap">{t("columns.date")}</th>
-            <th className="py-2 pr-4 font-normal whitespace-nowrap">{t("columns.size")}</th>
-            <th className="py-2 pr-4 font-normal">{t("columns.filename")}</th>
-            <th className="py-2 pr-4 font-normal">{t("columns.ingest")}</th>
-            <th className="py-2 font-normal">
-              <span className="sr-only">{t("columns.download")}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {versions.map((version) => (
-            <tr key={version.id} data-testid="document-version" data-version={version.number} className="border-b border-line align-top">
-              <td data-testid="version-number" className="py-2 pr-4 whitespace-nowrap">
-                <Icon name="version" className="mr-1 text-fg-muted" decorative />
-                {version.number}
-              </td>
-              <td className="py-2 pr-4 whitespace-nowrap">
-                <span data-testid="version-date" className="block">
-                  <DateTime iso={version.created_at} />
-                </span>
-                <UploadedBy name={version.uploaded_by} testId="version-user" />
-              </td>
-              <td data-testid="version-size" className="py-2 pr-4 whitespace-nowrap">
-                <Size bytes={version.size} />
-              </td>
-              <td className="min-w-40 py-2 pr-4">
-                <FileName name={version.original_filename} testId="version-filename" />
-                <Checksum sha256={version.sha256} />
-              </td>
-              <td data-testid="version-ingest" className="min-w-48 space-y-1 py-2 pr-4">
-                <IngestStatusBadge job={version.ingest} />
-                <IngestError job={version.ingest} />
-                {canIngest ? <IngestRetryButton version={version} /> : null}
-              </td>
-              <td className="py-2">
-                <DownloadIconLink versionId={version.id} number={version.number} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <ResponsiveTable
+      label={t("document.versionsLabel")}
+      testId="document-versions"
+      rows={versions}
+      rowKey={(version) => version.id}
+      columns={columns}
+      rowAttributes={(version) => ({ "data-testid": "document-version", "data-version": version.number })}
+      cardHeadingLevel={3}
+      tableClassName="tabular-nums"
+      headerRowClassName="border-b border-line text-fg-muted"
+      rowClassName="border-b border-line align-top"
+    />
   );
 }
 

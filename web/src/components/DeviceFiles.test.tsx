@@ -5,7 +5,9 @@ import type { Me } from "../api/generated";
 import { changeLanguage } from "../i18n.ts";
 import { fakeStructureApi } from "../pages/structure/testData.ts";
 import { jsonResponse, manager, reader } from "../test/fakeApi.ts";
+import { fakeMatchMedia } from "../test/fakeMatchMedia.ts";
 import { renderApp } from "../test/renderApp.tsx";
+import { WIDE_TABLE_QUERY } from "./ui/ResponsiveTable.tsx";
 import {
   fakeChecksum,
   type FakeFilesApi,
@@ -481,5 +483,107 @@ describe("upload of a new file", () => {
     expect(within(form).getByTestId("error-detail").textContent).toBe(
       "You do not have permission to perform this action.",
     );
+  });
+});
+
+describe("narrow screens (work order 081)", () => {
+  it("lists the files as cards below 768 px: title as heading, download, state, pairs and checksum", async () => {
+    fakeMatchMedia({ [WIDE_TABLE_QUERY]: false });
+    await openDevice(reader);
+    await waitFor(() => {
+      expect(rows()).toHaveLength(2);
+    });
+
+    expect(within(filesArea()).queryByRole("table")).toBeNull();
+    const list = within(filesArea()).getByRole("list", { name: "Files of the device" });
+    expect(list.dataset.testid).toBe("device-files-table");
+    expect(within(list).getAllByRole("listitem")).toHaveLength(2);
+    // Below the section heading "Files" (h2), one h3 per file.
+    expect(within(list).getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent)).toEqual([
+      "Test manual",
+      "Test notes",
+    ]);
+
+    const [manual] = rows();
+    if (manual === undefined) {
+      throw new Error("card missing");
+    }
+    expect(manual.tagName).toBe("LI");
+    expect(manual.dataset.documentId).toBe("7");
+    const heading = within(manual).getByRole("heading", { level: 3 });
+    expect(within(heading).getByRole("link", { name: "Test manual" }).getAttribute("href")).toBe("/documents/7");
+    // The checksum is no part of the heading; it stands at the end of the card.
+    expect(within(heading).queryByTestId("checksum")).toBeNull();
+    expect(within(manual).getByTestId("checksum-full").textContent).toBe(fakeChecksum("content 71"));
+    expect(within(manual).getByRole("link", { name: "Download version 2" }).getAttribute("href")).toBe(
+      "/api/v1/document-versions/71/download/",
+    );
+    expect(within(manual).getByTestId("file-ingest").textContent).toBe("Ingestion: Not ingested");
+
+    const terms = Array.from(manual.querySelectorAll("dt")).map((term) => term.textContent);
+    expect(terms).toEqual(["Kind", "Version", "Uploaded", "Size"]);
+    expect(cell(manual, "file-kind")).toBe("Document");
+    expect(cell(manual, "file-version")).toBe("2");
+    expect(within(manual).getByTestId("file-user").textContent).toBe("System");
+    expect(cell(manual, "file-size")?.replace(/\s/gu, " ")).toBe("2.5 MB");
+  });
+
+  it("says that a file has no version yet", async () => {
+    fakeMatchMedia({ [WIDE_TABLE_QUERY]: false });
+    await openDevice(reader, 1000, (files) => {
+      files.documents.push({ id: 99, device: 1000, title: "Test empty file", kind: "document", created_by: null, versions: [] });
+    });
+    const empty = await waitFor(() => {
+      const found = rows().find((item) => item.dataset.documentId === "99");
+      if (found === undefined) {
+        throw new Error("card missing");
+      }
+      return found;
+    });
+
+    expect(within(empty).getByRole("heading", { level: 3 }).textContent).toBe("Test empty file");
+    expect(within(empty).getByText("No version")).toBeDefined();
+    expect(within(empty).queryByRole("link", { name: /Download/ })).toBeNull();
+    expect(Array.from(empty.querySelectorAll("dt")).map((term) => term.textContent)).toEqual(["Kind"]);
+  });
+
+  it("shows a file without a version as one note in the table from 768 px", async () => {
+    fakeMatchMedia({ [WIDE_TABLE_QUERY]: true });
+    await openDevice(reader, 1000, (files) => {
+      files.documents.push({ id: 99, device: 1000, title: "Test empty file", kind: "document", created_by: null, versions: [] });
+    });
+    const empty = await waitFor(() => {
+      const found = rows().find((item) => item.dataset.documentId === "99");
+      if (found === undefined) {
+        throw new Error("row missing");
+      }
+      return found;
+    });
+
+    const cells = within(empty).getAllByRole("cell");
+    expect(cells).toHaveLength(3);
+    expect(cells[2]?.textContent).toBe("No version");
+    expect(cells[2]?.getAttribute("colspan")).toBe("5");
+  });
+
+  it("names the pairs in German", async () => {
+    fakeMatchMedia({ [WIDE_TABLE_QUERY]: false });
+    await changeLanguage("de");
+    await openDevice(reader);
+    await waitFor(() => {
+      expect(rows()).toHaveLength(2);
+    });
+
+    expect(within(filesArea()).getByRole("list", { name: "Dateien des Geräts" })).toBeDefined();
+    const [manual] = rows();
+    if (manual === undefined) {
+      throw new Error("card missing");
+    }
+    expect(Array.from(manual.querySelectorAll("dt")).map((term) => term.textContent)).toEqual([
+      "Art",
+      "Version",
+      "Hochgeladen",
+      "Größe",
+    ]);
   });
 });

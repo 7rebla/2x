@@ -12,6 +12,8 @@ import {
 } from "../components/files/testData.ts";
 import { changeLanguage } from "../i18n.ts";
 import { type FakeApi, jsonResponse, manager, reader } from "../test/fakeApi.ts";
+import { WIDE_TABLE_QUERY } from "../components/ui/ResponsiveTable.tsx";
+import { fakeMatchMedia } from "../test/fakeMatchMedia.ts";
 import { renderApp } from "../test/renderApp.tsx";
 import { fakeStructureApi } from "./structure/testData.ts";
 
@@ -459,5 +461,53 @@ describe("polling while a job is active", () => {
 
     await act(() => vi.advanceTimersByTimeAsync(30_000));
     expect(api.requestsTo(DOCUMENT_PATH)).toHaveLength(first);
+  });
+});
+
+describe("narrow screens (work order 081)", () => {
+  it("lists the versions as cards below 768 px: \"Version N\" as heading, download, state, pairs and checksum", async () => {
+    fakeMatchMedia({ [WIDE_TABLE_QUERY]: false });
+    await openDocument(reader);
+
+    expect(screen.queryByRole("table", { name: "All versions, newest first" })).toBeNull();
+    const list = screen.getByRole("list", { name: "All versions, newest first" });
+    expect(list.dataset.testid).toBe("document-versions");
+    // Below the section heading "Versions" (h2), one h3 per version.
+    expect(within(list).getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent)).toEqual([
+      "Version 2",
+      "Version 1",
+    ]);
+
+    const [, first] = versionRows();
+    if (first === undefined) {
+      throw new Error("card missing");
+    }
+    expect(first.tagName).toBe("LI");
+    expect(first.dataset.version).toBe("1");
+    expect(within(first).getByTestId("version-number").textContent).toBe("Version 1");
+    expect(Array.from(first.querySelectorAll("dt")).map((term) => term.textContent)).toEqual([
+      "Uploaded",
+      "Size",
+      "File name",
+    ]);
+    expect(within(first).getByTestId("version-user").textContent).toBe("test-manager");
+    expect(within(first).getByTestId("version-size").textContent.replace(/\s/gu, " ")).toBe("1.5 MB");
+    expect(within(first).getByTestId("version-filename").textContent).toBe("test-file-1.txt");
+    expect(within(first).getByTestId("version-ingest").textContent).toBe("Ingestion: Not ingested");
+    expect(within(first).getByTestId("checksum-full").textContent).toBe(fakeChecksum("content 70"));
+    expect(within(first).getByRole("link", { name: "Download version 1" }).getAttribute("href")).toBe(
+      "/api/v1/document-versions/70/download/",
+    );
+  });
+
+  it("keeps the button to ingest again on the card for managers", async () => {
+    fakeMatchMedia({ [WIDE_TABLE_QUERY]: false });
+    await openDocument(manager);
+
+    const [latest] = versionRows();
+    if (latest === undefined) {
+      throw new Error("card missing");
+    }
+    expect(within(within(latest).getByTestId("version-ingest")).getByRole("button")).toBeDefined();
   });
 });

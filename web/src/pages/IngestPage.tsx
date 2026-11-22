@@ -41,6 +41,7 @@ import { AnimatedHeading } from "../components/TextMotion.tsx";
 import { usePageTitle } from "../hooks/usePageTitle.ts";
 import { Button } from "../components/ui/Button.tsx";
 import { Select } from "../components/ui/fields.tsx";
+import { ResponsiveTable, type TableColumn } from "../components/ui/ResponsiveTable.tsx";
 import { Icon } from "../icons/Icon.tsx";
 import { useRole } from "../session.ts";
 
@@ -280,36 +281,7 @@ function IngestJobs({ address }: { address: IngestAddress }): ReactElement {
           {address.status === "open" && address.device === null ? t("empty.open") : t("empty.filtered")}
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table aria-label={t("tableLabel")} className="w-full border-collapse text-left text-sm">
-            <thead>
-              <tr className="border-b border-line">
-                <th scope="col" className="p-2 font-semibold">
-                  {t("column.device")}
-                </th>
-                <th scope="col" className="p-2 font-semibold">
-                  {t("column.document")}
-                </th>
-                <th scope="col" className="p-2 font-semibold">
-                  {t("column.status")}
-                </th>
-                <th scope="col" className="p-2 font-semibold">
-                  {t("column.times")}
-                </th>
-                {canManage ? (
-                  <th scope="col" data-testid="ingest-column-requested-by" className="p-2 font-semibold whitespace-nowrap">
-                    {t("column.requestedBy")}
-                  </th>
-                ) : null}
-              </tr>
-            </thead>
-            <tbody>
-              {results.map((job) => (
-                <IngestJobRow key={job.id} job={job} canManage={canManage} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <IngestJobTable jobs={results} canManage={canManage} />
       )}
       <nav aria-label={t("pagination.label")} className="flex flex-wrap items-center gap-3">
         <Button
@@ -344,67 +316,152 @@ function IngestJobs({ address }: { address: IngestAddress }): ReactElement {
   );
 }
 
-function IngestJobRow({ job, canManage }: { job: IngestJob; canManage: boolean }): ReactElement {
+/**
+ * The jobs as a table from 768 px; below that every job is a card (work order
+ * 081): the file as heading, the state below it, then device, version, times
+ * and (managers) who started it.
+ */
+function IngestJobTable({ jobs, canManage }: { jobs: readonly IngestJob[]; canManage: boolean }): ReactElement {
+  const { t } = useTranslation("ingest");
+  const columns: TableColumn<IngestJob>[] = [
+    {
+      key: "device",
+      header: t("column.device"),
+      headerClassName: "p-2 font-semibold",
+      className: "p-2",
+      testId: "ingest-job-device",
+      cell: (job) => (
+        <>
+          <Link to={devicePath(job.device.id)} className="text-accent underline hover:text-accent-strong">
+            <Icon name="device" className="mr-1" decorative />
+            {job.device.name}
+          </Link>
+          <span className="block text-xs text-fg-muted tabular-nums slashed-zero">{job.device.key}</span>
+        </>
+      ),
+    },
+    {
+      key: "document",
+      header: t("column.document"),
+      headerClassName: "p-2 font-semibold",
+      className: "p-2",
+      testId: "ingest-job-document",
+      card: "title",
+      cell: (job) => (
+        <>
+          <DocumentLink job={job} />
+          <VersionLine job={job} />
+        </>
+      ),
+      cardCell: (job) => <DocumentLink job={job} />,
+    },
+    {
+      key: "status",
+      header: t("column.status"),
+      headerClassName: "p-2 font-semibold",
+      className: "min-w-56 space-y-1 p-2",
+      testId: "ingest-job-status",
+      card: "status",
+      cell: (job) => <JobState job={job} canManage={canManage} />,
+    },
+    {
+      // In the table the version stands below the file title; on a card as a pair.
+      key: "version",
+      header: t("column.version"),
+      table: false,
+      cell: (job) => <VersionLine job={job} />,
+    },
+    {
+      key: "times",
+      header: t("column.times"),
+      headerClassName: "p-2 font-semibold",
+      className: "p-2 text-xs whitespace-nowrap tabular-nums",
+      testId: "ingest-job-times",
+      cell: (job) => (
+        <>
+          <span className="block">
+            <span className="text-fg-muted">{t("created")}: </span>
+            <DateTime iso={job.created_at} />
+          </span>
+          <span className="block">
+            <span className="text-fg-muted">{t("finished")}: </span>
+            {job.finished_at === null ? t("notFinished") : <DateTime iso={job.finished_at} />}
+          </span>
+        </>
+      ),
+    },
+  ];
+  if (canManage) {
+    columns.push({
+      key: "requestedBy",
+      header: t("column.requestedBy"),
+      headerClassName: "p-2 font-semibold whitespace-nowrap",
+      headerTestId: "ingest-column-requested-by",
+      className: "p-2 whitespace-nowrap",
+      testId: "ingest-job-requested-by",
+      cell: (job) => job.requested_by ?? <span className="text-fg-muted">{t("system")}</span>,
+    });
+  }
+  return (
+    <ResponsiveTable
+      label={t("tableLabel")}
+      rows={jobs}
+      rowKey={(job) => job.id}
+      columns={columns}
+      rowAttributes={(job) => ({ "data-testid": "ingest-job", "data-job": job.id, "data-status": job.status })}
+      cardHeadingLevel={2}
+      tableClassName="border-collapse"
+      headerRowClassName="border-b border-line"
+      rowClassName="border-b border-line align-top"
+    />
+  );
+}
+
+function DocumentLink({ job }: { job: IngestJob }): ReactElement {
+  return (
+    <Link
+      to={documentPath(job.document.id)}
+      data-testid="ingest-job-document-link"
+      className="break-words text-accent underline hover:text-accent-strong"
+    >
+      <Icon name="document" className="mr-1" decorative />
+      {job.document.title}
+    </Link>
+  );
+}
+
+/** "Version N · file name"; the name wraps at word boundaries and is cut after two lines, the tooltip has all of it (079). */
+function VersionLine({ job }: { job: IngestJob }): ReactElement {
+  const { t } = useTranslation("ingest");
+  return (
+    <span
+      className="line-clamp-2 max-w-xs text-xs break-words text-fg-muted"
+      title={job.version.original_filename}
+      data-testid="ingest-job-version"
+    >
+      <span className="whitespace-nowrap">{t("version", { number: job.version.number })}</span>
+      {" · "}
+      {job.version.original_filename}
+    </span>
+  );
+}
+
+function JobState({ job, canManage }: { job: IngestJob; canManage: boolean }): ReactElement {
   const { t } = useTranslation("ingest");
   // The API says whether a newer job of the same version exists, on any page.
   const superseded = !job.is_latest;
-
   return (
-    <tr data-testid="ingest-job" data-job={job.id} data-status={job.status} className="border-b border-line align-top">
-      <td className="p-2" data-testid="ingest-job-device">
-        <Link to={devicePath(job.device.id)} className="text-accent underline hover:text-accent-strong">
-          <Icon name="device" className="mr-1" decorative />
-          {job.device.name}
-        </Link>
-        <span className="block text-xs text-fg-muted tabular-nums slashed-zero">{job.device.key}</span>
-      </td>
-      <td className="p-2" data-testid="ingest-job-document">
-        <Link
-          to={documentPath(job.document.id)}
-          data-testid="ingest-job-document-link"
-          className="break-words text-accent underline hover:text-accent-strong"
-        >
-          <Icon name="document" className="mr-1" decorative />
-          {job.document.title}
-        </Link>
-        {/* The file name wraps at word boundaries and is cut after two lines; the tooltip has all of it (079). */}
-        <span
-          className="line-clamp-2 max-w-xs text-xs break-words text-fg-muted"
-          title={job.version.original_filename}
-          data-testid="ingest-job-version"
-        >
-          <span className="whitespace-nowrap">{t("version", { number: job.version.number })}</span>
-          {" · "}
-          {job.version.original_filename}
-        </span>
-      </td>
-      <td className="min-w-56 space-y-1 p-2" data-testid="ingest-job-status">
-        <IngestStatusBadge job={job} />
-        <IngestError job={job} />
-        {superseded ? (
-          <p data-testid="ingest-superseded" className="text-xs text-fg-muted">
-            {t("superseded")}
-          </p>
-        ) : canManage ? (
-          <IngestRetryButton version={{ id: job.version.id, number: job.version.number, ingest: job }} />
-        ) : null}
-      </td>
-      <td className="p-2 text-xs whitespace-nowrap tabular-nums" data-testid="ingest-job-times">
-        <span className="block">
-          <span className="text-fg-muted">{t("created")}: </span>
-          <DateTime iso={job.created_at} />
-        </span>
-        <span className="block">
-          <span className="text-fg-muted">{t("finished")}: </span>
-          {job.finished_at === null ? t("notFinished") : <DateTime iso={job.finished_at} />}
-        </span>
-      </td>
-      {canManage ? (
-        <td className="p-2 whitespace-nowrap" data-testid="ingest-job-requested-by">
-          {job.requested_by ?? <span className="text-fg-muted">{t("system")}</span>}
-        </td>
+    <>
+      <IngestStatusBadge job={job} />
+      <IngestError job={job} />
+      {superseded ? (
+        <p data-testid="ingest-superseded" className="text-xs text-fg-muted">
+          {t("superseded")}
+        </p>
+      ) : canManage ? (
+        <IngestRetryButton version={{ id: job.version.id, number: job.version.number, ingest: job }} />
       ) : null}
-    </tr>
+    </>
   );
 }
 
