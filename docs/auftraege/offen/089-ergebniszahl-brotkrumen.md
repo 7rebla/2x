@@ -14,6 +14,7 @@ Gefilterte Listen (Protokoll, Einlesen) melden die Trefferzahl Screenreadern nic
 - Brotkrumen der Dateiseite: Standort › Bereich › Anlage › Gerät › Datei, gemeinsamer Baustein mit der Geräteseite.
 - Tests (Vitest; e2e, wo Layout oder Bedienung sich ändern) für das neue Verhalten; bestehende Tests angepasst, nicht abgeschwächt.
 - Doku: `web/src/pages/README.md` bzw. `web/src/theme/README.md` nachziehen, wo betroffen.
+- Nachtrag der Leitstelle (Prüfung 068): `IngestError` in `web/src/components/files/IngestStatus.tsx` zeigt den Hinweis „Nur teilweise umgewandelt“ auch, wenn ein Auftrag `failed` ist und `partly_converted` wahr (zusätzlich zur Fehlermeldung), sowie bei wartenden/laufenden Einbettungsaufträgen mit `partly_converted`; Tests anpassen (`IngestStatus.test.tsx`). `IngestStatus.tsx` und der Test gehören dafür zu den betroffenen Bereichen.
 
 ## Nicht-Ziele
 
