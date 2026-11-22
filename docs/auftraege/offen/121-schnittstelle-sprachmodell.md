@@ -307,6 +307,28 @@ Keine, die den Auftrag aufhält. `TWOX_CHAT_MODEL` bleibt leer bis zur Entscheid
 - `llm_guard.py` bekommt zusätzlich `SHOW_PATH`, `COMPLETION_CAPABILITY` und `model_capabilities()`, damit 129 die Fähigkeitsprüfung ohne Erzeugung mitnutzen kann.
 - Die Einstellungstests stehen in `test_chat.py` (der Auftrag nennt keine eigene Datei dafür); sie nutzen `run_python` aus `tests/config/test_settings.py`, ohne diese Datei zu ändern.
 - `ChatUnavailableError` deckt auch „kein Modell eingestellt“ ab (Vorschlag aus dem Auftrag).
+- **Verhalten von `stream()`:** Prüfungen (KI an, Nachrichten, Name, Modellliste, Fähigkeit) und das Senden der Anfrage geschehen schon beim Aufruf. Abweisung, fehlende Verbindung und HTTP-Fehler kommen also, bevor etwas zurückgegeben wird. Rückgabetyp ist nicht ein roher Generator, sondern `ChatStream` (siehe Nachbesserung): ein `Iterator[str]` mit `close()`, `closed` und `with`. Auch `FakeChatModel.stream()` und das Protokoll `ChatModel` liefern `ChatStream`.
 - Hinweis: Weil `.env.example` die KI einschaltet und kein Chat-Modell setzt, zeigen jetzt alle `manage.py`-Befehle im Entwicklungsaufbau die Warnung W001 (so gewollt, Kriterium 5).
 
 Offene Fragen: keine.
+
+**Nachbesserung (nach Prüfung durch die Leitstelle):**
+
+- Fehler: `stream()` gab den rohen Generator zurück. Wurde er vor dem ersten `next()` geschlossen, lief sein `finally` nie. Die HTTP-Verbindung blieb offen, Ollama erzeugte weiter, und der Eintrag blieb in `_streams`.
+- Gewählte Lösung: `stream()` gibt jetzt ein Objekt `ChatStream` zurück (Iterator mit `close()`, `closed`, `__enter__`/`__exit__`). Begründung: Die Fehler sollen weiter sofort beim Aufruf kommen (126 braucht das), und dafür muss die Anfrage beim Aufruf gesendet sein. Mit „Verbindung erst beim ersten `next()` öffnen“ wären HTTP-Fehler erst beim Lesen gekommen.
+- `ChatStream.close()` schließt zuerst die Verbindung über `_release` (Eintrag aus `_streams` entfernen, Socket abbauen) und danach den Generator. Das gilt vor dem ersten Stück, mitten im Strom und nach dem Ende. Mehrfacher Aufruf ist harmlos.
+- Ein ungenutzt verworfenes Objekt wird über `weakref.finalize` geschlossen, sonst spätestens durch `client.close()`.
+- Neue Tests in `test_chat.py`, alle mit dem Server-Ereignis `client_closed` und leerem `_streams`:
+  - `close()` vor dem ersten Stück
+  - `contextlib.closing` mit Ausnahme vor dem ersten Stück
+  - `with`-Block
+  - verworfenes Objekt mit `gc.collect()`
+  - `client.close()` bei ungelesenem Strom
+  - schließbarer Strom der Attrappe
+- Modul- und Methoden-Docstrings beschreiben das Verhalten jetzt zutreffend.
+- Prüfungen nach der Nachbesserung, alle grün:
+  - ruff, ruff format, mypy (201 Dateien)
+  - pytest: 2521 passed, 0 failed, 0 skipped; `pytest -m worker`: 6 passed
+  - Übersetzungskatalog, Migrationen, Lizenzen, Schema; `manage.py check` Exit 0
+  - `down -v` Exit 0
+- Zu Kriterium 4: `git diff main -- …` ist inzwischen nicht mehr leer. Grund ist nur, dass `main` weitergelaufen ist (120 hat `tests/search/test_evaluation.py` und `test_probes_m3.py` hinzugefügt). Gegen den Ausgangspunkt des Zweigs (`808d30a`) und mit `git diff main...HEAD` ist der Diff leer. Dieser Zweig ändert die Dateien nicht.
