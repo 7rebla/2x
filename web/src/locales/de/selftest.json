@@ -26,6 +26,12 @@
     "disabled": "KI nicht aktiviert. Alles andere funktioniert ohne sie, auch die Stichwortsuche.",
     "model": "Modell",
     "dimensions": "Dimensionen",
-    "dimensionsValue": "{{dimensions, number}}"
+    "dimensionsValue": "{{dimensions, number}}",
+    "chatModel": "Chat-Modell",
+    "chatModelNotSet": "nicht festgelegt",
+    "chatStatus": "Status Chat-Modell",
+    "chatReady": "bereit",
+    "chatError": "Fehler Chat-Modell",
+    "chatNotSetHint": "Chat-Modell noch nicht festgelegt. Antworten auf Fragen sind erst danach möglich, alles andere funktioniert."
   }
 }

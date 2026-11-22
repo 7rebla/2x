@@ -164,6 +164,133 @@ describe("AI card (E-59, work order 048)", () => {
     expect(screen.queryByTestId("ai-dimensions")).toBeNull();
   });
 
+  it("shows no chat model fields when the AI features are off", async () => {
+    loadSelftestMock.mockResolvedValueOnce({ kind: "answered", selftest: { ...base, ai: { enabled: false } } });
+    render(<SelftestPage />);
+
+    await screen.findByTestId("ai-check");
+    expect(screen.queryByTestId("ai-chat-model")).toBeNull();
+    expect(screen.queryByTestId("ai-chat-hint")).toBeNull();
+    expect(screen.queryByTestId("ai-chat-error")).toBeNull();
+  });
+
+  it("is OK with a ready chat model", async () => {
+    loadSelftestMock.mockResolvedValueOnce({
+      kind: "answered",
+      selftest: {
+        ...base,
+        ai: {
+          enabled: true,
+          ok: true,
+          model: "bge-m3",
+          dimensions: 1024,
+          error: "",
+          chat_model: "example-chat:8b",
+          chat_ok: true,
+          chat_error: "",
+        },
+      },
+    });
+    render(<SelftestPage />);
+
+    const status = await screen.findByTestId("ai-status");
+    expect(status.textContent).toBe("OK");
+    expect(screen.getByTestId("ai-chat-model").textContent).toBe("example-chat:8b");
+    expect(screen.getByTestId("ai-chat-status").textContent).toBe("ready");
+    expect(screen.queryByTestId("ai-chat-hint")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("is OK with a quiet hint when no chat model is set yet", async () => {
+    loadSelftestMock.mockResolvedValueOnce({
+      kind: "answered",
+      selftest: {
+        ...base,
+        ai: {
+          enabled: true,
+          ok: true,
+          model: "bge-m3",
+          dimensions: 1024,
+          error: "",
+          chat_model: "",
+          chat_ok: false,
+          chat_error: "chat model not configured",
+        },
+      },
+    });
+    render(<SelftestPage />);
+
+    const card = await screen.findByTestId("ai-check");
+    expect(screen.getByTestId("ai-status").textContent).toBe("OK");
+    expect(screen.getByTestId("ai-chat-model").textContent).toBe("not set");
+    const hint = screen.getByTestId("ai-chat-hint");
+    expect(hint.textContent).toContain("Chat model not set yet.");
+    // Quiet: no alert, no error text, no danger or warning colours.
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(hint.closest("[role=alert]")).toBeNull();
+    expect(screen.queryByTestId("ai-chat-error")).toBeNull();
+    expect(card.className).not.toMatch(/danger|warning/);
+    expect(card.textContent).not.toContain("chat model not configured");
+  });
+
+  it("fails and shows the chat error when the chat model is not usable", async () => {
+    loadSelftestMock.mockResolvedValueOnce({
+      kind: "answered",
+      selftest: {
+        ...base,
+        ai: {
+          enabled: true,
+          ok: true,
+          model: "bge-m3",
+          dimensions: 1024,
+          error: "",
+          chat_model: "example-chat:8b",
+          chat_ok: false,
+          chat_error: "model 'example-chat:8b' is not loaded in Ollama; load it with: ollama pull example-chat:8b",
+        },
+      },
+    });
+    render(<SelftestPage />);
+
+    const status = await screen.findByTestId("ai-status");
+    expect(status.textContent).toBe("Failed");
+    expect(status.querySelector("svg")?.getAttribute("data-icon")).toBe("error");
+    const error = screen.getByTestId("ai-chat-error");
+    expect(error.getAttribute("role")).toBe("alert");
+    expect(error.textContent).toBe(
+      "model 'example-chat:8b' is not loaded in Ollama; load it with: ollama pull example-chat:8b",
+    );
+    // The embedding model itself is fine.
+    expect(screen.getByTestId("ai-dimensions").textContent).toBe("1,024");
+    expect(screen.queryByTestId("ai-error")).toBeNull();
+    expect(screen.queryByTestId("ai-chat-hint")).toBeNull();
+  });
+
+  it("shows the chat model fields in German", async () => {
+    await changeLanguage("de");
+    loadSelftestMock.mockResolvedValueOnce({
+      kind: "answered",
+      selftest: {
+        ...base,
+        ai: {
+          enabled: true,
+          ok: true,
+          model: "bge-m3",
+          dimensions: 1024,
+          error: "",
+          chat_model: "",
+          chat_ok: false,
+          chat_error: "chat model not configured",
+        },
+      },
+    });
+    render(<SelftestPage />);
+
+    expect((await screen.findByTestId("ai-chat-model")).textContent).toBe("nicht festgelegt");
+    expect(screen.getByTestId("ai-chat-hint").textContent).toContain("Chat-Modell noch nicht festgelegt");
+    expect(screen.getByTestId("ai-status").textContent).toBe("OK");
+  });
+
   it("shows the neutral state in German", async () => {
     await changeLanguage("de");
     loadSelftestMock.mockResolvedValueOnce({ kind: "answered", selftest: { ...base, ai: { enabled: false } } });

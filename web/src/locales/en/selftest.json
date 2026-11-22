@@ -26,6 +26,12 @@
     "disabled": "AI features are not enabled. Everything else works without them, the keyword search included.",
     "model": "Model",
     "dimensions": "Dimensions",
-    "dimensionsValue": "{{dimensions, number}}"
+    "dimensionsValue": "{{dimensions, number}}",
+    "chatModel": "Chat model",
+    "chatModelNotSet": "not set",
+    "chatStatus": "Chat model status",
+    "chatReady": "ready",
+    "chatError": "Chat model error",
+    "chatNotSetHint": "Chat model not set yet. Answers to questions are possible only after that; everything else works."
   }
 }

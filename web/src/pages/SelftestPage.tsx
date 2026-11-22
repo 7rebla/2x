@@ -142,6 +142,9 @@ function WorkerCard({ check }: { check: WorkerCheck }): ReactElement {
 /**
  * The AI features are optional (E-59): switched off is a neutral state, not an error,
  * so the card shows neither error colours nor a warning sign.
+ * With them on, the card covers the embedding model and the chat model (work order 129).
+ * A chat model that is not set yet is the expected state until it is chosen: a quiet hint,
+ * not a failure.
  */
 function AiCard({ check }: { check: AiCheck }): ReactElement {
   const { t } = useTranslation("selftest");
@@ -156,8 +159,17 @@ function AiCard({ check }: { check: AiCheck }): ReactElement {
     );
   }
   const ok = check.ok === true;
+  const chatModel = check.chat_model ?? "";
+  const chatConfigured = chatModel !== "";
+  const chatOk = check.chat_ok === true;
+  const tone: Tone = ok && (!chatConfigured || chatOk) ? "ok" : "failed";
   return (
-    <Card heading={t("ai.heading")} tone={ok ? "ok" : "failed"} testId="ai">
+    <Card
+      heading={t("ai.heading")}
+      tone={tone}
+      testId="ai"
+      note={chatConfigured ? undefined : <span data-testid="ai-chat-hint">{t("ai.chatNotSetHint")}</span>}
+    >
       <Field label={t("ai.model")}>
         <span data-testid="ai-model">{check.model ?? ""}</span>
       </Field>
@@ -167,6 +179,24 @@ function AiCard({ check }: { check: AiCheck }): ReactElement {
         </Field>
       ) : (
         <CheckError message={check.error ?? ""} testId="ai-error" />
+      )}
+      <Field label={t("ai.chatModel")}>
+        {chatConfigured ? (
+          <span data-testid="ai-chat-model" className="break-all">
+            {chatModel}
+          </span>
+        ) : (
+          <span data-testid="ai-chat-model" className="text-fg-muted">
+            {t("ai.chatModelNotSet")}
+          </span>
+        )}
+      </Field>
+      {!chatConfigured ? null : chatOk ? (
+        <Field label={t("ai.chatStatus")}>
+          <span data-testid="ai-chat-status">{t("ai.chatReady")}</span>
+        </Field>
+      ) : (
+        <CheckError message={check.chat_error ?? ""} testId="ai-chat-error" label={t("ai.chatError")} />
       )}
     </Card>
   );
@@ -222,10 +252,10 @@ function Field({ label, children }: { label: string; children: ReactNode }): Rea
   );
 }
 
-function CheckError({ message, testId }: { message: string; testId: string }): ReactElement {
+function CheckError({ message, testId, label }: { message: string; testId: string; label?: string }): ReactElement {
   const { t } = useTranslation("selftest");
   return (
-    <Field label={t("errorLabel")}>
+    <Field label={label ?? t("errorLabel")}>
       <span role="alert" data-testid={testId} className="text-danger">
         {message}
       </span>
