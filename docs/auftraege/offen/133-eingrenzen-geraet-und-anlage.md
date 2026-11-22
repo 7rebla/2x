@@ -1,6 +1,6 @@
 # Auftrag 133 – Eingrenzen auf Gerät und Anlage
 
-Meilenstein: M3 · Freigabestufe: B · Status: offen
+Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
 
 Voraussetzung: 132 (Seite Auskunft mit Quellenanzeige) ist auf `main`. Damit gibt es auch 130 (API mit `device` und `plant` im POST-Body) und 131 (`useAnswerStream`).
 
@@ -78,7 +78,39 @@ Das ROADMAP-Merkmal von M3 „Eingrenzen auf Gerät“ (`docs/ROADMAP.md:13`) wi
 - **D14 Eingrenzung (c oder d):** (c) Gerät und Anlage, (d) nur Gerät wie in der ROADMAP. Empfehlung: (c) – die Such-API kann Anlagen schon filtern, der Mehraufwand ist klein. Der Auftrag ist mit der Vorgabe (c) startbar; entscheidet a7 (d), entfällt nur die Anlagenauswahl samt Chip-Variante.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Was wurde gebaut?**
+
+- `web/src/components/devicesByPlant.ts` (neu): `devicesByPlant` samt privatem `sortedDevices` aus `SearchPage.tsx` ausgelagert, Signatur unverändert. `SearchPage.tsx` importiert nur noch (Diff: Import und Löschung, sonst nichts; der Typimport `Device` entfällt dort, weil unbenutzt).
+- `web/src/pages/answer/scope.ts` (neu): reine Hilfsfunktionen `readScopeAddress` (liest `?device=`/`?plant=` mit `parseId`; ungültig → „alle“; stehen beide gültig in der Adresse, gewinnt das Gerät), `withScopeAddress` (setzt höchstens eins, lässt `?q=` und alles andere stehen), `chooseDevice`/`choosePlant` (die Wahl des einen setzt das andere zurück), `ALL_DEVICES`.
+- `AnswerForm.tsx`: neue Props `scope` und `onScopeChange`; Baustein `ScopeChoice` mit zwei beschrifteten `Select` (`useId`): „Gerät“ (Alle Geräte + `<optgroup>` je Anlage, `Name (Kennung)`) und „Anlage“ (Alle Anlagen + Anlagen nach Name, Anzeige `Name (Kennung)` zur Unterscheidung gleichnamiger Anlagen). Unbekannte Kennung aus der Adresse als eigener Eintrag „Unbekanntes Gerät (id)“/„Unbekannte Anlage (id)“. `answerScopeOf()` macht daraus `AnswerScope`; der Body trägt `device: [id]` bzw. `plant: [id]` (im erzeugten Typ `AnswerRequest` sind beide `Array<number>`), bei „alle“ keines. Die Auswahl bleibt bei KI aus und während einer laufenden Antwort bedienbar; Ladefehler der Listen über `ErrorMessage`.
+- `web/src/pages/answer/ScopeChip.tsx` (neu): Kasten „Eingegrenzt auf: Gerät **Name (Kennung)**“ bzw. „Anlage **Name**“, unbekannt → Text mit Kennung, während die Liste lädt „Nr. id“. Knopf „Eingrenzung aufheben“ (`Button` size sm, Icon `resetFilter`). Kein Live-Bereich.
+- `AnswerPage.tsx`: liest die Eingrenzung aus der Adresse, schreibt Änderungen mit `setSearchParams(…, { replace: true })`; Aufheben bricht eine laufende Antwort nicht ab. Es wird nie etwas automatisch abgeschickt, die Frage kommt nie in die Adresse.
+- `DevicePage.tsx`: im Kopf neben „Bearbeiten“ ein `Link` mit `buttonClasses("secondary", "md")`, Icon `search`, Text „Frage zu diesem Gerät“, zugänglicher Name „Frage zu Gerät X stellen“, Ziel `/ask?device=<id>` (`askPath()`), für `read` und `manage` (`canRead`).
+- Texte de/en in `answers.json` (`scope.*`) und `assets.json` (`actions.askDevice`, `actions.askDeviceNamed`); Doku in `web/src/pages/README.md` (Abschnitte „Ask“ und Geräteseite).
+- Stabile `data-testid` für 137: `answer-device`, `answer-plant`, `answer-scope`, `answer-scope-name`, `answer-scope-reset`, `device-ask`.
+
+**Wie wurde getestet?** (Compose-Projekte `twox-133` und `twox-133-web`, API-Port 18133)
+
+- 0: `docker version` und `docker compose version` Exit 0.
+- 1: Web-Job: `npm ci`, `lint`, `typecheck`, `test` (56 Dateien, 1120 Tests), `build`, `licenses` grün; `api:generate` ohne Unterschied. e2e wie in `ci.yml`: 85 bestanden, 1 übersprungen (`m2-acceptance.spec.ts:487`, lokaler Teil mit Herstellerunterlagen, wie bisher). Nach der Sichtprüfung wurde nur noch eine Klasse im Chip geändert (`min-w-48`); danach lint, typecheck und Vitest erneut grün, e2e nicht erneut gelaufen.
+- 2–5: `AnswerPage.test.tsx`, neuer Block „limit to one device or one plant“ (15 Fälle): Vorfilter `?device=`/`?plant=` in Auswahl und Chip mit Namen, Aufheben entfernt beide aus der Adresse (und behält `?q=`); Body mit `device`/`plant`, bei „alle“ ohne, `location.search` nach dem Absenden ohne Frage; Auswahl schreibt die Adresse per REPLACE ohne POST; gegenseitiger Ausschluss; `abc`, `0`, `-1`, `1.5` zählen als „alle“; unbekannte Gerät- und Anlagenkennung als eigener Eintrag und im Chip; Aufheben bricht laufende Antwort nicht ab; bei KI aus bleiben Auswahl und Chip. Dazu `answer/scope.test.ts` (15 Fälle).
+- 6: `DevicePage.test.tsx`: Link `/ask?device=1000` mit Namen „Ask a question about device Test controller“ für `read` und `manage`, deutscher Name, Klick öffnet `/ask?device=1000` ohne POST.
+- 7: `components/devicesByPlant.test.ts` (Sortierung Anlage → Name → Kennung, Gruppen, leere Liste, Eingabe unverändert).
+- 8: `SearchPage.test.tsx` und `e2e/search.spec.ts` unverändert grün.
+- 9: `i18n.test.ts` grün.
+- 10: `package.json`/`package-lock.json` unverändert.
+- 11: Sichtprüfung im eingebauten Browser auf `twox133.localhost:18133` mit den e2e-Daten (KI an, ohne Chat-Modell → „Auskunft derzeit nicht verfügbar“): 375 px hell de, 375 px dunkel en, 768 px hell en, 1280 px dunkel de und hell en. Keine waagrechte Überbreite (`scrollWidth` = Breite). Bei 375 px stehen die Auswahlfelder untereinander; der Chip quetschte den Text zunächst in eine schmale Spalte neben den Knopf – behoben (Text mindestens 12rem, der Knopf bricht darunter um). Geräteseite: bei 1280 px „Frage zu diesem Gerät“ neben „Bearbeiten“, bei 375 px untereinander, ohne Überlauf. Tastatur: Chip-Knopf, Geräteauswahl, Anlagenauswahl und Link nacheinander erreichbar, `:focus-visible` mit 2 px Rahmen. Auswahl eines Geräts bei gesetzter Anlage setzt die Anlage zurück, Adresse `?device=44`.
+- 12: `down -v` beider Projekte Exit 0.
+
+**Zweig und Arbeitsverzeichnis:** `worktree-agent-a0a6979cd04c9c3c2`, `.claude/worktrees/agent-a0a6979cd04c9c3c2`.
+
+**Abweichungen und Hinweise**
+
+- Keine Datei außerhalb der „Betroffenen Bereiche“ geändert; kein e2e-Fall ergänzt (Browserfälle gehören zu 137).
+- Stehen `device` und `plant` beide in der Adresse, gewinnt das Gerät (der Auftrag nennt den Fall nicht; so bleibt die Bedeutung eindeutig).
+- Optionen der Anlagenauswahl zeigen `Name (Kennung)`, der Chip nach Vorgabe nur den Namen.
+- Der zugängliche Name des Links („Frage zu Gerät X stellen“) enthält den sichtbaren Text „Frage zu diesem Gerät“ nicht wörtlich (wie bei „Bearbeiten“/„Gerät X bearbeiten“); nach Vorgabe des Auftrags so umgesetzt.
+- `buttonClasses` setzt den Hover-Hintergrund nur über `enabled:`; am Link (kein `:enabled`) gibt es daher keinen Hover-Wechsel. Nicht geändert, weil `extra` nur für Layout gedacht ist.
+- Aufheben und Auswahländerung ersetzen den Verlaufseintrag (`replace`); „Zurück“ führt so zur Geräteseite zurück.
+- Folgepunkt: `IngestPage.tsx:135-149` hat noch eine eigene Kopie von `devicesByPlant` und kann auf `components/devicesByPlant.ts` umgestellt werden.
