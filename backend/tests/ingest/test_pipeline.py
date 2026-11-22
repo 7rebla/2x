@@ -195,20 +195,32 @@ def test_neutral_file_name(filename: str, content_type: str, expected_suffix: st
     assert pipeline.neutral_filename(version) == f"version-{version.pk}{expected_suffix}"
 
 
-def test_ai_switch_does_not_change_the_flow(settings: Settings) -> None:
-    # E-59: with and without AI the job ends after the sections; the model
-    # service is never asked (isolated_services fails the test otherwise, and
-    # the error would surface as an internal failure).
-    for ai_enabled, device in ((True, "dps-plc"), (False, "hbw-plc")):
-        settings.TWOX_AI_ENABLED = ai_enabled
-        version = make_version(f"content {device}".encode(), device=device)
-        job = make_job(version)
+@pytest.mark.parametrize("ai_enabled", [True, False], ids=["ai-on", "ai-off"])
+def test_ai_switch_decides_whether_the_step_embed_follows(
+    settings: Settings, ai_enabled: bool
+) -> None:
+    # E-59: without AI the job ends after the sections; with AI it stays
+    # running in the step embed and asks for the embed task (work order 048).
+    # Neither state asks the model service here (isolated_services fails the
+    # test otherwise, and the error would surface as an internal failure).
+    settings.TWOX_AI_ENABLED = ai_enabled
+    version = make_version()
+    job = make_job(version)
 
-        run_job(job, FakeConverter())
+    results = run_job(job, FakeConverter())
 
+    if ai_enabled:
+        assert results[-1] == StepResult(Outcome.EMBEDDING, embed_after=0)
+        assert (job.status, job.step, job.error_code) == (IngestStatus.RUNNING, "embed", "")
+        assert job.finished_at is None
+    else:
+        assert results[-1] == StepResult(Outcome.DONE)
         assert (job.status, job.step, job.error_code) == (IngestStatus.DONE, "sections", "")
-        assert job.section_count == Section.objects.filter(document_version=version).count() > 0
-        assert all(section.embedding is None for section in Section.objects.filter(ingest_job=job))
+        assert job.finished_at is not None
+    assert all(result.embed_after is None for result in results[:-1])
+    assert job.section_count == Section.objects.filter(document_version=version).count() > 0
+    assert job.page_count == 5
+    assert all(section.embedding is None for section in Section.objects.filter(ingest_job=job))
 
 
 # --- Reuse ---------------------------------------------------------------------
@@ -274,6 +286,75 @@ def test_answer_of_a_failed_job_is_not_reused() -> None:
 
     assert (second.status, second.reused_from) == (IngestStatus.DONE, None)
     assert len(converter.submissions) == 1
+
+
+@pytest.mark.parametrize("status", [PENDING, STARTED], ids=["pending", "started"])
+def test_every_status_query_of_a_running_job_writes_updated_at(status: TaskStatus) -> None:
+    # From the review of 049 (work order 048): ingest_versions --stuck looks at
+    # updated_at; a long conversion must not look stuck between state changes.
+    job = make_job(make_version())
+    converter = FakeConverter(statuses=[status])
+    assert pipeline.convert(job.pk, converter=converter).outcome == POLLING
+    long_ago = timezone.now() - timedelta(hours=1)
+
+    for _ in range(3):
+        IngestJob.objects.filter(pk=job.pk).update(updated_at=long_ago)
+        before = timezone.now()
+
+        assert pipeline.poll(job.pk, converter=converter).outcome == POLLING
+
+        job.refresh_from_db()
+        assert job.status == IngestStatus.RUNNING
+        assert job.updated_at >= before
+
+
+def test_status_query_does_not_touch_a_finished_job() -> None:
+    job = make_job(make_version())
+    run_job(job, FakeConverter())
+    long_ago = timezone.now() - timedelta(hours=1)
+    IngestJob.objects.filter(pk=job.pk).update(updated_at=long_ago)
+
+    assert pipeline.poll(job.pk, converter=FakeConverter()) == StepResult(Outcome.IGNORED)
+
+    job.refresh_from_db()
+    assert job.updated_at == long_ago
+
+
+def test_partial_answer_is_not_reused() -> None:
+    # From the review of 046 (work order 048): an answer that Docling cut short
+    # (partial_success, for example after document_timeout) is not reused for
+    # the same content; the next job asks Docling again.
+    partial = result_answer(fixture_document(), status="partial_success", errors=[])
+    first = make_job(make_version(device="dps-plc"))
+    run_job(first, FakeConverter(statuses=[TaskStatus.PARTIAL_SUCCESS], answer=partial))
+    assert first.status == IngestStatus.DONE
+    assert first.error_detail.startswith(pipeline.PARTIAL_DETAIL_PREFIX)
+    second = make_job(make_version(device="hbw-plc"))
+    converter = FakeConverter()
+
+    run_job(second, converter)
+
+    assert (second.status, second.reused_from, second.error_detail) == (
+        IngestStatus.DONE,
+        None,
+        "",
+    )
+    assert len(converter.submissions) == 1
+    # The complete answer of the second job is reused by a third.
+    third = make_job(make_version(device="vgr-plc"))
+    run_job(third, NoDocling())
+    assert third.reused_from_id == second.pk
+
+
+def test_partial_note_survives_a_file_name_like_its_words() -> None:
+    # The note is built from numbers only and is not cleaned: a file named
+    # like a word of it must not hide the prefix that excludes it from reuse.
+    partial = result_answer(fixture_document(), status="partial_success", errors=[])
+    job = make_job(make_version(filename="converted.pdf"))
+
+    run_job(job, FakeConverter(statuses=[TaskStatus.PARTIAL_SUCCESS], answer=partial))
+
+    assert job.error_detail == "converted with 0 errors"
 
 
 # --- Errors ------------------------------------------------------------------------

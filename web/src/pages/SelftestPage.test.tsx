@@ -46,6 +46,7 @@ describe("self-test status with icons (work order 071)", () => {
       selftest: {
         database: { ok: true, server_version: "18.7", error: "" },
         worker: { ok: false, result: "", error: "No worker answered.", duration_ms: 5000 },
+        ai: { enabled: false },
       },
     });
     render(<SelftestPage />);
@@ -66,5 +67,82 @@ describe("self-test status with icons (work order 071)", () => {
     const error = await screen.findByTestId("selftest-error");
     expect(error.querySelector("svg")?.getAttribute("data-icon")).toBe("error");
     expect(error.textContent).toBe("The API did not respond. Is the server running?");
+  });
+});
+
+describe("AI card (E-59, work order 048)", () => {
+  const base = {
+    database: { ok: true, server_version: "18.7", error: "" },
+    worker: { ok: true, result: "pong", error: "", duration_ms: 12 },
+  };
+
+  it("shows switched-off AI features as a neutral state, not as an error", async () => {
+    loadSelftestMock.mockResolvedValueOnce({ kind: "answered", selftest: { ...base, ai: { enabled: false } } });
+    render(<SelftestPage />);
+
+    const card = await screen.findByTestId("ai-check");
+    expect(screen.getByTestId("ai-heading").textContent).toBe("AI features");
+    const status = screen.getByTestId("ai-status");
+    expect(status.textContent).toBe("Not enabled");
+    expect(status.querySelector("svg")?.getAttribute("data-icon")).toBe("info");
+    expect(screen.getByTestId("ai-disabled").textContent).toBe(
+      "AI features are not enabled. Everything else works without them, the keyword search included.",
+    );
+    // Neither error nor warning: no alert, no danger or warning colours, no warning sign.
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(card.className).not.toMatch(/danger|warning/);
+    expect(status.className).not.toMatch(/danger|warning/);
+    expect(card.querySelector('[data-icon="warning"], [data-icon="error"]')).toBeNull();
+    expect(screen.queryByTestId("ai-error")).toBeNull();
+  });
+
+  it("shows model and dimensions when the AI check passed", async () => {
+    loadSelftestMock.mockResolvedValueOnce({
+      kind: "answered",
+      selftest: { ...base, ai: { enabled: true, ok: true, model: "bge-m3", dimensions: 1024, error: "" } },
+    });
+    render(<SelftestPage />);
+
+    expect((await screen.findByTestId("ai-status")).textContent).toBe("OK");
+    expect(screen.getByTestId("ai-model").textContent).toBe("bge-m3");
+    expect(screen.getByTestId("ai-dimensions").textContent).toBe("1,024");
+    expect(screen.queryByTestId("ai-disabled")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("shows the error when the AI features are on but the model service fails", async () => {
+    loadSelftestMock.mockResolvedValueOnce({
+      kind: "answered",
+      selftest: {
+        ...base,
+        ai: {
+          enabled: true,
+          ok: false,
+          model: "bge-m3",
+          dimensions: 1024,
+          error: "the model service refused the connection (is Ollama running?)",
+        },
+      },
+    });
+    render(<SelftestPage />);
+
+    const status = await screen.findByTestId("ai-status");
+    expect(status.textContent).toBe("Failed");
+    expect(status.querySelector("svg")?.getAttribute("data-icon")).toBe("error");
+    expect(screen.getByTestId("ai-error").textContent).toBe(
+      "the model service refused the connection (is Ollama running?)",
+    );
+    expect(screen.getByTestId("ai-model").textContent).toBe("bge-m3");
+    expect(screen.queryByTestId("ai-dimensions")).toBeNull();
+  });
+
+  it("shows the neutral state in German", async () => {
+    await changeLanguage("de");
+    loadSelftestMock.mockResolvedValueOnce({ kind: "answered", selftest: { ...base, ai: { enabled: false } } });
+    render(<SelftestPage />);
+
+    expect((await screen.findByTestId("ai-status")).textContent).toBe("Nicht aktiviert");
+    expect(screen.getByTestId("ai-heading").textContent).toBe("KI-Funktionen");
+    expect(screen.getByTestId("ai-disabled").textContent).toContain("KI nicht aktiviert");
   });
 });

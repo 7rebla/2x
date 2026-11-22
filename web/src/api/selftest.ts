@@ -47,20 +47,20 @@ async function requestSelftest(signal: AbortSignal): Promise<SelftestOutcome> {
   if (!result.response.ok) {
     return { kind: "http-error", status: result.response.status };
   }
-  if (!hasBothChecks(result.data)) {
+  if (!hasAllChecks(result.data)) {
     return { kind: "invalid-answer" };
   }
   return { kind: "answered", selftest: result.data };
 }
 
 /** Guards the page against answers that do not have the shape of the generated type. */
-function hasBothChecks(data: Selftest | undefined): data is Selftest {
+function hasAllChecks(data: Selftest | undefined): data is Selftest {
   const value: unknown = data;
   if (typeof value !== "object" || value === null) {
     return false;
   }
   const record = value as Record<string, unknown>;
-  return isObject(record.database) && isObject(record.worker);
+  return isObject(record.database) && isObject(record.worker) && isObject(record.ai);
 }
 
 function isObject(value: unknown): boolean {

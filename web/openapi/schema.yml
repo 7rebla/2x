@@ -849,6 +849,24 @@ paths:
           description: ''
 components:
   schemas:
+    AiCheck:
+      type: object
+      description: '``enabled`` always; the other fields only with the AI features
+        on.'
+      properties:
+        enabled:
+          type: boolean
+        ok:
+          type: boolean
+        model:
+          type: string
+        dimensions:
+          type: integer
+          minimum: 0
+        error:
+          type: string
+      required:
+      - enabled
     Area:
       type: object
       description: An area of a site. ``site`` is the id of the site.
@@ -1624,7 +1642,10 @@ components:
           $ref: '#/components/schemas/DatabaseCheck'
         worker:
           $ref: '#/components/schemas/WorkerCheck'
+        ai:
+          $ref: '#/components/schemas/AiCheck'
       required:
+      - ai
       - database
       - worker
     Site:

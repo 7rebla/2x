@@ -9,6 +9,7 @@ import { renderApp } from "./test/renderApp.tsx";
 const healthy: Selftest = {
   database: { ok: true, server_version: "18.7 (Debian 18.7-1.pgdg12+2)", error: "" },
   worker: { ok: true, result: "pong", duration_ms: 15, error: "" },
+  ai: { enabled: false },
 };
 
 const workerDown: Selftest = {
@@ -19,6 +20,7 @@ const workerDown: Selftest = {
     duration_ms: 5019,
     error: "no result from a worker within 5 seconds",
   },
+  ai: { enabled: false },
 };
 
 /**
@@ -73,6 +75,7 @@ describe("self-test page at /selftest", () => {
     expect(screen.getByTestId("worker-duration").textContent).toBe("15 ms");
     expect(screen.getByTestId("database-status").textContent).toBe("OK");
     expect(screen.getByTestId("worker-status").textContent).toBe("OK");
+    expect(screen.getByTestId("ai-status").textContent).toBe("Not enabled");
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -102,6 +105,18 @@ describe("self-test page at /selftest", () => {
     expect(error.getAttribute("role")).toBe("alert");
     expect(screen.queryByTestId("database-check")).toBeNull();
     expect(screen.queryByTestId("worker-check")).toBeNull();
+    expect(screen.queryByTestId("ai-check")).toBeNull();
+  });
+
+  it("does not accept an answer without the AI part", async () => {
+    stubApi(() =>
+      Promise.resolve(jsonResponse({ database: healthy.database, worker: healthy.worker })),
+    );
+    renderApp("/selftest");
+
+    expect((await screen.findByTestId("selftest-error")).textContent).toBe(
+      "The API sent an answer this page cannot read.",
+    );
   });
 
   it("shows the HTTP status when the API answers with an error", async () => {

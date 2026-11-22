@@ -26,6 +26,11 @@ test("self-test page shows the database version and the worker result", async ({
   await expect(page.getByTestId("database-status")).toHaveText("OK");
   await expect(page.getByTestId("worker-status")).toHaveText("OK");
 
+  // The AI card is there; its state depends on TWOX_AI_ENABLED and on the
+  // model service (E-59). The CI has no Ollama, so its content is not checked.
+  await expect(page.getByTestId("ai-check")).toBeVisible();
+  await expect(page.getByTestId("ai-status")).toHaveText(/^(OK|Failed|Not enabled)$/);
+
   await expect(page.getByTestId("selftest-loading")).toHaveCount(0);
   await expect(page.getByTestId("selftest-error")).toHaveCount(0);
   await expect(page.getByTestId("database-error")).toHaveCount(0);

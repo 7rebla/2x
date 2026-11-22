@@ -1,10 +1,11 @@
 {
   "heading": "Selbsttest",
-  "intro": "Prüft die Datenbank und den Hintergrunddienst über die API.",
+  "intro": "Prüft die Datenbank, den Hintergrunddienst und die optionalen KI-Funktionen über die API.",
   "recheck": "Erneut prüfen",
   "checking": "Wird geprüft…",
   "statusOk": "OK",
   "statusFailed": "Fehlgeschlagen",
+  "statusDisabled": "Nicht aktiviert",
   "errorLabel": "Fehler",
   "apiUnreachable": "Die API hat nicht geantwortet. Läuft der Server?",
   "apiHttpError": "Die API hat mit dem HTTP-Status {{status}} geantwortet.",
@@ -19,5 +20,12 @@
     "result": "Ergebnis",
     "duration": "Dauer",
     "durationValue": "{{duration, number}} ms"
+  },
+  "ai": {
+    "heading": "KI-Funktionen",
+    "disabled": "KI nicht aktiviert. Alles andere funktioniert ohne sie, auch die Stichwortsuche.",
+    "model": "Modell",
+    "dimensions": "Dimensionen",
+    "dimensionsValue": "{{dimensions, number}}"
   }
 }
