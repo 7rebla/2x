@@ -7,6 +7,12 @@
   },
   "loading": "Wird geladen…",
   "placeholder": "Diese Seite ist noch nicht gebaut.",
+  "fileInput": {
+    "choose": "Datei wählen …",
+    "none": "Keine Datei gewählt",
+    "drop": "oder hier ablegen",
+    "chooseFirst": "Erst eine Datei wählen."
+  },
   "error": {
     "http": "Die API hat mit dem HTTP-Status {{status}} geantwortet.",
     "network": "Die API hat nicht geantwortet. Läuft der Server?",

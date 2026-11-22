@@ -9,8 +9,8 @@ const sources = import.meta.glob<string>(["/src/**/*.tsx", "!/src/**/*.test.tsx"
   eager: true,
 });
 
-/** Native inputs that keep their own look: check boxes, radio buttons and file choosers. */
-const NATIVE_INPUT_TYPES = new Set(["checkbox", "radio", "file"]);
+/** Native inputs that keep their own look: check boxes and radio buttons. File choosers use FileInput (work order 088). */
+const NATIVE_INPUT_TYPES = new Set(["checkbox", "radio"]);
 
 /** The source without comments (a comment may name an element); line numbers stay the same. */
 function withoutComments(text: string): string {
@@ -50,13 +50,19 @@ describe("controls in the source code", () => {
     expect(findAll(/<(?:button|select|textarea)\b/g)).toEqual([]);
   });
 
-  it("has native inputs only for check boxes, radio buttons and files", () => {
+  it("has native inputs only for check boxes and radio buttons", () => {
     // Inputs close with "/>"; an arrow function in an attribute only has "=>".
     const others = findAll(/<input\b[\s\S]*?\/>/g, (match) => {
       const type = /\btype="([a-z]+)"/.exec(match[0])?.[1];
       return type === undefined || !NATIVE_INPUT_TYPES.has(type);
     });
     expect(others).toEqual([]);
+  });
+
+  it("chooses files only through FileInput", () => {
+    // Catches a file input written outside the building block in any form.
+    expect(findAll(/\btype=["{]?["'`]?file\b/g)).toEqual([]);
+    expect(Object.values(sources).some((source) => source.includes("<FileInput"))).toBe(true);
   });
 
   it("has no copy of the button classes", () => {
