@@ -444,6 +444,7 @@ docker compose run --rm backend-dev sh scripts/check-licenses.sh
 - `pytest -m worker` runs only those; they need the `valkey` and `worker` services running.
 - No test reaches Docling or Ollama: the tests use stand-ins (`backend/tests/ingest/fake_docling.py`, `fake_converter.py`, `backend/tests/answers/fake_ollama.py`, `backend/tests/search/fake_embedder.py`) and set `TWOX_AI_ENABLED` themselves; every AI-dependent part is tested with the AI features off and on (E-59). `backend/tests/acceptance/test_m2.py` runs the whole path from upload to search through the real tasks against the Docling stand-in.
 - `sh scripts/check-licenses.sh` is the licence check of the Python packages; it fails on every licence that is not allowed in `backend/scripts/license-rules.txt`.
+- `pytest` also runs the CI questions (`backend/tests/answers/test_ci_questions.py`): the whole answer chain against recorded model answers, without a model and without network. After a change of the prompt, the context selection or the fixtures it fails with `re-record: manage.py record_answers`. Recording again is only local and needs the chat model on the host: `docker compose run --rm -e TWOX_CHAT_MODEL=qwen3.8:27b-q4_K_M backend-dev python manage.py record_answers` (details: `backend/tests/answers/recorded/README.md`).
 
 Translation catalogue up to date (regenerates `backend/locale/de/LC_MESSAGES/django.po` from the texts marked with `gettext` or `gettext_lazy`; any difference apart from the creation date means the catalogue is out of date):
 
@@ -540,7 +541,7 @@ Scans the files of the working directory with gitleaks (no network, findings red
 
 ### What the CI does not run
 
-The CI (`.github/workflows/ci.yml`, jobs `backend`, `web`, `testfactory`, `e2e`) does not start `docling` and has no Ollama. So `check_docling`, `check_llm`, a real conversion, real embeddings and `evaluate_search` with ingested manuals run only locally; the tests use stand-ins instead. The local part of the M2 acceptance test is skipped. The CI does not run `testfactory/fetch.py`, and the test questions (`testfactory/questions.yaml`) are not yet run against a language model.
+The CI (`.github/workflows/ci.yml`, jobs `backend`, `web`, `testfactory`, `e2e`) does not start `docling` and has no Ollama. So `check_docling`, `check_llm`, a real conversion, real embeddings and `evaluate_search` with ingested manuals run only locally; the tests use stand-ins instead. The local part of the M2 acceptance test is skipped. The CI does not run `testfactory/fetch.py`, and the test questions (`testfactory/questions.yaml`) run against a language model only locally (`evaluate_answers`); the CI replays recorded answers to its own small question set instead.
 
 ## Security notes
 

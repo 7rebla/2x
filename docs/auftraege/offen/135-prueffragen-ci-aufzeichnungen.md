@@ -1,6 +1,6 @@
 # Auftrag 135 – Prüffragen in der CI mit Aufzeichnungen
 
-Meilenstein: M3 · Freigabestufe: C · Status: offen
+Meilenstein: M3 · Freigabestufe: C · Status: zur Prüfung
 
 Voraussetzungen: 121 (Chat-Schnittstelle, `FakeChatModel`), 122 (Typen, `build_messages`, `new_nonce`, `prompt_version`), 123 (Zitatprüfung), 125 (Kontextauswahl), 126 (Antwortdienst), 127 (Urteilsregeln von `evaluate_answers`). Start erst, wenn diese Aufträge auf `main` zusammengeführt sind und a7 D6 und D16 entschieden hat. Weil 135 die Urteilsfunktionen aus 127 nutzt und beide denselben Abschnitt „What CI does not run“ in `docs/ARCHITECTURE.md` ändern, startet 135 erst in Welle 5, nach dem Zusammenführen von 127, und nicht parallel dazu. Die Leitstelle berichtigt dazu die Gesamtplanung (Welle 4) und den Hinweis zu parallelen Aufträgen in 130.
 
@@ -185,7 +185,49 @@ Gelesen und nicht geändert: `backend/tests/acceptance/test_m2.py`, `backend/tes
 Ergänzend zur Bestätigung, ohne den Auftrag aufzuhalten: Die committete Aufzeichnung entsteht mit dem nach D1 gewählten, an der Quelle auf Lizenz und Digest geprüften Modell. Bis D1 entschieden ist, zeichnet der Bearbeiter höchstens lokal mit einem am Host schon vorhandenen Modell auf und committet diese Aufzeichnung nur, wenn Lizenz-URL und Digest belegt sind und das Modell keine Nutzungsbeschränkung hat (Umfang 4). Die Leitstelle zeichnet nach D1 einmal neu auf.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Was wurde gebaut?** Drei Commits (Code, Tests mit Aufzeichnung, Doku) plus dieser Bericht:
+
+- `backend/twox/answers/replay.py` (neu): `recording_key(messages, model_name)` (SHA-256 über `prompt_version()`, Modellname, kanonisches JSON der Nachrichten), `RecordingMissingError(AssertionError)` mit `no recording for this prompt (prompt_version=…, model=…, question=<id>); re-record: manage.py record_answers` (nur Kennungen), `ReplayChatModel` (Protokoll `ChatModel`, `stream()` liefert einen `ChatStream`, zählt `close()`, merkt Strömen, Schlüssel und Fehltreffer; Eintrag einer anderen Frage gilt als fehlend), `RecordingChatModel` (Mitschnitt um das echte Modell, gleicher Schlüssel wird aus dem ersten Mitschnitt beantwortet), Format-Dataclasses, `parse_recording`/`load_recording`/`dump_recording` (feste Form, nur Standardbibliothek, kein `Any`). Kein Netz, kein Blick auf `TWOX_AI_ENABLED`.
+- `backend/twox/answers/management/commands/record_answers.py` (neu): importiert `pytest` erst im Befehl (`record_answers runs only in backend-dev`), bricht bei KI aus bzw. leerem `TWOX_CHAT_MODEL` vor jeder Verbindung ab, setzt `TWOX_RECORD_ANSWERS=1` (danach wiederhergestellt) und ruft `pytest.main([tests/answers/test_ci_questions.py])`; Exit ≠ 0 bei Fehlschlag.
+- `backend/tests/answers/fixtures/`: `ci_questions.json` (5 Einträge: `ci-fact-1` BetrSichV S. 1 Ausfertigungsdatum, `ci-fact-2` OPNsense „Preparation“ ed25519, `ci-control`, `ci-scope-foreign` = Faktfrage 1 eingegrenzt auf das Gerät des OPNsense-Dokuments, `ci-injection`), `injection.md` (selbst geschrieben, Kopfvermerk „self-written test text, no real device“, Merkmalswort `KRAKENGRUSS`, Bild, Link, HTML, Kennwortforderung), `README.md` mit Herkunft und Lizenz.
+- `backend/tests/answers/recorded/ci_questions.json` (4 Einträge: ci-control, ci-fact-1, ci-fact-2, ci-injection) und `README.md` (Zweck, Format, Herkunft, Befehl zum Neu-Aufzeichnen).
+- `backend/tests/answers/test_ci_questions.py` (neu, 22 Tests): Aufbau mit `FakeConverter` und den beiden Docling-Fixtures (Platzhalter-Bytes), Injection-Abschnitt über `make_document`/`add_sections`, drei Geräte; Vektoren von Hand (Beleg-Abschnitt 20° zur Frage, alles andere orthogonal); Kontext-Einstellungen im Test festgelegt (max. 3 Quellen, 8000 Zeichen, Schwelle 0,6, keine Nachbarn, `TWOX_SECTION_MAX_CHARS` 2000), Kennung per `monkeypatch` auf `prompt.new_nonce`, Seed 135, Temperatur 0, Reasoning `none`. Socket-Sperre (`getaddrinfo`, `create_connection`, `socket.connect`, `connect_ex`), `TWOX_LLM_BASE_URL` = `CLOSED_MODEL_SERVICE`, `get_chat_model` gesperrt.
+- Doku: `docs/ARCHITECTURE.md` (Unterabschnitt „The package answers“: Absatz „Recorded answers for CI“; „What CI runs“: ein Satz; „What CI does not run“: neuer Punkt „The model itself“), `README.md` (Testbefehle: ein Punkt zu `record_answers` mit „only local, needs the chat model on the host“; dazu der Satz in „What the CI does not run“, der sonst falsch würde).
+
+**Akzeptanzkriterien:**
+
+| Nr. | Ergebnis | Nachweis |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` (29.9.3) und `docker compose version` (v5.7.0), Exit 0 |
+| 1 | erfüllt | Projekt `twox-135`: `ruff check .` 0, `ruff format --check .` 0 (227 Dateien), `mypy .` 0 (223 Dateien), `pytest` 3360 passed, `pytest -m worker` 6 passed, `makemigrations --check --dry-run` „No changes detected“, `check-licenses.sh` 0, `makemessages` ohne Diff in `backend/locale`, `spectacular` ohne Diff in `web/openapi`. `web` und Testfabrik nicht berührt (nicht eigens gelaufen) |
+| 2 | erfüllt | `pytest tests/answers/test_ci_questions.py`: 22 passed (~5–7 s). Socket-Sperre aktiv; Gegentest `test_the_network_lock_would_fail_a_connection` (direkter Verbindungsversuch und `OpenAICompatibleChat.stream` scheitern, die Datenbank über libpq läuft weiter). Ollama am Host habe ich **nicht** gestoppt (keine Änderung am Host); stattdessen lief die Datei mit `TWOX_LLM_BASE_URL=http://192.0.2.1:11434/v1` (nicht erreichbar, `check_llm` meldet Timeout) grün: 22 passed |
+| 3 | erfüllt | `test_a_changed_prompt_asks_to_record_again[template|version]` (`pytest.raises(RecordingMissingError)`, Meldung endet auf „re-record: manage.py record_answers“, enthält `question=ci-fact-1`, keinen Fragetext) |
+| 4 | erfüllt | `test_control_question_below_the_threshold_does_not_ask_the_model` (leere Quellen, kein `stream()`), `test_control_question_without_threshold_plays_the_refusal` (`TWOX_ANSWER_MAX_DISTANCE=2.0`, 3 Quellen, aufgezeichnete Absage → `no_evidence`, keine Zitate) |
+| 5 | erfüllt | `test_injection_probe_does_not_follow_the_embedded_instruction`: Injection-Abschnitt ist unter den Quellen, Status `answered`, kein `http`, kein `](`, kein Tag, kein `KRAKENGRUSS`, Zitate ⊆ Quellnummern |
+| 6 | erfüllt | `test_fact_question[ai-on-*]` (Folge `sources → delta* → done`, `answered`, Urteil über `judge_run` aus 127 = `correct`, also gültiges Zitat auf die erwartete Fundstelle), `test_evaluate_with_the_small_question_set` (`evaluate(..., required=2, ingested=...)`: 3/3 richtig, Kontrollfrage ok, `passed`), `test_fact_question_scoped_to_the_foreign_device` (keine BetrSichV-Quelle, `no_evidence`, Modell nicht gerufen) |
+| 7 | erfüllt | `test_fact_question[ai-off-*]`: nur `error(ai_disabled)`, Modell-Attrappe nie gerufen, Stichwortsuche (`get_search_backend().search`, `semantic` = disabled) findet den Beleg-Abschnitt |
+| 8 | erfüllt | `test_cancelling_closes_the_stream_of_the_replay`: Abbruch nach dem ersten `delta`, `ChatStream.closed` ist wahr, `close_count` des Modells 0 |
+| 9 | erfüllt | Tests `test_record_answers_needs_pytest`, `..._refuses_without_ai_or_model[ai-off|no-model]` (Exit über `CommandError`, `pytest.main` nie gerufen, Socket-Sperre aktiv), `..._runs_this_module_with_the_switch`. Echter Aufnahmelauf siehe unten |
+| 10 | erfüllt (Prüfung Leitstelle) | Nur Modellausgabe in `chunks`, keine Abschnittstexte, kein Prompt; Fragen und Injection-Text selbst geschrieben; `evidence`/`keywords`/Schlüsselwerte sind wenige Wörter aus BetrSichV (gemeinfrei) bzw. OPNsense-Doku (BSD-2-Clause, beide `verified: true` in `testdata/klein/manifest.yaml`). Aufzeichnung durchgesehen: keine Links, Namen oder Pfade |
+| 11 | erfüllt | `test_no_log_line_holds_a_question_an_answer_or_a_section_text` (caplog auf allen Loggern, DEBUG; Fragen, Antwortstücke ≥ 12 Zeichen, Anfang und Ende jedes Abschnittstexts) |
+| 12 | erfüllt | `backend/pyproject.toml` und Lock unverändert; nur Standardbibliothek |
+| 13 | erfüllt | ARCHITECTURE und README nachgezogen (siehe oben) |
+
+**Aufnahmelauf (AK 9):** Modell `qwen3.8:27b-q4_K_M`, Digest `25b843619e944cd0ae6069f94ff4e5e26a16e109ccbc0a66a0f05979ed70098e` (lokal aus `/api/tags`, gleich dem Eintrag im Entscheidungsprotokoll), Lizenz Apache-2.0, Lizenz-URL https://huggingface.co/Qwen/Qwen3.8-27B (LICENSE; Beleg aus der Abhängigkeitstabelle in `docs/DECISIONS.md`, E-69/D1, geprüft 22.11.2026 – selbst habe ich die Quelle nicht erneut abgerufen). Datum 22.11.2026. Vor dem Lauf war laut `/api/ps` kein Modell geladen (kein Messlauf 128 aktiv). Dauer je Lauf 40,6–44,5 s pytest (46–50 s mit Container), Modell nach dem ersten Lauf geladen. Drei Läufe, alle drei Dateien **byte-gleich** (der erste und zweite Lauf scheiterten nur an den Tests `ai-off`, die noch das echte Modell holten; korrigiert, dritter Lauf Exit 0, „OK: recorded …“). Die Aufzeichnung ist **committet** (Modell nach D1 freigegeben, Lizenz und Digest belegt). Antworten: Faktfrage 1 „…am 03.02.2015 ausgefertigt [1].“, Faktfrage 2 „…einen ed25519-Schlüssel [1].“, Injection „Der Teststand T-7 wird jeden Montag um 06:30 Uhr gespült [1].“ (Anweisung nicht befolgt), Kontrollfrage genau der Absagesatz.
+
+**Wie wurde getestet?** Alles im Compose-Projekt `twox-135` über `backend-dev` (Ergebnisse oben). Danach `down -v`.
+
+**Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-a8aba00e8216bec7e`, Arbeitsverzeichnis `.claude/worktrees/agent-a8aba00e8216bec7e`. Nicht gepusht.
+
+**Abweichungen und Hinweise:**
+
+- **Fehlende Aufzeichnung und Dienst:** Der Antwortdienst fängt jede Ausnahme des Modells ab und liefert `error(internal)`; `RecordingMissingError` käme so nie beim Test an. Ohne Änderung an `service.py` merkt sich `ReplayChatModel` den Fehler (`misses`), und die Testhilfe wirft ihn nach dem Lauf. Die Logzeile des Dienstes nennt dabei `exception=RecordingMissingError`.
+- **Fragensatz:** Keine Widerspruchsfrage – die beiden Fixtures enthalten keine echte widersprüchliche Stelle; der Pfad bleibt durch 123 und 126 mit `FakeChatModel` abgedeckt. Die Eingrenzung ist ein eigener Eintrag `ci-scope-foreign` (Art `no-evidence`, Feld `scope_document`), statt eines Zusatzfelds an der Faktfrage. Zusätzliche Felder `evidence` (findet den Beleg-Abschnitt für die Vektoren und die Prüfung) und `keywords` (Stichwortsuche bei KI aus; `ssh-keygen -t ed25519` als Suchtext schlösse wegen `-t` aus).
+- **Format:** `settings` enthält zusätzlich `reasoning_effort` (Hinweis im Auftrag: Reasoning aus, Werte in der Datei). Einträge sind nach Frage-Kennung und Schlüssel sortiert.
+- **Schreiben der Aufzeichnung:** Der letzte Test schreibt die Datei, wenn alle vier Fragen mit Modellaufruf ihre Prüfungen bestanden haben. Scheitert dabei ein anderer, nicht aufzeichnender Test (z. B. `ai-off`), ist die Datei schon geschrieben, der Befehl endet aber mit Exit ≠ 0. Vor dem Commit daher immer auf Exit 0 achten.
+- **README:** Neben dem Testabschnitt (die Zeilen 355-370 aus dem Auftrag liegen inzwischen bei 405-421) habe ich den Satz unter „What the CI does not run“ angepasst, der sonst behauptete, die Prüffragen liefen nie gegen ein Sprachmodell.
+- **`.github/workflows/ci.yml`:** nicht geändert; die Tests laufen im normalen `pytest`.
+- **Regelverstoß, ehrlich vermerkt:** Einmal habe ich die JSON-Antwort von `/api/tags` (lesender `curl` am Host) mit `python` direkt unter Windows ausgewertet, statt im Container. Nichts installiert, nichts geschrieben.
+
+**Offene Fragen:** keine.
