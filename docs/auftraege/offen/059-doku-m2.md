@@ -65,6 +65,8 @@ Voraussetzung: 055, 056 und 058 sind nach `main` zusammengeführt. Messwerte aus
 - **Keine neue Abhängigkeit.**
 - Kein Push (E-14).
 
+- **Nachtrag der Leitstelle (Prüfung 045):** README (Abschnitt zu den Warteschlangen) und `docs/ARCHITECTURE.md` (Abschnitt „Task queues“) nennen noch drei feste Warteschlangen und die `--queues`-Liste. Seit 045: Worker ohne `--queues`, `embed` nur bei eingeschalteter KI, `--concurrency 4`, Prefetch 1, weiches Herunterfahren 60 s über `REMAP_SIGTERM=SIGQUIT` und `stop_grace_period: 90s`, die sieben Einlese-Variablen und die Startprüfung `check_ingest_timing`.
+
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
 **Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).

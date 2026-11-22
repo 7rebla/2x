@@ -5,6 +5,7 @@ prefix ``TWOX_``. Importing this module never opens a database connection.
 """
 
 import os
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -270,18 +271,55 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_RESULT_ACCEPT_CONTENT = ["json"]
-# One queue per kind of work, so that each can be scaled on its own.
-# Each queue has its own exchange and routing key; a message for one queue
-# never reaches another.
-CELERY_TASK_QUEUES = tuple(
-    Queue(name, Exchange(name, type="direct"), routing_key=name)
-    for name in ("ingest", "embed", "default")
-)
+
+
+def task_queues(*, ai_enabled: bool) -> tuple[Queue, ...]:
+    """Return the Celery queues: one per kind of work, so that each can be scaled on its own.
+
+    Each queue has its own exchange and routing key; a message for one queue
+    never reaches another. The queue ``embed`` exists only with the AI
+    features on (E-59): with them off, sending an embedding task fails at once
+    instead of leaving a message that nobody consumes.
+    """
+    names = ("ingest", "embed", "default") if ai_enabled else ("ingest", "default")
+    return tuple(Queue(name, Exchange(name, type="direct"), routing_key=name) for name in names)
+
+
+# CELERY_TASK_QUEUES is set below TWOX_AI_ENABLED.
 CELERY_TASK_DEFAULT_QUEUE = "default"
 # A misspelled queue name is an error, not a new queue that nobody consumes.
 CELERY_TASK_CREATE_MISSING_QUEUES = False
+# Conversion and polling of the ingestion go to ingest, embedding to embed;
+# every other task to default. The tasks themselves follow in 046 and 048.
+CELERY_TASK_ROUTES = {
+    "twox.ingest.convert": {"queue": "ingest"},
+    "twox.ingest.poll": {"queue": "ingest"},
+    "twox.ingest.embed": {"queue": "embed"},
+}
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TIMEZONE = "UTC"
+# A worker process reserves one message at a time: a long task never holds
+# further messages back that another process could already work on.
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+# The Redis transport delivers a message again once it has not been
+# acknowledged for this long (Celery's default, set explicitly). No task may
+# run that long, and no countdown may reach it (see check_ingest_timing).
+TWOX_BROKER_VISIBILITY_TIMEOUT_SECONDS = 60 * 60
+CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": TWOX_BROKER_VISIBILITY_TIMEOUT_SECONDS}
+# Time limits of every task, ingestion included, far below the visibility
+# timeout. A task that needs longer splits its work and schedules itself
+# again. Soft: the task gets SoftTimeLimitExceeded and can clean up; hard: the
+# worker process is replaced.
+TWOX_TASK_SOFT_TIME_LIMIT = 300
+TWOX_TASK_TIME_LIMIT = 360
+CELERY_TASK_SOFT_TIME_LIMIT = TWOX_TASK_SOFT_TIME_LIMIT
+CELERY_TASK_TIME_LIMIT = TWOX_TASK_TIME_LIMIT
+# Soft shutdown: on a cold shutdown (SIGQUIT; compose maps SIGTERM to it with
+# REMAP_SIGTERM) running tasks get this many seconds to finish; then they are
+# cancelled. Tasks with acks_late (ingest, 046/048) go back to the queue at
+# once instead of after the visibility timeout; other running tasks are lost.
+# The stop_grace_period of the worker is longer.
+CELERY_WORKER_SOFT_SHUTDOWN_TIMEOUT = 60.0
 
 # Web UI. Vite builds it with base "/static/" (web/vite.config.ts); the image
 # build runs collectstatic, which copies the build output from WEB_DIST_DIR
@@ -368,3 +406,122 @@ TWOX_EMBED_QUERY_PREFIX = os.environ.get("TWOX_EMBED_QUERY_PREFIX", "")
 # Socket time limit of one request in seconds; the first request after a
 # start of Ollama also loads the model.
 TWOX_EMBED_TIMEOUT_SECONDS = env_positive_int("TWOX_EMBED_TIMEOUT_SECONDS", 120)
+
+CELERY_TASK_QUEUES = task_queues(ai_enabled=TWOX_AI_ENABLED)
+
+# Ingestion (M2). All times in seconds.
+# Attempts of one ingestion step after a temporary error (Docling or the
+# model service not reachable) before the job fails.
+TWOX_INGEST_MAX_RETRIES = env_positive_int("TWOX_INGEST_MAX_RETRIES", 5)
+# Wait between two status queries at Docling: starts at the minimum and grows
+# up to the maximum. The poll task schedules itself again, it never sleeps.
+TWOX_INGEST_POLL_MIN_SECONDS = env_positive_int("TWOX_INGEST_POLL_MIN_SECONDS", 10)
+TWOX_INGEST_POLL_MAX_SECONDS = env_positive_int("TWOX_INGEST_POLL_MAX_SECONDS", 60)
+# Upper limit of the Docling service per document (E-55): the value of
+# DOCLING_SERVE_MAX_DOCUMENT_TIMEOUT in compose.yaml and of
+# DEFAULT_DOCUMENT_TIMEOUT_SECONDS in twox/ingest/docling.py. Raising it
+# means changing all three.
+TWOX_DOCLING_MAX_DOCUMENT_TIMEOUT_SECONDS = 2 * 60 * 60
+# Sent with every conversion as document_timeout: Docling stops converting
+# one document after this time. At most the limit above.
+TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS = env_positive_int(
+    "TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS", TWOX_DOCLING_MAX_DOCUMENT_TIMEOUT_SECONDS
+)
+# Deadline of one conversion in the backend. It counts from the status
+# "started" at Docling, not while the document waits in Docling's queue, and
+# is longer than document_timeout, so that Docling's own error arrives first.
+TWOX_INGEST_TIMEOUT_SECONDS = env_positive_int("TWOX_INGEST_TIMEOUT_SECONDS", 9000)
+# Largest section in characters (twox/ingest/sections.py).
+TWOX_SECTION_MAX_CHARS = env_positive_int("TWOX_SECTION_MAX_CHARS", 2000)
+# One embedding task embeds for at most this long, then schedules itself
+# again for the rest; below the soft time limit of a task.
+TWOX_EMBED_TASK_MAX_SECONDS = env_positive_int("TWOX_EMBED_TASK_MAX_SECONDS", 240)
+
+
+def check_ingest_timing(
+    *,
+    max_retries: int,
+    poll_min_seconds: int,
+    poll_max_seconds: int,
+    docling_document_timeout_seconds: int,
+    docling_max_document_timeout_seconds: int,
+    ingest_timeout_seconds: int,
+    section_max_chars: int,
+    embed_task_max_seconds: int,
+    task_soft_time_limit: int,
+    task_time_limit: int,
+    visibility_timeout_seconds: int,
+) -> None:
+    """Raise ImproperlyConfigured unless the ingestion and Celery values fit together.
+
+    Runs when the settings load, so that a wrong value stops the API, the
+    worker and every management command at start with a clear message.
+    """
+    values = {
+        "TWOX_INGEST_MAX_RETRIES": max_retries,
+        "TWOX_INGEST_POLL_MIN_SECONDS": poll_min_seconds,
+        "TWOX_INGEST_POLL_MAX_SECONDS": poll_max_seconds,
+        "TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS": docling_document_timeout_seconds,
+        "TWOX_INGEST_TIMEOUT_SECONDS": ingest_timeout_seconds,
+        "TWOX_SECTION_MAX_CHARS": section_max_chars,
+        "TWOX_EMBED_TASK_MAX_SECONDS": embed_task_max_seconds,
+        "TWOX_TASK_SOFT_TIME_LIMIT": task_soft_time_limit,
+        "TWOX_TASK_TIME_LIMIT": task_time_limit,
+        "visibility_timeout": visibility_timeout_seconds,
+    }
+    for name, value in values.items():
+        # bool is a subclass of int, but True is no number of seconds.
+        if type(value) is not int or value < 1:
+            raise ImproperlyConfigured(
+                f"{name} must be a whole number greater than zero, not {value!r}."
+            )
+    if docling_document_timeout_seconds > docling_max_document_timeout_seconds:
+        raise ImproperlyConfigured(
+            f"TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS ({docling_document_timeout_seconds}) "
+            "must not exceed the limit of the Docling service "
+            f"({docling_max_document_timeout_seconds} seconds)."
+        )
+    if ingest_timeout_seconds <= docling_document_timeout_seconds:
+        raise ImproperlyConfigured(
+            f"TWOX_INGEST_TIMEOUT_SECONDS ({ingest_timeout_seconds}) must be greater than "
+            f"TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS ({docling_document_timeout_seconds}), "
+            "the document_timeout sent to Docling; otherwise the backend gives up on a "
+            "conversion that Docling is still allowed to finish."
+        )
+    if poll_min_seconds > poll_max_seconds:
+        raise ImproperlyConfigured(
+            f"TWOX_INGEST_POLL_MIN_SECONDS ({poll_min_seconds}) must not be greater than "
+            f"TWOX_INGEST_POLL_MAX_SECONDS ({poll_max_seconds})."
+        )
+    if poll_max_seconds >= visibility_timeout_seconds:
+        raise ImproperlyConfigured(
+            f"TWOX_INGEST_POLL_MAX_SECONDS ({poll_max_seconds}) must be less than the "
+            f"visibility_timeout of the broker ({visibility_timeout_seconds}); a task "
+            "scheduled further ahead would be delivered twice."
+        )
+    chain = [
+        ("TWOX_EMBED_TASK_MAX_SECONDS", embed_task_max_seconds),
+        ("TWOX_TASK_SOFT_TIME_LIMIT", task_soft_time_limit),
+        ("TWOX_TASK_TIME_LIMIT", task_time_limit),
+        ("visibility_timeout of the broker", visibility_timeout_seconds),
+    ]
+    for (lower_name, lower), (upper_name, upper) in pairwise(chain):
+        if lower >= upper:
+            raise ImproperlyConfigured(
+                f"{lower_name} ({lower}) must be less than {upper_name} ({upper})."
+            )
+
+
+check_ingest_timing(
+    max_retries=TWOX_INGEST_MAX_RETRIES,
+    poll_min_seconds=TWOX_INGEST_POLL_MIN_SECONDS,
+    poll_max_seconds=TWOX_INGEST_POLL_MAX_SECONDS,
+    docling_document_timeout_seconds=TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS,
+    docling_max_document_timeout_seconds=TWOX_DOCLING_MAX_DOCUMENT_TIMEOUT_SECONDS,
+    ingest_timeout_seconds=TWOX_INGEST_TIMEOUT_SECONDS,
+    section_max_chars=TWOX_SECTION_MAX_CHARS,
+    embed_task_max_seconds=TWOX_EMBED_TASK_MAX_SECONDS,
+    task_soft_time_limit=TWOX_TASK_SOFT_TIME_LIMIT,
+    task_time_limit=TWOX_TASK_TIME_LIMIT,
+    visibility_timeout_seconds=TWOX_BROKER_VISIBILITY_TIMEOUT_SECONDS,
+)

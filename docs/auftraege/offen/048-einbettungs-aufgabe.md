@@ -74,6 +74,8 @@ Voraussetzung: 046 ist nach `main` zusammengeführt.
 - Anfrage- und Abschnittstexte nie ins Protokoll schreiben.
 - `docs/DECISIONS.md` und `docs/STATUS.md` ändert nur die Leitstelle. Kein Push (E-14).
 
+- **Nachtrag der Leitstelle (Prüfung 045):** Das Socket-Zeitlimit des Einbettungs-Clients (120 s) kann zusammen mit `TWOX_EMBED_TASK_MAX_SECONDS` (240) die weiche Grenze von 300 s überschreiten. Beginne keinen neuen Stapel, wenn bis zur weichen Grenze weniger Zeit bleibt als das Socket-Zeitlimit; Test dafür. Beim kalten Herunterfahren kommen nur Aufgaben mit `acks_late` zurück in die Warteschlange (Celery 5.7.0, `cancel_active_requests`).
+
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
 **Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).

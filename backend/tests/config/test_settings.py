@@ -11,7 +11,7 @@ import pytest
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from rest_framework.settings import api_settings
 
 from twox.accounts.permissions import CanRead
@@ -55,8 +55,40 @@ print(json.dumps({
     "embed_batch_size": settings.TWOX_EMBED_BATCH_SIZE,
     "embed_query_prefix": settings.TWOX_EMBED_QUERY_PREFIX,
     "embed_timeout_seconds": settings.TWOX_EMBED_TIMEOUT_SECONDS,
+    "ingest_max_retries": settings.TWOX_INGEST_MAX_RETRIES,
+    "ingest_poll_min_seconds": settings.TWOX_INGEST_POLL_MIN_SECONDS,
+    "ingest_poll_max_seconds": settings.TWOX_INGEST_POLL_MAX_SECONDS,
+    "docling_document_timeout_seconds": settings.TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS,
+    "ingest_timeout_seconds": settings.TWOX_INGEST_TIMEOUT_SECONDS,
+    "section_max_chars": settings.TWOX_SECTION_MAX_CHARS,
+    "embed_task_max_seconds": settings.TWOX_EMBED_TASK_MAX_SECONDS,
 }))
 """
+
+INGEST_VARIABLES = (
+    "TWOX_INGEST_MAX_RETRIES",
+    "TWOX_INGEST_POLL_MIN_SECONDS",
+    "TWOX_INGEST_POLL_MAX_SECONDS",
+    "TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS",
+    "TWOX_INGEST_TIMEOUT_SECONDS",
+    "TWOX_SECTION_MAX_CHARS",
+    "TWOX_EMBED_TASK_MAX_SECONDS",
+)
+
+# Values that fit together; each test below breaks exactly one condition.
+VALID_TIMING: dict[str, int] = {
+    "max_retries": 5,
+    "poll_min_seconds": 10,
+    "poll_max_seconds": 60,
+    "docling_document_timeout_seconds": 7200,
+    "docling_max_document_timeout_seconds": 7200,
+    "ingest_timeout_seconds": 9000,
+    "section_max_chars": 2000,
+    "embed_task_max_seconds": 240,
+    "task_soft_time_limit": 300,
+    "task_time_limit": 360,
+    "visibility_timeout_seconds": 3600,
+}
 
 
 def run_python(
@@ -118,6 +150,158 @@ def test_settings_import_without_running_database() -> None:
     assert values["embed_batch_size"] == 16
     assert values["embed_query_prefix"] == ""
     assert values["embed_timeout_seconds"] == 120
+    # Ingestion (work order 045).
+    assert values["ingest_max_retries"] == 5
+    assert values["ingest_poll_min_seconds"] == 10
+    assert values["ingest_poll_max_seconds"] == 60
+    assert values["docling_document_timeout_seconds"] == 7200
+    assert values["ingest_timeout_seconds"] == 9000
+    assert values["section_max_chars"] == 2000
+    assert values["embed_task_max_seconds"] == 240
+
+
+def test_ingest_settings_read_twox_variables() -> None:
+    result = run_python(
+        DUMP_SETTINGS,
+        {
+            "TWOX_INGEST_MAX_RETRIES": "3",
+            "TWOX_INGEST_POLL_MIN_SECONDS": "5",
+            "TWOX_INGEST_POLL_MAX_SECONDS": "30",
+            "TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS": "3600",
+            "TWOX_INGEST_TIMEOUT_SECONDS": "4000",
+            "TWOX_SECTION_MAX_CHARS": "1500",
+            "TWOX_EMBED_TASK_MAX_SECONDS": "120",
+        },
+    )
+
+    assert result.returncode == 0, result.stderr
+    values = json.loads(result.stdout)
+    assert values["ingest_max_retries"] == 3
+    assert values["ingest_poll_min_seconds"] == 5
+    assert values["ingest_poll_max_seconds"] == 30
+    assert values["docling_document_timeout_seconds"] == 3600
+    assert values["ingest_timeout_seconds"] == 4000
+    assert values["section_max_chars"] == 1500
+    assert values["embed_task_max_seconds"] == 120
+
+
+@pytest.mark.parametrize("name", INGEST_VARIABLES)
+@pytest.mark.parametrize("value", ["0", "-1", "1.5", "many"])
+def test_settings_reject_invalid_ingest_numbers(name: str, value: str) -> None:
+    result = run_python(DUMP_SETTINGS, {name: value})
+
+    assert result.returncode != 0
+    assert f"{name} must be a whole number greater than zero" in result.stderr
+
+
+def test_settings_stop_when_the_ingest_deadline_is_below_the_docling_timeout() -> None:
+    result = run_python(DUMP_SETTINGS, {"TWOX_INGEST_TIMEOUT_SECONDS": "60"})
+
+    assert result.returncode != 0
+    assert (
+        "TWOX_INGEST_TIMEOUT_SECONDS (60) must be greater than "
+        "TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS (7200)"
+    ) in result.stderr
+
+
+def test_settings_stop_when_embedding_runs_longer_than_a_task_may() -> None:
+    result = run_python(DUMP_SETTINGS, {"TWOX_EMBED_TASK_MAX_SECONDS": "300"})
+
+    assert result.returncode != 0
+    assert (
+        "TWOX_EMBED_TASK_MAX_SECONDS (300) must be less than TWOX_TASK_SOFT_TIME_LIMIT (300)"
+    ) in result.stderr
+
+
+def test_settings_values_pass_the_ingest_check() -> None:
+    settings_module.check_ingest_timing(
+        max_retries=settings.TWOX_INGEST_MAX_RETRIES,
+        poll_min_seconds=settings.TWOX_INGEST_POLL_MIN_SECONDS,
+        poll_max_seconds=settings.TWOX_INGEST_POLL_MAX_SECONDS,
+        docling_document_timeout_seconds=settings.TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS,
+        docling_max_document_timeout_seconds=settings.TWOX_DOCLING_MAX_DOCUMENT_TIMEOUT_SECONDS,
+        ingest_timeout_seconds=settings.TWOX_INGEST_TIMEOUT_SECONDS,
+        section_max_chars=settings.TWOX_SECTION_MAX_CHARS,
+        embed_task_max_seconds=settings.TWOX_EMBED_TASK_MAX_SECONDS,
+        task_soft_time_limit=settings.TWOX_TASK_SOFT_TIME_LIMIT,
+        task_time_limit=settings.TWOX_TASK_TIME_LIMIT,
+        visibility_timeout_seconds=settings.TWOX_BROKER_VISIBILITY_TIMEOUT_SECONDS,
+    )
+
+
+def test_ingest_check_accepts_values_that_fit() -> None:
+    settings_module.check_ingest_timing(**VALID_TIMING)
+
+
+def test_ingest_check_accepts_equal_poll_bounds() -> None:
+    settings_module.check_ingest_timing(**(VALID_TIMING | {"poll_min_seconds": 60}))
+
+
+@pytest.mark.parametrize(
+    ("argument", "name"),
+    [
+        ("max_retries", "TWOX_INGEST_MAX_RETRIES"),
+        ("poll_min_seconds", "TWOX_INGEST_POLL_MIN_SECONDS"),
+        ("poll_max_seconds", "TWOX_INGEST_POLL_MAX_SECONDS"),
+        ("docling_document_timeout_seconds", "TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS"),
+        ("ingest_timeout_seconds", "TWOX_INGEST_TIMEOUT_SECONDS"),
+        ("section_max_chars", "TWOX_SECTION_MAX_CHARS"),
+        ("embed_task_max_seconds", "TWOX_EMBED_TASK_MAX_SECONDS"),
+        ("task_soft_time_limit", "TWOX_TASK_SOFT_TIME_LIMIT"),
+        ("task_time_limit", "TWOX_TASK_TIME_LIMIT"),
+        ("visibility_timeout_seconds", "visibility_timeout"),
+    ],
+)
+@pytest.mark.parametrize("value", [0, -1, 1.5, True, "60"])
+def test_ingest_check_rejects_values_that_are_no_positive_whole_number(
+    argument: str, name: str, value: object
+) -> None:
+    with pytest.raises(ImproperlyConfigured, match=f"^{name} must be a whole number"):
+        settings_module.check_ingest_timing(**(VALID_TIMING | {argument: value}))  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        (
+            {"docling_document_timeout_seconds": 7201, "ingest_timeout_seconds": 9000},
+            "TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS (7201) must not exceed the limit of the "
+            "Docling service (7200 seconds)",
+        ),
+        (
+            {"ingest_timeout_seconds": 7200},
+            "TWOX_INGEST_TIMEOUT_SECONDS (7200) must be greater than "
+            "TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS (7200)",
+        ),
+        (
+            {"poll_min_seconds": 61},
+            "TWOX_INGEST_POLL_MIN_SECONDS (61) must not be greater than "
+            "TWOX_INGEST_POLL_MAX_SECONDS (60)",
+        ),
+        (
+            {"poll_max_seconds": 3600},
+            "TWOX_INGEST_POLL_MAX_SECONDS (3600) must be less than the visibility_timeout "
+            "of the broker (3600)",
+        ),
+        (
+            {"embed_task_max_seconds": 300},
+            "TWOX_EMBED_TASK_MAX_SECONDS (300) must be less than TWOX_TASK_SOFT_TIME_LIMIT (300)",
+        ),
+        (
+            {"task_soft_time_limit": 360},
+            "TWOX_TASK_SOFT_TIME_LIMIT (360) must be less than TWOX_TASK_TIME_LIMIT (360)",
+        ),
+        (
+            {"task_time_limit": 3600},
+            "TWOX_TASK_TIME_LIMIT (3600) must be less than visibility_timeout of the broker (3600)",
+        ),
+    ],
+)
+def test_ingest_check_rejects_each_broken_condition(changes: dict[str, int], message: str) -> None:
+    with pytest.raises(ImproperlyConfigured) as error:
+        settings_module.check_ingest_timing(**(VALID_TIMING | changes))
+
+    assert message in str(error.value)
 
 
 def test_settings_read_twox_variables() -> None:
