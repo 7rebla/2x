@@ -222,10 +222,20 @@ Alle Befehle laufen in Git Bash im Wurzelverzeichnis des Arbeitsverzeichnisses, 
 
   Die absolute Grenze von 1 s für ungünstige Eingaben bleibt (Festlegung der Leitstelle).
 
-  Prüfungen nach Nachbesserung 3 (twox-123):
+  Prüfungen nach Nachbesserung 3 (twox-123): alle Prüfungen aus `ci.yml` grün; `test_citations.py` 167 bestanden, `pytest` 2787 bestanden, `pytest -m worker` 6 bestanden, `mypy` ohne Befund in 205 Dateien.
+- **Nachbesserung 4 (Regressionsprüfung von 7ecd861):** Bleibt nach dem Abschneiden der Wortteile nur ein Ziffernrest, wird nicht mehr das ganze Token geprüft.
+  - Steht direkt davor ein Token, das genau eine Typbezeichnung ist, werden die Ziffern mit ihr verbunden: `S7 1500-Ausführung` prüft `s71500`, unabhängig von der Schrift des abgeschnittenen Teils.
+  - Sonst sind die Ziffern eine reine Zahl ohne Einheit und werden nicht geprüft (wie unter „Limits“ dokumentiert). `6-Achs-Roboters` und `24-Volt-Versorgung` lösen keinen Fehlalarm mehr aus.
+  - Tests, jeweils positiv und negativ:
+    - `S7 1500-Ausführung`, `S7 1500-Gerät` und `S7 1500-Steuerung` gegen `S7-1200` ergeben `unsupported_value`, `S7 1200-Gerät` ist belegt.
+    - `6-Achs-Roboters … 5 kg` ist belegt, mit `7 kg` nicht.
+    - `24-Volt-Versorgung` ist belegt; mit falscher Stromstärke nicht.
+    - `G-13- und G-14-Ausführung` gegen `G-12 und G-14` ergibt `unsupported_value`.
+
+  Prüfungen nach Nachbesserung 4 (twox-123):
   - Build und `up --wait` Exit 0.
-  - `test_citations.py`: 167 bestanden.
-  - `pytest`: 2787 bestanden, 0 fehlgeschlagen. `pytest -m worker`: 6 bestanden.
+  - `test_citations.py`: 175 bestanden.
+  - `pytest`: 2795 bestanden, 0 fehlgeschlagen. `pytest -m worker`: 6 bestanden.
   - `ruff check .` „All checks passed!“, `ruff format --check .` Exit 0, `mypy .` „Success: no issues found in 205 source files“.
   - `makemessages`, `check-licenses.sh` und `spectacular` Exit 0, ohne Unterschied. `makemigrations --check` meldet „No changes detected“.
   - `down -v` Exit 0.

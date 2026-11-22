@@ -59,8 +59,10 @@ Check values
     script, at least one of them lower case) are cut off:
     ``S7-1200-Steuerung`` and ``S7-1200-Gerät`` check ``S7-1200``,
     ``Schütz-K3`` checks ``K3``; upper-case parts stay (``1756-ENBT``). If
-    only digits would remain, the whole token is checked
-    (``1500-Steuerung``). A trailing hyphen (``G-12-`` in ``G-12- und
+    only digits remain, they are joined with a type designation directly
+    before them (``S7 1500-Gerät`` checks ``S7 1500``) and otherwise are a
+    plain number, which is not checked (``6-Achs-Roboter``,
+    ``24-Volt-Versorgung``). A trailing hyphen (``G-12-`` in ``G-12- und
     G-14-Ausführung``) is dropped;
     a number and unit may be joined by ``-`` (``24-V-Versorgung`` checks
     ``24 V``). A minus sign belongs to the number (``-20 °C``).
@@ -234,7 +236,6 @@ _TOKEN: Final = re.compile(r"\S+")
 #: run of underscores is tried once, where it starts.
 _MARKDOWN: Final = str.maketrans({"*": " ", "`": " "})
 _EDGE_UNDERSCORE: Final = re.compile(r"(?<!\w)_++|(?<!_)_++(?!\w)")
-_DIGITS_TOKEN: Final = re.compile(r"\d+[.,;:!?)\]]*")
 #: Leading characters removed from a token before it is classified.
 _TOKEN_LEAD: Final = "\"'([{<"
 _NEXT_CHAR: Final = re.compile(r"[ \t]*(\S)")
@@ -533,10 +534,16 @@ def _check_values(sentence: str) -> list[_Value]:
             # off, no punctuation after it ("S7-1200, 2 Module" stays apart).
             and core == value
             and any(char.isalpha() for char in value)
-            and _DIGITS_TOKEN.fullmatch(following.group())
             and following.start() not in unit_starts
         ):
-            digits = following.group().rstrip(".,;:!?)]")
+            # The next token counts if it is digits, also once word parts are
+            # cut off ("S7 1500-Gerät" checks "S7 1500").
+            digits = _trim_compound(following.group().lstrip(_TOKEN_LEAD).lstrip("-")).rstrip(
+                ".,;:!?)]"
+            )
+        else:
+            digits = ""
+        if digits.isdigit():
             add(f"{value} {digits}")
             skip_next = True
             continue
@@ -553,15 +560,15 @@ def _trim_compound(token: str) -> str:
     """``token`` without ``-`` parts at its ends that are words.
 
     ``S7-1200-Gerät`` gives ``S7-1200``, ``Schütz-K3`` gives ``K3``;
-    upper-case parts (``1756-ENBT``) and short parts (``G-12-A``) stay. If
-    only digits would remain (``1500-Steuerung``), the token is kept whole.
-    Punctuation at the end is kept, a trailing hyphen (``G-12-``) dropped.
+    upper-case parts (``1756-ENBT``) and short parts (``G-12-A``) stay. Only
+    digits may remain (``1500-Gerät`` gives ``1500``); the caller joins them
+    with a type designation before them or ignores them. Punctuation at the
+    end is kept, a trailing hyphen (``G-12-``) dropped.
     """
     end = len(token)
     while end > 0 and not token[end - 1].isalnum():
         end -= 1
     tail = token[end:].replace("-", "")
-    whole_end = end
     start = 0
     while True:
         cut = token.rfind("-", start, end)
@@ -573,8 +580,6 @@ def _trim_compound(token: str) -> str:
         if cut <= start or not _is_word_part(token[start:cut]):
             break
         start = cut + 1
-    if token[start:end].isdigit():
-        return token[:whole_end] + tail
     return token[start:end] + tail
 
 

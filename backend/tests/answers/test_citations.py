@@ -170,8 +170,25 @@ def test_type_designation_with_separate_digits_is_one_value(
         # Upper-case parts are part of the designation.
         ("Das Modul 1756-ENBT ist vorgesehen [1].", "Modul 1756-EN2T.", "no_evidence"),
         ("Das Modul 1756-EN2T ist vorgesehen [1].", "Modul 1756-EN2T.", "answered"),
-        # Only digits would remain: the whole token is checked.
+        # Only digits remain: joined with the designation before them, else
+        # a plain number that is not checked.
         ("Die S7 1500-Steuerung ist vorgesehen [1].", "Modul S7-1200.", "no_evidence"),
+        ("Die S7 1500-Ausführung ist vorgesehen [1].", "Modul S7-1200.", "no_evidence"),
+        ("Das S7 1500-Gerät ist vorgesehen [1].", "Modul S7-1200.", "no_evidence"),
+        ("Das S7 1200-Gerät ist vorgesehen [1].", "Modul S7-1200.", "answered"),
+        (
+            "Die Traglast des 6-Achs-Roboters beträgt 5 kg [1].",
+            "6-Achs-Roboter, Traglast 5 kg.",
+            "answered",
+        ),
+        (
+            "Die Traglast des 6-Achs-Roboters beträgt 7 kg [1].",
+            "6-Achs-Roboter, Traglast 5 kg.",
+            "no_evidence",
+        ),
+        ("Die 24-Volt-Versorgung ist vorgesehen [1].", "Versorgung: 24 Volt.", "answered"),
+        ("Die 24-Volt-Versorgung liefert 3 A [1].", "Versorgung: 24 Volt, 2 A.", "no_evidence"),
+        ("Die G-13- und G-14-Ausführung passen [1].", "Greifer G-12 und G-14.", "no_evidence"),
         # Leading word parts in any script.
         ("Das Schütz-K3 schaltet [1].", "Das Relais -K7 schaltet.", "no_evidence"),
         ("Das Schütz-K7 schaltet [1].", "Das Relais -K7 schaltet.", "answered"),
