@@ -6,6 +6,10 @@ export type ClientOptions = {
 
 /**
  * ``enabled`` always; the other fields only with the AI features on.
+ *
+ * ``ok``, ``model``, ``dimensions`` and ``error`` describe the embedding
+ * model, the ``chat_*`` fields the chat model (empty ``chat_model``: none
+ * configured).
  */
 export type AiCheck = {
     enabled: boolean;
@@ -13,6 +17,9 @@ export type AiCheck = {
     model?: string;
     dimensions?: number;
     error?: string;
+    chat_model?: string;
+    chat_ok?: boolean;
+    chat_error?: string;
 };
 
 /**
