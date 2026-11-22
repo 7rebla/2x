@@ -1046,8 +1046,12 @@ components:
   schemas:
     AiCheck:
       type: object
-      description: '``enabled`` always; the other fields only with the AI features
-        on.'
+      description: |-
+        ``enabled`` always; the other fields only with the AI features on.
+
+        ``ok``, ``model``, ``dimensions`` and ``error`` describe the embedding
+        model, the ``chat_*`` fields the chat model (empty ``chat_model``: none
+        configured).
       properties:
         enabled:
           type: boolean
@@ -1059,6 +1063,12 @@ components:
           type: integer
           minimum: 0
         error:
+          type: string
+        chat_model:
+          type: string
+        chat_ok:
+          type: boolean
+        chat_error:
           type: string
       required:
       - enabled

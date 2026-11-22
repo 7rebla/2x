@@ -13,9 +13,20 @@ With ``--embed`` the command instead embeds one fixed sentence through
 URL does not point to this machine, a line ``WARNING:`` comes first: a model
 service in the own network is allowed (Startunterlage 5.2), but texts go there.
 
+With ``--chat`` (work order 129) the command lets the chat model of
+``TWOX_CHAT_MODEL`` answer one fixed test prompt through
+:func:`twox.answers.chat.get_chat_model` (cloud check, model list and
+capability ``completion`` included) with a small ``max_tokens``, temperature 0
+and a fixed seed. It reports the time until the first text piece and the
+number of pieces per second (``OK:``), or the kind of error (``FAILED:``). The
+chat interface yields text pieces, not tokens, so the rate is given in
+``chunks``. The answer of the model is never printed or logged. The time
+limit is ``TWOX_CHAT_TIMEOUT_SECONDS``, not ``--timeout``. The ``WARNING:``
+line comes first, as with ``--embed``.
+
 AI features are optional (E-59). With ``TWOX_AI_ENABLED`` off the command
 contacts nothing and prints one neutral line ``DISABLED:`` (exit code 0), with
-or without ``--embed``.
+or without ``--embed`` or ``--chat``.
 """
 
 import json
@@ -31,11 +42,18 @@ from urllib.parse import urlsplit
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 
+from twox.answers import chat
 from twox.answers.embeddings import EmbeddingError, OpenAICompatibleEmbedder
 
 DEFAULT_TIMEOUT_SECONDS = 5.0
 # Fixed, harmless text for --embed; nothing from the manuals.
 EMBED_TEST_SENTENCE = "Check the oil level of the pump every 500 operating hours."
+# Fixed, harmless prompt for --chat; nothing from the manuals.
+CHAT_TEST_PROMPT = "Reply with one short sentence: what colour is a clear sky at noon?"
+# Small limits for --chat: a short, repeatable answer.
+CHAT_TEST_MAX_TOKENS = 32
+CHAT_TEST_TEMPERATURE = 0.0
+CHAT_TEST_SEED = 129
 # Host names that mean "this machine" (the host of the containers included).
 LOCAL_HOSTS = frozenset({"host.docker.internal", "localhost", "127.0.0.1", "::1"})
 DISABLED_LINE = (
@@ -201,6 +219,56 @@ def check_embed() -> CheckResult:
     )
 
 
+def check_chat() -> CheckResult:
+    """Let the chat model answer one fixed prompt; report timing, never the answer."""
+    if not settings.TWOX_CHAT_MODEL:
+        return _failed("invalid configuration: TWOX_CHAT_MODEL is empty")
+    try:
+        model = chat.get_chat_model()
+    except ValueError as error:
+        return _failed(f"invalid configuration: {error}")
+    except chat.ChatError as error:
+        return _failed(f"{type(error).__name__}: {error}")
+    messages: list[chat.ChatMessage] = [{"role": "user", "content": CHAT_TEST_PROMPT}]
+    started = time.monotonic()
+    first_piece: float | None = None
+    pieces = 0
+    try:
+        stream = model.stream(
+            messages,
+            max_tokens=CHAT_TEST_MAX_TOKENS,
+            temperature=CHAT_TEST_TEMPERATURE,
+            seed=CHAT_TEST_SEED,
+        )
+        try:
+            # Only counted: the text of the answer is neither kept nor shown.
+            for _piece in stream:
+                if first_piece is None:
+                    first_piece = time.monotonic() - started
+                pieces += 1
+        finally:
+            stream.close()
+    except chat.ChatError as error:
+        return _failed(f"{type(error).__name__}: {error}")
+    finally:
+        model.close()
+    elapsed = time.monotonic() - started
+    if first_piece is None:
+        # For example a thinking model that spent all tokens on reasoning.
+        return _failed(
+            f"empty answer: model {model.model_name!r} returned no text"
+            f" within {CHAT_TEST_MAX_TOKENS} tokens"
+        )
+    rate = pieces / elapsed if elapsed > 0 else 0.0
+    return CheckResult(
+        ok=True,
+        message=(
+            f"chat with {model.model_name}: first token after {first_piece:.2f}s,"
+            f" {pieces} chunks in {elapsed:.2f}s ({rate:.1f} chunks/s)"
+        ),
+    )
+
+
 def _positive_seconds(value: str) -> float:
     """Parse the value of ``--timeout``."""
     seconds = float(value)
@@ -213,7 +281,8 @@ class Command(BaseCommand):
     help = (
         "Check whether the model service at TWOX_LLM_BASE_URL is reachable."
         " Prints one line starting with OK: (exit code 0) or FAILED: (exit code 1);"
-        " DISABLED: (exit code 0) if TWOX_AI_ENABLED is off."
+        " DISABLED: (exit code 0) if TWOX_AI_ENABLED is off. --embed and --chat"
+        " test the embedding or the chat model instead."
     )
     # The check needs neither the database nor the system checks.
     requires_system_checks = []  # noqa: RUF012
@@ -226,15 +295,26 @@ class Command(BaseCommand):
             metavar="SECONDS",
             help=(
                 "Time limit per step of the reachability check in seconds"
-                " (default: %(default)g). --embed uses TWOX_EMBED_TIMEOUT_SECONDS instead."
+                " (default: %(default)g). --embed uses TWOX_EMBED_TIMEOUT_SECONDS,"
+                " --chat TWOX_CHAT_TIMEOUT_SECONDS instead."
             ),
         )
-        parser.add_argument(
+        mode = parser.add_mutually_exclusive_group()
+        mode.add_argument(
             "--embed",
             action="store_true",
             help=(
                 "Embed a fixed test sentence with TWOX_EMBED_MODEL and report model,"
                 " number of dimensions and duration."
+            ),
+        )
+        mode.add_argument(
+            "--chat",
+            action="store_true",
+            help=(
+                "Let TWOX_CHAT_MODEL answer a fixed test prompt (at most"
+                f" {CHAT_TEST_MAX_TOKENS} tokens) and report the time until the first text"
+                " piece and the pieces per second; the answer is not shown."
             ),
         )
 
@@ -246,11 +326,11 @@ class Command(BaseCommand):
             # E-59: a neutral state, not an error; nothing is contacted.
             self.stdout.write(DISABLED_LINE)
             return
-        if options["embed"]:
+        if options["embed"] or options["chat"]:
             warning = remote_host_warning(settings.TWOX_LLM_BASE_URL)
             if warning is not None:
                 self.stdout.write(warning)
-            result = check_embed()
+            result = check_embed() if options["embed"] else check_chat()
         else:
             result = check_llm(settings.TWOX_LLM_BASE_URL, timeout)
         self.stdout.write(result.line)

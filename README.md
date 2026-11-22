@@ -86,7 +86,7 @@ Run everything from the repository root.
 
 6. Upload a document on a device page. It is ingested on its own; the file page shows the state ("Queued", "Ingesting", "Ingested" with pages and sections, "Error" or "Skipped"), and **Search** finds its content once it is ingested. Details: [Ingestion and search](#ingestion-and-search).
 
-7. Optional: the self-test page <http://localhost:8000/selftest> shows three cards: **Database - OK** with the PostgreSQL server version, **Worker - OK** with the result `pong` and the round-trip time, and **AI features**: "Not enabled" (a neutral card, no error) with `TWOX_AI_ENABLED` off, otherwise OK with model and vector length, or the error.
+7. Optional: the self-test page <http://localhost:8000/selftest> shows three cards: **Database - OK** with the PostgreSQL server version, **Worker - OK** with the result `pong` and the round-trip time, and **AI features**: "Not enabled" (a neutral card, no error) with `TWOX_AI_ENABLED` off, otherwise OK with model and vector length, or the error. With the AI features on, the same card also names the chat model (`TWOX_CHAT_MODEL`) and whether it is ready; it only reads the model list of Ollama and lets the model generate nothing. While no chat model is set, the card stays OK with the calm hint "Chat model not set yet"; a set chat model that is missing, a cloud model or not able to generate text makes the card fail with the reason.
    "Check again" repeats the test. If the worker is stopped, the worker card turns red and shows the error from the API.
 
 Stop the services with `docker compose down`. To also delete the data volumes (database, Valkey, the uploaded files and stored Docling answers in `media-data`, the `node_modules` volume of the web tooling), run:
@@ -185,6 +185,34 @@ Measured on the development machine (work order 057, CPU only, one Docling worke
    Expected: `OK: embedded a test sentence with bge-m3 at http://host.docker.internal:11434/v1/embeddings: 1024 dimensions in 0.04s` (the first call after the start of Ollama loads the model and takes a few seconds). With the AI features off the command prints `DISABLED: …` and exits with 0. More under [`check_llm`](#check_llm).
 
 Measured (057): about 1.25 s per 100 sections with `bge-m3` once the model is loaded; the 2,623 sections of all test-factory manuals take 49 MB in the database, indexes included (about 19 kB per section).
+
+#### Chat model for answers
+
+Answers (milestone M3) need a second, local model that generates text. Which one becomes the default is decided after the measurement run (work order 128); until then `TWOX_CHAT_MODEL` stays empty, answers are unavailable and `manage.py` commands show the warning `twox.answers.W001`.
+
+1. Load the chosen chat model on the host:
+
+   ```sh
+   ollama pull <chat model>
+   ```
+
+2. Set `TWOX_CHAT_MODEL=<chat model>` in `.env` (the name exactly as `ollama list` shows it) and recreate `api` and `worker` with `docker compose up -d --wait`. Cloud models (`…:cloud`, `…-cloud`) are refused, and so is a model without the capability `completion`, for example an embedding model.
+
+3. Settings of Ollama on the host (environment variables of the Ollama service, not of the containers; concrete values are set after the model decision):
+
+   - `OLLAMA_CONTEXT_LENGTH`: the context window in tokens. Ollama silently cuts a longer prompt to it, and the OpenAI-compatible interface `/v1` that 2x uses cannot set it per request. It has to hold the question, the retrieved sections and the answer. A larger window needs more memory (RAM or VRAM).
+   - `OLLAMA_NUM_PARALLEL`: how many requests one loaded model answers at the same time. Each parallel slot needs its own share of the context memory.
+   - `OLLAMA_KEEP_ALIVE`: how long a model stays loaded after the last request. Short saves memory, but the next answer first has to load the model again (several seconds for a large model). The embedding model and the chat model are loaded side by side, so the host needs memory for both.
+
+4. Check the chat model with one short test prompt:
+
+   ```sh
+   docker compose exec api python manage.py check_llm --chat
+   ```
+
+   Expected: `OK: chat with <chat model>: first token after <x>s, <n> chunks in <y>s (<z> chunks/s)`; the answer itself is not shown. More under [`check_llm`](#check_llm).
+
+**Logs of the host are sensitive data.** Ollama on the host can write prompts, and with them texts of the documents, into its own log, for example with debug logging (`OLLAMA_DEBUG`). Treat the Ollama log of the host like the documents themselves and leave debug logging off in operation.
 
 ### Starting and repeating ingestion
 
@@ -345,6 +373,18 @@ It reads `TWOX_LLM_BASE_URL` (default `http://host.docker.internal:11434/v1`) an
 - `FAILED: EmbeddingRemoteModelError: ...`: the name is an Ollama cloud model; only local models are allowed, and the client never asks Ollama about cloud models.
 - `FAILED: EmbeddingDimensionError: ...`: the model gives vectors of another length than `TWOX_EMBED_DIMENSIONS`.
 - `WARNING: ...` comes first when `TWOX_LLM_BASE_URL` points to another machine than this one: a model server in the own network is allowed, but texts of the documents go there.
+
+`--chat` lets `TWOX_CHAT_MODEL` answer one fixed, self-written test prompt instead (at most 32 tokens, temperature 0, fixed seed; time limit `TWOX_CHAT_TIMEOUT_SECONDS`, not `--timeout`). The answer of the model is never printed or logged. The chat interface delivers text pieces, not tokens, so the rate is counted in `chunks`. `--chat` and `--embed` cannot be combined.
+
+- `OK: chat with <model>: first token after <x>s, <n> chunks in <y>s (<z> chunks/s)`: the time until the first text piece (the first call after a start of Ollama includes loading the model) and the pieces per second.
+- `FAILED: invalid configuration: TWOX_CHAT_MODEL is empty`: no chat model is set (see [Chat model for answers](#chat-model-for-answers)).
+- `FAILED: ChatRejectedError: model '<model>' is not loaded in Ollama; load it with: ollama pull <model>`: the model is missing on the host.
+- `FAILED: ChatRejectedError: model '<model>' cannot generate text ...`: the model has no capability `completion`, for example an embedding model.
+- `FAILED: ChatRemoteModelError: ...`: an Ollama cloud model, by name or by the local model list; it is never asked.
+- `FAILED: ChatUnavailableError: ...`: no connection, no answer within `TWOX_CHAT_TIMEOUT_SECONDS`, or the answer broke off.
+- `FAILED: empty answer: ...`: the model answered without any text within the 32 tokens, for example because it spent them on reasoning.
+- `WARNING: ...` comes first, as with `--embed`.
+- `DISABLED: ...` with the AI features off, as without options.
 
 On the development machine (Docker with WSL 2 on Windows) Ollama with its default binding was reachable without any change. Other setups, for example Docker directly on Linux, have not been checked.
 
