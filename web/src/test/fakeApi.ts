@@ -20,6 +20,91 @@ export function notSignedIn(): Response {
   return jsonResponse({ detail: "Authentication credentials were not provided." }, 403);
 }
 
+/** One server-sent event as the answer API writes it (`event:` and `data:` lines, empty line). */
+export function sseEvent(data: { type: string } & Record<string, unknown>): string {
+  return `event: ${data.type}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+/** A stream of server-sent events whose pieces the test sends one by one. */
+export interface FakeEventStream {
+  /**
+   * Answer 200 with this stream as body (Content-Type text/event-stream unless
+   * given). Like a real fetch, aborting the signal of `request` breaks the body off.
+   */
+  response: (request?: Request, contentType?: string) => Response;
+  /** Sends a piece of text (any cut: lines may be split between pieces). */
+  send: (text: string) => void;
+  /** Sends raw bytes (a character may be split between two pieces). */
+  sendBytes: (bytes: Uint8Array) => void;
+  /** Ends the stream normally (the server closed it). */
+  close: () => void;
+  /** Breaks the stream off with an error (connection lost). */
+  fail: () => void;
+  /** True once the client stopped the stream (cancelled the body or aborted the request). */
+  readonly stopped: boolean;
+}
+
+export function fakeEventStream(): FakeEventStream {
+  const encoder = new TextEncoder();
+  let controller: ReadableStreamDefaultController<Uint8Array> | null = null;
+  let stopped = false;
+  let finished = false;
+  const body = new ReadableStream<Uint8Array>({
+    start(streamController) {
+      controller = streamController;
+    },
+    cancel() {
+      stopped = true;
+      finished = true;
+    },
+  });
+  const withController = (action: (streamController: ReadableStreamDefaultController<Uint8Array>) => void): void => {
+    if (controller !== null && !finished) {
+      action(controller);
+    }
+  };
+  const end = (action: (streamController: ReadableStreamDefaultController<Uint8Array>) => void): void => {
+    withController(action);
+    finished = true;
+  };
+  return {
+    response: (request, contentType = "text/event-stream; charset=utf-8") => {
+      request?.signal.addEventListener("abort", () => {
+        if (!finished) {
+          stopped = true;
+        }
+        end((streamController) => {
+          streamController.error(new DOMException("The operation was aborted.", "AbortError"));
+        });
+      });
+      return new Response(body, { status: 200, headers: { "Content-Type": contentType } });
+    },
+    send: (text) => {
+      withController((streamController) => {
+        streamController.enqueue(encoder.encode(text));
+      });
+    },
+    sendBytes: (bytes) => {
+      withController((streamController) => {
+        streamController.enqueue(bytes);
+      });
+    },
+    close: () => {
+      end((streamController) => {
+        streamController.close();
+      });
+    },
+    fail: () => {
+      end((streamController) => {
+        streamController.error(new TypeError("network error"));
+      });
+    },
+    get stopped() {
+      return stopped;
+    },
+  };
+}
+
 /**
  * Node's Request (used under jsdom) rejects relative URLs, a browser resolves them
  * against the page address. This subclass does what the browser does.
