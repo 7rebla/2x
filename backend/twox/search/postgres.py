@@ -89,6 +89,16 @@ the version, the same pages (or, without pages, the same headings) and the
 same text are one hit with all locations, after the fusion; the hit gets the
 best score of its sections.
 
+Distance (124): the vector query returns the cosine distance of each of its
+sections, and a hit carries the smallest distance of its sections that are
+in the vector list (``SearchHit.semantic_distance``), the only signal of
+relevance that can be compared between queries (the score only orders).
+It is ``None`` for a hit found by keyword or exactly only, and for every hit
+when there is no vector list (AI features off, ``keyword_only``, model
+service failed). It changes neither score nor order. With
+``SearchRequest.include_text`` a hit also carries the whole text of its
+section, the text the snippet is cut from.
+
 The snippet is plain text, cut in Python around the first found place. The
 found words of the keyword search are located with ``ts_headline`` and
 private markers that do not occur in the text; its output is never passed
@@ -423,7 +433,7 @@ def _scope_params(request: SearchRequest) -> dict[str, Any]:
 def vector_sql(
     *, filter_devices: bool, filter_plants: bool, exclusions: _Queries | None = None
 ) -> str:
-    """The vector search: the nearest sections and their rank by distance.
+    """The vector search: the nearest sections, their rank by distance and the distance.
 
     Parameters: those of the scope, ``embedding`` (pgvector text form),
     ``model`` and ``vector_limit``, and those of ``exclusions``
@@ -449,7 +459,7 @@ nearest AS MATERIALIZED (
     ORDER BY s.embedding <=> %(embedding)s::vector
     LIMIT %(vector_limit)s
 )
-SELECT id, DENSE_RANK() OVER (ORDER BY distance + 0) AS rank
+SELECT id, DENSE_RANK() OVER (ORDER BY distance + 0) AS rank, distance
 FROM nearest
 ORDER BY distance + 0, id
 """
@@ -467,7 +477,9 @@ def _search_sql(
     """The search query; user input goes in only as named parameters.
 
     With ``semantic``, the sections of the vector search come in as the
-    arrays ``semantic_ids`` and ``semantic_ranks``. The excluded parts of
+    arrays ``semantic_ids``, ``semantic_ranks`` and ``semantic_distances``;
+    each row ends with the smallest distance of the sections of its hit
+    (``NULL`` when none is in the vector list). The excluded parts of
     the query apply to every way a section is found. ``exact_first``
     (:func:`exact_hits_first`) adds the number of identifiers found to the
     score; otherwise exact hits add nothing of their own, the score is the
@@ -488,14 +500,17 @@ def _search_sql(
     conditions = [keyword, *exact]
     semantic_join = ""
     semantic_rank = "NULL::bigint"
+    semantic_distance = "NULL::float8"
     if semantic:
         # ANY on the primary key keeps the OR of index conditions (BitmapOr).
         conditions.append("s.id = ANY(%(semantic_ids)s::bigint[])")
         semantic_join = (
-            "LEFT JOIN unnest(%(semantic_ids)s::bigint[], %(semantic_ranks)s::bigint[])"
-            " AS sem(section_id, rank) ON sem.section_id = s.id"
+            "LEFT JOIN unnest(%(semantic_ids)s::bigint[], %(semantic_ranks)s::bigint[],"
+            " %(semantic_distances)s::float8[])"
+            " AS sem(section_id, rank, distance) ON sem.section_id = s.id"
         )
         semantic_rank = "sem.rank"
+        semantic_distance = "sem.distance"
     where = " OR ".join(conditions)
     scope = _scope_sql(filter_devices=filter_devices, filter_plants=filter_plants)
     content_key = "sha256, page_start_key, page_end_key, heading_key, text_key"
@@ -522,7 +537,8 @@ candidates AS (
         {exact_count} AS exact_count,
         {keyword} AS keyword_match,
         {rank} AS rank,
-        {semantic_rank} AS semantic_rank
+        {semantic_rank} AS semantic_rank,
+        {semantic_distance} AS semantic_distance
     FROM ingest_section s
     JOIN searchable sv ON sv.version_id = s.document_version_id
     {semantic_join}
@@ -546,7 +562,7 @@ grouped AS (
     SELECT
         {content_key},
         MAX(score) AS score, MIN(semantic_rank) AS semantic_key,
-        MIN(section_id) AS representative_id
+        MIN(section_id) AS representative_id, MIN(semantic_distance) AS semantic_distance
     FROM matched
     GROUP BY {content_key}
     ORDER BY score DESC, {tie_break}representative_id
@@ -557,7 +573,8 @@ SELECT
     rs.text, rs.heading_path, rs.page_start, rs.page_end,
     m.section_id, m.exact_count > 0, m.keyword_match, m.semantic_rank IS NOT NULL,
     m.is_latest, v.id, v.number, v.original_filename, d.id, d.title,
-    dev.id, dev.key, dev.name, p.id, p.key, p.name
+    dev.id, dev.key, dev.name, p.id, p.key, p.name,
+    g.semantic_distance
 FROM grouped g
 JOIN matched m
     ON m.sha256 = g.sha256
@@ -579,7 +596,7 @@ def _search_params(
     request: SearchRequest,
     queries: _Queries,
     identifiers: Sequence[Identifier],
-    semantic: Sequence[tuple[int, int]],
+    semantic: Sequence[tuple[int, int, float]],
 ) -> dict[str, Any]:
     params: dict[str, Any] = {
         **_scope_params(request),
@@ -587,8 +604,9 @@ def _search_params(
         **_query_params(queries.exclusions(), _EXCLUDE),
         "limit": request.limit,
         "rrf_k": RRF_K,
-        "semantic_ids": [section_id for section_id, _ in semantic],
-        "semantic_ranks": [rank for _, rank in semantic],
+        "semantic_ids": [section_id for section_id, _, _ in semantic],
+        "semantic_ranks": [rank for _, rank, _ in semantic],
+        "semantic_distances": [distance for _, _, distance in semantic],
     }
     for index, identifier in enumerate(identifiers):
         params[f"pattern_{index}"] = postgres_pattern(identifier)
@@ -643,8 +661,27 @@ def nearest_sections(
 ) -> list[tuple[int, int]]:
     """``(section ID, rank)`` of the sections nearest to ``vector``, nearest first.
 
-    Sections with one of the ``exclusions`` (the excluded parts of the query)
-    do not take part.
+    The same list as :func:`nearest_sections_with_distance`, without the distance.
+    """
+    return [
+        (section_id, rank)
+        for section_id, rank, _ in nearest_sections_with_distance(
+            cursor, request, model, vector, exclusions
+        )
+    ]
+
+
+def nearest_sections_with_distance(
+    cursor: CursorWrapper,
+    request: SearchRequest,
+    model: str,
+    vector: Sequence[float],
+    exclusions: _Queries | None = None,
+) -> list[tuple[int, int, float]]:
+    """``(section ID, rank, cosine distance)`` of the sections nearest to ``vector``.
+
+    Nearest first, at most :data:`VECTOR_CANDIDATES`. Sections with one of
+    the ``exclusions`` (the excluded parts of the query) do not take part.
 
     Runs in a transaction of its own; the HNSW settings are local to it and
     end with it. Inside an outer transaction (a savepoint) they last until the
@@ -671,7 +708,10 @@ def nearest_sections(
             {"scan": HNSW_ITERATIVE_SCAN, "ef_search": str(HNSW_EF_SEARCH)},
         )
         cursor.execute(sql, params)
-        return [(int(section_id), int(rank)) for section_id, rank in cursor.fetchall()]
+        return [
+            (int(section_id), int(rank), float(distance))
+            for section_id, rank, distance in cursor.fetchall()
+        ]
 
 
 @dataclass(slots=True)
@@ -688,6 +728,8 @@ class _HitDraft:
     keyword: bool
     semantic: bool
     locations: list[HitLocation]
+    #: The smallest distance of the hit's sections in the vector list, or ``None``.
+    semantic_distance: float | None = None
 
     @property
     def match_kinds(self) -> list[MatchKind]:
@@ -731,6 +773,7 @@ def _collect_hits(rows: Iterable[Sequence[Any]]) -> list[_HitDraft]:
             plant_id,
             plant_key,
             plant_name,
+            semantic_distance,
         ) = row
         draft = drafts.get(representative_id)
         if draft is None:
@@ -745,6 +788,7 @@ def _collect_hits(rows: Iterable[Sequence[Any]]) -> list[_HitDraft]:
                 keyword=False,
                 semantic=False,
                 locations=[],
+                semantic_distance=None if semantic_distance is None else float(semantic_distance),
             )
             drafts[representative_id] = draft
             seen_versions[representative_id] = set()
@@ -928,10 +972,12 @@ class PostgresSearchBackend:
         if wanted:
             state = SemanticState.UNAVAILABLE if embedded is None else SemanticState.USED
         with connection.cursor() as cursor:
-            semantic: list[tuple[int, int]] = []
+            semantic: list[tuple[int, int, float]] = []
             if embedded is not None:
                 model, vector = embedded
-                semantic = nearest_sections(cursor, request, model, vector, queries.exclusions())
+                semantic = nearest_sections_with_distance(
+                    cursor, request, model, vector, queries.exclusions()
+                )
             sql = _search_sql(
                 queries,
                 len(identifiers),
@@ -962,6 +1008,9 @@ class PostgresSearchBackend:
                     page_end=draft.page_end,
                     heading_path=draft.heading_path,
                     locations=draft.locations,
+                    semantic_distance=draft.semantic_distance,
+                    # The full text read for the snippet; no further query.
+                    text=draft.text if request.include_text else None,
                 )
             )
         return SearchResult(hits=hits, semantic=state)

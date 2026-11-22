@@ -1,6 +1,6 @@
 # Auftrag 121 – Schnittstelle Sprachmodell
 
-Meilenstein: M3 · Freigabestufe: B · Status: offen
+Meilenstein: M3 · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 
@@ -266,7 +266,69 @@ Alle Befehle laufen in Git Bash im Wurzelverzeichnis des Arbeitsverzeichnisses, 
 Keine, die den Auftrag aufhält. `TWOX_CHAT_MODEL` bleibt leer bis zur Entscheidung D1 (Modellwahl im Messlauf 128). Der Variablenname ist ein Vorschlag der Leitstelle.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Was wurde gebaut?** In fünf Commits, wie vorgegeben:
+
+1. `answers/llm_guard.py` (neu): `is_cloud_model_name`, `ollama_root`, `full_model_name`, `is_timeout`, `TAGS_PATH`, `SHOW_PATH`, `COMPLETION_CAPABILITY`, `model_capabilities(answer)` und `find_local_model(body, model)` mit den neutralen Fehlern `ModelListError`, `ModelNotLoadedError`, `RemoteModelError` (Meldungen wie bisher, mit `ollama pull <modell>`). `embeddings.py` nutzt das Modul; Fehlerklassen, Meldungen, Reihenfolge und `monotonic` bleiben, `is_cloud_model_name` wird ausdrücklich wieder ausgeführt (`import … as is_cloud_model_name`).
+2. Einstellungen `TWOX_CHAT_MODEL`, `_TIMEOUT_SECONDS`, `_MAX_TOKENS`, `_TEMPERATURE`, `_REASONING_EFFORT` mit `env_float` und `env_reasoning_effort` (leer = `none`, `omit` = `None` = Feld nicht senden); Compose-Zeilen und `.env.example`-Block ohne Modellnamen.
+3. `answers/chat.py` (neu): `ChatMessage` (TypedDict, `role` system/user/assistant), Protokoll `ChatModel` (`model_name`, `stream(...) -> Iterator[str]`, `close()`), Fehler `ChatError`, `ChatDisabledError`, `ChatUnavailableError`, `ChatRejectedError`, `ChatRemoteModelError`, `OpenAICompatibleChat` (urllib ohne Proxy, SSE zeilenweise, Größen- und Zeilengrenze, Schließen über `close()` auch aus anderem Thread per Socket-`shutdown`), `get_chat_model()`, `FakeChatModel` (Stücke, Aufzeichnung in `calls`, Fehler nach n Stücken, `fail_on_call`, `close_count`). `stream()` prüft und sendet die Anfrage schon beim Aufruf (Ablehnung/keine Verbindung kommt sofort), die Stücke werden beim Iterieren gelesen.
+4. `answers/checks.py` (neu) mit `twox.answers.W001` (KI an, Modell leer) und `twox.answers.E001` (Cloud-Name), registriert in `AnswersConfig.ready()`.
+5. `docs/ARCHITECTURE.md`: Konfigurationstabelle, Satz zu den Zahlenprüfungen, Absatz zum Chat-Client (direkt nach der Tabelle, Abschnitt „Configuration“).
+
+**Fähigkeit completion (Kriterium 9):** `GET /api/tags` aus dem `api`-Container, nur lesend, Ollama 0.40.17: Einträge `qwen3-embedding:0.6b` und `bge-m3:latest`, Felder `capabilities`, `details`, `digest`, `model`, `modified_at`, `name`, `size`. `capabilities` ist vorhanden (`bge-m3`: nur `embedding`; `qwen3-embedding`: `tools`, `thinking`, `embedding`). Gewählter Weg: Fähigkeiten aus dem Eintrag in `/api/tags`; nur wenn er keine nennt, `POST /api/show` – erst nach bestandener Prüfung über `/api/tags`. Nennt auch das keine, wird nur `info` protokolliert. Kein `ollama pull`, keine Erzeugung.
+
+**Wie wurde getestet?** Alles in Containern (`docker compose -p twox-121`, `.env` aus `.env.example`, `TWOX_API_PORT=18121`, KI an, Modell leer):
+
+| Kriterium | Ergebnis |
+| --- | --- |
+| 0 | `docker version`, `docker compose version` Exit 0 |
+| 1 | build und `up -d --wait` Exit 0 |
+| 2.1–2.14 | je eigene Tests in `backend/tests/answers/test_chat.py` gegen den erweiterten Fake-Server (`fake_ollama.py`: Route `/v1/chat/completions` mit SSE, Pausen, Abbruch, Fehlerobjekt, `[DONE]`/`finish_reason`, Zeilen nach `[DONE]`; `/api/show`; Einträge mit `capabilities`; Ereignis `client_closed`, das der Server beim Schließen durch den Client setzt). Zeitgrenze und `close()` prüfen das Schließen am Server. Markierung im Prompt und Fake-Adressen erscheinen weder in Fehlertexten noch in Logs. – erfüllt |
+| 3 | `backend/tests/answers/test_llm_guard.py` – erfüllt |
+| 4 | `git diff main -- …test_embeddings.py …test_check_llm.py backend/tests/search backend/tests/ingest` leer – erfüllt |
+| 5 | `backend/tests/answers/test_checks.py` (W001 genau einmal, aus = nichts, E001, keine Verbindung); `manage.py check` Exit 0 mit `twox.answers.W001` – erfüllt |
+| 6 | Einstellungstests in `test_chat.py` (Unterprozess mit Standardwerten, ungesetzt und leer; ungültige Werte mit Variablenname; `env_float`, `env_reasoning_effort`) – erfüllt |
+| 7 | ruff check „All checks passed!“, ruff format Exit 0, mypy „Success: no issues found in 201 source files“, pytest 2515 passed, 0 failed, 0 skipped, `pytest -m worker` 6 passed, Übersetzungskatalog ohne Unterschied, „No changes detected“, „License check passed.“, Schema ohne Unterschied; kein Unterschied unter `web/` – erfüllt |
+| 8 | `git diff main -- backend/pyproject.toml backend/uv.lock` leer, kein `httpx`/`openai` in `uv.lock` – erfüllt |
+| 9 | siehe oben – erfüllt |
+| 10 | ARCHITECTURE nachgezogen, Z. 134 unverändert – erfüllt |
+| 11 | `down -v` Exit 0 – erfüllt |
+
+**Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-a9f778e2b68aa1744`, Arbeitsverzeichnis `.claude/worktrees/agent-a9f778e2b68aa1744`.
+
+**Für die Leitstelle beim Zusammenführen:**
+
+- App-Tabelle `docs/ARCHITECTURE.md` Z. 134 (`answers`), Stichworte: Chat-Client `chat.py` (Protokoll `ChatModel`, Zugang `get_chat_model()`, Attrappe `FakeChatModel`), gemeinsame Cloud-Sperre `llm_guard.py`, Systemprüfung `checks.py` (`twox.answers.W001`/`E001`).
+- Mit 122: In `answers/prompt.py` den eigenen Nachrichtentyp durch `from twox.answers.chat import ChatMessage` ersetzen (Alias `Message = ChatMessage` zulässig), Richtung `prompt.py` → `chat.py`.
+
+**Abweichungen:**
+
+- `settings.py` enthält neben `env_float` eine zweite kleine Hilfsfunktion `env_reasoning_effort` (mit den privaten Konstanten `_CHAT_REASONING_EFFORTS`, `_CHAT_REASONING_EFFORT_OMIT`) neben den anderen `env_*`; so ist die Prüfung „leer = none, omit = nicht senden, sonst `ImproperlyConfigured`“ einzeln testbar. Der Block selbst steht wie verlangt nach `TWOX_SEARCH_EMBED_TIMEOUT_SECONDS`.
+- `llm_guard.py` bekommt zusätzlich `SHOW_PATH`, `COMPLETION_CAPABILITY` und `model_capabilities()`, damit 129 die Fähigkeitsprüfung ohne Erzeugung mitnutzen kann.
+- Die Einstellungstests stehen in `test_chat.py` (der Auftrag nennt keine eigene Datei dafür); sie nutzen `run_python` aus `tests/config/test_settings.py`, ohne diese Datei zu ändern.
+- `ChatUnavailableError` deckt auch „kein Modell eingestellt“ ab (Vorschlag aus dem Auftrag).
+- **Verhalten von `stream()`:** Prüfungen (KI an, Nachrichten, Name, Modellliste, Fähigkeit) und das Senden der Anfrage geschehen schon beim Aufruf. Abweisung, fehlende Verbindung und HTTP-Fehler kommen also, bevor etwas zurückgegeben wird. Rückgabetyp ist nicht ein roher Generator, sondern `ChatStream` (siehe Nachbesserung): ein `Iterator[str]` mit `close()`, `closed` und `with`. Auch `FakeChatModel.stream()` und das Protokoll `ChatModel` liefern `ChatStream`.
+- Hinweis: Weil `.env.example` die KI einschaltet und kein Chat-Modell setzt, zeigen jetzt alle `manage.py`-Befehle im Entwicklungsaufbau die Warnung W001 (so gewollt, Kriterium 5).
+
+Offene Fragen: keine.
+
+**Nachbesserung (nach Prüfung durch die Leitstelle):**
+
+- Fehler: `stream()` gab den rohen Generator zurück. Wurde er vor dem ersten `next()` geschlossen, lief sein `finally` nie. Die HTTP-Verbindung blieb offen, Ollama erzeugte weiter, und der Eintrag blieb in `_streams`.
+- Gewählte Lösung: `stream()` gibt jetzt ein Objekt `ChatStream` zurück (Iterator mit `close()`, `closed`, `__enter__`/`__exit__`). Begründung: Die Fehler sollen weiter sofort beim Aufruf kommen (126 braucht das), und dafür muss die Anfrage beim Aufruf gesendet sein. Mit „Verbindung erst beim ersten `next()` öffnen“ wären HTTP-Fehler erst beim Lesen gekommen.
+- `ChatStream.close()` schließt zuerst die Verbindung über `_release` (Eintrag aus `_streams` entfernen, Socket abbauen) und danach den Generator. Das gilt vor dem ersten Stück, mitten im Strom und nach dem Ende. Mehrfacher Aufruf ist harmlos.
+- Ein ungenutzt verworfenes Objekt wird über `weakref.finalize` geschlossen, sonst spätestens durch `client.close()`.
+- Neue Tests in `test_chat.py`, alle mit dem Server-Ereignis `client_closed` und leerem `_streams`:
+  - `close()` vor dem ersten Stück
+  - `contextlib.closing` mit Ausnahme vor dem ersten Stück
+  - `with`-Block
+  - verworfenes Objekt mit `gc.collect()`
+  - `client.close()` bei ungelesenem Strom
+  - schließbarer Strom der Attrappe
+- Modul- und Methoden-Docstrings beschreiben das Verhalten jetzt zutreffend.
+- Prüfungen nach der Nachbesserung, alle grün:
+  - ruff, ruff format, mypy (201 Dateien)
+  - pytest: 2521 passed, 0 failed, 0 skipped; `pytest -m worker`: 6 passed
+  - Übersetzungskatalog, Migrationen, Lizenzen, Schema; `manage.py check` Exit 0
+  - `down -v` Exit 0
+- Zu Kriterium 4: `git diff main -- …` ist inzwischen nicht mehr leer. Grund ist nur, dass `main` weitergelaufen ist (120 hat `tests/search/test_evaluation.py` und `test_probes_m3.py` hinzugefügt). Gegen den Ausgangspunkt des Zweigs (`808d30a`) und mit `git diff main...HEAD` ist der Diff leer. Dieser Zweig ändert die Dateien nicht.

@@ -1,6 +1,6 @@
 # Auftrag 124 – Abstand und Volltext im Suchtreffer
 
-Meilenstein: M3 · Freigabestufe: C · Status: offen
+Meilenstein: M3 · Freigabestufe: C · Status: erledigt (D11 mit E-69 nach Empfehlung (a) entschieden; Messung in „2x“ von der Leitstelle nach dem Zusammenführen auszuführen)
 
 Voraussetzung: 120 (Suchgrundlinie Prüffragen) ist nach `main` zusammengeführt. Beide Aufträge ändern `backend/twox/search/evaluation.py` und `evaluate_search`. Start erst nach Freigabe von D11 durch a7 (siehe „Fragen an a7“).
 
@@ -131,7 +131,77 @@ Alle Texte selbst geschrieben, Embedder nur als Attrappe (`backend/tests/search/
 Empfehlung: (a). Der Abstand ist das einzige brauchbare Relevanzsignal für die Schwelle, die Werte liegen in der Suche schon vor, und die Regel „Schnittstellen vor Umsetzung“ spricht gegen eine zweite Vektorabfrage unter `answers/`.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Code, Tests und Doku fertig; die Messung in „2x“ (Kriterium 7, Tabelle) ist **von der Leitstelle nach dem Zusammenführen auszuführen** (Vorgabe der Leitstelle für diesen Lauf). Eigenes Compose-Projekt `twox-124`, `TWOX_API_PORT=18124`. „2x“ und „twox-leit“ nicht angefasst. Keine neue Abhängigkeit, keine Migration.
+
+### Was wurde gebaut?
+
+- **`interface.py`:** `SearchRequest.include_text: bool = False` (nach `keyword_only`); `SearchHit.semantic_distance: float | None = None` und `SearchHit.text: str | None = None` am Ende, mit englischen Docstrings (Wertebereich 0–2, nur für dasselbe Embedding-Modell vergleichbar, nicht Teil der öffentlichen API).
+- **`postgres.py`:** `vector_sql` gibt zusätzlich `distance` aus (Sortierung `distance + 0, id` und Planform unverändert). Neue Funktion `nearest_sections_with_distance` → `(section_id, rank, distance)`; `nearest_sections` ist eine dünne Hülle mit unveränderter Rückgabe `(id, rank)`. In `_search_sql` läuft der Abstand als drittes Feld durch `unnest` (`semantic_distances`, `float8[]`), wird in `candidates` mitgeführt, in `grouped` als `MIN(...)` je Inhalt gebildet und als letzte Spalte ausgegeben; ohne Vektorliste `NULL`. `score`, `tie_break` und `ORDER BY` unverändert. `_HitDraft`/`_collect_hits` übernehmen den Abstand; `SearchHit.text` ist `draft.text` (schon gelesen, keine weitere Abfrage) bei `include_text`, sonst `None`. Modul-Docstring um einen Absatz ergänzt. `api.py`/`hit_data` unverändert.
+- **`evaluation.py`:** `Place.distance`; `KindResult` mit `distance` (erster richtiger Eintrag, gleiche Regel wie der Rang inkl. anderer Sprachfassung), `min_distance` (kleinster unter den ersten 10) und `first_rank_without_distance`; `ControlEntry.distance`, `ControlList.min_distance`; neue `DistanceOverview` je Art (Vektor, kombiniert): größter Abstand einer gefundenen Belegstelle (mit Probe) gegenüber kleinstem Abstand einer Kontrollprobe (mit Probe) und Differenz („gap“/„no gap“). Vektorliste über `nearest_sections_with_distance`, kombiniert über `SearchHit.semantic_distance`; Stichwort ohne Abstand (auch in JSON entfernt). `evaluate(..., distances=True)`; ohne die Option werden alle neuen Felder aus JSON und Text entfernt. KI aus: Zeile „Distances: not measured: AI features not enabled.“, in JSON `distance_overview` mit `measured: false`. Die Kontrolltabelle zeigt je Eintrag nur Rang, Abstand, `section_id`, sha256-Präfix (12 Zeichen), Seiten, Anzahl der Fundorte. `SCHEMA_VERSION` unverändert.
+- **`evaluate_search.py`:** Option `--distance`, Kopf-Docstring ergänzt.
+- **Tests:** neu `backend/tests/search/test_hit_details.py` (14 Testfunktionen, 21 Fälle): Volltext gleich `Section.text` auch über 300 Zeichen (KI an/aus), ohne Option `None`; gleiche Treffer, `score`, Snippets und Highlights mit und ohne `include_text` (4 Anfragen × KI an/aus); Abstand gleich eigener `<=>`-Abfrage (Toleranz 1e-6, auch mit eigenem Anfragevektor); `None` bei reinen Stichwort- und exakten Treffern, KI aus, `keyword_only`, Modellausfall; gleicher Inhalt an zwei Geräten → kleinerer Abstand, mit `device_ids` bzw. `plant_ids` nur der Abstand aus dem Filterbereich; `nearest_sections` unverändert `(id, rank)`, neue Funktion mit aufsteigendem Abstand. In `test_evaluation.py` nur angehängt (Importliste erweitert): `judge` mit Abständen von Hand und mit anderer Sprachfassung, Abstände Vektor/kombiniert/Kontrolle und Übersicht gegen die Datenbank, erster kombinierter Treffer ohne Abstand, Befehl mit `--distance` in Text und JSON (eigener auffälliger Satz in einem nahen Abschnitt kommt nicht vor), Ausgabe ohne `--distance` gleich der Ausgabe mit `--distance` abzüglich der Abstände und ohne das Wort „distance“, KI aus mit Hinweis und ohne Modellaufruf.
+- **Doku:** `docs/ARCHITECTURE.md`, Abschnitt „Search“: neuer Punkt „Whole text and distance in a hit“ und ein Satz zu `--distance` im Punkt „Measurement“. Sonst nichts in gemeinsamen Dateien.
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-124`, `.env` aus `.env.example` mit `TWOX_API_PORT=18124`.
+
+| Nr. | Ergebnis | Nachweis |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` 29.9.3, `docker compose version` v5.7.0, je Exit 0 |
+| 1 | erfüllt | `ruff check .` „All checks passed!“, `ruff format --check .` (198 Dateien), `mypy .` „no issues found in 197 source files“, `pytest` 2491 passed / 6 deselected, `pytest -m worker` 6 passed, `makemessages -l de` ohne Unterschied in `backend/locale`, `makemigrations --check --dry-run` „No changes detected“, `check-licenses.sh` „License check passed.“, `spectacular` ohne Unterschied in `web/openapi` |
+| 2 | erfüllt | `pytest tests/search tests/acceptance` 447 passed; Diff in `backend/tests/search` gegenüber der Basis: nur neue Tests, neue Datei und erweiterte Importzeilen von `test_evaluation.py` |
+| 3 | erfüllt | `git diff --exit-code -- web/openapi` Exit 0 nach `spectacular --file` |
+| 4 | erfüllt | `test_include_text_gives_the_whole_section_text`, `test_without_include_text_there_is_no_text` |
+| 5 | erfüllt | Tests zu Abstand, `None`-Fällen und gebündeltem Inhalt in `test_hit_details.py` |
+| 6 | erfüllt | `test_include_text_changes_neither_order_nor_scores_nor_snippets` (KI an/aus) |
+| 7 | Code und Test erfüllt; Tabelle offen | Ohne `--distance` unverändert (Tests, dazu bestehende Golden-Tests von 120 unverändert grün). Messung in „2x“ von der Leitstelle, Befehle unten |
+| 8 | erfüllt | Ausgabe enthält nur Ränge, Abstände, Seiten, Kennungen (Tests mit eigenem auffälligem Satz) |
+| 9 | erfüllt | `pyproject.toml` und Lock unverändert, keine Migration |
+
+### Messung in „2x“ – von der Leitstelle nach dem Zusammenführen auszuführen
+
+1. Vorher: `docker compose -p 2x ps` (`db`, `api` laufen); `docker compose -p 2x exec -T api python manage.py check_llm`; Zählung `docker compose -p 2x exec -T db psql -U twox -d twox -Atc "select (select count(*) from ingest_section), (select count(*) from files_documentversion), (select count(*) from ingest_ingestjob)"`.
+2. Messung mit dem Code nach dem Zusammenführen (Einmal-Container, nur lesend, der laufende `api` kennt `--distance` noch nicht):
+   `docker compose -p 2x --env-file <.env des Projektordners> --profile dev run --rm --no-deps backend-dev python manage.py evaluate_search --probes m3 --distance` und dasselbe mit `--json`.
+3. Nachher dieselbe Zählung wie in 1 (muss gleich sein).
+4. Eintragen: je Probe aus `m3.json` Rang und Abstand der besten Belegstelle (kombiniert), Rang und Abstand (nur Vektor), kleinster Abstand unter den ersten 10 (kombiniert), ggf. Rang des ersten Treffers ohne Abstand – alles aus der Tabelle „Cosine distances“; für `control-11` die Tabelle „Control probes: distances of the first 10 entries“ (Rang, Abstand, `section_id`, sha256-Präfix, Seiten); die Übersicht „Largest distance of a found expected place against the smallest of a control probe“ als Beobachtung („Lücke zwischen x und y“ oder „keine Lücke“). Belegstellen ohne Platz unter den ersten 50 der Vektorsuche mit „–“ und Anmerkung. Keine Texte; Seite 38 der APS-Dokumentation nicht zitieren.
+
+### Messung der Leitstelle in „2x“ (22.11.2026, nach dem Zusammenführen)
+
+`evaluate_search --probes m3 --distance`, nur lesend; vorher und nachher je 5 071 Abschnitte, 158 Versionen, 228 Einlese-Aufträge.
+
+| Probe | Rang | Abstand der Belegstelle | kleinster Abstand Top 10 |
+| --- | --- | --- | --- |
+| question-1 | 1 | 0,4346 | 0,4346 |
+| question-2 | 1 | 0,4448 | 0,4448 |
+| question-3 | – | – | 0,4445 |
+| question-3b | – | – | 0,4554 |
+| question-4 | – | – | 0,4337 |
+| question-5 | 2 | 0,3372 | 0,2898 |
+| question-6 | 4 | 0,4728 | 0,4632 |
+| question-7 | 6 (kombiniert 7) | 0,4791 | 0,4313 |
+| question-7b | – | – | 0,4417 |
+| question-8 | 9 | 0,5487 | 0,5242 |
+| question-9 | 1 | 0,3182 | 0,3182 |
+| question-10 | 1 | 0,3846 | 0,3846 |
+| question-10b | 7 | 0,4457 | 0,4141 |
+
+Kontrollprobe (Frage 11): erste zehn Treffer 0,5095 bis 0,5634.
+
+Ergebnis: Keine Lücke. Größter Abstand einer gefundenen Belegstelle 0,5487 (Frage 8, englischer Markdown-Text gegen deutsche Frage), kleinster der Kontrollprobe 0,5095 (Differenz −0,039). Ohne Frage 8 läge die Lücke bei +0,030 (0,4791 gegen 0,5095) – zu knapp für eine verlässliche feste Schwelle. Folgerung für 125/126/128: Die Schwelle vor dem Modellaufruf darf nur offensichtlich Fernes abweisen (Vorschlag: oberhalb von etwa 0,60, in 128 kalibriert); die Kontrollfrage muss das Zusammenspiel aus Prompt (Absage erlaubt) und Zitatprüfung (123) abfangen.
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-a42b3811665538731`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-a42b3811665538731` (relativ zum Projektordner)
+- Nicht gepusht, nichts zusammengeführt.
+
+### Abweichungen
+
+1. **Keine Messung in „2x“:** nach Vorgabe der Leitstelle nur beschrieben (oben); die Tabelle zu Kriterium 7 fehlt.
+2. **Basis des Zweigs:** Der Zweig beginnt beim lokalen `main` mit 120 (`2d07b10`). Inzwischen ist 121 nach `main` zusammengeführt; `git diff main` zeigt deshalb dessen Änderungen umgekehrt. Berührt sind nur die sechs genannten Dateien plus `test_hit_details.py`; Konflikte mit 121 sind nicht zu erwarten (andere Dateien außer `ARCHITECTURE.md`, dort anderer Abschnitt).
+3. **Feldnamen in `evaluate_search`:** Die Messfelder heißen `distance`, `min_distance` (kleinster unter den ersten 10) und `first_rank_without_distance`; die Übersicht `distance_overview` hat je Art `largest_found`, `smallest_control` und `gap` (= kleinster Kontrollabstand minus größter Belegabstand; größer 0 heißt Lücke). Die Übersicht wird für Vektor und kombiniert getrennt ausgegeben.
+4. **„Gefundene Belegstelle“** heißt in der Übersicht: erster richtiger Eintrag innerhalb der Listentiefe 50 mit Abstand. Eine Belegstelle auf einem späten Rang kann den größten Abstand bestimmen; die Tabelle je Probe zeigt den Rang daneben.
+5. Lokal bleiben die Images `twox-124-*`; die ignorierte `.env` hat `TWOX_API_PORT=18124`.

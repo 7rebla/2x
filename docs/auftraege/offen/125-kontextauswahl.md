@@ -58,6 +58,8 @@ Ablauf, in dieser Reihenfolge:
 
 Felder der `ContextSource` (Definition aus 122): `section_id` = `hit.section_id`; `version_id` und `sha256` aus dem Fundort, zu dem `hit.section_id` gehört (`HitLocation.section_id == hit.section_id`; `sha256` über `DocumentVersion.sha256` in einer gesammelten Abfrage, falls 122/124 ihn nicht schon liefern); `ordinal` aus `Section`; `page_start`, `page_end`, `heading_path`, `text` aus dem Treffer; `locations` = alle `hit.locations` unverändert (E-55: Fundorte mehrerer Geräte bleiben erhalten). Weicht die Definition in 122 von dieser Liste ab, gilt 122; die Abweichung steht im Kurzbericht.
 
+Dubletten (Messung 120 auf 2x, 22.11.2026): Dieselbe Datei hängt oft an mehreren Geräten (bis zu elf); jede Kopie hat eigene Abschnitte mit gleichem Text, gleicher `sha256` und gleichen Seiten. Ohne Zusammenfassen füllt ein einziger Abschnitt bis zu elf Plätze der Kandidatenliste. Die Kontextauswahl fasst Treffer mit gleicher `sha256` und gleichem Seitenbereich (bzw. gleichem `ordinal`) zu einer Quelle zusammen, bevor `k` gezählt wird; behalten wird der beste Rang, die Fundorte aller Kopien bleiben als `locations` erhalten (wenn die Eingrenzung auf ein Gerät gilt, nur dessen Kopie). Test mit drei Kopien derselben Datei an drei Geräten.
+
 Datenbankzugriffe: höchstens eine Abfrage für `ordinal`/`sha256` aller Kandidaten und eine für alle Nachbarn – keine Abfrage je Treffer (Test mit `django_assert_max_num_queries`).
 
 Protokollierung: Das Modul protokolliert weder Frage noch Abschnittstext noch Überschriften. Erlaubt ist auf DEBUG nur: Zahl der Treffer, Zahl der Quellen, `best_distance`, `below_threshold`.
@@ -81,7 +83,7 @@ In `backend/twox/config/settings.py`, direkt unter dem KI-Block (`settings.py:42
 | `TWOX_ANSWER_MAX_SOURCES` | int ≥ 1 | 8 | Höchstzahl Hauptquellen (k) |
 | `TWOX_ANSWER_CONTEXT_CHARS` | int ≥ 1 | 20000 | Zeichenbudget aller Quellentexte zusammen |
 | `TWOX_ANSWER_NEIGHBOURS` | bool | false | Nachbarabschnitte nachladen |
-| `TWOX_ANSWER_MAX_DISTANCE` | float 0 < x ≤ 2 | Wert aus Kurzbericht 124 (siehe Hinweise), sonst 0.5 | Relevanzschwelle (Kosinusabstand) |
+| `TWOX_ANSWER_MAX_DISTANCE` | float 0 < x ≤ 2 | 0.60 (Messung 124 auf 2x: Belegstellen bis 0,549, Kontrollfrage ab 0,510 – keine Lücke; die Schwelle weist nur offensichtlich Fernes ab, die Kontrollfrage fangen Prompt und Zitatprüfung ab; Feinkalibrierung in 128) | Relevanzschwelle (Kosinusabstand) |
 | `TWOX_ANSWER_TRANSLATION_DISTANCE` | float 0 < x ≤ 2 | 0.15 | Höchstabstand für „gleiche Stelle in anderer Sprache“ |
 
 Begründung Zeichenbudget: 8 Abschnitte à höchstens 2 000 Zeichen (`TWOX_SECTION_MAX_CHARS`, `settings.py:481`, E-60) sind 16 000 Zeichen; 20 000 lassen Platz für zwei Nachbarn. Bei der in D1 vorgeschlagenen Kontextlänge von 16 384 Tokens bleibt damit genug Raum für Systemprompt und Antwort. Alle Startwerte sind vorläufig und werden in 128 kalibriert.
