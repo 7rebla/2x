@@ -9,13 +9,7 @@ from rest_framework import serializers
 
 from twox.files.models import Document, DocumentKind, DocumentVersion
 from twox.files.services import DuplicateLocation
-from twox.ingest.models import (
-    PARTIAL_DETAIL_PREFIX,
-    IngestErrorCode,
-    IngestJob,
-    IngestStatus,
-    IngestStep,
-)
+from twox.ingest.models import IngestErrorCode, IngestJob, IngestStep
 
 #: Attribute that :func:`prefetch_latest_ingest_job` fills on each version:
 #: a list with the newest ingest job, or an empty list.
@@ -78,13 +72,25 @@ class IngestJobSummarySerializer(serializers.ModelSerializer[IngestJob]):
     error_detail = serializers.CharField(
         read_only=True,
         help_text=(
-            "Technical detail in English. Set for failed and skipped jobs, and for a done "
-            "job that was converted only in part (then it starts with 'converted with ')."
+            "Technical detail in English. Set for failed and skipped jobs, and as a note "
+            "for a job that was converted only in part."
         ),
     )
     # Not "partial": serializers use that name for partial updates.
     partly_converted = serializers.SerializerMethodField(
-        help_text="True for a done job that was converted only in part; see error_detail."
+        help_text=(
+            "True if Docling converted the document only in part (conversion_error_count "
+            "above 0), also when the embedding failed afterwards."
+        )
+    )
+    conversion_error_count = serializers.IntegerField(
+        read_only=True,
+        min_value=0,
+        help_text=(
+            "Errors Docling reported for a conversion it finished only in part; 0 for a "
+            "complete conversion and for a job that has not converted anything yet. An "
+            "embedding job carries the count of the conversion before it."
+        ),
     )
 
     class Meta:
@@ -96,6 +102,7 @@ class IngestJobSummarySerializer(serializers.ModelSerializer[IngestJob]):
             "error_code",
             "error_detail",
             "partly_converted",
+            "conversion_error_count",
             "section_count",
             "page_count",
             "created_at",
@@ -104,9 +111,7 @@ class IngestJobSummarySerializer(serializers.ModelSerializer[IngestJob]):
         read_only_fields: tuple[str, ...] = fields
 
     def get_partly_converted(self, job: IngestJob) -> bool:
-        return job.status == IngestStatus.DONE and job.error_detail.startswith(
-            PARTIAL_DETAIL_PREFIX
-        )
+        return job.conversion_error_count > 0
 
 
 class DocumentVersionSerializer(serializers.ModelSerializer[DocumentVersion]):

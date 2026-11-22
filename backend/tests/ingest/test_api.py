@@ -39,6 +39,7 @@ JOB_FIELDS = {
     "error_code",
     "error_detail",
     "partly_converted",
+    "conversion_error_count",
     "section_count",
     "page_count",
     "created_at",
@@ -623,25 +624,61 @@ def test_error_code_and_detail_for_every_role(kind: str) -> None:
     assert item["error_detail"] == FAILED_DETAIL
 
 
-def test_partial_conversion_is_done_with_a_note() -> None:
+@pytest.mark.parametrize("kind", ["read", "manage"])
+def test_partial_conversion_is_done_with_a_note(kind: str) -> None:
     version = make_version()
     job = make_job(
         version,
         status=IngestStatus.DONE,
         step=IngestStep.SECTIONS,
         error_detail="converted with 2 errors on pages 3, 7",
+        conversion_error_count=2,
         section_count=12,
         page_count=9,
     )
 
-    [item] = results(client_for("read"))
+    [item] = results(client_for(kind))
 
     assert item["id"] == job.pk
     assert item["status"] == "done"
-    assert item["partly_converted"] is True
+    assert (item["partly_converted"], item["conversion_error_count"]) == (True, 2)
     assert item["error_code"] == ""
     assert item["error_detail"] == "converted with 2 errors on pages 3, 7"
     assert (item["section_count"], item["page_count"]) == (12, 9)
+
+
+@pytest.mark.parametrize("kind", ["read", "manage"])
+def test_partial_conversion_with_a_failed_embedding_stays_partly_converted(kind: str) -> None:
+    # E-62: the embedding error replaced the note; the count of the conversion stays.
+    version = make_version()
+    make_job(
+        version,
+        status=IngestStatus.FAILED,
+        step=IngestStep.EMBED,
+        error_code=IngestErrorCode.EMBEDDING_UNAVAILABLE,
+        error_detail="cannot reach the model service (gave up after 5 retries)",
+        conversion_error_count=3,
+        section_count=12,
+    )
+
+    [item] = results(client_for(kind))
+
+    assert (item["status"], item["step"]) == ("failed", "embed")
+    assert (item["partly_converted"], item["conversion_error_count"]) == (True, 3)
+
+
+@pytest.mark.parametrize("kind", ["read", "manage"])
+def test_complete_and_unfinished_jobs_are_not_partly_converted(kind: str) -> None:
+    make_job(make_version(), status=IngestStatus.DONE, step=IngestStep.SECTIONS)
+    make_job(make_version(b"%PDF-1.7 queued\n", device="hbw-plc"))
+    failed_job(make_version(b"%PDF-1.7 failed\n", device="vgr-plc"))
+
+    items = results(client_for(kind))
+
+    assert len(items) == 3
+    assert {(item["partly_converted"], item["conversion_error_count"]) for item in items} == {
+        (False, 0)
+    }
 
 
 @pytest.mark.parametrize("ai_enabled", [True, False], ids=["ai-on", "ai-off"])
@@ -652,7 +689,13 @@ def test_api_is_the_same_with_and_without_ai(
     # call of the model service.
     settings.TWOX_AI_ENABLED = ai_enabled
     version = make_version()
-    make_job(version, status=IngestStatus.DONE, step=IngestStep.SECTIONS, section_count=3)
+    make_job(
+        version,
+        status=IngestStatus.DONE,
+        step=IngestStep.SECTIONS,
+        section_count=3,
+        conversion_error_count=1,
+    )
     client = client_for("manage")
 
     items = results(client)
@@ -660,8 +703,13 @@ def test_api_is_the_same_with_and_without_ai(
 
     assert items[0]["status"] == "done"
     assert items[0]["error_code"] == ""
+    assert (items[0]["partly_converted"], items[0]["conversion_error_count"]) == (True, 1)
     assert started.status_code == 202
     assert started.json()["status"] == "queued"
+    assert (started.json()["partly_converted"], started.json()["conversion_error_count"]) == (
+        False,
+        0,
+    )
 
 
 # --- schema ---------------------------------------------------------------------------
@@ -698,6 +746,9 @@ def test_schema_lists_the_ingest_endpoints_and_fields() -> None:
         "requested_by",
         "is_latest",
     }
+    count = components["IngestJobSummary"]["properties"]["conversion_error_count"]
+    assert (count["type"], count["minimum"], count["readOnly"]) == ("integer", 0, True)
+    assert "conversion_error_count" in components["IngestJobSummary"]["required"]
     assert set(components["IngestStatusEnum"]["enum"]) == set(IngestStatus.values)
     assert set(components["IngestJobDevice"]["properties"]) == {"id", "key", "name"}
     assert set(components["IngestJobDocument"]["properties"]) == {"id", "title"}

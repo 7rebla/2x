@@ -16,7 +16,9 @@ other filters then apply to them.
 
 Who started a job (``requested_by``) is shown to the role ``manage`` only,
 like the change log (E-43); the role ``read`` always gets ``null``. The
-cleaned technical text ``error_detail`` is shown to both roles (E-57).
+cleaned technical text ``error_detail`` is shown to both roles (E-57). A
+partial conversion is told by ``conversion_error_count`` and
+``partly_converted``, not by the text (E-62, work order 068).
 
 The API works the same with the AI features switched off (E-59): no field
 here depends on embeddings, and nothing here calls the model service.

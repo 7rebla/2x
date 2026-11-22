@@ -19,7 +19,7 @@ one, and the keyword search works on the search vector alone.
 """
 
 from collections.abc import Iterable, Sequence
-from typing import Final, Protocol
+from typing import Protocol
 
 from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
@@ -49,11 +49,6 @@ SEARCH_CONFIGS = ("simple", "german", "english")
 HEADING_SEPARATOR = " > "
 
 ERROR_DETAIL_MAX_LENGTH = 2000
-#: Start of ``error_detail`` of a job that Docling converted only in part
-#: (``partial_success``, work order 046); such a job ends ``done``. Defined
-#: here, not in the ingest flow, so that the files API can use it without
-#: importing the flow and its clients (work order 061).
-PARTIAL_DETAIL_PREFIX: Final = "converted with "
 EMBEDDING_MODEL_MAX_LENGTH = 200
 DOCLING_TASK_ID_MAX_LENGTH = 200
 
@@ -183,6 +178,11 @@ class IngestJob(models.Model):
     )
     page_count = models.PositiveIntegerField(_("page count"), null=True, blank=True)
     section_count = models.PositiveIntegerField(_("section count"), null=True, blank=True)
+    # Errors Docling reported for a conversion it finished only in part
+    # (partial_success); at least 1 for such a conversion, 0 otherwise. An
+    # embedding job of embed_sections takes it over from the conversion of its
+    # version, and a failed embedding leaves it in place (E-62, work order 068).
+    conversion_error_count = models.PositiveIntegerField(_("conversion errors"), default=0)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     started_at = models.DateTimeField(_("started at"), null=True, blank=True)
     finished_at = models.DateTimeField(_("finished at"), null=True, blank=True)

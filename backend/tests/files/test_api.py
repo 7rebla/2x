@@ -32,14 +32,7 @@ from twox.files.models import Document, DocumentKind, DocumentVersion
 from twox.files.services import add_version, create_document
 from twox.files.uploads import MULTIPART_OVERHEAD_BYTES
 from twox.ingest import pipeline
-from twox.ingest.docling import ConversionErrorItem
-from twox.ingest.models import (
-    PARTIAL_DETAIL_PREFIX,
-    IngestErrorCode,
-    IngestJob,
-    IngestStatus,
-    IngestStep,
-)
+from twox.ingest.models import IngestErrorCode, IngestJob, IngestStatus, IngestStep
 
 if TYPE_CHECKING:
     # Exists in the type stubs only; annotations are not evaluated at runtime.
@@ -187,6 +180,7 @@ INGEST_FIELDS = {
     "error_code",
     "error_detail",
     "partly_converted",
+    "conversion_error_count",
     "section_count",
     "page_count",
     "created_at",
@@ -261,31 +255,69 @@ def test_device_list_shows_the_job_of_the_newest_version(media_root: Path) -> No
     # The cleaned detail is for every role (E-57).
     assert ingest["error_detail"] == "docling-serve refused the connection"
     assert ingest["partly_converted"] is False
+    assert ingest["conversion_error_count"] == 0
 
 
-def test_partial_conversion_is_marked(media_root: Path) -> None:
-    created = upload(client_for("manage"), make_device(), b"edition 1").json()
+def uploaded_version(kind: str) -> tuple[APIClient, str, DocumentVersion]:
+    """A client of ``kind``, the detail URL and the version of a newly uploaded document."""
+    manager = client_for("manage")
+    created = upload(manager, make_device(), b"edition 1").json()
     version = DocumentVersion.objects.get(pk=created["version"]["id"])
+    client = manager if kind == "manage" else client_for(kind)
+    return client, document_url(created["document"]["id"]), version
+
+
+@pytest.mark.parametrize("kind", ["read", "manage"])
+def test_partial_conversion_is_marked(media_root: Path, kind: str) -> None:
+    client, url, version = uploaded_version(kind)
     # The note exactly as the ingest flow writes it after partial_success (046).
-    note = pipeline._partial_detail(
-        (
-            ConversionErrorItem(
-                component_type="model", module_name="ocr", error_message="x", page_no=3
-            ),
-        )
-    )
-    IngestJob.objects.create(document_version=version, status=IngestStatus.DONE, error_detail=note)
-
-    ingest = (
-        client_for("read")
-        .get(document_url(created["document"]["id"]))
-        .json()["latest_version"]["ingest"]
+    note = pipeline.partial_detail(2, [3, 7])
+    IngestJob.objects.create(
+        document_version=version,
+        status=IngestStatus.DONE,
+        error_detail=note,
+        conversion_error_count=2,
     )
 
-    assert note.startswith(PARTIAL_DETAIL_PREFIX)
+    ingest = client.get(url).json()["latest_version"]["ingest"]
+
     assert ingest["status"] == "done"
-    assert ingest["partly_converted"] is True
+    assert (ingest["partly_converted"], ingest["conversion_error_count"]) == (True, 2)
     assert ingest["error_detail"] == note
+
+
+@pytest.mark.parametrize("kind", ["read", "manage"])
+def test_partial_conversion_stays_marked_when_the_embedding_failed(
+    media_root: Path, kind: str
+) -> None:
+    # E-62: the error text of the embedding replaces the note; the field stays.
+    client, url, version = uploaded_version(kind)
+    IngestJob.objects.create(
+        document_version=version,
+        status=IngestStatus.FAILED,
+        step=IngestStep.EMBED,
+        error_code=IngestErrorCode.EMBEDDING_UNAVAILABLE,
+        error_detail="cannot reach the model service (gave up after 5 retries)",
+        conversion_error_count=1,
+    )
+
+    ingest = client.get(url).json()["latest_version"]["ingest"]
+
+    assert (ingest["status"], ingest["error_code"]) == ("failed", "embedding_unavailable")
+    assert (ingest["partly_converted"], ingest["conversion_error_count"]) == (True, 1)
+
+
+def test_the_text_alone_no_longer_marks_a_partial_conversion(media_root: Path) -> None:
+    client, url, version = uploaded_version("read")
+    IngestJob.objects.create(
+        document_version=version,
+        status=IngestStatus.DONE,
+        error_detail=pipeline.partial_detail(4),
+    )
+
+    ingest = client.get(url).json()["latest_version"]["ingest"]
+
+    assert (ingest["partly_converted"], ingest["conversion_error_count"]) == (False, 0)
 
 
 def test_job_after_upload_shows_in_the_detail(
