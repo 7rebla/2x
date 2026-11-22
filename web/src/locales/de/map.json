@@ -3,7 +3,12 @@
   "listLink": "Struktur als Liste ansehen",
   "empty": "Noch keine Struktur erfasst.",
   "emptyLink": "Zur Struktur",
-  "legend": "Gestrichelte Linie: Die Adresse des Geräts liegt in diesem Netz (IPv4 nach /24, IPv6 nach /64). Andere Verbindungen werden nicht gezeichnet.",
+  "legend": {
+    "label": "Legende",
+    "dashed": "Gestrichelte Linie:",
+    "inNetwork": "Die Adresse des Geräts liegt in diesem Netz",
+    "detail": "IPv4 nach /24, IPv6 nach /64. Andere Verbindungen werden nicht gezeichnet."
+  },
   "label": "Karte der Standorte, Bereiche, Anlagen, Geräte und Netze",
   "kind": {
     "site": "Standort",

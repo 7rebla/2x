@@ -40,9 +40,11 @@ export function SelftestPage(): ReactElement {
 
   const loading = state.kind === "loading";
 
+  // Heading, button, introduction and messages stay in a narrow column of the page grid (E-65 point 1);
+  // only the result cards spread out, in two or three columns on wide screens.
   return (
-    <section className="w-full max-w-xl space-y-4" aria-busy={loading}>
-      <div className="flex items-center justify-between gap-4">
+    <section data-testid="selftest-page" className="w-full space-y-4" aria-busy={loading}>
+      <div data-testid="selftest-head" className="flex max-w-xl items-center justify-between gap-4">
         <AnimatedHeading text={t("heading")} />
         <Button type="button" variant="primary" icon="retry" onClick={recheck} loading={loading}>
           {loading ? t("checking") : t("recheck")}
@@ -80,7 +82,7 @@ function SelftestBody({ state }: { state: PageState }): ReactElement {
       return <ApiError message={t("unexpectedError")} />;
     case "answered":
       return (
-        <div className="space-y-4">
+        <div data-testid="selftest-cards" className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
           <DatabaseCard check={state.selftest.database} />
           <WorkerCard check={state.selftest.worker} />
           <AiCard check={state.selftest.ai} />

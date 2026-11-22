@@ -39,6 +39,34 @@ describe("self-test page with a failing loader", () => {
   });
 });
 
+describe("self-test layout in the page grid (work order 080)", () => {
+  it("keeps heading and button in a narrow column and sets the cards in two or three columns on wide screens", async () => {
+    loadSelftestMock.mockResolvedValueOnce({
+      kind: "answered",
+      selftest: {
+        database: { ok: true, server_version: "18.7", error: "" },
+        worker: { ok: true, result: "pong", error: "", duration_ms: 12 },
+        ai: { enabled: false },
+      },
+    });
+    render(<SelftestPage />);
+
+    const cards = await screen.findByTestId("selftest-cards");
+    const classes = cards.className.split(/\s+/);
+    expect(classes).toEqual(expect.arrayContaining(["grid", "lg:grid-cols-2", "xl:grid-cols-3"]));
+    // One column below 1024 px: no column count without a breakpoint.
+    expect(classes.filter((name) => name.startsWith("grid-cols-"))).toEqual([]);
+    expect([...cards.children].map((card) => card.getAttribute("data-testid"))).toEqual([
+      "database-check",
+      "worker-check",
+      "ai-check",
+    ]);
+    expect(screen.getByTestId("selftest-head").className.split(/\s+/)).toContain("max-w-xl");
+    // The page itself takes the whole grid; only the head stays narrow.
+    expect(screen.getByTestId("selftest-page").className).not.toMatch(/max-w-/);
+  });
+});
+
 describe("self-test status with icons (work order 071)", () => {
   it("shows each status as icon and text, never by colour alone", async () => {
     loadSelftestMock.mockResolvedValueOnce({

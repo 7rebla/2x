@@ -41,6 +41,14 @@ describe("settings page", () => {
     expect(screen.getByTestId("user-menu-button").getAttribute("aria-expanded")).toBe("false");
   });
 
+  it("stays a narrow column inside the page grid (work order 080)", async () => {
+    fakeApi(manager);
+    renderApp("/settings");
+    const page = await openSettings();
+    expect(page.className.split(/\s+/).filter((name) => name.includes("max-w-"))).toEqual(["max-w-2xl"]);
+    expect(page.parentElement).toBe(screen.getByRole("main"));
+  });
+
   it("offers no settings link to an account without a role", async () => {
     fakeApi(roleless);
     renderApp("/");

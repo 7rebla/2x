@@ -18,8 +18,9 @@ const legendClass = "px-1 font-semibold";
 export function SettingsPage(): ReactElement {
   const { t } = useTranslation(["settings", "nav"]);
   usePageTitle(t("nav:settings"));
+  // A form page: a narrow column (42rem) at the left edge of the page grid (E-65 point 1, work order 080).
   return (
-    <section data-testid="settings-page" className="max-w-2xl space-y-6">
+    <section data-testid="settings-page" className="w-full max-w-2xl space-y-6">
       <AnimatedHeading text={t("nav:settings")} />
       <p className="text-fg-muted">{t("settings:intro")}</p>
       <AppearanceSetting />

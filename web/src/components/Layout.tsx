@@ -13,6 +13,19 @@ import { UserMenu } from "./UserMenu.tsx";
 export const MAIN_CONTENT_ID = "inhalt";
 
 /**
+ * The one page grid (E-65 point 1, work order 080): header and page content
+ * are equally wide (at most 80rem, 1280 px) with the same side padding, so the
+ * left edges of brand mark and page heading are on one line at every width.
+ */
+export const PAGE_GRID = "mx-auto w-full max-w-7xl px-4";
+
+/**
+ * Paragraphs directly inside a page's section (introductions and other running
+ * text) are held to a readable line length of about 65 characters.
+ */
+export const PAGE_PROSE = "[&>section>p]:max-w-prose";
+
+/**
  * After a change of page, moves the focus to the heading (`h1`) of the new
  * page (work order 078, WCAG 2.4.3), so keyboard and screen reader users start
  * reading there instead of staying in the navigation. Not on the first load:
@@ -118,12 +131,11 @@ export function Layout(): ReactElement {
           One line in every language and at every width: the navigation never
           wraps; below 1280 px (xl) its entries shrink to their icons (the text
           stays as accessible name and tooltip), and if even that does not
-          fit, the navigation scrolls on its own instead of the page. From
-          1280 px the header grows wider than the page content (max-w-7xl
-          instead of max-w-5xl), so seven entries and more show their texts
-          (work order 055).
+          fit, the navigation scrolls on its own instead of the page. Header
+          and page content share one grid (PAGE_GRID, E-65), so the brand mark
+          and the page heading start on the same line at every width.
         */}
-        <div className="mx-auto flex w-full max-w-5xl items-center gap-x-4 px-4 py-4 xl:max-w-7xl">
+        <div data-testid="header-grid" className={`${PAGE_GRID} flex items-center gap-x-4 py-4`}>
           <div className="text-3xl font-semibold tracking-tight">
             <BrandMark typing={typingRunFor(session.status)} />
           </div>
@@ -156,12 +168,16 @@ export function Layout(): ReactElement {
           </div>
         </div>
       </header>
-      {/* Focused by the skip link and after a change of page (its h1); no ring around content that is not a control. */}
+      {/*
+        Focused by the skip link and after a change of page (its h1); no ring around content that is not a control.
+        Running text directly in a page (its introduction) keeps a readable line length (max-w-prose); tables,
+        cards and the map take the whole grid.
+      */}
       <main
         ref={main}
         id={MAIN_CONTENT_ID}
         tabIndex={-1}
-        className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-8 focus:outline-none [&_h1:focus]:outline-none"
+        className={`${PAGE_GRID} flex-1 space-y-4 py-8 focus:outline-none [&_h1:focus]:outline-none ${PAGE_PROSE}`}
       >
         {user !== null && user.role === null ? (
           <p role="status" data-testid="no-role" className="rounded border border-warning-line bg-warning-soft p-4 text-warning">

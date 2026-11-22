@@ -12,7 +12,7 @@ import { fakeStructureApi } from "../pages/structure/testData.ts";
 import { fakeApi, manager, reader } from "../test/fakeApi.ts";
 import { openUserMenu, renderApp } from "../test/renderApp.tsx";
 import { fakeFilesApi } from "./files/testData.ts";
-import { MAIN_CONTENT_ID } from "./Layout.tsx";
+import { MAIN_CONTENT_ID, PAGE_GRID, PAGE_PROSE } from "./Layout.tsx";
 
 afterEach(async () => {
   cleanup();
@@ -177,6 +177,48 @@ describe("skip link (work order 078)", () => {
     renderApp("/login");
     await screen.findByTestId("login-form");
     expect(tabStops()[0]).toBe(screen.getByRole("link", { name: "Zum Inhalt" }));
+  });
+});
+
+describe("page grid (work order 080)", () => {
+  /** The classes of an element as a set (order does not matter). */
+  function classesOf(element: Element): Set<string> {
+    return new Set(element.className.split(/\s+/).filter((name) => name !== ""));
+  }
+
+  it("gives header and page content the same width and side padding, signed in and before sign-in", async () => {
+    for (const user of [manager, null]) {
+      fakeApi(user);
+      renderApp(user === null ? "/login" : "/");
+      await screen.findByRole("heading", { level: 1 });
+      const header = screen.getByTestId("header-grid");
+      const main = screen.getByRole("main");
+      for (const name of PAGE_GRID.split(" ")) {
+        expect(classesOf(header).has(name), `header ${name}`).toBe(true);
+        expect(classesOf(main).has(name), `main ${name}`).toBe(true);
+      }
+      expect(PAGE_GRID).toContain("max-w-7xl");
+      // No second, narrower width on either of them, also not from a breakpoint (before: max-w-5xl, xl:max-w-7xl).
+      // The prose rule of main applies to paragraphs inside, not to main itself.
+      for (const element of [header, main]) {
+        expect([...classesOf(element)].filter((name) => /^(?:[a-z0-9-]+:)*max-w-/.test(name))).toEqual(["max-w-7xl"]);
+      }
+      cleanup();
+    }
+  });
+
+  it("holds the introduction of a page to a readable line length", async () => {
+    fakeApi(manager);
+    renderApp("/audit");
+    await screen.findByRole("heading", { level: 1, name: "Change log" });
+    const main = screen.getByRole("main");
+    expect(classesOf(main).has(PAGE_PROSE)).toBe(true);
+    expect(PAGE_PROSE).toBe("[&>section>p]:max-w-prose");
+    // The rule reaches the introduction: a paragraph directly inside the page's section.
+    const intro = screen.getByText("Who changed what and when, newest first.");
+    expect(intro.tagName).toBe("P");
+    expect(intro.parentElement?.tagName).toBe("SECTION");
+    expect(intro.parentElement?.parentElement).toBe(main);
   });
 });
 

@@ -43,8 +43,15 @@ loaded when it is opened (work order 062): `routes.tsx` wraps it with `lazyPage(
 - `../components/Layout.tsx` draws the header (name, navigation, user menu) around every page, always on one line:
   every navigation entry has an icon (`../navigation.ts`, `../icons/README.md`); below 1280 px (`xl`) only the icons show,
   with the text as accessible name and tooltip, and a navigation that is still too wide scrolls on its own. From
-  1280 px the header is wider than the page content (`max-w-7xl`), so the seven entries of M2 show their texts in
-  German and English on one line (work order 055; `../../e2e/navigation.spec.ts` checks 1024 and 1280 px).
+  1280 px the seven entries of M2 show their texts in German and English on one line (work order 055;
+  `../../e2e/navigation.spec.ts` checks 1024 and 1280 px).
+- Page grid (work order 080, E-65 point 1): header and page content share one grid, `PAGE_GRID` in
+  `../components/Layout.tsx` (`max-w-7xl`, at most 1280 px, `px-4`), so the brand mark and the page heading start on
+  the same line at every width (`../../e2e/layout.spec.ts` measures 375, 1024 and 1600 px). Tables, cards and the map
+  take the whole grid. Paragraphs directly inside a page's `<section>` (the introduction) are held to `max-w-prose` by
+  `PAGE_PROSE` on `<main>`; a page needs no class of its own for that. Form pages keep a narrow column at the left edge
+  of the grid: settings `max-w-2xl`; the self-test keeps heading and button at `max-w-xl` and sets its result cards in
+  one column, two from 1024 px (`lg`) and three from 1280 px (`xl`). The sign-in page follows with work order 086.
   The user menu (`../components/UserMenu.tsx`) is a button with the user name; it opens a panel with the role,
   the link to the settings, the language switch and "Sign out". Before sign-in the language switch stands in the header.
   An account without a role sees a hint above the page.
@@ -304,6 +311,15 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 - A click or Enter on a device opens `/devices/:id`. Selected, focused and found devices are highlighted with their
   network line. The search (name, key, IP address) marks matches and fits the view to them. The network nodes can be
   hidden. The React Flow attribution link stays visible (the project asks to remove it only with a Pro subscription).
+- Size and zoom (work order 080): the map takes the whole width of the page grid and reaches down to the bottom of the
+  window (`useRestHeight`: window height minus the map's place in the page minus the 32 px padding of `main`, measured
+  again on resize; at least 28rem as before, 70vh until measured). Fitting the view, on opening and with "Fit view", keeps the
+  zoom between 0.6 and 1.25 (`FIT_VIEW_OPTIONS`), so the 12 px texts of the nodes never shrink below about 7 px; a
+  larger structure is then reached by panning, the overview or zooming out by hand. The search still fits all its
+  matches, at any zoom.
+- The legend is a small box in the top right corner of the map (React Flow `Panel`, `role="note"`, named "Legend"):
+  a sample of the dashed line with its meaning, and the network sizes (below 640 px for screen readers only, so the
+  narrow map stays free). The sample is decorative; screen readers hear "Dashed line:" instead.
 - A device node shows the icon of its class with the class as tooltip; the label of the node names the class too.
 - Node components live in `map/nodes.tsx`; every text from the data is rendered as text. Under jsdom the tests stub
   `ResizeObserver`, `DOMMatrixReadOnly`, `offsetWidth`/`offsetHeight` and `getBBox` (`map/MapPage.test.tsx`).

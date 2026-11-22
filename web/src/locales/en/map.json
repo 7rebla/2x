@@ -3,7 +3,12 @@
   "listLink": "Show the structure as a list",
   "empty": "No structure recorded yet.",
   "emptyLink": "Go to the structure",
-  "legend": "Dashed line: the device's address lies in this network (IPv4 by /24, IPv6 by /64). No other connections are drawn.",
+  "legend": {
+    "label": "Legend",
+    "dashed": "Dashed line:",
+    "inNetwork": "the device's address lies in this network",
+    "detail": "IPv4 by /24, IPv6 by /64. No other connections are drawn."
+  },
   "label": "Map of sites, areas, plants, devices and networks",
   "kind": {
     "site": "Site",
