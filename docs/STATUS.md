@@ -63,7 +63,7 @@ Nichts davon hält die laufende Arbeit auf.
 7. **Startunterlage berichtigen (Auftrag 102, Frage 5):** Laut Recherche haben fünf statt vier Module eine S7-1200 (zusätzlich DPS). Die Leitstelle ändert die Startunterlage nicht ohne a7.
 8. ~~Gebündelte Bibliotheken in psycopg-binary~~ – bestätigt mit E-28.
 9. ~~Siemens: Klausel gegen Text- und Data-Mining~~ – entschieden mit E-27: nur lokal, von Hand geladen.
-10. **Siemens: welche Ausgabe (Auftrag 103, Frage 6).** Aktuell ist V4.7 (12/2024, nur im Browser abrufbar); V4.6 (11/2022) passt vermutlich besser zu TIA Portal V18, das ist nicht bestätigt. Empfehlung und Arbeitsstand: beide führen, V4.6 maßgeblich, V4.7 als Verweis; beides ohne automatischen Abruf.
+. **Eigenes Feld für Teilumwandlungen (Aufträge 048, 061; Stufe C, Datenmodell).** Heute wird eine Teilumwandlung am Textpräfix `converted with ` in `error_detail` erkannt. Scheitert danach das Einbetten, überschreibt die Fehlermeldung den Hinweis, und die Oberfläche zeigt die Umwandlung als vollständig. Optionen: (a) Feld `partial_errors` (Zahl) am Einlese-Auftrag, Migration, Anzeige darüber – Empfehlung; (b) so lassen, Lücke dokumentieren. Blockiert nichts.
 
 ## Offene Abnahmebedingungen M0
 
@@ -179,7 +179,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 050 | Vektorsuche und Kombination | B | 044, 047 | erledigt |
 | 051 | Einlese-API | C | 049 | erledigt |
 | 052 | Such-API | C | 050, 051 | in Arbeit |
-| 053 | Oberfläche: Einlese-Status | B | 051 | in Arbeit |
+| 053 | Oberfläche: Einlese-Status | B | 051 | erledigt |
 | 054 | Oberfläche: Suchseite | B | 052 | offen |
 | 055 | Oberfläche: Einlese-Übersicht | B | 051, 053, 054 | offen |
 | 056 | Suchprobe: Befehl evaluate_search | B | 050 | erledigt |
@@ -187,7 +187,8 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 058 | Abnahmetests M2 | B | 052–055 | offen |
 | 059 | README und ARCHITECTURE für M2 | B | 055, 056, 058 | offen |
 | 060 | Abnahmelauf M2 (Leitstelle) | C | 057, 058, 059 | offen |
-| 061 | Einbettungsaufträge im Feld `ingest` | B | 048, 051 | in Arbeit |
+| 061 | Einbettungsaufträge im Feld `ingest` | B | 048, 051 | erledigt |
+| 062 | Seiten bei Bedarf nachladen (Bündelgröße) | B | 054, 055 | offen |
 - 073: Feld `device_class` (plc, controller, computer, router, firewall, robot, other) in Modell, API, Admin, Protokoll und Formular; CSV mit optionaler 14. Spalte; Testfabrik: 5 SPS, 4 Controller, je 1 Rechner, Router, Roboter, Firewall. Die Geräteseite zeigt den Typ noch nur im Bearbeiten-Formular (für 074).
 - 040: Erweiterungen `vector` und `pg_trgm` per Migration `ingest.0001_extensions`. Für M6 (Betrieb ohne Superuser): `vector` ist nicht „trusted“ – ein Administrator legt die Erweiterung vor der ersten Migration an; die Rückwärtsmigration entfernt sie und braucht dann ebenfalls einen Superuser.
 - Für M3 vorgemerkt (22.11.2026): Chat-Assistent als animierte Pixelfigur ist von a7 ausgewählt (Vorlage lokal und ungetrackt unter `docs/design/bildmarke/assistent/`). Einbau als eigener M3-Auftrag nach Freigabe; erscheint nur bei eingeschalteten KI-Funktionen (E-59). Der Name der Figur kommt wie der Produktname nicht in getrackte Dateien, bis a7 beide veröffentlicht; vorher Registerprüfung.
@@ -206,4 +207,6 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 - 049: Einlesen startet nach dem Upload (`transaction.on_commit`, nur Art „Dokument“), Formatprüfung nach Endung und Inhalt (`ingest/formats.py`), Senden mit `ignore_result` (Upload hängt nicht, wenn Valkey fehlt; Auftrag bleibt `queued`), Befehl `ingest_versions` (`--missing`/`--all`/`--failed`/`--stuck`, Probelauf als Vorgabe, `--commit --user`). Kriterium 6 hat die Leitstelle in der Testumgebung über die Oberfläche nachgeholt: BetrSichV an „SPS Bohrstation“ hochgeladen, ohne weiteren Befehl `done`, 60 Seiten, 140 Abschnitte, 292 s. Restrisiko Leitplanke 5: Konfigurationen als `.md` oder PDF würden eingelesen (Doku in 059).
 - 048: Schritt `embed` (Stapel 16, Zeitbudget gegen Socket-Grenze, Übernahme bei gleichem Inhalt, Überschriften und Modell), Befehl `embed_sections` (`--missing`/`--all`), Systemprüfung E001 (KI an) / W001 (KI aus), Selbsttest-Teil `ai` mit neutraler Karte bei „aus“. Gemessen: 140 Abschnitte in 2,8 s (Modell geladen), erster Lauf 7,3 s. Neuzustellungen zählen als Versuch; Teilergebnisse werden nicht übernommen. Offen für a7 (nicht blockierend): eigener Feldwert statt Textpräfix für Teilergebnisse wäre robuster (Stufe C, Datenmodell).
 - 051: `GET /api/v1/ingest-jobs/` (read; Filter status/device/document/version, 50 je Seite), `POST /api/v1/document-versions/{id}/ingest/` (manage; 202, 409 `ingest_active`, 400 `configuration_not_ingested`), Feld `ingest` an jeder Version (eine Zusatzabfrage per `DISTINCT ON`), `requested_by` nur für manage (E-57), zusätzlich `partly_converted`. Schema-Enum `StatusEnum` heißt jetzt `HealthStatusEnum`. Folgeauftrag 061: Einbettungsaufträge aus `embed_sections` als neuester Auftrag verfälschen Seitenzahl und Hinweis.
+- 061: Einbettungsaufträge aus `embed_sections` übernehmen Seitenzahl und Teilumwandlungs-Hinweis der neuesten fertigen Umwandlung (auch `failed` im Schritt `embed`). `PARTIAL_DETAIL_PREFIX` steht nur noch in `ingest/models.py`. Grenze: Scheitert das Einbetten, überschreibt `_fail` den Hinweis – nur mit eigenem Feld lösbar (siehe „Wartet auf a7“).
+- 053: Spalte „Einlesen“ auf der Dateiseite und Abzeichen auf der Geräteseite (In Warteschlange, Wird eingelesen: Schritt, Eingelesen mit Seiten und Abschnitten, Fehler mit Meldung je Fehlerart, Übersprungen, Nicht eingelesen), Abfrage alle 5 s nur bei laufendem Auftrag, „Erneut einlesen“ nur für Verwalter. Hinweis: Statuswechsel werden Screenreadern nicht angesagt (für 058/059 vormerken). Bündelwarnung bestand schon vorher → 062.
 - 074: Acht eigene Icons (Anlage, Gerät, sechs Gerätetypen) unter `web/src/icons/industrial/`, Zuordnung nur in `deviceClass.ts` (Rückfall: generisches Gerät). Typ als Text im Baum, als Feld „Gerätetyp“ auf der Geräteseite, als Tooltip auf der Karte. Notwendig mitgeändert: `graph.ts`, `MapPage.tsx`, `map.json`. Nicht von Hand bei 16 px gesichtet.

@@ -1,6 +1,6 @@
 # Auftrag 053 – Oberfläche: Einlese-Status auf Datei- und Geräteseite
 
-Meilenstein: M2 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 

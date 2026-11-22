@@ -1,6 +1,6 @@
 # Auftrag 061 – Einbettungsaufträge im Feld `ingest`
 
-Meilenstein: M2 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 048 und 051 sind nach `main` zusammengeführt.
 
