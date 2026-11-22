@@ -62,6 +62,8 @@ Voraussetzung: 052 ist nach `main` zusammengeführt (Endpunkt im erzeugten Clien
 - Die CI hat nur das Testkonto `e2e-manager`; die Rolle `read` deshalb in Vitest.
 - `docs/DECISIONS.md` und `docs/STATUS.md` ändert nur die Leitstelle. Kein Push (E-14).
 
+- **Nachtrag der Leitstelle (Prüfung 050):** Die Such-API (052) unterscheidet „KI nicht aktiviert“ von „Sprachmodell nicht erreichbar“. Bei „nicht aktiviert“ zeigt die Seite keinen Fehlerhinweis, höchstens einen neutralen Text (E-59); nur bei „nicht erreichbar“ den Hinweis „Nur Stichwortsuche – Sprachmodell nicht erreichbar“.
+
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
 **Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
