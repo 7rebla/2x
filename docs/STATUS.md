@@ -70,7 +70,7 @@ Nichts davon hält die laufende Arbeit auf.
 14. ~~Abnahmelauf 060 – Befunde zur Suchgüte~~ – entschieden mit E-61 (Auftrag 067, danach 060 wiederholen). Frühere Beschreibung: Alles andere ist erfüllt (Handbücher eingelesen, Fehler sichtbar). (1) IP-Probe: Die richtige Stelle steht auf Rang 2 – in der englischen APS-Dokumentation (gleiche Seite 38); Probe und Test zählen nur die deutsche (Rang 4). Empfehlung: beide Sprachfassungen als richtige Fundstelle werten (Probe `m2.json` und Abnahmetest ergänzen). (2) Prüffrage 9: Vektor Rang 1, zusammen Rang 12 (verlangt: unter den ersten 5). Empfehlung: Folgeauftrag „bei Fragen keine eigene exakte Liste“ (Option B aus 063), danach 060 wiederholen. Alternative: Grenze für Fragen im Abnahmetest auf 15 lockern – nicht empfohlen.
 15. ~~Swap~~ – entschieden mit E-62 (Auftrag 075). Frühere Beschreibung: **Swap für Docling (Auftrag 066; Stufe C).** `mem_limit: 8g` begrenzt nur den Arbeitsspeicher; Docker erlaubt zusätzlich Swap (bis zur gleichen Menge, hier begrenzt durch 4 GiB Swap der Docker-VM). Optionen: (a) so lassen; (b) `memswap_limit` auf denselben Wert setzen, dann ist bei 8 GiB wirklich Schluss – Empfehlung (Swap verlangsamt die Umwandlung stark, die Variable soll die ganze Grenze bedeuten).
 16. ~~Abnahme M2~~ – abgenommen mit E-67. Frühere Beschreibung: Wiederholung von 060 nach 067: Handbücher eingelesen, Fehler sichtbar, IP-Adresse auf Rang 2, Prüffrage 9 auf Rang 1 – das ROADMAP-Kriterium ist erfüllt. Der Abnahmetest scheitert nur noch an Prüffrage 10 in seiner eigenen Formulierung (Rang 10 statt ≤ 5; in der Formulierung der Probe Rang 1). Optionen: (a) M2 abnehmen, Prüffrage 10 als Thema für M3 (Antwort mit Quellen) vormerken und den Abnahmetest auf das ROADMAP-Kriterium (eine sinngemäße Frage) zurückführen – Empfehlung; (b) vor der Abnahme die Suche weiter verbessern (z. B. Abschnittsüberschriften stärker gewichten, Rangfolge mit einem Reranker – neue Abhängigkeit) und 060 erneut laufen lassen.
-17. **Abnahme D1 (Gestaltung).** Alle Aufträge 070–094 sind erledigt und auf `main`; Testumgebung 2x zeigt den Stand. Empfehlung: abnehmen.
+17. ~~Abnahme D1~~ – abgenommen mit E-68. Frühere Beschreibung: **Abnahme D1 (Gestaltung).** Alle Aufträge 070–094 sind erledigt und auf `main`; Testumgebung 2x zeigt den Stand. Empfehlung: abnehmen.
 18. **Grenze Tabelle/Karten (081).** Zwischen 768 und etwa 900 px scrollen Protokoll, Einlesen und Dateien noch im eigenen Kasten (die Seite nicht). Optionen: (a) bei 768 px lassen, wie E-65 sagt – Empfehlung; (b) Grenze auf 1024 px (eine Zeile, `WIDE_TABLE_QUERY`), dann Karten bis 1023 px.
 
 ## Offene Abnahmebedingungen M0
@@ -156,7 +156,7 @@ Hinweise aus Welle 1:
 
 **M1 ist abgenommen (E-49, 22.11.2026).**
 
-## Gestaltung D1 (vorbereitet 22.11.2026)
+## Gestaltung D1 (vorbereitet 22.11.2026, abgenommen 22.11.2026, E-68)
 
 Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen lokal und ungetrackt unter `docs/design/bildmarke/` (in `.gitignore`); dort vorkommende Produktnamen kommen nicht ins Repository.
 
@@ -188,7 +188,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 094 | Beschriftung der Netzlinien auf der Landkarte nach E-65 | B | 084 | erledigt |
 
 - 078/079/083/085/087/088 zusammengeführt am 22.11.2026. Lücke aus 078: Die Seite „keine Berechtigung“ (RequireRole) hat weder Seitentitel noch h1 – Auftrag 091.
-- Alle Aufträge 070–094 erledigt. D1 ist bereit zur Abnahme durch a7.
+- Alle Aufträge 070–094 erledigt. D1 abgenommen am 22.11.2026 (E-68).
 - 080: Hinweise aus der Prüfung – der Warnkasten der Seite „keine Berechtigung“ (091) ist jetzt auf Lesebreite begrenzt (gewollt gelassen). Gesehen vom Bearbeiter: Übersichtskarte (MiniMap) bei vielen Knoten fast leer und bei 375 px groß; Einpassen großer Strukturen zeigt die Mitte – Kandidaten für einen späteren Auftrag.
 - 081: Kartenansicht unter 768 px (E-65). Zwischen 768 und etwa 900 px scrollen Protokoll, Einlesen und Dateien noch im eigenen Kasten (Seite scrollt nicht); Grenze ließe sich mit `WIDE_TABLE_QUERY` auf 1024 px setzen – a7 gefragt, bis dahin 768 px.
 - 086: Name über der Karte steht still und ist für Screenreader verborgen (nur der Kopf tippt, E-64); `BrandMark` hat dafür `link={false}`.
