@@ -72,7 +72,7 @@ Pure CSS in `index.css`; only `opacity`, `transform`, `background-position` and 
 | --- | --- | --- |
 | A, words fade in (E-65, work order 085) | the first page heading of a browser session; every later heading stands there at once | `AnimatedHeading` (`components/TextMotion.tsx`) |
 | B, line mask | device header, file title | `MaskedTitle` |
-| C, navigation line | main navigation, settings link | class `nav-link` around an icon and a `nav-label` with `data-label` (reserves the width of the bold label); the current entry also gets the soft accent background |
+| C, navigation line | main navigation, settings link | class `nav-link` around an icon and a `nav-label` with `data-label` (reserves the width of the bold label); the current entry also gets the soft accent background. From 768 to 1279 px the entry stands as a column, icon above the short text `nav-short` (drawn from `data-short`, bold width reserved the same way, work order 082) |
 | D, loading shimmer | `Loading`, self-test "checking" | `LoadingText` |
 | E, typing (E-64, work order 076) | the name next to the brand mark in the header (not the one above the sign-in card) | `TypedText` (via `BrandMark` with `typing`, set in `Layout.tsx`) |
 

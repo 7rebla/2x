@@ -1,5 +1,6 @@
 {
   "label": "Main navigation",
+  "menu": "Menu",
   "structure": "Structure",
   "map": "Map",
   "search": "Search",
@@ -10,5 +11,14 @@
   "audit": "Change log",
   "login": "Sign in",
   "selftest": "Self-test",
-  "settings": "Settings"
+  "settings": "Settings",
+  "short": {
+    "structure": "Structure",
+    "map": "Map",
+    "search": "Search",
+    "ingest": "Ingestion",
+    "import": "Import",
+    "audit": "Log",
+    "selftest": "Self-test"
+  }
 }

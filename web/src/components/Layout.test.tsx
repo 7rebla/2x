@@ -6,13 +6,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { changeLanguage } from "../i18n.ts";
 import { iconNames } from "../icons/names.ts";
+import deNav from "../locales/de/nav.json";
 import enNav from "../locales/en/nav.json";
 import { navigation } from "../navigation.ts";
 import { fakeStructureApi } from "../pages/structure/testData.ts";
 import { fakeApi, manager, reader } from "../test/fakeApi.ts";
+import { fakeMatchMedia } from "../test/fakeMatchMedia.ts";
 import { openUserMenu, renderApp } from "../test/renderApp.tsx";
 import { fakeFilesApi } from "./files/testData.ts";
-import { MAIN_CONTENT_ID, PAGE_GRID, PAGE_PROSE } from "./Layout.tsx";
+import { MAIN_CONTENT_ID, NARROW_QUERY, PAGE_GRID, PAGE_PROSE } from "./Layout.tsx";
 
 afterEach(async () => {
   cleanup();
@@ -51,9 +53,56 @@ describe("navigation with icons", () => {
       const text = link.querySelector(".nav-label");
       expect(text?.textContent).toBe(label);
       expect(text?.getAttribute("data-label")).toBe(label);
-      // Below 1280 px only the icon is visible (the text stays for screen readers, work order 055).
+      // Below 1280 px the text is for screen readers only (work order 055) ...
       expect(text?.classList.contains("max-xl:sr-only")).toBe(true);
+      // ... and from 768 to 1279 px the short text shows below the icon, hidden from assistive technology (work order 082).
+      const short = link.querySelector(".nav-short");
+      expect(short?.getAttribute("data-short")).toBe(enNav.short[entry?.textKey ?? "structure"]);
+      expect(short?.getAttribute("aria-hidden")).toBe("true");
+      expect(short?.textContent).toBe("");
+      // 13 px on a 16 px line (E-65 point 5), so the entry stays 42 px high.
+      expect(short?.classList.contains("text-[13px]")).toBe(true);
+      expect(short?.classList.contains("leading-4")).toBe(true);
+      expect(short?.classList.contains("xl:hidden")).toBe(true);
+      expect(link.classList.contains("max-xl:flex-col")).toBe(true);
+      // The link's text stays the full text.
+      expect(link.textContent).toBe(label);
     });
+  });
+
+  it("has a short text in German and English for every entry, contained in its full text", () => {
+    for (const [full, short] of [
+      [enNav, enNav.short],
+      [deNav, deNav.short],
+    ] as const) {
+      expect(Object.keys(short).sort()).toEqual(navigation.map((entry) => entry.textKey).sort());
+      for (const entry of navigation) {
+        const text = short[entry.textKey];
+        // Label in name (WCAG 2.5.3): what shows is part of the accessible name.
+        expect(full[entry.textKey].toLowerCase()).toContain(text.toLowerCase());
+        expect(text.length).toBeLessThanOrEqual(10);
+      }
+    }
+  });
+
+  it("shows the German short texts after a change of language", async () => {
+    fakeApi(manager);
+    renderApp("/");
+    await screen.findByTestId("user-name");
+    await act(async () => {
+      await changeLanguage("de");
+    });
+    const nav = screen.getByRole("navigation", { name: deNav.label });
+    expect([...nav.querySelectorAll(".nav-short")].map((element) => element.getAttribute("data-short"))).toEqual([
+      "Struktur",
+      "Karte",
+      "Suche",
+      "Einlesen",
+      "Import",
+      "Protokoll",
+      "Selbsttest",
+    ]);
+    expect(within(nav).getByRole("link", { name: "Änderungsprotokoll" }).getAttribute("title")).toBe("Änderungsprotokoll");
   });
 
   it("marks the current entry without changing its icon", async () => {
@@ -128,6 +177,183 @@ describe("user menu", () => {
     });
     expect(await screen.findByRole("navigation", { name: "Hauptnavigation" })).toBeDefined();
     expect(screen.getByRole("button", { name: `Benutzermenü: ${manager.username}` })).toBeDefined();
+  });
+});
+
+describe("menu below 768 px (work order 082)", () => {
+  function menuButton(): HTMLElement {
+    return screen.getByTestId("navigation-menu-button");
+  }
+
+  async function renderNarrow(path = "/", user = manager): Promise<ReturnType<typeof renderApp>> {
+    fakeMatchMedia({ [NARROW_QUERY]: true });
+    fakeApi(user);
+    const result = renderApp(path);
+    await screen.findByTestId("navigation-menu-button");
+    return result;
+  }
+
+  it("shows a closed button 'Menu' instead of navigation and user menu", async () => {
+    await renderNarrow();
+    const button = menuButton();
+    expect(screen.getByRole("button", { name: "Menu" })).toBe(button);
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(button.querySelector("svg")?.getAttribute("data-icon")).toBe("menu");
+    expect(button.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    const panel = screen.getByTestId("navigation-menu");
+    expect(button.getAttribute("aria-controls")).toBe(panel.id);
+    expect(panel.hidden).toBe(true);
+    expect(screen.queryByRole("navigation")).toBeNull();
+    expect(screen.queryByTestId("user-menu-button")).toBeNull();
+    expect(within(screen.getByTestId("user-area")).getByRole("button", { name: "Menu" })).toBe(button);
+  });
+
+  it("opens a list with every entry and the content of the user menu", async () => {
+    await renderNarrow();
+    fireEvent.click(menuButton());
+    const panel = screen.getByTestId("navigation-menu");
+    expect(panel.hidden).toBe(false);
+    expect(menuButton().getAttribute("aria-expanded")).toBe("true");
+    expect(menuButton().querySelector("svg")?.getAttribute("data-icon")).toBe("close");
+    const nav = within(panel).getByRole("navigation", { name: enNav.label });
+    const links = within(nav).getAllByRole("link");
+    expect(links.map((link) => link.textContent)).toEqual(navigation.map((entry) => enNav[entry.textKey]));
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(navigation.map((entry) => entry.path));
+    // Full texts, one entry per line, no short texts.
+    expect(nav.querySelectorAll(".nav-short")).toHaveLength(0);
+    expect(nav.querySelector("ul")?.classList.contains("flex-col")).toBe(true);
+    expect(within(nav).getByRole("link", { name: "Structure" }).getAttribute("aria-current")).toBe("page");
+    // The user menu's content: name, role, settings, language, sign-out.
+    expect(within(panel).getByText(manager.username)).toBeDefined();
+    expect(within(panel).getByTestId("user-role").textContent).toBe("Manage");
+    expect(within(panel).getByRole("link", { name: "Settings" })).toBeDefined();
+    expect(within(panel).getByRole("combobox", { name: "Language" })).toBeDefined();
+    expect(within(panel).getByRole("button", { name: "Sign out" })).toBeDefined();
+    expect(screen.getAllByTestId("language-switch")).toHaveLength(1);
+  });
+
+  it("closes on Escape and gives the focus back to its button", async () => {
+    await renderNarrow();
+    fireEvent.click(menuButton());
+    const panel = screen.getByTestId("navigation-menu");
+    const entry = within(panel).getByRole("link", { name: "Search" });
+    entry.focus();
+    fireEvent.keyDown(entry, { key: "Escape" });
+    expect(panel.hidden).toBe(true);
+    expect(menuButton().getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(menuButton());
+  });
+
+  it("closes after a choice; the focus goes to the button and then to the new page's heading", async () => {
+    const { router } = await renderNarrow();
+    fireEvent.click(menuButton());
+    const panel = screen.getByTestId("navigation-menu");
+    const entry = within(panel).getByRole("link", { name: "Self-test" });
+    entry.focus();
+    fireEvent.click(entry);
+    expect(panel.hidden).toBe(true);
+    expect(router.state.location.pathname).toBe("/selftest");
+    const heading = await screen.findByRole("heading", { level: 1, name: "Self-test" });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(heading);
+    });
+  });
+
+  it("closes when the focus leaves button and panel, without taking the focus back", async () => {
+    await renderNarrow();
+    fireEvent.click(menuButton());
+    const panel = screen.getByTestId("navigation-menu");
+    // Within button and panel it stays open.
+    menuButton().focus();
+    within(panel).getByRole("link", { name: "Structure" }).focus();
+    const signOut = within(panel).getByRole("button", { name: "Sign out" });
+    signOut.focus();
+    expect(panel.hidden).toBe(false);
+    // A focus that goes nowhere (a click on text in the panel) leaves it open.
+    fireEvent.focusOut(signOut, { relatedTarget: null });
+    expect(panel.hidden).toBe(false);
+    // Tab after "Sign out": the focus moves on outside, the panel closes, the focus stays there.
+    // (jsdom already names the new target in the focusout of focus(); the explicit event states the case on its own.)
+    const outside = screen.getByRole("link", { name: "Skip to content" });
+    outside.focus();
+    fireEvent.focusOut(signOut, { relatedTarget: outside });
+    expect(panel.hidden).toBe(true);
+    expect(menuButton().getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(outside);
+  });
+
+  it("keeps the focus on the button when the current page is chosen", async () => {
+    await renderNarrow();
+    fireEvent.click(menuButton());
+    const panel = screen.getByTestId("navigation-menu");
+    fireEvent.click(within(panel).getByRole("link", { name: "Structure" }));
+    expect(panel.hidden).toBe(true);
+    expect(document.activeElement).toBe(menuButton());
+  });
+
+  it("closes on a click outside, but not on a click inside, and on a second click on the button", async () => {
+    await renderNarrow();
+    fireEvent.click(menuButton());
+    const panel = screen.getByTestId("navigation-menu");
+    fireEvent.pointerDown(within(panel).getByTestId("user-role"));
+    expect(panel.hidden).toBe(false);
+    fireEvent.pointerDown(screen.getByRole("main"));
+    expect(panel.hidden).toBe(true);
+    fireEvent.click(menuButton());
+    expect(panel.hidden).toBe(false);
+    fireEvent.click(menuButton());
+    expect(panel.hidden).toBe(true);
+  });
+
+  it("gives way to the header bar at 768 px and stays closed when the window narrows again", async () => {
+    const media = fakeMatchMedia({ [NARROW_QUERY]: true });
+    fakeApi(manager);
+    renderApp("/");
+    fireEvent.click(await screen.findByTestId("navigation-menu-button"));
+    act(() => {
+      media.set(NARROW_QUERY, false);
+    });
+    expect(screen.queryByTestId("navigation-menu-button")).toBeNull();
+    expect(within(mainNavigation()).getAllByRole("link")).toHaveLength(navigation.length);
+    expect(screen.getByTestId("user-menu-button")).toBeDefined();
+    act(() => {
+      media.set(NARROW_QUERY, true);
+    });
+    expect(screen.getByTestId("navigation-menu").hidden).toBe(true);
+    expect(menuButton().getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("offers only the user menu's content to an account without a role", async () => {
+    await renderNarrow("/", { ...reader, role: null });
+    fireEvent.click(menuButton());
+    const panel = screen.getByTestId("navigation-menu");
+    expect(within(panel).queryByRole("navigation")).toBeNull();
+    expect(within(panel).getByRole("button", { name: "Sign out" })).toBeDefined();
+  });
+
+  it("speaks German", async () => {
+    await changeLanguage("de");
+    await renderNarrow();
+    fireEvent.click(screen.getByRole("button", { name: "Menü" }));
+    const nav = within(screen.getByTestId("navigation-menu")).getByRole("navigation", { name: deNav.label });
+    expect(within(nav).getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "Struktur",
+      "Landkarte",
+      "Suche",
+      "Einlesen",
+      "Import",
+      "Änderungsprotokoll",
+      "Selbsttest",
+    ]);
+  });
+
+  it("is not there before sign-in: the language switch stays in the header", async () => {
+    fakeMatchMedia({ [NARROW_QUERY]: true });
+    fakeApi(null);
+    renderApp("/login");
+    await screen.findByTestId("login-form");
+    expect(screen.queryByTestId("navigation-menu-button")).toBeNull();
+    expect(screen.getByTestId("language-switch")).toBeDefined();
   });
 });
 

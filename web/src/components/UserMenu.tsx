@@ -18,8 +18,6 @@ import { Button } from "./ui/Button.tsx";
  */
 export function UserMenu({ user }: { user: Me }): ReactElement {
   const { t } = useTranslation(["auth", "nav"]);
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const location = useLocation();
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -27,8 +25,6 @@ export function UserMenu({ user }: { user: Me }): ReactElement {
   // The panel is open only for the address it was opened on.
   const [openOn, setOpenOn] = useState<string | null>(null);
   const open = openOn === location.key;
-  const [pending, setPending] = useState(false);
-  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -51,28 +47,6 @@ export function UserMenu({ user }: { user: Me }): ReactElement {
       buttonRef.current?.focus();
     }
   };
-
-  const onSignOut = async (): Promise<void> => {
-    setPending(true);
-    setFailed(false);
-    const result = await signOut();
-    if (result.kind !== "signed-out") {
-      setPending(false);
-      setFailed(true);
-      return;
-    }
-    // Signed out on the server: forget the user first, so that the sign-in
-    // page does not send the browser straight back, then drop the old data.
-    // flushSync shows the sign-in page as soon as the router has moved there.
-    // Without it the router renders the new address in a transition, and the
-    // session guard of the old page may see "signed out" first and send the
-    // browser to /login?next=<old page> instead (work order 062).
-    forgetSession(queryClient);
-    await navigate(LOGIN_PAGE_PATH, { replace: true, flushSync: true });
-    dropUserData(queryClient);
-  };
-
-  const roleText = user.role === null ? t("role.none") : t(`role.${user.role}`);
 
   return (
     <div ref={rootRef} className="relative" onKeyDown={onKeyDown}>
@@ -101,45 +75,86 @@ export function UserMenu({ user }: { user: Me }): ReactElement {
         id={panelId}
         hidden={!open}
         data-testid="user-menu"
-        className="absolute right-0 top-full z-20 mt-2 w-64 space-y-3 rounded border border-line bg-surface p-3 text-sm shadow-lg"
+        className="absolute right-0 top-full z-20 mt-2 w-64 rounded border border-line bg-surface p-3 text-sm shadow-lg"
       >
-        <dl className="space-y-1">
-          <div className="flex gap-1">
-            <dt className="text-fg-muted">{t("signedInAs")}</dt>
-            <dd className="truncate font-semibold">{user.username}</dd>
-          </div>
-          <div className="flex gap-1">
-            <dt className="text-fg-muted">{t("roleLabel")}:</dt>
-            <dd data-testid="user-role">{roleText}</dd>
-          </div>
-        </dl>
-        {/* Settings of this browser (work order 070); like every page they need a role. */}
-        {hasRole(user.role, "read") ? (
-          <NavLink to="/settings" data-testid="settings-link" className="nav-link">
-            <Icon name="settings" size={20} decorative />
-            <span className="nav-label" data-label={t("nav:settings")}>
-              {t("nav:settings")}
-            </span>
-          </NavLink>
-        ) : null}
-        <LanguageSwitch />
-        <Button
-          type="button"
-          size="sm"
-          icon="signOut"
-          onClick={() => void onSignOut()}
-          loading={pending}
-          data-testid="sign-out"
-        >
-          {pending ? t("signingOut") : t("signOut")}
-        </Button>
-        {failed ? (
-          <p role="alert" data-testid="sign-out-error" className="text-danger">
-            <Icon name="error" className="mr-2" decorative />
-            {t("error.signOutFailed")}
-          </p>
-        ) : null}
+        <UserMenuContent user={user} />
       </div>
+    </div>
+  );
+}
+
+/**
+ * What the user menu holds: name and role, the link to the settings, the
+ * language and the sign-out button. The panel of `UserMenu` shows it, and
+ * below 768 px the navigation menu of the header (`Layout`, work order 082).
+ */
+export function UserMenuContent({ user }: { user: Me }): ReactElement {
+  const { t } = useTranslation(["auth", "nav"]);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const onSignOut = async (): Promise<void> => {
+    setPending(true);
+    setFailed(false);
+    const result = await signOut();
+    if (result.kind !== "signed-out") {
+      setPending(false);
+      setFailed(true);
+      return;
+    }
+    // Signed out on the server: forget the user first, so that the sign-in
+    // page does not send the browser straight back, then drop the old data.
+    // flushSync shows the sign-in page as soon as the router has moved there.
+    // Without it the router renders the new address in a transition, and the
+    // session guard of the old page may see "signed out" first and send the
+    // browser to /login?next=<old page> instead (work order 062).
+    forgetSession(queryClient);
+    await navigate(LOGIN_PAGE_PATH, { replace: true, flushSync: true });
+    dropUserData(queryClient);
+  };
+
+  const roleText = user.role === null ? t("role.none") : t(`role.${user.role}`);
+
+  return (
+    <div className="space-y-3">
+      <dl className="space-y-1">
+        <div className="flex gap-1">
+          <dt className="text-fg-muted">{t("signedInAs")}</dt>
+          <dd className="truncate font-semibold">{user.username}</dd>
+        </div>
+        <div className="flex gap-1">
+          <dt className="text-fg-muted">{t("roleLabel")}:</dt>
+          <dd data-testid="user-role">{roleText}</dd>
+        </div>
+      </dl>
+      {/* Settings of this browser (work order 070); like every page they need a role. */}
+      {hasRole(user.role, "read") ? (
+        <NavLink to="/settings" data-testid="settings-link" className="nav-link">
+          <Icon name="settings" size={20} decorative />
+          <span className="nav-label" data-label={t("nav:settings")}>
+            {t("nav:settings")}
+          </span>
+        </NavLink>
+      ) : null}
+      <LanguageSwitch />
+      <Button
+        type="button"
+        size="sm"
+        icon="signOut"
+        onClick={() => void onSignOut()}
+        loading={pending}
+        data-testid="sign-out"
+      >
+        {pending ? t("signingOut") : t("signOut")}
+      </Button>
+      {failed ? (
+        <p role="alert" data-testid="sign-out-error" className="text-danger">
+          <Icon name="error" className="mr-2" decorative />
+          {t("error.signOutFailed")}
+        </p>
+      ) : null}
     </div>
   );
 }

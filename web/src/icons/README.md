@@ -28,7 +28,7 @@ Buttons take their icon by name (`<Button type="button" icon="upload">`, `../com
 
 | Group | Names |
 | --- | --- |
-| Navigation | `structure`, `map`, `ingest` (work order 055), `import`, `audit`, `selftest`, `settings`, `user` |
+| Navigation | `structure`, `map`, `ingest` (work order 055), `import`, `audit`, `selftest`, `settings`, `user`, `menu` and `close` (the menu button below 768 px, work order 082) |
 | Objects | `site`, `area`, `plant` (own), `device` (own, generic), `network`, `document`, `version` |
 | Device classes (own) | `devicePlc`, `deviceController`, `deviceComputer`, `deviceRouter`, `deviceRobot`, `deviceFirewall` |
 | Actions | `create`, `edit`, `upload`, `download`, `retry`, `apply`, `filter`, `resetFilter`, `search`, `fitView`, `previous`, `next`, `disclosure` (work order 083), `signOut` |

@@ -276,6 +276,33 @@
     font-weight: 600;
   }
 
+  /*
+   * Short text below the icon from 768 to 1279 px (work order 082). It is drawn
+   * from data-short by ::before, inside an element hidden from assistive
+   * technology, so the link's text and accessible name stay the full text.
+   * ::after reserves the width of the bold short text, as for .nav-label.
+   */
+  .nav-short {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  .nav-short::before {
+    content: attr(data-short);
+  }
+
+  .nav-short::after {
+    content: attr(data-short);
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+    user-select: none;
+    font-weight: 600;
+  }
+
   .nav-link:hover {
     color: var(--twox-fg);
     background-size: 100% 2px;

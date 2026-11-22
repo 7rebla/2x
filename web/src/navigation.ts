@@ -11,14 +11,23 @@ import type navCatalog from "./locales/en/nav.json";
 import { hasRole, type Role } from "./session.ts";
 
 /** Key of a page name in locales/<language>/nav.json. */
-export type NavTextKey = Exclude<keyof typeof navCatalog, "label">;
+export type NavTextKey = Exclude<keyof typeof navCatalog, "label" | "menu" | "short">;
+
+/**
+ * Key of a navigation entry: a page name that also has a short text under
+ * "short" in nav.json (shown below the icon from 768 to 1279 px, work order 082).
+ */
+export type NavEntryKey = keyof typeof navCatalog.short & NavTextKey;
 
 export interface NavigationEntry {
   /** Address of the page, as in routes.tsx. */
   readonly path: string;
-  /** Text of the entry in the "nav" catalog. */
-  readonly textKey: NavTextKey;
-  /** Icon shown before the text; on narrow screens the icon alone (work order 071). */
+  /**
+   * Text of the entry in the "nav" catalog (`nav:<key>`, accessible name and
+   * tooltip) and its short text (`nav:short.<key>`).
+   */
+  readonly textKey: NavEntryKey;
+  /** Icon of the entry: next to the text from 1280 px, above the short text below (work orders 071, 082). */
   readonly icon: IconName;
   /** Marks the entry as current only for exactly this path (not for paths below it). */
   readonly end?: boolean;
