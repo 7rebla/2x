@@ -22,6 +22,7 @@ import { DocumentPage } from "./pages/DocumentPage.tsx";
 import { ImportPage } from "./pages/ImportPage.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
 import { SelftestPage } from "./pages/SelftestPage.tsx";
+import { SettingsPage } from "./pages/SettingsPage.tsx";
 import { StructurePage } from "./pages/StructurePage.tsx";
 
 // The map page brings React Flow along; it is loaded only when the page is opened.
@@ -65,6 +66,8 @@ export const routes: RouteObject[] = [
               { path: "import", element: guarded("/import", <ImportPage />) },
               { path: "audit", element: guarded("/audit", <AuditPage />) },
               { path: "selftest", element: guarded("/selftest", <SelftestPage />) },
+              // Reached from the user menu (work order 070); no entry in navigation.ts, so role "read".
+              { path: "settings", element: guarded("/settings", <SettingsPage />) },
               { path: "*", element: <NotFound /> },
             ],
           },

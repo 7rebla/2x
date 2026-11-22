@@ -1,0 +1,36 @@
+{
+  "intro": "These settings apply to this browser only. They are stored here and take effect at once.",
+  "appearance": {
+    "legend": "Appearance",
+    "system": "Same as the system",
+    "light": "Light",
+    "dark": "Dark",
+    "systemCurrent": {
+      "light": "Your system currently uses the light appearance.",
+      "dark": "Your system currently uses the dark appearance."
+    }
+  },
+  "accent": {
+    "legend": "Accent colour",
+    "hint": "Used for buttons, links, the current navigation entry and the focus ring. Status colours (success, warning, error) stay the same.",
+    "default": "{{name}} (default)",
+    "names": {
+      "aubergine": "Aubergine",
+      "indigo": "Indigo",
+      "berry": "Berry",
+      "umber": "Umber",
+      "graphite": "Graphite"
+    }
+  },
+  "language": {
+    "legend": "Language",
+    "label": "Language of the interface",
+    "hint": "The language switch in the header changes the same setting."
+  },
+  "motion": {
+    "legend": "Motion",
+    "label": "Reduce motion",
+    "hint": "Turns off text animations and transitions.",
+    "system": "Your system already asks for reduced motion, so animations stay off."
+  }
+}

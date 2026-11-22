@@ -12,6 +12,7 @@ import type importCatalog from "./locales/en/import.json";
 import type map from "./locales/en/map.json";
 import type nav from "./locales/en/nav.json";
 import type selftest from "./locales/en/selftest.json";
+import type settings from "./locales/en/settings.json";
 
 declare module "i18next" {
   interface CustomTypeOptions {
@@ -26,6 +27,7 @@ declare module "i18next" {
       import: typeof importCatalog;
       files: typeof files;
       map: typeof map;
+      settings: typeof settings;
     };
     returnNull: false;
   }
