@@ -31,7 +31,7 @@ Buttons take their icon by name (`<Button type="button" icon="upload">`, `../com
 | Navigation | `structure`, `map`, `ingest` (work order 055), `import`, `audit`, `selftest`, `settings`, `user` |
 | Objects | `site`, `area`, `plant` (own), `device` (own, generic), `network`, `document`, `version` |
 | Device classes (own) | `devicePlc`, `deviceController`, `deviceComputer`, `deviceRouter`, `deviceRobot`, `deviceFirewall` |
-| Actions | `create`, `edit`, `upload`, `download`, `retry`, `apply`, `filter`, `resetFilter`, `search`, `fitView`, `previous`, `next`, `signOut` |
+| Actions | `create`, `edit`, `upload`, `download`, `retry`, `apply`, `filter`, `resetFilter`, `search`, `fitView`, `previous`, `next`, `disclosure` (work order 083), `signOut` |
 | Status | `success`, `error`, `warning`, `loading`, `noPermission`, `info`, `queued`, `skipped`, `notIngested` (the last three for ingest jobs, work order 053) |
 
 The navigation entries name their icon in `../navigation.ts` (`icon`).
@@ -46,7 +46,7 @@ Own icons are React components on the frame `SvgGlyph` (`glyph.tsx`): view box `
 - `industrial/glyphs.tsx` repeats the shapes of each file as a component. `industrial/glyphs.test.tsx` compares every component with its file shape by shape and checks that each file holds nothing but `path`, `rect` and `circle` on the rules above. A changed drawing therefore means: replace the file, then the shapes in `glyphs.tsx`, until the test passes.
 - They are the project's own work under the licence of the repository.
 
-The mapping from device class to icon (`device_class` → `IconName`) is `deviceClassIcon()` in `../pages/structure/deviceClass.ts`, the only place that knows it. `other`, a missing and an unknown class show `device`; plants show `plant` (`PLANT_ICON`). Every place that shows a class icon also writes the class out (tree row, field on the device page, tooltip and label of the map node), because the icon is decorative.
+The mapping from device class to icon (`device_class` → `IconName`) is `deviceClassIcon()` in `../pages/structure/deviceClass.ts`, the only place that knows it. `other`, a missing and an unknown class show `device`; plants show `plant` (`PLANT_ICON`). Every place that shows a class icon also writes the class out (tree row: visible from 640 px, below that for screen readers and as tooltip; field on the device page, tooltip and label of the map node), because the icon is decorative.
 
 ## Library
 

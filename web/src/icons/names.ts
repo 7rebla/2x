@@ -10,6 +10,7 @@
 import {
   Activity,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleCheck,
@@ -101,6 +102,7 @@ const glyphs = {
   fitView: Scan, // map: fit the view
   previous: ChevronLeft, // ACT-10
   next: ChevronRight, // ACT-10
+  disclosure: ChevronDown, // fold a branch of the structure tree in and out (work order 083); turned while folded
   signOut: LogOut, // ACT-08
 
   // Status (STA), always next to a text
