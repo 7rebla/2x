@@ -84,6 +84,9 @@ INSTALLED_APPS = [
     # collectstatic gathers the built web UI and the admin's files at image
     # build time.
     "django.contrib.staticfiles",
+    # PostgreSQL-specific parts of Django: TrigramExtension, GinIndex, OpClass
+    # and the full-text search building blocks (search, M2).
+    "django.contrib.postgres",
     "rest_framework",
     "drf_spectacular",
     # Sign-in with local accounts through the headless API of django-allauth
