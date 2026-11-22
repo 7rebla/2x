@@ -63,9 +63,36 @@ Keine.
 
 - Statt `_deadline_passed` zu erweitern, steht die neue Frist in einer eigenen Funktion `_start_deadline_passed`, die nach der Abfrage geprüft wird (Begründung oben: ein fertiger Auftrag soll nicht an der Frist scheitern). Verhalten wie im Umfang verlangt.
 
-**Hinweise für die Leitstelle (nicht geändert, außerhalb des Bereichs)**
+### Nachbesserung (Entscheidung der Leitstelle, Stufe B)
 
-- Drei Stellen sagen noch, die Wartezeit in der Docling-Warteschlange zähle nicht: `docs/ARCHITECTURE.md` Abschnitt „Convert and poll“ (Zeile 303) und Tabelle der Zeiten (Zeile 494), `.env.example` Kommentar zu `TWOX_INGEST_TIMEOUT_SECONDS`. Für die Frist ab `started` stimmt das weiterhin, für eine nie gestartete Aufgabe nicht mehr. Vorschlag: in einem kleinen Doku-Auftrag ergänzen.
-- Folge der neuen Frist: Bei einem großen Stapel (z. B. `ingest_versions --all`) reicht `convert` alle Aufträge sofort bei Docling ein; mit einem Docling-Worker warten sie nacheinander. Braucht der Stapel in Docling mehr als 2,5 h (bei ~5 s je Seite etwa 1 800 Seiten), enden die letzten Aufträge mit `timeout` und lassen sich mit `ingest_versions --failed` neu starten. In ARCHITECTURE beschrieben. Falls a7 das vermeiden will, wäre eine eigene, längere Startfrist eine neue Einstellung (nicht Teil dieses Auftrags).
+Die erste Fassung nahm für die Startfrist `TWOX_INGEST_TIMEOUT_SECONDS` (2,5 h). Ein großer Stapel wartet aber nacheinander in der Docling-Warteschlange, und seine letzten Aufträge wären abgebrochen worden. Die Leitstelle hat deshalb eine eigene Einstellung entschieden:
+
+- **Neue Einstellung** `TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS`, Vorgabe 86 400 (24 h). Sie zählt ab `started_at` des Auftrags und gilt nur, solange `docling_started_at` leer ist. `_start_deadline_passed` und `_start_timeout` in `pipeline.py` verwenden sie. `error_detail` nennt die Einstellung: „… within 86400 seconds after the upload (TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS)“.
+- **`settings.py`:** Die Einstellung wird mit `env_positive_int` gelesen. `check_ingest_timing` prüft sie als ganze Zahl größer 0 und verlangt neu `TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS >= TWOX_INGEST_TIMEOUT_SECONDS`.
+- **Tests in `backend/tests/config/test_settings.py`:**
+  - Vorgabewert 86 400
+  - Lesen aus der Umgebung
+  - ungültige Zahlen
+  - Abbruch beim Start mit 8 999
+  - Prüfung mit 8 999 schlägt fehl
+  - gleicher Wert wie `TWOX_INGEST_TIMEOUT_SECONDS` ist erlaubt
+- **Weitere Dateien:**
+  - `deploy/compose/compose.yaml` (`x-backend-environment`)
+  - `.env.example`: neue Variable mit Kommentar; der Kommentar zu `TWOX_INGEST_TIMEOUT_SECONDS` ist berichtigt.
+  - `README.md`: Konfigurationstabelle
+  - `docs/ARCHITECTURE.md`: „Convert and poll“, Zeiten-Tabelle, Startprüfung, Konfigurationstabelle und der Punkt unter den bekannten Grenzen
+  - Docstring von `ingest_versions`
+- **Tests in `test_pipeline.py`:**
+  - Die vier Fälle zählen jetzt gegen die Startfrist.
+  - Neu ist der Stapel-Fall: 10 h `pending` liegt weit über `TWOX_INGEST_TIMEOUT_SECONDS`, aber unter 24 h, und der Auftrag bleibt `running`.
+- **Prüfung:** Alle Prüfungen des backend-Jobs erneut grün, jeweils mit Exit 0:
+  - ruff check, ruff format, mypy
+  - pytest: 2339 bestanden
+  - pytest -m worker: 6 bestanden
+  - Übersetzungskatalog, Migrationen, Lizenzen, OpenAPI-Schema
+  - `down -v` von `twox-065`
+- **Damit erledigt:** Die drei Doku-Stellen, die der erste Bericht als Hinweise genannt hatte, sind nachgezogen.
+
+**Verbleibende Grenze:** Ein Stapel, der mehr als 24 h in Docling braucht, beendet seine letzten Aufträge mit `timeout`. `ingest_versions --failed` startet sie neu. Das steht in ARCHITECTURE.
 
 Keine offene Frage an a7.
