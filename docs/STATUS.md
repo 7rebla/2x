@@ -236,9 +236,9 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 129 | Selbsttest und check_llm für Chat | B | 121 | erledigt |
 | 130 | Antwort-API mit SSE und Status | C | 126, 129 | erledigt |
 | 131 | Oberfläche Antwortstrom und Hook | B | 130 | erledigt |
-| 132 | Seite Auskunft mit Quellenanzeige | B | 131 | in Arbeit |
-| 133 | Eingrenzen auf Gerät und Anlage | B | 132 | offen |
-| 134 | Navigation Auskunft | C | 132 | offen |
+| 132 | Seite Auskunft mit Quellenanzeige | B | 131 | erledigt |
+| 133 | Eingrenzen auf Gerät und Anlage | B | 132 | in Arbeit |
+| 134 | Navigation Auskunft | C | 132 | in Arbeit |
 | 135 | Prüffragen in der CI mit Aufzeichnungen | C | 126, 127 | erledigt |
 | 136 | Beleg für Prüffrage 8 | C | 120 | erledigt |
 | 137 | Abnahmetests M3 und Browserfluss | B | 127, 130, 133, 134 | offen |

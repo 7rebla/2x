@@ -1,6 +1,6 @@
 # Auftrag 132 – Seite Auskunft mit Quellenanzeige
 
-Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 131 (Antwortstrom und Hook) ist auf `main`; damit auch 130 (API mit SSE und Status-Endpunkt), 126 und 122 (Ereignisvertrag).
 
