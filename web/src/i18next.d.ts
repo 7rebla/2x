@@ -9,6 +9,7 @@ import type auth from "./locales/en/auth.json";
 import type common from "./locales/en/common.json";
 import type files from "./locales/en/files.json";
 import type importCatalog from "./locales/en/import.json";
+import type ingest from "./locales/en/ingest.json";
 import type map from "./locales/en/map.json";
 import type nav from "./locales/en/nav.json";
 import type search from "./locales/en/search.json";
@@ -30,6 +31,7 @@ declare module "i18next" {
       map: typeof map;
       settings: typeof settings;
       search: typeof search;
+      ingest: typeof ingest;
     };
     returnNull: false;
   }

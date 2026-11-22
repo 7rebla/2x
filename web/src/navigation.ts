@@ -33,6 +33,8 @@ export const navigation: readonly NavigationEntry[] = [
   { path: "/map", textKey: "map", icon: "map", requires: "read" },
   // Search in the ingested files (work order 054).
   { path: "/search", textKey: "search", icon: "search", requires: "read" },
+  // Overview of the ingest jobs of all devices (work order 055).
+  { path: "/ingest", textKey: "ingest", icon: "ingest", requires: "read" },
   { path: "/import", textKey: "import", icon: "import", requires: "manage" },
   // The change log names users; only "manage" may read it (E-43, work order 028, question 3).
   { path: "/audit", textKey: "audit", icon: "audit", requires: "manage" },

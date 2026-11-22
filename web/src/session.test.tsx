@@ -116,7 +116,7 @@ describe("navigation and role", () => {
     renderApp("/");
 
     expect((await screen.findByTestId("user-role")).textContent).toBe("Manage");
-    expect(navigationTexts()).toEqual(["Structure", "Map", "Search", "Import", "Change log", "Self-test"]);
+    expect(navigationTexts()).toEqual(["Structure", "Map", "Search", "Ingestion", "Import", "Change log", "Self-test"]);
     expect(screen.queryByTestId("no-role")).toBeNull();
   });
 
@@ -125,7 +125,7 @@ describe("navigation and role", () => {
     renderApp("/");
 
     expect((await screen.findByTestId("user-role")).textContent).toBe("Read");
-    expect(navigationTexts()).toEqual(["Structure", "Map", "Search", "Self-test"]);
+    expect(navigationTexts()).toEqual(["Structure", "Map", "Search", "Ingestion", "Self-test"]);
 
     fireEvent.change(screen.getByTestId("language-switch"), { target: { value: "de" } });
 
@@ -134,7 +134,7 @@ describe("navigation and role", () => {
       within(screen.getByRole("navigation", { name: "Hauptnavigation" }))
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["Struktur", "Landkarte", "Suche", "Selbsttest"]);
+    ).toEqual(["Struktur", "Landkarte", "Suche", "Einlesen", "Selbsttest"]);
   });
 
   it.each(["/import", "/audit"])("a reader who opens %s directly gets a notice, no redirect", async (path) => {
@@ -176,13 +176,15 @@ describe("navigation and role", () => {
       ["/", "read"],
       ["/map", "read"],
       ["/search", "read"],
+      ["/ingest", "read"],
       ["/import", "manage"],
       ["/audit", "manage"],
       ["/selftest", "read"],
     ]);
-    expect(visibleNavigation("manage")).toHaveLength(6);
-    expect(visibleNavigation("read").map((entry) => entry.path)).toEqual(["/", "/map", "/search", "/selftest"]);
+    expect(visibleNavigation("manage")).toHaveLength(7);
+    expect(visibleNavigation("read").map((entry) => entry.path)).toEqual(["/", "/map", "/search", "/ingest", "/selftest"]);
     expect(requiredRole("/search")).toBe("read");
+    expect(requiredRole("/ingest")).toBe("read");
     expect(requiredRole("/map")).toBe("read");
     expect(visibleNavigation(null)).toEqual([]);
     expect(requiredRole("/import")).toBe("manage");

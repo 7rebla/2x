@@ -38,6 +38,7 @@ import {
   RefreshCw,
   RotateCcwClock,
   Scan,
+  ScanText,
   Search,
   Settings,
   TriangleExclamationPoint,
@@ -62,6 +63,7 @@ const glyphs = {
   // Navigation (NAV)
   structure: ListTree, // NAV-01
   map: MapGlyph, // NAV-09 (library icon until an own one is drawn)
+  ingest: ScanText, // NAV-07, ingest overview (work order 055)
   import: Import, // NAV-02
   audit: RotateCcwClock, // NAV-03
   selftest: Activity, // NAV-04

@@ -25,11 +25,14 @@ export function Layout(): ReactElement {
       <header className="border-b border-line bg-surface">
         {/*
           One line in every language and at every width: the navigation never
-          wraps; below 1024 px its entries shrink to their icons (the text
+          wraps; below 1280 px (xl) its entries shrink to their icons (the text
           stays as accessible name and tooltip), and if even that does not
-          fit, the navigation scrolls on its own instead of the page.
+          fit, the navigation scrolls on its own instead of the page. From
+          1280 px the header grows wider than the page content (max-w-7xl
+          instead of max-w-5xl), so seven entries and more show their texts
+          (work order 055).
         */}
-        <div className="mx-auto flex w-full max-w-5xl items-center gap-x-4 px-4 py-4">
+        <div className="mx-auto flex w-full max-w-5xl items-center gap-x-4 px-4 py-4 xl:max-w-7xl">
           <h1 className="text-3xl font-semibold tracking-tight">
             <BrandMark />
           </h1>
@@ -44,7 +47,7 @@ export function Layout(): ReactElement {
                         <NavLink to={entry.path} end={entry.end ?? false} className="nav-link" title={label}>
                           <Icon name={entry.icon} size={20} decorative />
                           {/* Navigation line (pattern C): data-label reserves the width of the bold label. */}
-                          <span className="nav-label max-lg:sr-only" data-label={label}>
+                          <span className="nav-label max-xl:sr-only" data-label={label}>
                             {label}
                           </span>
                         </NavLink>
