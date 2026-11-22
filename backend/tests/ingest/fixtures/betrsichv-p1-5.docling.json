@@ -1,0 +1,5540 @@
+{
+ "schema_name": "DoclingDocument",
+ "version": "1.10.0",
+ "name": "upload",
+ "origin": {
+  "mimetype": "application/pdf",
+  "binary_hash": 14281820622281014531,
+  "filename": "upload.pdf",
+  "uri": null
+ },
+ "furniture": {
+  "self_ref": "#/furniture",
+  "parent": null,
+  "children": [],
+  "content_layer": "furniture",
+  "meta": null,
+  "name": "_root_",
+  "label": "unspecified"
+ },
+ "body": {
+  "self_ref": "#/body",
+  "parent": null,
+  "children": [
+   {
+    "$ref": "#/texts/0"
+   },
+   {
+    "$ref": "#/texts/1"
+   },
+   {
+    "$ref": "#/texts/2"
+   },
+   {
+    "$ref": "#/texts/3"
+   },
+   {
+    "$ref": "#/texts/4"
+   },
+   {
+    "$ref": "#/texts/5"
+   },
+   {
+    "$ref": "#/texts/6"
+   },
+   {
+    "$ref": "#/texts/7"
+   },
+   {
+    "$ref": "#/texts/8"
+   },
+   {
+    "$ref": "#/texts/9"
+   },
+   {
+    "$ref": "#/texts/10"
+   },
+   {
+    "$ref": "#/texts/11"
+   },
+   {
+    "$ref": "#/texts/12"
+   },
+   {
+    "$ref": "#/tables/0"
+   },
+   {
+    "$ref": "#/texts/13"
+   },
+   {
+    "$ref": "#/texts/14"
+   },
+   {
+    "$ref": "#/tables/1"
+   },
+   {
+    "$ref": "#/texts/15"
+   },
+   {
+    "$ref": "#/texts/16"
+   },
+   {
+    "$ref": "#/texts/17"
+   },
+   {
+    "$ref": "#/groups/0"
+   },
+   {
+    "$ref": "#/texts/21"
+   },
+   {
+    "$ref": "#/texts/22"
+   },
+   {
+    "$ref": "#/texts/23"
+   },
+   {
+    "$ref": "#/texts/24"
+   },
+   {
+    "$ref": "#/texts/25"
+   },
+   {
+    "$ref": "#/texts/26"
+   },
+   {
+    "$ref": "#/texts/27"
+   },
+   {
+    "$ref": "#/texts/28"
+   },
+   {
+    "$ref": "#/texts/29"
+   },
+   {
+    "$ref": "#/texts/30"
+   },
+   {
+    "$ref": "#/texts/31"
+   },
+   {
+    "$ref": "#/groups/1"
+   },
+   {
+    "$ref": "#/texts/34"
+   },
+   {
+    "$ref": "#/groups/2"
+   },
+   {
+    "$ref": "#/texts/38"
+   },
+   {
+    "$ref": "#/texts/39"
+   },
+   {
+    "$ref": "#/texts/40"
+   },
+   {
+    "$ref": "#/texts/41"
+   },
+   {
+    "$ref": "#/texts/42"
+   },
+   {
+    "$ref": "#/texts/43"
+   },
+   {
+    "$ref": "#/texts/44"
+   },
+   {
+    "$ref": "#/texts/45"
+   },
+   {
+    "$ref": "#/texts/46"
+   },
+   {
+    "$ref": "#/texts/47"
+   },
+   {
+    "$ref": "#/texts/48"
+   },
+   {
+    "$ref": "#/texts/49"
+   },
+   {
+    "$ref": "#/texts/50"
+   },
+   {
+    "$ref": "#/texts/51"
+   },
+   {
+    "$ref": "#/texts/52"
+   },
+   {
+    "$ref": "#/texts/53"
+   },
+   {
+    "$ref": "#/texts/54"
+   },
+   {
+    "$ref": "#/groups/3"
+   },
+   {
+    "$ref": "#/texts/58"
+   },
+   {
+    "$ref": "#/groups/4"
+   },
+   {
+    "$ref": "#/texts/63"
+   },
+   {
+    "$ref": "#/texts/64"
+   },
+   {
+    "$ref": "#/texts/65"
+   },
+   {
+    "$ref": "#/texts/66"
+   },
+   {
+    "$ref": "#/texts/67"
+   },
+   {
+    "$ref": "#/texts/68"
+   },
+   {
+    "$ref": "#/texts/69"
+   },
+   {
+    "$ref": "#/groups/5"
+   },
+   {
+    "$ref": "#/texts/73"
+   },
+   {
+    "$ref": "#/texts/74"
+   },
+   {
+    "$ref": "#/groups/6"
+   },
+   {
+    "$ref": "#/texts/80"
+   },
+   {
+    "$ref": "#/texts/81"
+   },
+   {
+    "$ref": "#/texts/82"
+   },
+   {
+    "$ref": "#/texts/83"
+   },
+   {
+    "$ref": "#/groups/7"
+   },
+   {
+    "$ref": "#/texts/87"
+   },
+   {
+    "$ref": "#/texts/88"
+   }
+  ],
+  "content_layer": "body",
+  "meta": null,
+  "name": "_root_",
+  "label": "unspecified"
+ },
+ "groups": [
+  {
+   "self_ref": "#/groups/0",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [
+    {
+     "$ref": "#/texts/18"
+    },
+    {
+     "$ref": "#/texts/19"
+    },
+    {
+     "$ref": "#/texts/20"
+    }
+   ],
+   "content_layer": "body",
+   "meta": null,
+   "name": "list",
+   "label": "list"
+  },
+  {
+   "self_ref": "#/groups/1",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [
+    {
+     "$ref": "#/texts/32"
+    },
+    {
+     "$ref": "#/texts/33"
+    }
+   ],
+   "content_layer": "body",
+   "meta": null,
+   "name": "list",
+   "label": "list"
+  },
+  {
+   "self_ref": "#/groups/2",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [
+    {
+     "$ref": "#/texts/35"
+    },
+    {
+     "$ref": "#/texts/36"
+    },
+    {
+     "$ref": "#/texts/37"
+    }
+   ],
+   "content_layer": "body",
+   "meta": null,
+   "name": "list",
+   "label": "list"
+  },
+  {
+   "self_ref": "#/groups/3",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [
+    {
+     "$ref": "#/texts/55"
+    },
+    {
+     "$ref": "#/texts/56"
+    },
+    {
+     "$ref": "#/texts/57"
+    }
+   ],
+   "content_layer": "body",
+   "meta": null,
+   "name": "list",
+   "label": "list"
+  },
+  {
+   "self_ref": "#/groups/4",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [
+    {
+     "$ref": "#/texts/59"
+    },
+    {
+     "$ref": "#/texts/60"
+    },
+    {
+     "$ref": "#/texts/61"
+    },
+    {
+     "$ref": "#/texts/62"
+    }
+   ],
+   "content_layer": "body",
+   "meta": null,
+   "name": "list",
+   "label": "list"
+  },
+  {
+   "self_ref": "#/groups/5",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [
+    {
+     "$ref": "#/texts/70"
+    },
+    {
+     "$ref": "#/texts/71"
+    },
+    {
+     "$ref": "#/texts/72"
+    }
+   ],
+   "content_layer": "body",
+   "meta": null,
+   "name": "list",
+   "label": "list"
+  },
+  {
+   "self_ref": "#/groups/6",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [
+    {
+     "$ref": "#/texts/75"
+    },
+    {
+     "$ref": "#/texts/76"
+    },
+    {
+     "$ref": "#/texts/77"
+    },
+    {
+     "$ref": "#/texts/78"
+    },
+    {
+     "$ref": "#/texts/79"
+    }
+   ],
+   "content_layer": "body",
+   "meta": null,
+   "name": "list",
+   "label": "list"
+  },
+  {
+   "self_ref": "#/groups/7",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [
+    {
+     "$ref": "#/texts/84"
+    },
+    {
+     "$ref": "#/texts/85"
+    },
+    {
+     "$ref": "#/texts/86"
+    }
+   ],
+   "content_layer": "body",
+   "meta": null,
+   "name": "list",
+   "label": "list"
+  }
+ ],
+ "texts": [
+  {
+   "self_ref": "#/texts/0",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "furniture",
+   "meta": null,
+   "label": "page_header",
+   "prov": [
+    {
+     "page_no": 1,
+     "bbox": {
+      "l": 282.97100018,
+      "t": 826.67200007,
+      "r": 544.25900018,
+      "b": 809.1642883346656,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      131
+     ]
+    }
+   ],
+   "orig": "Ein Service des Bundesministerium der Justiz und für Verbraucherschutz sowie des Bundesamts für Justiz - www.gesetze-im-internet.de",
+   "text": "Ein Service des Bundesministerium der Justiz und für Verbraucherschutz sowie des Bundesamts für Justiz - www.gesetze-im-internet.de",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/1",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "section_header",
+   "prov": [
+    {
+     "page_no": 1,
+     "bbox": {
+      "l": 48.519,
+      "t": 769.45300095,
+      "r": 548.22900549,
+      "b": 718.9040486501704,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      130
+     ]
+    }
+   ],
+   "orig": "Verordnung über Sicherheit und Gesundheitsschutz bei der Verwendung von Arbeitsmitteln (Betriebssicherheitsverordnung - BetrSichV)",
+   "text": "Verordnung über Sicherheit und Gesundheitsschutz bei der Verwendung von Arbeitsmitteln (Betriebssicherheitsverordnung - BetrSichV)",
+   "formatting": null,
+   "hyperlink": null,
+   "level": 1
+  },
+  {
+   "self_ref": "#/texts/2",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 1,
+     "bbox": {
+      "l": 48.519,
+      "t": 704.9049972500001,
+      "r": 92.42899999999999,
+      "b": 695.0203574558319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      9
+     ]
+    }
+   ],
+   "orig": "BetrSichV",
+   "text": "BetrSichV",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/3",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 1,
+     "bbox": {
+      "l": 48.519,
+      "t": 681.7050003100001,
+      "r": 197.489,
+      "b": 671.8203605158319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      30
+     ]
+    }
+   ],
+   "orig": "Ausfertigungsdatum: 03.02.2015",
+   "text": "Ausfertigungsdatum: 03.02.2015",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/4",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 1,
+     "bbox": {
+      "l": 48.519,
+      "t": 658.50500336,
+      "r": 87.969,
+      "b": 648.6203635658319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      10
+     ]
+    }
+   ],
+   "orig": "Vollzitat:",
+   "text": "Vollzitat:",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/5",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 1,
+     "bbox": {
+      "l": 48.519,
+      "t": 635.30499878,
+      "r": 544.459,
+      "b": 613.4203589858319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      175
+     ]
+    }
+   ],
+   "orig": "\"Betriebssicherheitsverordnung vom 3. Februar 2015 (BGBl. I S. 49), die zuletzt durch Artikel 27 des Gesetzes vom 18. Dezember 2025 (BGBl. 2025 I Nr. 347) geändert worden ist\"",
+   "text": "\"Betriebssicherheitsverordnung vom 3. Februar 2015 (BGBl. I S. 49), die zuletzt durch Artikel 27 des Gesetzes vom 18. Dezember 2025 (BGBl. 2025 I Nr. 347) geändert worden ist\"",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/6",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 1,
+     "bbox": {
+      "l": 51.349,
+      "t": 597.27499981,
+      "r": 357.2669999999999,
+      "b": 587.390360015832,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      63
+     ]
+    }
+   ],
+   "orig": "Stand: Zuletzt geändert durch Art. 27 G v. 18.12.2025 I Nr. 347",
+   "text": "Stand: Zuletzt geändert durch Art. 27 G v. 18.12.2025 I Nr. 347",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/7",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "code",
+   "prov": [
+    {
+     "page_no": 1,
+     "bbox": {
+      "l": 51.349,
+      "t": 579.61499981,
+      "r": 274.2389999999999,
+      "b": 569.7303600158319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      49
+     ]
+    }
+   ],
+   "orig": "Ersetzt V 805-3-9 v. 27.9.2002 I 3777 (BetrSichV)",
+   "text": "Ersetzt V 805-3-9 v. 27.9.2002 I 3777 (BetrSichV)",
+   "formatting": null,
+   "hyperlink": null,
+   "captions": [],
+   "references": [],
+   "footnotes": [],
+   "image": null,
+   "code_language": "unknown"
+  },
+  {
+   "self_ref": "#/texts/8",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "section_header",
+   "prov": [
+    {
+     "page_no": 1,
+     "bbox": {
+      "l": 48.519,
+      "t": 553.58499756,
+      "r": 90.009,
+      "b": 543.8856960267802,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      7
+     ]
+    }
+   ],
+   "orig": "Fußnote",
+   "text": "Fußnote",
+   "formatting": null,
+   "hyperlink": null,
+   "level": 1
+  },
+  {
+   "self_ref": "#/texts/9",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "code",
+   "prov": [
+    {
+     "page_no": 1,
+     "bbox": {
+      "l": 48.519,
+      "t": 530.51600122,
+      "r": 471.1230000000004,
+      "b": 445.9978250911816,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      312
+     ]
+    }
+   ],
+   "orig": "(+++ Textnachweis ab: 1.6.2015 +++) (+++ Zur Anwendung vgl. § 20 +++) (+++ Amtlicher Hinweis des Normgebers auf EG-Recht: Umsetzung der EWGRL 270/90 (CELEX Nr: 31990L0270) EWGRL 269/90 (CELEX Nr: 31990L0269) EGRL 10/2003 (CELEX Nr: 32003L0010) EGRL 44/2002 (CELEX Nr: 32002L0044) vgl. V v. 18.10.2017 I 3584 +++)",
+   "text": "(+++ Textnachweis ab: 1.6.2015 +++) (+++ Zur Anwendung vgl. § 20 +++) (+++ Amtlicher Hinweis des Normgebers auf EG-Recht: Umsetzung der EWGRL 270/90 (CELEX Nr: 31990L0270) EWGRL 269/90 (CELEX Nr: 31990L0269) EGRL 10/2003 (CELEX Nr: 32003L0010) EGRL 44/2002 (CELEX Nr: 32002L0044) vgl. V v. 18.10.2017 I 3584 +++)",
+   "formatting": null,
+   "hyperlink": null,
+   "captions": [],
+   "references": [],
+   "footnotes": [],
+   "image": null,
+   "code_language": "unknown"
+  },
+  {
+   "self_ref": "#/texts/10",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 1,
+     "bbox": {
+      "l": 48.519,
+      "t": 422.38498535,
+      "r": 557.2989999999996,
+      "b": 376.5003455558319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      416
+     ]
+    }
+   ],
+   "orig": "Die V wurde als Artikel 1 der V v. 3.2.2015 I 49 von der Bundesregierung, dem Bundesministerium für Wirtschaft und Energie und dem Bundesministerium für Arbeit und Soziales mit Zustimmung des Bundesrates und im Einvernehmen mit dem Bundesministerium für Umwelt, Naturschutz, Bau und Reaktorsicherheit sowie mit dem Bundesministerium des Innern beschlossen. Sie tritt gem. Art. 3 Satz 1 dieser V am 1.6.2015 in Kraft.",
+   "text": "Die V wurde als Artikel 1 der V v. 3.2.2015 I 49 von der Bundesregierung, dem Bundesministerium für Wirtschaft und Energie und dem Bundesministerium für Arbeit und Soziales mit Zustimmung des Bundesrates und im Einvernehmen mit dem Bundesministerium für Umwelt, Naturschutz, Bau und Reaktorsicherheit sowie mit dem Bundesministerium des Innern beschlossen. Sie tritt gem. Art. 3 Satz 1 dieser V am 1.6.2015 in Kraft.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/11",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "section_header",
+   "prov": [
+    {
+     "page_no": 1,
+     "bbox": {
+      "l": 48.519,
+      "t": 366.08499756000003,
+      "r": 131.279,
+      "b": 356.38569602678024,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      16
+     ]
+    }
+   ],
+   "orig": "Inhaltsübersicht",
+   "text": "Inhaltsübersicht",
+   "formatting": null,
+   "hyperlink": null,
+   "level": 1
+  },
+  {
+   "self_ref": "#/texts/12",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "section_header",
+   "prov": [
+    {
+     "page_no": 1,
+     "bbox": {
+      "l": 253.93800635,
+      "t": 345.71498779,
+      "r": 360.06800635,
+      "b": 336.46498779,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      27
+     ]
+    }
+   ],
+   "orig": "I nha l t s ü be r s i ch t",
+   "text": "I nha l t s ü be r s i ch t",
+   "formatting": null,
+   "hyperlink": null,
+   "level": 1
+  },
+  {
+   "self_ref": "#/texts/13",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "furniture",
+   "meta": null,
+   "label": "page_footer",
+   "prov": [
+    {
+     "page_no": 1,
+     "bbox": {
+      "l": 276.67799658,
+      "t": 22.72900026000002,
+      "r": 338.43799706999994,
+      "b": 14.821288424665568,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      18
+     ]
+    }
+   ],
+   "orig": "- Seite 1 von 60 -",
+   "text": "- Seite 1 von 60 -",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/14",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "furniture",
+   "meta": null,
+   "label": "page_header",
+   "prov": [
+    {
+     "page_no": 2,
+     "bbox": {
+      "l": 282.97100018,
+      "t": 826.67200007,
+      "r": 544.25900018,
+      "b": 809.1642883346656,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      131
+     ]
+    }
+   ],
+   "orig": "Ein Service des Bundesministerium der Justiz und für Verbraucherschutz sowie des Bundesamts für Justiz - www.gesetze-im-internet.de",
+   "text": "Ein Service des Bundesministerium der Justiz und für Verbraucherschutz sowie des Bundesamts für Justiz - www.gesetze-im-internet.de",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/15",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "section_header",
+   "prov": [
+    {
+     "page_no": 2,
+     "bbox": {
+      "l": 48.519,
+      "t": 365.8040144,
+      "r": 341.77500000000003,
+      "b": 339.7648281501363,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      54
+     ]
+    }
+   ],
+   "orig": "Abschnitt 1 Anwendungsbereich und Begriffsbestimmungen",
+   "text": "Abschnitt 1 Anwendungsbereich und Begriffsbestimmungen",
+   "formatting": null,
+   "hyperlink": null,
+   "level": 1
+  },
+  {
+   "self_ref": "#/texts/16",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "section_header",
+   "prov": [
+    {
+     "page_no": 2,
+     "bbox": {
+      "l": 48.519,
+      "t": 328.96500244000003,
+      "r": 253.05899954000003,
+      "b": 319.26570090678024,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      37
+     ]
+    }
+   ],
+   "orig": "§ 1 Anwendungsbereich und Zielsetzung",
+   "text": "§ 1 Anwendungsbereich und Zielsetzung",
+   "formatting": null,
+   "hyperlink": null,
+   "level": 1
+  },
+  {
+   "self_ref": "#/texts/17",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 2,
+     "bbox": {
+      "l": 48.519,
+      "t": 306.16501465,
+      "r": 562.9089999999998,
+      "b": 272.28037485583195,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      259
+     ]
+    }
+   ],
+   "orig": "(1) Diese Verordnung gilt für die Verwendung von Arbeitsmitteln. Ziel dieser Verordnung ist es, die Sicherheit und den Schutz der Gesundheit von Beschäftigten bei der Verwendung von Arbeitsmitteln zu gewährleisten. Dies soll insbesondere erreicht werden durch",
+   "text": "(1) Diese Verordnung gilt für die Verwendung von Arbeitsmitteln. Ziel dieser Verordnung ist es, die Sicherheit und den Schutz der Gesundheit von Beschäftigten bei der Verwendung von Arbeitsmitteln zu gewährleisten. Dies soll insbesondere erreicht werden durch",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/18",
+   "parent": {
+    "$ref": "#/groups/0"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 2,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 264.16501465,
+      "r": 394.71900152999984,
+      "b": 254.28037485583195,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      69
+     ]
+    }
+   ],
+   "orig": "1. die Auswahl geeigneter Arbeitsmittel und deren sichere Verwendung,",
+   "text": "die Auswahl geeigneter Arbeitsmittel und deren sichere Verwendung,",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "1."
+  },
+  {
+   "self_ref": "#/texts/19",
+   "parent": {
+    "$ref": "#/groups/0"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 2,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 247.15500487999998,
+      "r": 560.9490015299996,
+      "b": 225.27036508583194,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      108
+     ]
+    }
+   ],
+   "orig": "2. die für den vorgesehenen Verwendungszweck geeignete Gestaltung von Arbeits- und Fertigungsverfahren sowie",
+   "text": "die für den vorgesehenen Verwendungszweck geeignete Gestaltung von Arbeits- und Fertigungsverfahren sowie",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "2."
+  },
+  {
+   "self_ref": "#/texts/20",
+   "parent": {
+    "$ref": "#/groups/0"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 2,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 218.14499511999998,
+      "r": 325.0390015299999,
+      "b": 208.26035532583194,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      56
+     ]
+    }
+   ],
+   "orig": "3. die Qualifikation und Unterweisung der Beschäftigten.",
+   "text": "die Qualifikation und Unterweisung der Beschäftigten.",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "3."
+  },
+  {
+   "self_ref": "#/texts/21",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 2,
+     "bbox": {
+      "l": 48.519,
+      "t": 201.13498534999997,
+      "r": 557.5389999999996,
+      "b": 167.25034555583193,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      294
+     ]
+    }
+   ],
+   "orig": "Diese Verordnung regelt hinsichtlich der in § 18 und in Anhang 2 genannten überwachungsbedürftigen Anlagen zugleich Maßnahmen zum Schutz anderer Personen im Gefahrenbereich, soweit diese aufgrund der Verwendung dieser Anlagen durch Arbeitgeber im Sinne des § 2 Absatz 3 gefährdet werden können.",
+   "text": "Diese Verordnung regelt hinsichtlich der in § 18 und in Anhang 2 genannten überwachungsbedürftigen Anlagen zugleich Maßnahmen zum Schutz anderer Personen im Gefahrenbereich, soweit diese aufgrund der Verwendung dieser Anlagen durch Arbeitgeber im Sinne des § 2 Absatz 3 gefährdet werden können.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/22",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 2,
+     "bbox": {
+      "l": 48.519,
+      "t": 154.33499756000003,
+      "r": 560.4089999999995,
+      "b": 120.450357765832,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      317
+     ]
+    }
+   ],
+   "orig": "(2) Diese Verordnung gilt nicht in Betrieben, die dem Bundesberggesetz unterliegen, soweit dafür entsprechende Rechtsvorschriften bestehen. Abweichend von Satz 1 gilt sie jedoch für überwachungsbedürftige Anlagen in Tagesanlagen, mit Ausnahme von Rohrleitungen nach Anhang 2 Abschnitt 4 Nummer 2.1 Satz 1 Buchstabe d.",
+   "text": "(2) Diese Verordnung gilt nicht in Betrieben, die dem Bundesberggesetz unterliegen, soweit dafür entsprechende Rechtsvorschriften bestehen. Abweichend von Satz 1 gilt sie jedoch für überwachungsbedürftige Anlagen in Tagesanlagen, mit Ausnahme von Rohrleitungen nach Anhang 2 Abschnitt 4 Nummer 2.1 Satz 1 Buchstabe d.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/23",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 2,
+     "bbox": {
+      "l": 48.519,
+      "t": 107.53500976999999,
+      "r": 552.4289999999999,
+      "b": 73.65036997583195,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      316
+     ]
+    }
+   ],
+   "orig": "(3) Diese Verordnung gilt nicht auf Seeschiffen unter fremder Flagge und auf Seeschiffen, für die das Bundesministerium für Verkehr und digitale Infrastruktur nach § 10 des Flaggenrechtsgesetzes die Befugnis zur Führung der Bundesflagge lediglich für die erste Überführungsreise in einen anderen Hafen verliehen hat.",
+   "text": "(3) Diese Verordnung gilt nicht auf Seeschiffen unter fremder Flagge und auf Seeschiffen, für die das Bundesministerium für Verkehr und digitale Infrastruktur nach § 10 des Flaggenrechtsgesetzes die Befugnis zur Führung der Bundesflagge lediglich für die erste Überführungsreise in einen anderen Hafen verliehen hat.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/24",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "furniture",
+   "meta": null,
+   "label": "page_footer",
+   "prov": [
+    {
+     "page_no": 2,
+     "bbox": {
+      "l": 276.67799658,
+      "t": 22.72900026000002,
+      "r": 338.43799706999994,
+      "b": 14.821288424665568,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      18
+     ]
+    }
+   ],
+   "orig": "- Seite 2 von 60 -",
+   "text": "- Seite 2 von 60 -",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/25",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "furniture",
+   "meta": null,
+   "label": "page_header",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 282.97100018,
+      "t": 826.67200007,
+      "r": 544.25900018,
+      "b": 809.1642883346656,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      131
+     ]
+    }
+   ],
+   "orig": "Ein Service des Bundesministerium der Justiz und für Verbraucherschutz sowie des Bundesamts für Justiz - www.gesetze-im-internet.de",
+   "text": "Ein Service des Bundesministerium der Justiz und für Verbraucherschutz sowie des Bundesamts für Justiz - www.gesetze-im-internet.de",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/26",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 48.519,
+      "t": 766.00499954,
+      "r": 529.1289999999998,
+      "b": 708.1203635658319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      464
+     ]
+    }
+   ],
+   "orig": "(4) Abschnitt 3 gilt nicht für Energieanlagen im Sinne des § 3 Nummer 32 des Energiewirtschaftsgesetzes, soweit sie Druckanlagen im Sinne des Anhangs 2 Abschnitt 4 Nummer 2.1 Buchstabe b, c oder d dieser Verordnung sind. Satz 1 gilt nicht für Gasfüllanlagen, die Energieanlagen im Sinne des § 3 Nummer 15 des Energiewirtschaftsgesetzes sind und nicht auf dem Betriebsgelände von Unternehmen der öffentlichen Gasversorgung von diesen errichtet und betrieben werden.",
+   "text": "(4) Abschnitt 3 gilt nicht für Energieanlagen im Sinne des § 3 Nummer 32 des Energiewirtschaftsgesetzes, soweit sie Druckanlagen im Sinne des Anhangs 2 Abschnitt 4 Nummer 2.1 Buchstabe b, c oder d dieser Verordnung sind. Satz 1 gilt nicht für Gasfüllanlagen, die Energieanlagen im Sinne des § 3 Nummer 15 des Energiewirtschaftsgesetzes sind und nicht auf dem Betriebsgelände von Unternehmen der öffentlichen Gasversorgung von diesen errichtet und betrieben werden.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/27",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 48.519,
+      "t": 695.2050003100001,
+      "r": 550.5489999999996,
+      "b": 661.3203605158319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      301
+     ]
+    }
+   ],
+   "orig": "(5) Das Bundesministerium der Verteidigung kann Ausnahmen von den Vorschriften dieser Verordnung zulassen, wenn zwingende Gründe der Verteidigung oder die Erfüllung zwischenstaatlicher Verpflichtungen der Bundesrepublik Deutschland dies erfordern und die Sicherheit auf andere Weise gewährleistet ist.",
+   "text": "(5) Das Bundesministerium der Verteidigung kann Ausnahmen von den Vorschriften dieser Verordnung zulassen, wenn zwingende Gründe der Verteidigung oder die Erfüllung zwischenstaatlicher Verpflichtungen der Bundesrepublik Deutschland dies erfordern und die Sicherheit auf andere Weise gewährleistet ist.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/28",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "section_header",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 48.519,
+      "t": 650.90500488,
+      "r": 181.31899954000002,
+      "b": 641.2057033467802,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      24
+     ]
+    }
+   ],
+   "orig": "§ 2 Begriffsbestimmungen",
+   "text": "§ 2 Begriffsbestimmungen",
+   "formatting": null,
+   "hyperlink": null,
+   "level": 1
+  },
+  {
+   "self_ref": "#/texts/29",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 48.519,
+      "t": 628.10500183,
+      "r": 549.8389999999996,
+      "b": 606.2203620358318,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      140
+     ]
+    }
+   ],
+   "orig": "(1) Arbeitsmittel sind Werkzeuge, Geräte, Maschinen oder Anlagen, die für die Arbeit verwendet werden, sowie überwachungsbedürftige Anlagen.",
+   "text": "(1) Arbeitsmittel sind Werkzeuge, Geräte, Maschinen oder Anlagen, die für die Arbeit verwendet werden, sowie überwachungsbedürftige Anlagen.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/30",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 48.519,
+      "t": 593.30499878,
+      "r": 562.4089999999997,
+      "b": 559.4203589858319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      302
+     ]
+    }
+   ],
+   "orig": "(2) Die Verwendung von Arbeitsmitteln umfasst jegliche Tätigkeit mit diesen. Hierzu gehören insbesondere das Montieren und Installieren, Bedienen, An- oder Abschalten oder Einstellen, Gebrauchen, Betreiben, Instandhalten, Reinigen, Prüfen, Umbauen, Erproben, Demontieren, Transportieren und Überwachen.",
+   "text": "(2) Die Verwendung von Arbeitsmitteln umfasst jegliche Tätigkeit mit diesen. Hierzu gehören insbesondere das Montieren und Installieren, Bedienen, An- oder Abschalten oder Einstellen, Gebrauchen, Betreiben, Instandhalten, Reinigen, Prüfen, Umbauen, Erproben, Demontieren, Transportieren und Überwachen.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/31",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 48.519,
+      "t": 546.50499573,
+      "r": 551.4189999999998,
+      "b": 524.6203559358319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      124
+     ]
+    }
+   ],
+   "orig": "(3) Arbeitgeber ist, wer nach § 2 Absatz 3 des Arbeitsschutzgesetzes als solcher bestimmt ist. Dem Arbeitgeber steht gleich,",
+   "text": "(3) Arbeitgeber ist, wer nach § 2 Absatz 3 des Arbeitsschutzgesetzes als solcher bestimmt ist. Dem Arbeitgeber steht gleich,",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/32",
+   "parent": {
+    "$ref": "#/groups/1"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 516.5050109900001,
+      "r": 458.56900152999975,
+      "b": 494.6203711958319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      131
+     ]
+    }
+   ],
+   "orig": "1. wer, ohne Arbeitgeber zu sein, zu gewerblichen oder wirtschaftlichen Zwecken eine überwachungsbedürftige Anlage verwendet, sowie",
+   "text": "wer, ohne Arbeitgeber zu sein, zu gewerblichen oder wirtschaftlichen Zwecken eine überwachungsbedürftige Anlage verwendet, sowie",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "1."
+  },
+  {
+   "self_ref": "#/texts/33",
+   "parent": {
+    "$ref": "#/groups/1"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 487.49500122,
+      "r": 436.8290015299997,
+      "b": 477.6103614258319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      77
+     ]
+    }
+   ],
+   "orig": "2. der Auftraggeber und der Zwischenmeister im Sinne des Heimarbeitsgesetzes.",
+   "text": "der Auftraggeber und der Zwischenmeister im Sinne des Heimarbeitsgesetzes.",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "2."
+  },
+  {
+   "self_ref": "#/texts/34",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 48.519,
+      "t": 459.68500366,
+      "r": 549.2989999999998,
+      "b": 437.8003638658319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      192
+     ]
+    }
+   ],
+   "orig": "(4) Beschäftigte sind Personen, die nach § 2 Absatz 2 des Arbeitsschutzgesetzes als solche bestimmt sind. Den Beschäftigten stehen folgende Personen gleich, sofern sie Arbeitsmittel verwenden:",
+   "text": "(4) Beschäftigte sind Personen, die nach § 2 Absatz 2 des Arbeitsschutzgesetzes als solche bestimmt sind. Den Beschäftigten stehen folgende Personen gleich, sofern sie Arbeitsmittel verwenden:",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/35",
+   "parent": {
+    "$ref": "#/groups/2"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 429.68500366,
+      "r": 285.33900152999996,
+      "b": 419.8003638658319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      46
+     ]
+    }
+   ],
+   "orig": "1. Schülerinnen und Schüler sowie Studierende,",
+   "text": "Schülerinnen und Schüler sowie Studierende,",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "1."
+  },
+  {
+   "self_ref": "#/texts/36",
+   "parent": {
+    "$ref": "#/groups/2"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 412.67499390000006,
+      "r": 428.2390015299998,
+      "b": 402.79035410583197,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      77
+     ]
+    }
+   ],
+   "orig": "2. in Heimarbeit Beschäftigte nach § 1 Absatz 1 des Heimarbeitsgesetzes sowie",
+   "text": "in Heimarbeit Beschäftigte nach § 1 Absatz 1 des Heimarbeitsgesetzes sowie",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "2."
+  },
+  {
+   "self_ref": "#/texts/37",
+   "parent": {
+    "$ref": "#/groups/2"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 395.66501465000005,
+      "r": 505.5790015299998,
+      "b": 385.78037485583195,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      96
+     ]
+    }
+   ],
+   "orig": "3. sonstige Personen, insbesondere Personen, die in wissenschaftlichen Einrichtungen tätig sind.",
+   "text": "sonstige Personen, insbesondere Personen, die in wissenschaftlichen Einrichtungen tätig sind.",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "3."
+  },
+  {
+   "self_ref": "#/texts/38",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 48.519,
+      "t": 367.85498657000005,
+      "r": 556.5389999999995,
+      "b": 309.9703467758319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      445
+     ]
+    }
+   ],
+   "orig": "(5) Fachkundig ist, wer zur Ausübung einer in dieser Verordnung bestimmten Aufgabe über die erforderlichen Fachkenntnisse verfügt. Die Anforderungen an die Fachkunde sind abhängig von der jeweiligen Art der Aufgabe. Zu den Anforderungen zählen eine entsprechende Berufsausbildung, Berufserfahrung oder eine zeitnah ausgeübte entsprechende berufliche Tätigkeit. Die Fachkenntnisse sind durch Teilnahme an Schulungen auf aktuellem Stand zu halten.",
+   "text": "(5) Fachkundig ist, wer zur Ausübung einer in dieser Verordnung bestimmten Aufgabe über die erforderlichen Fachkenntnisse verfügt. Die Anforderungen an die Fachkunde sind abhängig von der jeweiligen Art der Aufgabe. Zu den Anforderungen zählen eine entsprechende Berufsausbildung, Berufserfahrung oder eine zeitnah ausgeübte entsprechende berufliche Tätigkeit. Die Fachkenntnisse sind durch Teilnahme an Schulungen auf aktuellem Stand zu halten.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/39",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 48.519,
+      "t": 297.0549987800001,
+      "r": 554.7289999999998,
+      "b": 251.17038950583196,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      361
+     ]
+    }
+   ],
+   "orig": "(6) Zur Prüfung befähigte Person ist eine Person, die durch ihre Berufsausbildung, ihre Berufserfahrung und ihre zeitnahe berufliche Tätigkeit über die erforderlichen Kenntnisse zur Prüfung von Arbeitsmitteln verfügt; soweit hinsichtlich der Prüfung von Arbeitsmitteln in den Anhängen 2 und 3 weitergehende Anforderungen festgelegt sind, sind diese zu erfüllen.",
+   "text": "(6) Zur Prüfung befähigte Person ist eine Person, die durch ihre Berufsausbildung, ihre Berufserfahrung und ihre zeitnahe berufliche Tätigkeit über die erforderlichen Kenntnisse zur Prüfung von Arbeitsmitteln verfügt; soweit hinsichtlich der Prüfung von Arbeitsmitteln in den Anhängen 2 und 3 weitergehende Anforderungen festgelegt sind, sind diese zu erfüllen.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/40",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 48.519,
+      "t": 238.25498046999996,
+      "r": 513.8489999999996,
+      "b": 216.37034067583193,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      197
+     ]
+    }
+   ],
+   "orig": "(7) Instandhaltung ist die Gesamtheit aller Maßnahmen zur Erhaltung des sicheren Zustands oder der Rückführung in diesen. Instandhaltung umfasst insbesondere Inspektion, Wartung und Instandsetzung.",
+   "text": "(7) Instandhaltung ist die Gesamtheit aller Maßnahmen zur Erhaltung des sicheren Zustands oder der Rückführung in diesen. Instandhaltung umfasst insbesondere Inspektion, Wartung und Instandsetzung.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/41",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 48.519,
+      "t": 203.45499268000003,
+      "r": 530.6489999999999,
+      "b": 181.570352885832,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      165
+     ]
+    }
+   ],
+   "orig": "(8) Prüfung ist die Ermittlung des Istzustands, der Vergleich des Istzustands mit dem Sollzustand sowie die Bewertung der Abweichung des Istzustands vom Sollzustand.",
+   "text": "(8) Prüfung ist die Ermittlung des Istzustands, der Vergleich des Istzustands mit dem Sollzustand sowie die Bewertung der Abweichung des Istzustands vom Sollzustand.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/42",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 48.519,
+      "t": 168.65500487999998,
+      "r": 559.2789999999995,
+      "b": 146.77036508583194,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      172
+     ]
+    }
+   ],
+   "orig": "(9) Prüfpflichtige Änderung ist jede Maßnahme, durch welche die Sicherheit eines Arbeitsmittels beeinflusst wird. Auch Instandsetzungsarbeiten können solche Maßnahmen sein.",
+   "text": "(9) Prüfpflichtige Änderung ist jede Maßnahme, durch welche die Sicherheit eines Arbeitsmittels beeinflusst wird. Auch Instandsetzungsarbeiten können solche Maßnahmen sein.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/43",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 48.519,
+      "t": 133.85501708999993,
+      "r": 560.9989999999998,
+      "b": 75.9703772958319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      471
+     ]
+    }
+   ],
+   "orig": "(10) Stand der Technik ist der Entwicklungsstand fortschrittlicher Verfahren, Einrichtungen oder Betriebsweisen, der die praktische Eignung einer Maßnahme oder Vorgehensweise zum Schutz der Gesundheit und zur Sicherheit der Beschäftigten oder anderer Personen gesichert erscheinen lässt. Bei der Bestimmung des Stands der Technik sind insbesondere vergleichbare Verfahren, Einrichtungen oder Betriebsweisen heranzuziehen, die mit Erfolg in der Praxis erprobt worden sind.",
+   "text": "(10) Stand der Technik ist der Entwicklungsstand fortschrittlicher Verfahren, Einrichtungen oder Betriebsweisen, der die praktische Eignung einer Maßnahme oder Vorgehensweise zum Schutz der Gesundheit und zur Sicherheit der Beschäftigten oder anderer Personen gesichert erscheinen lässt. Bei der Bestimmung des Stands der Technik sind insbesondere vergleichbare Verfahren, Einrichtungen oder Betriebsweisen heranzuziehen, die mit Erfolg in der Praxis erprobt worden sind.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/44",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "furniture",
+   "meta": null,
+   "label": "page_footer",
+   "prov": [
+    {
+     "page_no": 3,
+     "bbox": {
+      "l": 276.67799658,
+      "t": 22.72900026000002,
+      "r": 338.43799706999994,
+      "b": 14.821288424665568,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      18
+     ]
+    }
+   ],
+   "orig": "- Seite 3 von 60 -",
+   "text": "- Seite 3 von 60 -",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/45",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "furniture",
+   "meta": null,
+   "label": "page_header",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 282.97100018,
+      "t": 826.67200007,
+      "r": 544.25900018,
+      "b": 809.1642883346656,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      131
+     ]
+    }
+   ],
+   "orig": "Ein Service des Bundesministerium der Justiz und für Verbraucherschutz sowie des Bundesamts für Justiz - www.gesetze-im-internet.de",
+   "text": "Ein Service des Bundesministerium der Justiz und für Verbraucherschutz sowie des Bundesamts für Justiz - www.gesetze-im-internet.de",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/46",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 48.519,
+      "t": 766.00499954,
+      "r": 558.3389999999996,
+      "b": 744.1203597458319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      220
+     ]
+    }
+   ],
+   "orig": "(11) Gefahrenbereich ist der Bereich innerhalb oder im Umkreis eines Arbeitsmittels, in dem die Sicherheit oder die Gesundheit von Beschäftigten und anderen Personen durch die Verwendung des Arbeitsmittels gefährdet ist.",
+   "text": "(11) Gefahrenbereich ist der Bereich innerhalb oder im Umkreis eines Arbeitsmittels, in dem die Sicherheit oder die Gesundheit von Beschäftigten und anderen Personen durch die Verwendung des Arbeitsmittels gefährdet ist.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/47",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 48.519,
+      "t": 731.2050003100001,
+      "r": 383.76899999999983,
+      "b": 721.3203605158319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      71
+     ]
+    }
+   ],
+   "orig": "(12) Errichtung umfasst die Montage und Installation am Verwendungsort.",
+   "text": "(12) Errichtung umfasst die Montage und Installation am Verwendungsort.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/48",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 48.519,
+      "t": 708.4049972500001,
+      "r": 520.069,
+      "b": 674.5203574558319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      289
+     ]
+    }
+   ],
+   "orig": "(13) Überwachungsbedürftige Anlagen sind die Anlagen, die in Anhang 2 genannt oder nach § 18 Absatz 1 erlaubnispflichtig sind. Zu den überwachungsbedürftigen Anlagen gehören auch Mess-, Steuer- und Regeleinrichtungen, die dem sicheren Betrieb dieser überwachungsbedürftigen Anlagen dienen.",
+   "text": "(13) Überwachungsbedürftige Anlagen sind die Anlagen, die in Anhang 2 genannt oder nach § 18 Absatz 1 erlaubnispflichtig sind. Zu den überwachungsbedürftigen Anlagen gehören auch Mess-, Steuer- und Regeleinrichtungen, die dem sicheren Betrieb dieser überwachungsbedürftigen Anlagen dienen.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/49",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 48.519,
+      "t": 661.60500183,
+      "r": 463.61899999999974,
+      "b": 651.720362035832,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      88
+     ]
+    }
+   ],
+   "orig": "(14) Zugelassene Überwachungsstellen sind die in Anhang 2 Abschnitt 1 genannten Stellen.",
+   "text": "(14) Zugelassene Überwachungsstellen sind die in Anhang 2 Abschnitt 1 genannten Stellen.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/50",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 48.519,
+      "t": 638.80499878,
+      "r": 543.8689999999996,
+      "b": 604.9203589858319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      221
+     ]
+    }
+   ],
+   "orig": "(15) Andere Personen sind Personen, die nicht Beschäftigte oder Gleichgestellte nach Absatz 4 sind und sich im Gefahrenbereich einer überwachungsbedürftigen Anlage innerhalb oder außerhalb eines Betriebsgeländes befinden.",
+   "text": "(15) Andere Personen sind Personen, die nicht Beschäftigte oder Gleichgestellte nach Absatz 4 sind und sich im Gefahrenbereich einer überwachungsbedürftigen Anlage innerhalb oder außerhalb eines Betriebsgeländes befinden.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/51",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "section_header",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 48.519,
+      "t": 595.04400464,
+      "r": 344.571,
+      "b": 569.0048336401363,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      54
+     ]
+    }
+   ],
+   "orig": "Abschnitt 2 Gefährdungsbeurteilung und Schutzmaßnahmen",
+   "text": "Abschnitt 2 Gefährdungsbeurteilung und Schutzmaßnahmen",
+   "formatting": null,
+   "hyperlink": null,
+   "level": 1
+  },
+  {
+   "self_ref": "#/texts/52",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "section_header",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 48.519,
+      "t": 558.20499268,
+      "r": 189.97899954000002,
+      "b": 548.5056911467802,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      26
+     ]
+    }
+   ],
+   "orig": "§ 3 Gefährdungsbeurteilung",
+   "text": "§ 3 Gefährdungsbeurteilung",
+   "formatting": null,
+   "hyperlink": null,
+   "level": 1
+  },
+  {
+   "self_ref": "#/texts/53",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 48.519,
+      "t": 535.40500488,
+      "r": 554.2089999999997,
+      "b": 477.52036508583194,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      449
+     ]
+    }
+   ],
+   "orig": "(1) Der Arbeitgeber hat vor der Verwendung von Arbeitsmitteln die auftretenden Gefährdungen zu beurteilen (Gefährdungsbeurteilung) und daraus notwendige und geeignete Schutzmaßnahmen abzuleiten. Das Vorhandensein einer CE-Kennzeichnung am Arbeitsmittel entbindet nicht von der Pflicht zur Durchführung einer Gefährdungsbeurteilung. Für Aufzugsanlagen gilt Satz 1 nur, wenn sie von einem Arbeitgeber im Sinne des § 2 Absatz 3 Satz 1 verwendet werden.",
+   "text": "(1) Der Arbeitgeber hat vor der Verwendung von Arbeitsmitteln die auftretenden Gefährdungen zu beurteilen (Gefährdungsbeurteilung) und daraus notwendige und geeignete Schutzmaßnahmen abzuleiten. Das Vorhandensein einer CE-Kennzeichnung am Arbeitsmittel entbindet nicht von der Pflicht zur Durchführung einer Gefährdungsbeurteilung. Für Aufzugsanlagen gilt Satz 1 nur, wenn sie von einem Arbeitgeber im Sinne des § 2 Absatz 3 Satz 1 verwendet werden.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/54",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 48.519,
+      "t": 464.60498657000005,
+      "r": 519.3189999999995,
+      "b": 442.72034677583196,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      125
+     ]
+    }
+   ],
+   "orig": "(2) In die Beurteilung sind alle Gefährdungen einzubeziehen, die bei der Verwendung von Arbeitsmitteln ausgehen, und zwar von",
+   "text": "(2) In die Beurteilung sind alle Gefährdungen einzubeziehen, die bei der Verwendung von Arbeitsmitteln ausgehen, und zwar von",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/55",
+   "parent": {
+    "$ref": "#/groups/3"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 434.60498657000005,
+      "r": 196.83900153000002,
+      "b": 424.72034677583196,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      29
+     ]
+    }
+   ],
+   "orig": "1. den Arbeitsmitteln selbst,",
+   "text": "den Arbeitsmitteln selbst,",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "1."
+  },
+  {
+   "self_ref": "#/texts/56",
+   "parent": {
+    "$ref": "#/groups/3"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 417.59500732000004,
+      "r": 198.95900153,
+      "b": 407.71036752583194,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      26
+     ]
+    }
+   ],
+   "orig": "2. der Arbeitsumgebung und",
+   "text": "der Arbeitsumgebung und",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "2."
+  },
+  {
+   "self_ref": "#/texts/57",
+   "parent": {
+    "$ref": "#/groups/3"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 400.58499756000003,
+      "r": 483.60900152999966,
+      "b": 390.70035776583194,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      88
+     ]
+    }
+   ],
+   "orig": "3. den Arbeitsgegenständen, an denen Tätigkeiten mit Arbeitsmitteln durchgeführt werden.",
+   "text": "den Arbeitsgegenständen, an denen Tätigkeiten mit Arbeitsmitteln durchgeführt werden.",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "3."
+  },
+  {
+   "self_ref": "#/texts/58",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 48.519,
+      "t": 383.57498779,
+      "r": 409.6389999999998,
+      "b": 373.6903479958319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      77
+     ]
+    }
+   ],
+   "orig": "Bei der Gefährdungsbeurteilung ist insbesondere Folgendes zu berücksichtigen:",
+   "text": "Bei der Gefährdungsbeurteilung ist insbesondere Folgendes zu berücksichtigen:",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/59",
+   "parent": {
+    "$ref": "#/groups/4"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 365.57498779,
+      "r": 492.9290015299998,
+      "b": 343.6903479958319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      122
+     ]
+    }
+   ],
+   "orig": "1. die Gebrauchstauglichkeit von Arbeitsmitteln einschließlich der ergonomischen, alters- und alternsgerechten Gestaltung,",
+   "text": "die Gebrauchstauglichkeit von Arbeitsmitteln einschließlich der ergonomischen, alters- und alternsgerechten Gestaltung,",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "1."
+  },
+  {
+   "self_ref": "#/texts/60",
+   "parent": {
+    "$ref": "#/groups/4"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 336.56500854,
+      "r": 534.0190015299997,
+      "b": 314.68036874583197,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      199
+     ]
+    }
+   ],
+   "orig": "2. die sicherheitsrelevanten einschließlich der ergonomischen Zusammenhänge zwischen Arbeitsplatz, Arbeitsmittel, Arbeitsverfahren, Arbeitsorganisation, Arbeitsablauf, Arbeitszeit und Arbeitsaufgabe,",
+   "text": "die sicherheitsrelevanten einschließlich der ergonomischen Zusammenhänge zwischen Arbeitsplatz, Arbeitsmittel, Arbeitsverfahren, Arbeitsorganisation, Arbeitsablauf, Arbeitszeit und Arbeitsaufgabe,",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "2."
+  },
+  {
+   "self_ref": "#/texts/61",
+   "parent": {
+    "$ref": "#/groups/4"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 307.5549987800001,
+      "r": 500.8790015299997,
+      "b": 285.67035898583197,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      117
+     ]
+    }
+   ],
+   "orig": "3. die physischen und psychischen Belastungen der Beschäftigten, die bei der Verwendung von Arbeitsmitteln auftreten,",
+   "text": "die physischen und psychischen Belastungen der Beschäftigten, die bei der Verwendung von Arbeitsmitteln auftreten,",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "3."
+  },
+  {
+   "self_ref": "#/texts/62",
+   "parent": {
+    "$ref": "#/groups/4"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 278.54498901,
+      "r": 501.88900152999975,
+      "b": 268.66034921583196,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      89
+     ]
+    }
+   ],
+   "orig": "4. vorhersehbare Betriebsstörungen und die Gefährdung bei Maßnahmen zu deren Beseitigung.",
+   "text": "vorhersehbare Betriebsstörungen und die Gefährdung bei Maßnahmen zu deren Beseitigung.",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "4."
+  },
+  {
+   "self_ref": "#/texts/63",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 48.519,
+      "t": 250.73502196999993,
+      "r": 561.0589999999996,
+      "b": 192.8503821758319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      466
+     ]
+    }
+   ],
+   "orig": "(3) Die Gefährdungsbeurteilung soll bereits vor der Auswahl und der Beschaffung der Arbeitsmittel begonnen werden. Dabei sind insbesondere die Eignung des Arbeitsmittels für die geplante Verwendung, die Arbeitsabläufe und die Arbeitsorganisation zu berücksichtigen. Die Gefährdungsbeurteilung darf nur von fachkundigen Personen durchgeführt werden. Verfügt der Arbeitgeber nicht selbst über die entsprechenden Kenntnisse, so hat er sich fachkundig beraten zu lassen.",
+   "text": "(3) Die Gefährdungsbeurteilung soll bereits vor der Auswahl und der Beschaffung der Arbeitsmittel begonnen werden. Dabei sind insbesondere die Eignung des Arbeitsmittels für die geplante Verwendung, die Arbeitsabläufe und die Arbeitsorganisation zu berücksichtigen. Die Gefährdungsbeurteilung darf nur von fachkundigen Personen durchgeführt werden. Verfügt der Arbeitgeber nicht selbst über die entsprechenden Kenntnisse, so hat er sich fachkundig beraten zu lassen.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/64",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 48.519,
+      "t": 179.93497314,
+      "r": 559.4089999999998,
+      "b": 98.05033334583197,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      691
+     ]
+    }
+   ],
+   "orig": "(4) Der Arbeitgeber hat sich die Informationen zu beschaffen, die für die Gefährdungsbeurteilung notwendig sind. Dies sind insbesondere die nach § 21 Absatz 6 Nummer 1 bekannt gegebenen Regeln und Erkenntnisse, Gebrauchs- und Betriebsanleitungen sowie die ihm zugänglichen Erkenntnisse aus der arbeitsmedizinischen Vorsorge. Der Arbeitgeber darf diese Informationen übernehmen, sofern sie auf die Arbeitsmittel, Arbeitsbedingungen und Verfahren in seinem Betrieb anwendbar sind. Bei der Informationsbeschaffung kann der Arbeitgeber davon ausgehen, dass die vom Hersteller des Arbeitsmittels mitgelieferten Informationen zutreffend sind, es sei denn, dass er über andere Erkenntnisse verfügt.",
+   "text": "(4) Der Arbeitgeber hat sich die Informationen zu beschaffen, die für die Gefährdungsbeurteilung notwendig sind. Dies sind insbesondere die nach § 21 Absatz 6 Nummer 1 bekannt gegebenen Regeln und Erkenntnisse, Gebrauchs- und Betriebsanleitungen sowie die ihm zugänglichen Erkenntnisse aus der arbeitsmedizinischen Vorsorge. Der Arbeitgeber darf diese Informationen übernehmen, sofern sie auf die Arbeitsmittel, Arbeitsbedingungen und Verfahren in seinem Betrieb anwendbar sind. Bei der Informationsbeschaffung kann der Arbeitgeber davon ausgehen, dass die vom Hersteller des Arbeitsmittels mitgelieferten Informationen zutreffend sind, es sei denn, dass er über andere Erkenntnisse verfügt.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/65",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 48.519,
+      "t": 85.13498534999997,
+      "r": 502.2089999999996,
+      "b": 51.25034555583193,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      275
+     ]
+    },
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 48.519,
+      "t": 776.80499973,
+      "r": 546.0489999999995,
+      "b": 754.9203608958319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      276,
+      403
+     ]
+    }
+   ],
+   "orig": "(5) Der Arbeitgeber kann bei der Festlegung der Schutzmaßnahmen bereits vorhandene Gefährdungsbeurteilungen, hierzu gehören auch gleichwertige Unterlagen, die ihm der Hersteller oder Inverkehrbringer mitgeliefert hat, übernehmen, sofern die Angaben und Festlegungen in dieser Gefährdungsbeurteilung den Arbeitsmitteln einschließlich der Arbeitsbedingungen und -verfahren, im eigenen Betrieb entsprechen.",
+   "text": "(5) Der Arbeitgeber kann bei der Festlegung der Schutzmaßnahmen bereits vorhandene Gefährdungsbeurteilungen, hierzu gehören auch gleichwertige Unterlagen, die ihm der Hersteller oder Inverkehrbringer mitgeliefert hat, übernehmen, sofern die Angaben und Festlegungen in dieser Gefährdungsbeurteilung den Arbeitsmitteln einschließlich der Arbeitsbedingungen und -verfahren, im eigenen Betrieb entsprechen.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/66",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "furniture",
+   "meta": null,
+   "label": "page_footer",
+   "prov": [
+    {
+     "page_no": 4,
+     "bbox": {
+      "l": 276.67799658,
+      "t": 22.72900026000002,
+      "r": 338.43799706999994,
+      "b": 14.821288424665568,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      18
+     ]
+    }
+   ],
+   "orig": "- Seite 4 von 60 -",
+   "text": "- Seite 4 von 60 -",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/67",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "furniture",
+   "meta": null,
+   "label": "page_header",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 282.97100018,
+      "t": 826.67200007,
+      "r": 544.25900018,
+      "b": 809.1642883346656,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      131
+     ]
+    }
+   ],
+   "orig": "Ein Service des Bundesministerium der Justiz und für Verbraucherschutz sowie des Bundesamts für Justiz - www.gesetze-im-internet.de",
+   "text": "Ein Service des Bundesministerium der Justiz und für Verbraucherschutz sowie des Bundesamts für Justiz - www.gesetze-im-internet.de",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/68",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 48.519,
+      "t": 742.00499954,
+      "r": 564.6489999999999,
+      "b": 600.1203559358319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      1219
+     ]
+    }
+   ],
+   "orig": "(6) Der Arbeitgeber hat Art und Umfang erforderlicher Prüfungen von Arbeitsmitteln sowie die Fristen von wiederkehrenden Prüfungen nach den §§ 14 und 16 zu ermitteln und festzulegen, soweit diese Verordnung nicht bereits entsprechende Vorgaben enthält. Satz 1 gilt auch für Aufzugsanlagen. Die Fristen für die wiederkehrenden Prüfungen sind so festzulegen, dass die Arbeitsmittel bis zur nächsten festgelegten Prüfung sicher verwendet werden können. Bei der Festlegung der Fristen für die wiederkehrenden Prüfungen nach § 14 Absatz 2 Satz 1 für die in Anhang 3 genannten Arbeitsmittel dürfen die dort genannten Prüffristen nicht überschritten werden. Bei der Festlegung der Fristen für die wiederkehrenden Prüfungen nach § 16 dürfen die in Anhang 2 Abschnitt 2 Nummer 4.1 und 4.3, Abschnitt 3 Nummer 5.1 bis 5.3 und Abschnitt 4 Nummer 5.8 in Verbindung mit Tabelle 1 genannten Höchstfristen nicht überschritten werden, es sei denn, dass in den genannten Anhängen etwas anderes bestimmt ist. Ferner hat der Arbeitgeber zu ermitteln und festzulegen, welche Voraussetzungen die zur Prüfung befähigten Personen erfüllen müssen, die von ihm mit den Prüfungen von Arbeitsmitteln nach den §§ 14, 15 und 16 zu beauftragen sind.",
+   "text": "(6) Der Arbeitgeber hat Art und Umfang erforderlicher Prüfungen von Arbeitsmitteln sowie die Fristen von wiederkehrenden Prüfungen nach den §§ 14 und 16 zu ermitteln und festzulegen, soweit diese Verordnung nicht bereits entsprechende Vorgaben enthält. Satz 1 gilt auch für Aufzugsanlagen. Die Fristen für die wiederkehrenden Prüfungen sind so festzulegen, dass die Arbeitsmittel bis zur nächsten festgelegten Prüfung sicher verwendet werden können. Bei der Festlegung der Fristen für die wiederkehrenden Prüfungen nach § 14 Absatz 2 Satz 1 für die in Anhang 3 genannten Arbeitsmittel dürfen die dort genannten Prüffristen nicht überschritten werden. Bei der Festlegung der Fristen für die wiederkehrenden Prüfungen nach § 16 dürfen die in Anhang 2 Abschnitt 2 Nummer 4.1 und 4.3, Abschnitt 3 Nummer 5.1 bis 5.3 und Abschnitt 4 Nummer 5.8 in Verbindung mit Tabelle 1 genannten Höchstfristen nicht überschritten werden, es sei denn, dass in den genannten Anhängen etwas anderes bestimmt ist. Ferner hat der Arbeitgeber zu ermitteln und festzulegen, welche Voraussetzungen die zur Prüfung befähigten Personen erfüllen müssen, die von ihm mit den Prüfungen von Arbeitsmitteln nach den §§ 14, 15 und 16 zu beauftragen sind.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/69",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 48.519,
+      "t": 587.20499268,
+      "r": 563.9089999999998,
+      "b": 553.3203528858319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      304
+     ]
+    }
+   ],
+   "orig": "(7) Die Gefährdungsbeurteilung ist regelmäßig zu überprüfen. Dabei ist der Stand der Technik zu berücksichtigen. Soweit erforderlich, sind die Schutzmaßnahmen bei der Verwendung von Arbeitsmitteln entsprechend anzupassen. Der Arbeitgeber hat die Gefährdungsbeurteilung unverzüglich zu aktualisieren, wenn",
+   "text": "(7) Die Gefährdungsbeurteilung ist regelmäßig zu überprüfen. Dabei ist der Stand der Technik zu berücksichtigen. Soweit erforderlich, sind die Schutzmaßnahmen bei der Verwendung von Arbeitsmitteln entsprechend anzupassen. Der Arbeitgeber hat die Gefährdungsbeurteilung unverzüglich zu aktualisieren, wenn",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/70",
+   "parent": {
+    "$ref": "#/groups/5"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 545.20499268,
+      "r": 504.6490015299996,
+      "b": 523.3203528858319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      123
+     ]
+    }
+   ],
+   "orig": "1. sicherheitsrelevante Veränderungen der Arbeitsbedingungen einschließlich der Änderung von Arbeitsmitteln dies erfordern,",
+   "text": "sicherheitsrelevante Veränderungen der Arbeitsbedingungen einschließlich der Änderung von Arbeitsmitteln dies erfordern,",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "1."
+  },
+  {
+   "self_ref": "#/texts/71",
+   "parent": {
+    "$ref": "#/groups/5"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 516.19501343,
+      "r": 475.9790015299998,
+      "b": 494.3103736358319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      131
+     ]
+    }
+   ],
+   "orig": "2. neue Informationen, insbesondere Erkenntnisse aus dem Unfallgeschehen oder aus der arbeitsmedizinischen Vorsorge, vorliegen oder",
+   "text": "neue Informationen, insbesondere Erkenntnisse aus dem Unfallgeschehen oder aus der arbeitsmedizinischen Vorsorge, vorliegen oder",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "2."
+  },
+  {
+   "self_ref": "#/texts/72",
+   "parent": {
+    "$ref": "#/groups/5"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 487.18500366,
+      "r": 521.7690015299997,
+      "b": 465.3003638658319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      166
+     ]
+    }
+   ],
+   "orig": "3. die Überprüfung der Wirksamkeit der Schutzmaßnahmen nach § 4 Absatz 5 ergeben hat, dass die festgelegten Schutzmaßnahmen nicht wirksam oder nicht ausreichend sind.",
+   "text": "die Überprüfung der Wirksamkeit der Schutzmaßnahmen nach § 4 Absatz 5 ergeben hat, dass die festgelegten Schutzmaßnahmen nicht wirksam oder nicht ausreichend sind.",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "3."
+  },
+  {
+   "self_ref": "#/texts/73",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 48.519,
+      "t": 458.17499390000006,
+      "r": 556.9989999999998,
+      "b": 436.29035410583197,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      211
+     ]
+    }
+   ],
+   "orig": "Ergibt die Überprüfung der Gefährdungsbeurteilung, dass keine Aktualisierung erforderlich ist, so hat der Arbeitgeber dies unter Angabe des Datums der Überprüfung in der Dokumentation nach Absatz 8 zu vermerken.",
+   "text": "Ergibt die Überprüfung der Gefährdungsbeurteilung, dass keine Aktualisierung erforderlich ist, so hat der Arbeitgeber dies unter Angabe des Datums der Überprüfung in der Dokumentation nach Absatz 8 zu vermerken.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/74",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 48.519,
+      "t": 423.3750061,
+      "r": 526.9489999999995,
+      "b": 401.4903663058319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      165
+     ]
+    }
+   ],
+   "orig": "(8) Der Arbeitgeber hat das Ergebnis seiner Gefährdungsbeurteilung vor der erstmaligen Verwendung der Arbeitsmittel zu dokumentieren. Dabei sind mindestens anzugeben",
+   "text": "(8) Der Arbeitgeber hat das Ergebnis seiner Gefährdungsbeurteilung vor der erstmaligen Verwendung der Arbeitsmittel zu dokumentieren. Dabei sind mindestens anzugeben",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/75",
+   "parent": {
+    "$ref": "#/groups/6"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 393.3750061,
+      "r": 401.8490015299998,
+      "b": 383.4903663058319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      72
+     ]
+    }
+   ],
+   "orig": "1. die Gefährdungen, die bei der Verwendung der Arbeitsmittel auftreten,",
+   "text": "die Gefährdungen, die bei der Verwendung der Arbeitsmittel auftreten,",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "1."
+  },
+  {
+   "self_ref": "#/texts/76",
+   "parent": {
+    "$ref": "#/groups/6"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 376.36499634000006,
+      "r": 261.5790015299999,
+      "b": 366.48035654583197,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      39
+     ]
+    }
+   ],
+   "orig": "2. die zu ergreifenden Schutzmaßnahmen,",
+   "text": "die zu ergreifenden Schutzmaßnahmen,",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "2."
+  },
+  {
+   "self_ref": "#/texts/77",
+   "parent": {
+    "$ref": "#/groups/6"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 359.35498657000005,
+      "r": 561.45900153,
+      "b": 337.47034677583196,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      163
+     ]
+    }
+   ],
+   "orig": "3. wie die Anforderungen dieser Verordnung eingehalten werden, wenn von den nach § 21 Absatz 6 Nummer 1 bekannt gegebenen Regeln und Erkenntnissen abgewichen wird,",
+   "text": "wie die Anforderungen dieser Verordnung eingehalten werden, wenn von den nach § 21 Absatz 6 Nummer 1 bekannt gegebenen Regeln und Erkenntnissen abgewichen wird,",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "3."
+  },
+  {
+   "self_ref": "#/texts/78",
+   "parent": {
+    "$ref": "#/groups/6"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 330.34500732000004,
+      "r": 557.9190015299996,
+      "b": 308.4603675258319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      116
+     ]
+    }
+   ],
+   "orig": "4. Art und Umfang der erforderlichen Prüfungen sowie die Fristen der wiederkehrenden Prüfungen (Absatz 6 Satz 1) und",
+   "text": "Art und Umfang der erforderlichen Prüfungen sowie die Fristen der wiederkehrenden Prüfungen (Absatz 6 Satz 1) und",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "4."
+  },
+  {
+   "self_ref": "#/texts/79",
+   "parent": {
+    "$ref": "#/groups/6"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 301.33499756000003,
+      "r": 485.90900152999995,
+      "b": 291.4503577658319,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      86
+     ]
+    }
+   ],
+   "orig": "5. das Ergebnis der Überprüfung der Wirksamkeit der Schutzmaßnahmen nach § 4 Absatz 5.",
+   "text": "das Ergebnis der Überprüfung der Wirksamkeit der Schutzmaßnahmen nach § 4 Absatz 5.",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "5."
+  },
+  {
+   "self_ref": "#/texts/80",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 48.519,
+      "t": 284.32498779,
+      "r": 397.37899999999973,
+      "b": 274.440347995832,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      70
+     ]
+    }
+   ],
+   "orig": "Die Dokumentation kann auch in elektronischer Form vorgenommen werden.",
+   "text": "Die Dokumentation kann auch in elektronischer Form vorgenommen werden.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/81",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 48.519,
+      "t": 261.525,
+      "r": 543.7989999999996,
+      "b": 239.64036020583194,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      210
+     ]
+    }
+   ],
+   "orig": "(9) Sofern der Arbeitgeber von § 7 Absatz 1 Gebrauch macht und die Gefährdungsbeurteilung ergibt, dass die Voraussetzungen nach § 7 Absatz 1 vorliegen, ist eine Dokumentation dieser Voraussetzungen ausreichend.",
+   "text": "(9) Sofern der Arbeitgeber von § 7 Absatz 1 Gebrauch macht und die Gefährdungsbeurteilung ergibt, dass die Voraussetzungen nach § 7 Absatz 1 vorliegen, ist eine Dokumentation dieser Voraussetzungen ausreichend.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/82",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "section_header",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 48.519,
+      "t": 229.22501220999993,
+      "r": 231.88899954,
+      "b": 219.52571067678025,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      35
+     ]
+    }
+   ],
+   "orig": "§ 4 Grundpflichten des Arbeitgebers",
+   "text": "§ 4 Grundpflichten des Arbeitgebers",
+   "formatting": null,
+   "hyperlink": null,
+   "level": 1
+  },
+  {
+   "self_ref": "#/texts/83",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 48.519,
+      "t": 206.42502441,
+      "r": 383.3689999999997,
+      "b": 196.54038461583195,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      71
+     ]
+    }
+   ],
+   "orig": "(1) Arbeitsmittel dürfen erst verwendet werden, nachdem der Arbeitgeber",
+   "text": "(1) Arbeitsmittel dürfen erst verwendet werden, nachdem der Arbeitgeber",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/84",
+   "parent": {
+    "$ref": "#/groups/7"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 188.42502441,
+      "r": 294.9090015299999,
+      "b": 178.54038461583195,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      48
+     ]
+    }
+   ],
+   "orig": "1. eine Gefährdungsbeurteilung durchgeführt hat,",
+   "text": "eine Gefährdungsbeurteilung durchgeführt hat,",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "1."
+  },
+  {
+   "self_ref": "#/texts/85",
+   "parent": {
+    "$ref": "#/groups/7"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 171.41501465,
+      "r": 479.7190015299996,
+      "b": 161.53037485583195,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      85
+     ]
+    }
+   ],
+   "orig": "2. die dabei ermittelten Schutzmaßnahmen nach dem Stand der Technik getroffen hat und",
+   "text": "die dabei ermittelten Schutzmaßnahmen nach dem Stand der Technik getroffen hat und",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "2."
+  },
+  {
+   "self_ref": "#/texts/86",
+   "parent": {
+    "$ref": "#/groups/7"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "list_item",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 50.918999619999994,
+      "t": 154.40500487999998,
+      "r": 508.63900152999975,
+      "b": 144.52036508583194,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      97
+     ]
+    }
+   ],
+   "orig": "3. festgestellt hat, dass die Verwendung der Arbeitsmittel nach dem Stand der Technik sicher ist.",
+   "text": "festgestellt hat, dass die Verwendung der Arbeitsmittel nach dem Stand der Technik sicher ist.",
+   "formatting": null,
+   "hyperlink": null,
+   "enumerated": true,
+   "marker": "3."
+  },
+  {
+   "self_ref": "#/texts/87",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 48.519,
+      "t": 126.59500731999992,
+      "r": 549.7089999999994,
+      "b": 56.710367525831884,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      525
+     ]
+    }
+   ],
+   "orig": "(2) Ergibt sich aus der Gefährdungsbeurteilung, dass Gefährdungen durch technische Schutzmaßnahmen nach dem Stand der Technik nicht oder nur unzureichend vermieden werden können, hat der Arbeitgeber geeignete organisatorische und personenbezogene Schutzmaßnahmen zu treffen. Technische Schutzmaßnahmen haben Vorrang vor organisatorischen, diese haben wiederum Vorrang vor personenbezogenen Schutzmaßnahmen. Die Verwendung persönlicher Schutzausrüstung ist für jeden Beschäftigten auf das erforderliche Minimum zu beschränken.",
+   "text": "(2) Ergibt sich aus der Gefährdungsbeurteilung, dass Gefährdungen durch technische Schutzmaßnahmen nach dem Stand der Technik nicht oder nur unzureichend vermieden werden können, hat der Arbeitgeber geeignete organisatorische und personenbezogene Schutzmaßnahmen zu treffen. Technische Schutzmaßnahmen haben Vorrang vor organisatorischen, diese haben wiederum Vorrang vor personenbezogenen Schutzmaßnahmen. Die Verwendung persönlicher Schutzausrüstung ist für jeden Beschäftigten auf das erforderliche Minimum zu beschränken.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/88",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "furniture",
+   "meta": null,
+   "label": "page_footer",
+   "prov": [
+    {
+     "page_no": 5,
+     "bbox": {
+      "l": 276.67799658,
+      "t": 22.72900026000002,
+      "r": 338.43799706999994,
+      "b": 14.821288424665568,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      18
+     ]
+    }
+   ],
+   "orig": "- Seite 5 von 60 -",
+   "text": "- Seite 5 von 60 -",
+   "formatting": null,
+   "hyperlink": null
+  }
+ ],
+ "pictures": [],
+ "tables": [
+  {
+   "self_ref": "#/tables/0",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "table",
+   "prov": [
+    {
+     "page_no": 1,
+     "bbox": {
+      "l": 50.15917815810082,
+      "t": 336.3492082687704,
+      "r": 483.27944412231443,
+      "b": 59.22626105729421,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      0
+     ]
+    }
+   ],
+   "captions": [],
+   "references": [],
+   "footnotes": [],
+   "image": null,
+   "data": {
+    "table_cells": [
+     {
+      "bbox": {
+       "l": 199.18800635,
+       "t": 508.10399022999997,
+       "r": 415.9280063499998,
+       "b": 529.9886300241681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 0,
+      "end_row_offset_idx": 1,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Abschnitt 1 Anwendungsbereich und Begriffsbestimmungen",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 534.93400019,
+       "r": 67.259,
+       "b": 544.8186399841682,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 1,
+      "end_row_offset_idx": 2,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 1",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 534.93400019,
+       "r": 269.74699999999996,
+       "b": 544.8186399841682,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 1,
+      "end_row_offset_idx": 2,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Anwendungsbereich und Zielsetzung",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 552.5940001900001,
+       "r": 67.259,
+       "b": 562.4786399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 2,
+      "end_row_offset_idx": 3,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 2",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 552.5940001900001,
+       "r": 333.05300635,
+       "b": 577.3086373541681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 2,
+      "end_row_offset_idx": 3,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Begriffsbestimmungen Abschnitt 2",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 579.4239975600001,
+       "r": 417.44800207999987,
+       "b": 604.1386399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 3,
+      "end_row_offset_idx": 4,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Gefährdungsbeurteilung und Schutzmaßnahmen Gefährdungsbeurteilung",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 594.25400019,
+       "r": 67.259,
+       "b": 604.1386399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 3,
+      "end_row_offset_idx": 4,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 3",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 611.91400019,
+       "r": 67.259,
+       "b": 621.7986399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 4,
+      "end_row_offset_idx": 5,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 4",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 611.91400019,
+       "r": 249.757,
+       "b": 621.7986399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 4,
+      "end_row_offset_idx": 5,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Grundpflichten des Arbeitgebers",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 629.57400019,
+       "r": 67.259,
+       "b": 639.458639984168,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 5,
+      "end_row_offset_idx": 6,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 5",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 629.57400019,
+       "r": 376.6669999999999,
+       "b": 639.458639984168,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 5,
+      "end_row_offset_idx": 6,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Anforderungen an die zur Verfügung gestellten Arbeitsmittel",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 647.2340001900001,
+       "r": 67.259,
+       "b": 657.1186399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 6,
+      "end_row_offset_idx": 7,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 6",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 647.2340001900001,
+       "r": 437.1269999999998,
+       "b": 657.1186399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 6,
+      "end_row_offset_idx": 7,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Grundlegende Schutzmaßnahmen bei der Verwendung von Arbeitsmitteln",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 664.89400019,
+       "r": 67.259,
+       "b": 674.7786399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 7,
+      "end_row_offset_idx": 8,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 7",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 664.89400019,
+       "r": 417.26699999999977,
+       "b": 674.7786399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 7,
+      "end_row_offset_idx": 8,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Vereinfachte Vorgehensweise bei der Verwendung von Arbeitsmitteln",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 682.55400019,
+       "r": 67.259,
+       "b": 692.438639984168,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 8,
+      "end_row_offset_idx": 9,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 8",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 682.55400019,
+       "r": 481.3869999999997,
+       "b": 692.438639984168,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 8,
+      "end_row_offset_idx": 9,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Schutzmaßnahmen bei Gefährdungen durch Energien, Ingangsetzen und Stillsetzen",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 700.21400019,
+       "r": 67.259,
+       "b": 710.098639984168,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 9,
+      "end_row_offset_idx": 10,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 9",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 700.21400019,
+       "r": 408.3369999999998,
+       "b": 710.098639984168,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 9,
+      "end_row_offset_idx": 10,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Weitere Schutzmaßnahmen bei der Verwendung von Arbeitsmitteln",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 717.8740001900001,
+       "r": 70.12899999999999,
+       "b": 727.7586399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 10,
+      "end_row_offset_idx": 11,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 10",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 717.8740001900001,
+       "r": 323.697,
+       "b": 727.7586399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 10,
+      "end_row_offset_idx": 11,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Instandhaltung und Änderung von Arbeitsmitteln",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 735.53400019,
+       "r": 70.12899999999999,
+       "b": 745.4186399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 11,
+      "end_row_offset_idx": 12,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 11",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 735.53400019,
+       "r": 375.4969999999999,
+       "b": 745.4186399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 11,
+      "end_row_offset_idx": 12,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Besondere Betriebszustände, Betriebsstörungen und Unfälle",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 753.19400019,
+       "r": 70.12899999999999,
+       "b": 763.078639984168,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 12,
+      "end_row_offset_idx": 13,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 12",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 753.19400019,
+       "r": 384.58699999999976,
+       "b": 763.078639984168,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 12,
+      "end_row_offset_idx": 13,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Unterweisung und besondere Beauftragung von Beschäftigten",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 770.8540001900001,
+       "r": 70.12899999999999,
+       "b": 780.7386399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 13,
+      "end_row_offset_idx": 14,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 13",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 770.8540001900001,
+       "r": 303.437,
+       "b": 780.7386399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 13,
+      "end_row_offset_idx": 14,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Zusammenarbeit verschiedener Arbeitgeber",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     }
+    ],
+    "num_rows": 14,
+    "num_cols": 2,
+    "orientation": "rot_0",
+    "grid": [
+     [
+      {
+       "bbox": null,
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 0,
+       "end_row_offset_idx": 1,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 199.18800635,
+        "t": 508.10399022999997,
+        "r": 415.9280063499998,
+        "b": 529.9886300241681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 0,
+       "end_row_offset_idx": 1,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Abschnitt 1 Anwendungsbereich und Begriffsbestimmungen",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 534.93400019,
+        "r": 67.259,
+        "b": 544.8186399841682,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 1,
+       "end_row_offset_idx": 2,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 1",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 534.93400019,
+        "r": 269.74699999999996,
+        "b": 544.8186399841682,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 1,
+       "end_row_offset_idx": 2,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Anwendungsbereich und Zielsetzung",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 552.5940001900001,
+        "r": 67.259,
+        "b": 562.4786399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 2,
+       "end_row_offset_idx": 3,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 2",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 552.5940001900001,
+        "r": 333.05300635,
+        "b": 577.3086373541681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 2,
+       "end_row_offset_idx": 3,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Begriffsbestimmungen Abschnitt 2",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 594.25400019,
+        "r": 67.259,
+        "b": 604.1386399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 3,
+       "end_row_offset_idx": 4,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 3",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 579.4239975600001,
+        "r": 417.44800207999987,
+        "b": 604.1386399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 3,
+       "end_row_offset_idx": 4,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Gefährdungsbeurteilung und Schutzmaßnahmen Gefährdungsbeurteilung",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 611.91400019,
+        "r": 67.259,
+        "b": 621.7986399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 4,
+       "end_row_offset_idx": 5,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 4",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 611.91400019,
+        "r": 249.757,
+        "b": 621.7986399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 4,
+       "end_row_offset_idx": 5,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Grundpflichten des Arbeitgebers",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 629.57400019,
+        "r": 67.259,
+        "b": 639.458639984168,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 5,
+       "end_row_offset_idx": 6,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 5",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 629.57400019,
+        "r": 376.6669999999999,
+        "b": 639.458639984168,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 5,
+       "end_row_offset_idx": 6,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Anforderungen an die zur Verfügung gestellten Arbeitsmittel",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 647.2340001900001,
+        "r": 67.259,
+        "b": 657.1186399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 6,
+       "end_row_offset_idx": 7,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 6",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 647.2340001900001,
+        "r": 437.1269999999998,
+        "b": 657.1186399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 6,
+       "end_row_offset_idx": 7,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Grundlegende Schutzmaßnahmen bei der Verwendung von Arbeitsmitteln",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 664.89400019,
+        "r": 67.259,
+        "b": 674.7786399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 7,
+       "end_row_offset_idx": 8,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 7",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 664.89400019,
+        "r": 417.26699999999977,
+        "b": 674.7786399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 7,
+       "end_row_offset_idx": 8,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Vereinfachte Vorgehensweise bei der Verwendung von Arbeitsmitteln",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 682.55400019,
+        "r": 67.259,
+        "b": 692.438639984168,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 8,
+       "end_row_offset_idx": 9,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 8",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 682.55400019,
+        "r": 481.3869999999997,
+        "b": 692.438639984168,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 8,
+       "end_row_offset_idx": 9,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Schutzmaßnahmen bei Gefährdungen durch Energien, Ingangsetzen und Stillsetzen",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 700.21400019,
+        "r": 67.259,
+        "b": 710.098639984168,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 9,
+       "end_row_offset_idx": 10,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 9",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 700.21400019,
+        "r": 408.3369999999998,
+        "b": 710.098639984168,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 9,
+       "end_row_offset_idx": 10,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Weitere Schutzmaßnahmen bei der Verwendung von Arbeitsmitteln",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 717.8740001900001,
+        "r": 70.12899999999999,
+        "b": 727.7586399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 10,
+       "end_row_offset_idx": 11,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 10",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 717.8740001900001,
+        "r": 323.697,
+        "b": 727.7586399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 10,
+       "end_row_offset_idx": 11,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Instandhaltung und Änderung von Arbeitsmitteln",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 735.53400019,
+        "r": 70.12899999999999,
+        "b": 745.4186399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 11,
+       "end_row_offset_idx": 12,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 11",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 735.53400019,
+        "r": 375.4969999999999,
+        "b": 745.4186399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 11,
+       "end_row_offset_idx": 12,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Besondere Betriebszustände, Betriebsstörungen und Unfälle",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 753.19400019,
+        "r": 70.12899999999999,
+        "b": 763.078639984168,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 12,
+       "end_row_offset_idx": 13,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 12",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 753.19400019,
+        "r": 384.58699999999976,
+        "b": 763.078639984168,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 12,
+       "end_row_offset_idx": 13,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Unterweisung und besondere Beauftragung von Beschäftigten",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 770.8540001900001,
+        "r": 70.12899999999999,
+        "b": 780.7386399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 13,
+       "end_row_offset_idx": 14,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 13",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 770.8540001900001,
+        "r": 303.437,
+        "b": 780.7386399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 13,
+       "end_row_offset_idx": 14,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Zusammenarbeit verschiedener Arbeitgeber",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ]
+    ]
+   },
+   "annotations": []
+  },
+  {
+   "self_ref": "#/tables/1",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "table",
+   "prov": [
+    {
+     "page_no": 2,
+     "bbox": {
+      "l": 49.687188308831026,
+      "t": 779.7686579313029,
+      "r": 530.674540298257,
+      "b": 375.0164123847581,
+      "coord_origin": "BOTTOMLEFT"
+     },
+     "charspan": [
+      0,
+      0
+     ]
+    }
+   ],
+   "captions": [],
+   "references": [],
+   "footnotes": [],
+   "image": null,
+   "data": {
+    "table_cells": [
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 67.91400019000002,
+       "r": 70.12899999999999,
+       "b": 77.79863998416806,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 0,
+      "end_row_offset_idx": 1,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 14",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 67.91400019000002,
+       "r": 333.05300635,
+       "b": 92.62863895416808,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 0,
+      "end_row_offset_idx": 1,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Prüfung von Arbeitsmitteln Abschnitt 3",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 94.74400106999997,
+       "r": 525.0469999999997,
+       "b": 119.45863998416803,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 1,
+      "end_row_offset_idx": 2,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Zusätzliche Vorschriften für überwachungsbedürftige Anlagen Prüfung vor Inbetriebnahme und vor Wiederinbetriebnahme nach prüfpflichtigen Änderungen",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 109.57400018999999,
+       "r": 70.12899999999999,
+       "b": 119.45863998416803,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 1,
+      "end_row_offset_idx": 2,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 15",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 127.23400019000007,
+       "r": 70.12899999999999,
+       "b": 137.1186399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 2,
+      "end_row_offset_idx": 3,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 16",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 127.23400019000007,
+       "r": 215.527,
+       "b": 137.1186399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 2,
+      "end_row_offset_idx": 3,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Wiederkehrende Prüfung",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 144.89400019000004,
+       "r": 70.12899999999999,
+       "b": 154.77863998416808,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 3,
+      "end_row_offset_idx": 4,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 17",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 144.89400019000004,
+       "r": 295.81699999999995,
+       "b": 154.77863998416808,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 3,
+      "end_row_offset_idx": 4,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Prüfaufzeichnungen und -bescheinigungen",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 162.55400019,
+       "r": 70.12899999999999,
+       "b": 172.43863998416805,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 4,
+      "end_row_offset_idx": 5,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 18",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 162.55400019,
+       "r": 333.05300635,
+       "b": 187.26863643416812,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 4,
+      "end_row_offset_idx": 5,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Erlaubnispflicht Abschnitt 4",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 189.38400427,
+       "r": 390.9280063499998,
+       "b": 226.09863998416813,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 5,
+      "end_row_offset_idx": 6,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Vollzugsregelungen und Ausschuss für Betriebssicherheit Mitteilungspflichten, behördliche Ausnahmen",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 216.2140001900001,
+       "r": 70.12899999999999,
+       "b": 226.09863998416813,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 5,
+      "end_row_offset_idx": 6,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 19",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 233.87400019000006,
+       "r": 70.12899999999999,
+       "b": 243.7586399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 6,
+      "end_row_offset_idx": 7,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 20",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 233.87400019000006,
+       "r": 428.48699999999985,
+       "b": 243.7586399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 6,
+      "end_row_offset_idx": 7,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Sonderbestimmungen für überwachungsbedürftige Anlagen des Bundes",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 251.53400019000003,
+       "r": 70.12899999999999,
+       "b": 261.41863998416807,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 7,
+      "end_row_offset_idx": 8,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 21",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 251.53400019000003,
+       "r": 333.05300635,
+       "b": 276.24863979416807,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 7,
+      "end_row_offset_idx": 8,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Ausschuss für Betriebssicherheit Abschnitt 5",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 278.36400000000003,
+       "r": 386.9930039099999,
+       "b": 315.07863998416803,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 8,
+      "end_row_offset_idx": 9,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Ordnungswidrigkeiten und Straftaten, Schlussvorschriften Ordnungswidrigkeiten",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 305.19400019,
+       "r": 70.12899999999999,
+       "b": 315.07863998416803,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 8,
+      "end_row_offset_idx": 9,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 22",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 322.85400018999997,
+       "r": 70.12899999999999,
+       "b": 332.73863998416806,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 9,
+      "end_row_offset_idx": 10,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 23",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 322.85400018999997,
+       "r": 148.527,
+       "b": 332.73863998416806,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 9,
+      "end_row_offset_idx": 10,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Straftaten",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 340.51400019000005,
+       "r": 70.12899999999999,
+       "b": 350.39863998416814,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 10,
+      "end_row_offset_idx": 11,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "§ 24",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 103.157,
+       "t": 340.51400019000005,
+       "r": 205.90699999999998,
+       "b": 350.39863998416814,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 10,
+      "end_row_offset_idx": 11,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Übergangsvorschriften",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 358.17400019,
+       "r": 120.049,
+       "b": 463.3786390341681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 11,
+      "end_row_offset_idx": 12,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "Anhang 1 (zu § 6 Absatz 1 (zu § 14 Absatz",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 93.059,
+       "t": 358.17400019,
+       "r": 455.68500000000006,
+       "b": 463.3786390341681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 11,
+      "end_row_offset_idx": 12,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Satz 2) Besondere Vorschriften für bestimmte Arbeitsmittel 4)",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 399.83400019000004,
+       "r": 464.79499999999996,
+       "b": 421.7186390341681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 2,
+      "start_row_offset_idx": 12,
+      "end_row_offset_idx": 13,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 2,
+      "text": "Anhang 2 (zu den §§ 15 Prüfvorschriften für überwachungsbedürftige Anlagen",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": {
+       "l": 51.349,
+       "t": 423.83399924,
+       "r": 421.93500000000006,
+       "b": 451.3786399841681,
+       "coord_origin": "TOPLEFT"
+      },
+      "row_span": 1,
+      "col_span": 2,
+      "start_row_offset_idx": 13,
+      "end_row_offset_idx": 14,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 2,
+      "text": "und 16) Anhang 3 Prüfvorschriften für bestimmte Arbeitsmittel",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     }
+    ],
+    "num_rows": 14,
+    "num_cols": 2,
+    "orientation": "rot_0",
+    "grid": [
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 67.91400019000002,
+        "r": 70.12899999999999,
+        "b": 77.79863998416806,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 0,
+       "end_row_offset_idx": 1,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 14",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 67.91400019000002,
+        "r": 333.05300635,
+        "b": 92.62863895416808,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 0,
+       "end_row_offset_idx": 1,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Prüfung von Arbeitsmitteln Abschnitt 3",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 109.57400018999999,
+        "r": 70.12899999999999,
+        "b": 119.45863998416803,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 1,
+       "end_row_offset_idx": 2,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 15",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 94.74400106999997,
+        "r": 525.0469999999997,
+        "b": 119.45863998416803,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 1,
+       "end_row_offset_idx": 2,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Zusätzliche Vorschriften für überwachungsbedürftige Anlagen Prüfung vor Inbetriebnahme und vor Wiederinbetriebnahme nach prüfpflichtigen Änderungen",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 127.23400019000007,
+        "r": 70.12899999999999,
+        "b": 137.1186399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 2,
+       "end_row_offset_idx": 3,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 16",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 127.23400019000007,
+        "r": 215.527,
+        "b": 137.1186399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 2,
+       "end_row_offset_idx": 3,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Wiederkehrende Prüfung",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 144.89400019000004,
+        "r": 70.12899999999999,
+        "b": 154.77863998416808,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 3,
+       "end_row_offset_idx": 4,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 17",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 144.89400019000004,
+        "r": 295.81699999999995,
+        "b": 154.77863998416808,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 3,
+       "end_row_offset_idx": 4,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Prüfaufzeichnungen und -bescheinigungen",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 162.55400019,
+        "r": 70.12899999999999,
+        "b": 172.43863998416805,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 4,
+       "end_row_offset_idx": 5,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 18",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 162.55400019,
+        "r": 333.05300635,
+        "b": 187.26863643416812,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 4,
+       "end_row_offset_idx": 5,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Erlaubnispflicht Abschnitt 4",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 216.2140001900001,
+        "r": 70.12899999999999,
+        "b": 226.09863998416813,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 5,
+       "end_row_offset_idx": 6,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 19",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 189.38400427,
+        "r": 390.9280063499998,
+        "b": 226.09863998416813,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 5,
+       "end_row_offset_idx": 6,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Vollzugsregelungen und Ausschuss für Betriebssicherheit Mitteilungspflichten, behördliche Ausnahmen",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 233.87400019000006,
+        "r": 70.12899999999999,
+        "b": 243.7586399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 6,
+       "end_row_offset_idx": 7,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 20",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 233.87400019000006,
+        "r": 428.48699999999985,
+        "b": 243.7586399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 6,
+       "end_row_offset_idx": 7,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Sonderbestimmungen für überwachungsbedürftige Anlagen des Bundes",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 251.53400019000003,
+        "r": 70.12899999999999,
+        "b": 261.41863998416807,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 7,
+       "end_row_offset_idx": 8,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 21",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 251.53400019000003,
+        "r": 333.05300635,
+        "b": 276.24863979416807,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 7,
+       "end_row_offset_idx": 8,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Ausschuss für Betriebssicherheit Abschnitt 5",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 305.19400019,
+        "r": 70.12899999999999,
+        "b": 315.07863998416803,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 8,
+       "end_row_offset_idx": 9,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 22",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 278.36400000000003,
+        "r": 386.9930039099999,
+        "b": 315.07863998416803,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 8,
+       "end_row_offset_idx": 9,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Ordnungswidrigkeiten und Straftaten, Schlussvorschriften Ordnungswidrigkeiten",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 322.85400018999997,
+        "r": 70.12899999999999,
+        "b": 332.73863998416806,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 9,
+       "end_row_offset_idx": 10,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 23",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 322.85400018999997,
+        "r": 148.527,
+        "b": 332.73863998416806,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 9,
+       "end_row_offset_idx": 10,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Straftaten",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 340.51400019000005,
+        "r": 70.12899999999999,
+        "b": 350.39863998416814,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 10,
+       "end_row_offset_idx": 11,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "§ 24",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 103.157,
+        "t": 340.51400019000005,
+        "r": 205.90699999999998,
+        "b": 350.39863998416814,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 10,
+       "end_row_offset_idx": 11,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Übergangsvorschriften",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 358.17400019,
+        "r": 120.049,
+        "b": 463.3786390341681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 11,
+       "end_row_offset_idx": 12,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "Anhang 1 (zu § 6 Absatz 1 (zu § 14 Absatz",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 93.059,
+        "t": 358.17400019,
+        "r": 455.68500000000006,
+        "b": 463.3786390341681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 11,
+       "end_row_offset_idx": 12,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Satz 2) Besondere Vorschriften für bestimmte Arbeitsmittel 4)",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 399.83400019000004,
+        "r": 464.79499999999996,
+        "b": 421.7186390341681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 2,
+       "start_row_offset_idx": 12,
+       "end_row_offset_idx": 13,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 2,
+       "text": "Anhang 2 (zu den §§ 15 Prüfvorschriften für überwachungsbedürftige Anlagen",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 399.83400019000004,
+        "r": 464.79499999999996,
+        "b": 421.7186390341681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 2,
+       "start_row_offset_idx": 12,
+       "end_row_offset_idx": 13,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 2,
+       "text": "Anhang 2 (zu den §§ 15 Prüfvorschriften für überwachungsbedürftige Anlagen",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 423.83399924,
+        "r": 421.93500000000006,
+        "b": 451.3786399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 2,
+       "start_row_offset_idx": 13,
+       "end_row_offset_idx": 14,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 2,
+       "text": "und 16) Anhang 3 Prüfvorschriften für bestimmte Arbeitsmittel",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": {
+        "l": 51.349,
+        "t": 423.83399924,
+        "r": 421.93500000000006,
+        "b": 451.3786399841681,
+        "coord_origin": "TOPLEFT"
+       },
+       "row_span": 1,
+       "col_span": 2,
+       "start_row_offset_idx": 13,
+       "end_row_offset_idx": 14,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 2,
+       "text": "und 16) Anhang 3 Prüfvorschriften für bestimmte Arbeitsmittel",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ]
+    ]
+   },
+   "annotations": []
+  }
+ ],
+ "key_value_items": [],
+ "form_items": [],
+ "pages": {
+  "1": {
+   "size": {
+    "width": 595.275,
+    "height": 841.889
+   },
+   "image": null,
+   "page_no": 1
+  },
+  "2": {
+   "size": {
+    "width": 595.275,
+    "height": 841.889
+   },
+   "image": null,
+   "page_no": 2
+  },
+  "3": {
+   "size": {
+    "width": 595.275,
+    "height": 841.889
+   },
+   "image": null,
+   "page_no": 3
+  },
+  "4": {
+   "size": {
+    "width": 595.275,
+    "height": 841.889
+   },
+   "image": null,
+   "page_no": 4
+  },
+  "5": {
+   "size": {
+    "width": 595.275,
+    "height": 841.889
+   },
+   "image": null,
+   "page_no": 5
+  }
+ }
+}

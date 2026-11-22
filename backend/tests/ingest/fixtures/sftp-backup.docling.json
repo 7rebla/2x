@@ -1,0 +1,1316 @@
+{
+ "schema_name": "DoclingDocument",
+ "version": "1.10.0",
+ "name": "upload",
+ "origin": {
+  "mimetype": "text/markdown",
+  "binary_hash": 3996620111438005590,
+  "filename": "upload.md",
+  "uri": null
+ },
+ "furniture": {
+  "self_ref": "#/furniture",
+  "parent": null,
+  "children": [],
+  "content_layer": "furniture",
+  "meta": null,
+  "name": "_root_",
+  "label": "unspecified"
+ },
+ "body": {
+  "self_ref": "#/body",
+  "parent": null,
+  "children": [
+   {
+    "$ref": "#/texts/0"
+   },
+   {
+    "$ref": "#/texts/1"
+   },
+   {
+    "$ref": "#/groups/0"
+   },
+   {
+    "$ref": "#/texts/5"
+   },
+   {
+    "$ref": "#/texts/6"
+   },
+   {
+    "$ref": "#/groups/1"
+   },
+   {
+    "$ref": "#/texts/10"
+   },
+   {
+    "$ref": "#/texts/11"
+   },
+   {
+    "$ref": "#/texts/12"
+   },
+   {
+    "$ref": "#/groups/2"
+   },
+   {
+    "$ref": "#/groups/3"
+   },
+   {
+    "$ref": "#/groups/4"
+   },
+   {
+    "$ref": "#/texts/36"
+   },
+   {
+    "$ref": "#/texts/37"
+   },
+   {
+    "$ref": "#/texts/38"
+   },
+   {
+    "$ref": "#/tables/0"
+   },
+   {
+    "$ref": "#/texts/39"
+   },
+   {
+    "$ref": "#/texts/40"
+   },
+   {
+    "$ref": "#/groups/5"
+   }
+  ],
+  "content_layer": "body",
+  "meta": null,
+  "name": "_root_",
+  "label": "unspecified"
+ },
+ "groups": [
+  {
+   "self_ref": "#/groups/0",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [
+    {
+     "$ref": "#/texts/2"
+    },
+    {
+     "$ref": "#/texts/3"
+    },
+    {
+     "$ref": "#/texts/4"
+    }
+   ],
+   "content_layer": "body",
+   "meta": null,
+   "name": "group",
+   "label": "inline"
+  },
+  {
+   "self_ref": "#/groups/1",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [
+    {
+     "$ref": "#/texts/7"
+    },
+    {
+     "$ref": "#/texts/8"
+    },
+    {
+     "$ref": "#/texts/9"
+    }
+   ],
+   "content_layer": "body",
+   "meta": null,
+   "name": "group",
+   "label": "inline"
+  },
+  {
+   "self_ref": "#/groups/2",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [
+    {
+     "$ref": "#/texts/13"
+    },
+    {
+     "$ref": "#/texts/14"
+    },
+    {
+     "$ref": "#/texts/15"
+    },
+    {
+     "$ref": "#/texts/16"
+    },
+    {
+     "$ref": "#/texts/17"
+    }
+   ],
+   "content_layer": "body",
+   "meta": null,
+   "name": "group",
+   "label": "inline"
+  },
+  {
+   "self_ref": "#/groups/3",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [
+    {
+     "$ref": "#/texts/18"
+    },
+    {
+     "$ref": "#/texts/19"
+    },
+    {
+     "$ref": "#/texts/20"
+    },
+    {
+     "$ref": "#/texts/21"
+    },
+    {
+     "$ref": "#/texts/22"
+    },
+    {
+     "$ref": "#/texts/23"
+    },
+    {
+     "$ref": "#/texts/24"
+    },
+    {
+     "$ref": "#/texts/25"
+    },
+    {
+     "$ref": "#/texts/26"
+    }
+   ],
+   "content_layer": "body",
+   "meta": null,
+   "name": "group",
+   "label": "inline"
+  },
+  {
+   "self_ref": "#/groups/4",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [
+    {
+     "$ref": "#/texts/27"
+    },
+    {
+     "$ref": "#/texts/28"
+    },
+    {
+     "$ref": "#/texts/29"
+    },
+    {
+     "$ref": "#/texts/30"
+    },
+    {
+     "$ref": "#/texts/31"
+    },
+    {
+     "$ref": "#/texts/32"
+    },
+    {
+     "$ref": "#/texts/33"
+    },
+    {
+     "$ref": "#/texts/34"
+    },
+    {
+     "$ref": "#/texts/35"
+    }
+   ],
+   "content_layer": "body",
+   "meta": null,
+   "name": "group",
+   "label": "inline"
+  },
+  {
+   "self_ref": "#/groups/5",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [
+    {
+     "$ref": "#/texts/41"
+    },
+    {
+     "$ref": "#/texts/42"
+    },
+    {
+     "$ref": "#/texts/43"
+    }
+   ],
+   "content_layer": "body",
+   "meta": null,
+   "name": "group",
+   "label": "inline"
+  }
+ ],
+ "texts": [
+  {
+   "self_ref": "#/texts/0",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "title",
+   "prov": [],
+   "orig": "Backups via secure copy (sftp)",
+   "text": "Backups via secure copy (sftp)",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/1",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "When your remote host supports SSH, it's often possible to use sftp as well, which can be used for file transfers in a secure manner between machines (in this case your firewall and the backup target).",
+   "text": "When your remote host supports SSH, it's often possible to use sftp as well, which can be used for file transfers in a secure manner between machines (in this case your firewall and the backup target).",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/2",
+   "parent": {
+    "$ref": "#/groups/0"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "In order to use this feature, one has to install the sftp-backup plugin first (in",
+   "text": "In order to use this feature, one has to install the sftp-backup plugin first (in",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/3",
+   "parent": {
+    "$ref": "#/groups/0"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "code",
+   "prov": [],
+   "orig": "System->Firmware->Plugins",
+   "text": "System->Firmware->Plugins",
+   "formatting": null,
+   "hyperlink": null,
+   "captions": [],
+   "references": [],
+   "footnotes": [],
+   "image": null,
+   "code_language": "unknown"
+  },
+  {
+   "self_ref": "#/texts/4",
+   "parent": {
+    "$ref": "#/groups/0"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "search for os-sftp-backup).",
+   "text": "search for os-sftp-backup).",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/5",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "section_header",
+   "prov": [],
+   "orig": "Preparation",
+   "text": "Preparation",
+   "formatting": null,
+   "hyperlink": null,
+   "level": 1
+  },
+  {
+   "self_ref": "#/texts/6",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "Before configuring the plugin, make sure your target machine has ssh enabled and is reachable. You also need a private/public key combination which the backup machine will trust.",
+   "text": "Before configuring the plugin, make sure your target machine has ssh enabled and is reachable. You also need a private/public key combination which the backup machine will trust.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/7",
+   "parent": {
+    "$ref": "#/groups/1"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "Generate a key with the command below (",
+   "text": "Generate a key with the command below (",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/8",
+   "parent": {
+    "$ref": "#/groups/1"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "-f",
+   "text": "-f",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/9",
+   "parent": {
+    "$ref": "#/groups/1"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "specifies the filename) and omit a password in the process:",
+   "text": "specifies the filename) and omit a password in the process:",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/10",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "code",
+   "prov": [],
+   "orig": "ssh-keygen -t ed25519 -C \"your_email@example.com\" -f my_new_key",
+   "text": "ssh-keygen -t ed25519 -C \"your_email@example.com\" -f my_new_key",
+   "formatting": null,
+   "hyperlink": null,
+   "captions": [],
+   "references": [],
+   "footnotes": [],
+   "image": null,
+   "code_language": "unknown"
+  },
+  {
+   "self_ref": "#/texts/11",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "The output will look like this:",
+   "text": "The output will look like this:",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/12",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "code",
+   "prov": [],
+   "orig": "Generating public/private ed25519 key pair.\nEnter passphrase (empty for no passphrase):\nEnter same passphrase again:\nYour identification has been saved in my_new_key\nYour public key has been saved in my_new_key.pub\nThe key fingerprint is:\nSHA256:DJ+Jj1xeuezYLYaqOQg9DBa8ETmOuausIf1rNKeuMQs your_email@example.com\nThe key's randomart image is:\n+--[ED25519 256]--+\n|..o              |\n| *               |\n|o.=   .          |\n|++     = o .     |\n|.=    . S o      |\n|o.+ o..= o .     |\n|Eo++ +o o.o      |\n|+o.=+.  .+o.     |\n|=.o+*+....o..    |\n+----[SHA256]-----+",
+   "text": "Generating public/private ed25519 key pair.\nEnter passphrase (empty for no passphrase):\nEnter same passphrase again:\nYour identification has been saved in my_new_key\nYour public key has been saved in my_new_key.pub\nThe key fingerprint is:\nSHA256:DJ+Jj1xeuezYLYaqOQg9DBa8ETmOuausIf1rNKeuMQs your_email@example.com\nThe key's randomart image is:\n+--[ED25519 256]--+\n|..o              |\n| *               |\n|o.=   .          |\n|++     = o .     |\n|.=    . S o      |\n|o.+ o..= o .     |\n|Eo++ +o o.o      |\n|+o.=+.  .+o.     |\n|=.o+*+....o..    |\n+----[SHA256]-----+",
+   "formatting": null,
+   "hyperlink": null,
+   "captions": [],
+   "references": [],
+   "footnotes": [],
+   "image": null,
+   "code_language": "unknown"
+  },
+  {
+   "self_ref": "#/texts/13",
+   "parent": {
+    "$ref": "#/groups/2"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "This creates two files,",
+   "text": "This creates two files,",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/14",
+   "parent": {
+    "$ref": "#/groups/2"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "my_new_key",
+   "text": "my_new_key",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/15",
+   "parent": {
+    "$ref": "#/groups/2"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "and",
+   "text": "and",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/16",
+   "parent": {
+    "$ref": "#/groups/2"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "my_new_key.pub",
+   "text": "my_new_key.pub",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/17",
+   "parent": {
+    "$ref": "#/groups/2"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": ", the first one is private and should not be shared, the other is public and offered to the backup machine.",
+   "text": ", the first one is private and should not be shared, the other is public and offered to the backup machine.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/18",
+   "parent": {
+    "$ref": "#/groups/3"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "Next we will add the",
+   "text": "Next we will add the",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/19",
+   "parent": {
+    "$ref": "#/groups/3"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "my_new_key.pub",
+   "text": "my_new_key.pub",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/20",
+   "parent": {
+    "$ref": "#/groups/3"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "file to the",
+   "text": "file to the",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/21",
+   "parent": {
+    "$ref": "#/groups/3"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "authorized_keys",
+   "text": "authorized_keys",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/22",
+   "parent": {
+    "$ref": "#/groups/3"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "file in the users",
+   "text": "file in the users",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/23",
+   "parent": {
+    "$ref": "#/groups/3"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": ".ssh",
+   "text": ".ssh",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/24",
+   "parent": {
+    "$ref": "#/groups/3"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "directory (e.g.",
+   "text": "directory (e.g.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/25",
+   "parent": {
+    "$ref": "#/groups/3"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "/home/opnsense/.ssh/authorized_keys",
+   "text": "/home/opnsense/.ssh/authorized_keys",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/26",
+   "parent": {
+    "$ref": "#/groups/3"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": ").",
+   "text": ").",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/27",
+   "parent": {
+    "$ref": "#/groups/4"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "[!NOTE] Make sure the",
+   "text": "[!NOTE] Make sure the",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/28",
+   "parent": {
+    "$ref": "#/groups/4"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": ".ssh",
+   "text": ".ssh",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/29",
+   "parent": {
+    "$ref": "#/groups/4"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "directory is only readable and writebable by the owner and",
+   "text": "directory is only readable and writebable by the owner and",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/30",
+   "parent": {
+    "$ref": "#/groups/4"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "authorized_keys",
+   "text": "authorized_keys",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/31",
+   "parent": {
+    "$ref": "#/groups/4"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "has the same rights. (",
+   "text": "has the same rights. (",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/32",
+   "parent": {
+    "$ref": "#/groups/4"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "chmod 600",
+   "text": "chmod 600",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/33",
+   "parent": {
+    "$ref": "#/groups/4"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "for the file",
+   "text": "for the file",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/34",
+   "parent": {
+    "$ref": "#/groups/4"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "chmod 700",
+   "text": "chmod 700",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/35",
+   "parent": {
+    "$ref": "#/groups/4"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "for the directory)",
+   "text": "for the directory)",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/36",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "[!TIP] Create a separate key for the backup (don't use the same one elsewhere), so you can easily drop access later.",
+   "text": "[!TIP] Create a separate key for the backup (don't use the same one elsewhere), so you can easily drop access later.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/37",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "section_header",
+   "prov": [],
+   "orig": "Initial setup",
+   "text": "Initial setup",
+   "formatting": null,
+   "hyperlink": null,
+   "level": 1
+  },
+  {
+   "self_ref": "#/texts/38",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "The configuration part of this plugin is quite basic and offers two types of transport modes, https using a username and password combination or ssh using public key infrastructure.",
+   "text": "The configuration part of this plugin is quite basic and offers two types of transport modes, https using a username and password combination or ssh using public key infrastructure.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/39",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "section_header",
+   "prov": [],
+   "orig": "Finish and test",
+   "text": "Finish and test",
+   "formatting": null,
+   "hyperlink": null,
+   "level": 1
+  },
+  {
+   "self_ref": "#/texts/40",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "After willing in the details, press \"Setup/Test sftp\" to validate if it works. When connectivity isn't possible, the error will be reported.",
+   "text": "After willing in the details, press \"Setup/Test sftp\" to validate if it works. When connectivity isn't possible, the error will be reported.",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/41",
+   "parent": {
+    "$ref": "#/groups/5"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "[!TIP] For advanced debugging use",
+   "text": "[!TIP] For advanced debugging use",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/42",
+   "parent": {
+    "$ref": "#/groups/5"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "sftp",
+   "text": "sftp",
+   "formatting": null,
+   "hyperlink": null
+  },
+  {
+   "self_ref": "#/texts/43",
+   "parent": {
+    "$ref": "#/groups/5"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "text",
+   "prov": [],
+   "orig": "on the command line, this plugin uses the same tool and reports the same errors.",
+   "text": "on the command line, this plugin uses the same tool and reports the same errors.",
+   "formatting": null,
+   "hyperlink": null
+  }
+ ],
+ "pictures": [],
+ "tables": [
+  {
+   "self_ref": "#/tables/0",
+   "parent": {
+    "$ref": "#/body"
+   },
+   "children": [],
+   "content_layer": "body",
+   "meta": null,
+   "label": "table",
+   "prov": [],
+   "captions": [],
+   "references": [],
+   "footnotes": [],
+   "image": null,
+   "data": {
+    "table_cells": [
+     {
+      "bbox": null,
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 0,
+      "end_row_offset_idx": 1,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "",
+      "column_header": true,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": null,
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 0,
+      "end_row_offset_idx": 1,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "",
+      "column_header": true,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": null,
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 1,
+      "end_row_offset_idx": 2,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "Enable",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": null,
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 1,
+      "end_row_offset_idx": 2,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Enable backup to the upstream target",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": null,
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 2,
+      "end_row_offset_idx": 3,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "URL",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": null,
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 2,
+      "end_row_offset_idx": 3,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Target location, which defines protocol, user and path. This may look like: <span class=\"title-ref\">sftp://opnsense@192.168.1.10//home/opnsense/config_backups</span>",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": null,
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 3,
+      "end_row_offset_idx": 4,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "SSH private key",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": null,
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 3,
+      "end_row_offset_idx": 4,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Upload the <span class=\"title-ref\">my_new_key</span> file created during preparation.",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": null,
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 4,
+      "end_row_offset_idx": 5,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "Backup Count",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": null,
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 4,
+      "end_row_offset_idx": 5,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Number of backups to keep",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": null,
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 5,
+      "end_row_offset_idx": 6,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "text": "Encrypt Password",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     },
+     {
+      "bbox": null,
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 5,
+      "end_row_offset_idx": 6,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "text": "Password used to encrypt the backup (optional)",
+      "column_header": false,
+      "row_header": false,
+      "row_section": false,
+      "fillable": false
+     }
+    ],
+    "num_rows": 6,
+    "num_cols": 2,
+    "orientation": "rot_0",
+    "grid": [
+     [
+      {
+       "bbox": null,
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 0,
+       "end_row_offset_idx": 1,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "",
+       "column_header": true,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": null,
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 0,
+       "end_row_offset_idx": 1,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "",
+       "column_header": true,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": null,
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 1,
+       "end_row_offset_idx": 2,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "Enable",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": null,
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 1,
+       "end_row_offset_idx": 2,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Enable backup to the upstream target",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": null,
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 2,
+       "end_row_offset_idx": 3,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "URL",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": null,
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 2,
+       "end_row_offset_idx": 3,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Target location, which defines protocol, user and path. This may look like: <span class=\"title-ref\">sftp://opnsense@192.168.1.10//home/opnsense/config_backups</span>",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": null,
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 3,
+       "end_row_offset_idx": 4,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "SSH private key",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": null,
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 3,
+       "end_row_offset_idx": 4,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Upload the <span class=\"title-ref\">my_new_key</span> file created during preparation.",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": null,
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 4,
+       "end_row_offset_idx": 5,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "Backup Count",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": null,
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 4,
+       "end_row_offset_idx": 5,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Number of backups to keep",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ],
+     [
+      {
+       "bbox": null,
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 5,
+       "end_row_offset_idx": 6,
+       "start_col_offset_idx": 0,
+       "end_col_offset_idx": 1,
+       "text": "Encrypt Password",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      },
+      {
+       "bbox": null,
+       "row_span": 1,
+       "col_span": 1,
+       "start_row_offset_idx": 5,
+       "end_row_offset_idx": 6,
+       "start_col_offset_idx": 1,
+       "end_col_offset_idx": 2,
+       "text": "Password used to encrypt the backup (optional)",
+       "column_header": false,
+       "row_header": false,
+       "row_section": false,
+       "fillable": false
+      }
+     ]
+    ]
+   },
+   "annotations": []
+  }
+ ],
+ "key_value_items": [],
+ "form_items": [],
+ "pages": {}
+}
