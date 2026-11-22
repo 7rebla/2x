@@ -4,6 +4,7 @@ Every deployment-specific value comes from an environment variable with the
 prefix ``TWOX_``. Importing this module never opens a database connection.
 """
 
+import math
 import os
 from itertools import pairwise
 from pathlib import Path
@@ -56,6 +57,45 @@ def env_positive_int(name: str, default: int) -> int:
             f"Environment variable {name} must be a whole number greater than zero."
         )
     return value
+
+
+def env_float(name: str, default: float, *, minimum: float, maximum: float) -> float:
+    """Return the variable ``name`` as a number from ``minimum`` to ``maximum``."""
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        value = math.nan
+    if not minimum <= value <= maximum:
+        raise ImproperlyConfigured(
+            f"Environment variable {name} must be a number from {minimum:g} to {maximum:g}."
+        )
+    return value
+
+
+#: Values of TWOX_CHAT_REASONING_EFFORT that are sent as they are.
+_CHAT_REASONING_EFFORTS = ("none", "low", "medium", "high")
+#: The value of TWOX_CHAT_REASONING_EFFORT that leaves the field out.
+_CHAT_REASONING_EFFORT_OMIT = "omit"
+
+
+def env_reasoning_effort(name: str, default: str) -> str | None:
+    """Return the variable ``name`` as a reasoning effort; ``None`` means "do not send".
+
+    Unset and empty both mean ``default``: compose passes an empty string for a
+    variable that is missing in .env.
+    """
+    raw = os.environ.get(name, "").strip().lower()
+    if not raw:
+        return default
+    if raw == _CHAT_REASONING_EFFORT_OMIT:
+        return None
+    if raw not in _CHAT_REASONING_EFFORTS:
+        choices = ", ".join((*_CHAT_REASONING_EFFORTS, _CHAT_REASONING_EFFORT_OMIT))
+        raise ImproperlyConfigured(f"Environment variable {name} must be one of: {choices}.")
+    return raw
 
 
 def env_absolute_path(name: str, default: str) -> Path:
@@ -444,6 +484,20 @@ TWOX_EMBED_TIMEOUT_SECONDS = env_positive_int("TWOX_EMBED_TIMEOUT_SECONDS", 120)
 # The same for embedding a search query (052): short, so a hanging model
 # service holds a search up only briefly before it falls back to keywords.
 TWOX_SEARCH_EMBED_TIMEOUT_SECONDS = env_positive_int("TWOX_SEARCH_EMBED_TIMEOUT_SECONDS", 20)
+# Chat model for answers (M3, twox/answers/chat.py). No default: the model is
+# chosen after the measurement run of work order 128 and loaded with ollama
+# pull; empty means answers are unavailable. Read without env_str, whose
+# fallback would require a value.
+TWOX_CHAT_MODEL = os.environ.get("TWOX_CHAT_MODEL", "").strip()
+# Socket time limit in seconds: the longest wait between two pieces of an
+# answer, the first one included (it may have to wait for the model to load).
+TWOX_CHAT_TIMEOUT_SECONDS = env_positive_int("TWOX_CHAT_TIMEOUT_SECONDS", 120)
+# Most tokens the model may generate for one answer.
+TWOX_CHAT_MAX_TOKENS = env_positive_int("TWOX_CHAT_MAX_TOKENS", 1024)
+TWOX_CHAT_TEMPERATURE = env_float("TWOX_CHAT_TEMPERATURE", 0.0, minimum=0.0, maximum=2.0)
+# reasoning_effort sent with every request: none, low, medium or high; "omit"
+# leaves the field out (None). Unset or empty means none.
+TWOX_CHAT_REASONING_EFFORT = env_reasoning_effort("TWOX_CHAT_REASONING_EFFORT", "none")
 
 CELERY_TASK_QUEUES = task_queues(ai_enabled=TWOX_AI_ENABLED)
 
