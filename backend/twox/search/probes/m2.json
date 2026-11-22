@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "notes": "Search probes of milestone M2 (work order 056) for the command evaluate_search. References only: manifest_id and sha256 name a file of testfactory/manifest.yaml, pages are page indexes of the PDF file counted from 1 ('PDF-S.'), taken from the sources of testfactory/questions.yaml (basis 'question') or from the column address_source of testfactory/layout/devices.csv (basis 'device', 'Handbuch' is aps-documentation-de). Queries are written in the project's own words; no text of a vendor document is quoted. Sources in the git repositories of the test factory (README and other files, located by line) have no pages and no file checksum and are left out. tests/search/test_probes.py checks every reference.",
+  "probes": [
+    {
+      "id": "ip-ccu",
+      "query": "192.168.0.100",
+      "basis": {"question": 1},
+      "expected": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [18, 31, 38]
+        }
+      ]
+    },
+    {
+      "id": "ip-drill-plc",
+      "query": "192.168.0.50",
+      "basis": {"device": "drill-plc"},
+      "expected": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [38]
+        }
+      ]
+    },
+    {
+      "id": "question-1",
+      "query": "Welche IP-Adresse hat der zentrale Rechner der Produktionsanlage?",
+      "basis": {"question": 1},
+      "expected": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [18, 31, 38]
+        }
+      ]
+    },
+    {
+      "id": "question-3",
+      "query": "Mit welchem Kommunikationsprotokoll reden die TXT-Steuerungen mit dem zentralen Rechner?",
+      "basis": {"question": 3},
+      "expected": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [36, 38]
+        }
+      ]
+    },
+    {
+      "id": "question-7",
+      "query": "Das fahrerlose Fahrzeug ist von seiner Fahrlinie abgekommen. Wie geht man vor?",
+      "basis": {"question": 7},
+      "expected": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [22, 27]
+        }
+      ]
+    },
+    {
+      "id": "question-9",
+      "query": "Wie viel Gewicht darf der Roboterarm UR5e höchstens tragen?",
+      "basis": {"question": 9},
+      "expected": [
+        {
+          "manifest_id": "ur5e-user-manual-de",
+          "sha256": "70940ab1cd824a2af60e75d1f2437f45fe479f2394057e267fecfe8448266102",
+          "pages": [16, 101, 102]
+        }
+      ]
+    },
+    {
+      "id": "question-10",
+      "query": "Wie bringt man den UR5e wieder in Gang, nachdem eine Schutzeinrichtung ihn angehalten hat (Safeguard Stop)?",
+      "basis": {"question": 10},
+      "expected": [
+        {
+          "manifest_id": "ur5e-user-manual-de",
+          "sha256": "70940ab1cd824a2af60e75d1f2437f45fe479f2394057e267fecfe8448266102",
+          "pages": [81, 84, 86, 252]
+        },
+        {
+          "manifest_id": "ur5e-software-handbook-en",
+          "sha256": "06488da8a8bc2be51e796d2e62e2f90ad4b00412acbac016c232780b1d0ee3ba",
+          "pages": [46]
+        }
+      ]
+    }
+  ]
+}
