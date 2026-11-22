@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { AiCheck, DatabaseCheck, WorkerCheck } from "../api/generated";
 import { loadSelftest, type SelftestOutcome } from "../api/selftest.ts";
 import { AnimatedHeading, LoadingText } from "../components/TextMotion.tsx";
+import { Button } from "../components/ui/Button.tsx";
 import { Icon } from "../icons/Icon.tsx";
 
 type PageState = { kind: "loading" } | SelftestOutcome;
@@ -41,15 +42,9 @@ export function SelftestPage(): ReactElement {
     <section className="w-full max-w-xl space-y-4" aria-busy={loading}>
       <div className="flex items-center justify-between gap-4">
         <AnimatedHeading text={t("heading")} />
-        <button
-          type="button"
-          onClick={recheck}
-          disabled={loading}
-          className="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong disabled:opacity-50"
-        >
-          <Icon name="retry" size={20} decorative />
+        <Button type="button" variant="primary" icon="retry" onClick={recheck} loading={loading}>
           {loading ? t("checking") : t("recheck")}
-        </button>
+        </Button>
       </div>
       <p className="text-fg-muted">{t("intro")}</p>
       <SelftestBody state={state} />

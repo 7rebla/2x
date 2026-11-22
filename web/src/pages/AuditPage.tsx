@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 
 import { AuditTrail, auditObjectTypes } from "../components/AuditTrail.tsx";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
-import { Icon } from "../icons/Icon.tsx";
+import { Button } from "../components/ui/Button.tsx";
+import { Input, Select } from "../components/ui/fields.tsx";
 
 /** Longest user name the API accepts as a filter (Django's username field). */
 const ACTOR_MAX_LENGTH = 150;
@@ -50,10 +51,9 @@ export function AuditPage(): ReactElement {
           <legend className="sr-only">{t("filter.legend")}</legend>
           <div className="flex flex-col gap-1 text-sm">
             <label htmlFor={objectTypeId}>{t("filter.objectType")}</label>
-            <select
+            <Select
               id={objectTypeId}
               data-testid="audit-filter-object-type"
-              className="rounded border border-line-strong px-2 py-1"
               value={objectType}
               onChange={(event) => {
                 setObjectType(event.target.value);
@@ -65,14 +65,13 @@ export function AuditPage(): ReactElement {
                   {t(`objectType.${type.textKey}`)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="flex flex-col gap-1 text-sm">
             <label htmlFor={actorId}>{t("filter.actor")}</label>
-            <input
+            <Input
               id={actorId}
               data-testid="audit-filter-actor"
-              className="rounded border border-line-strong px-2 py-1"
               type="text"
               value={actor}
               maxLength={ACTOR_MAX_LENGTH}
@@ -83,21 +82,12 @@ export function AuditPage(): ReactElement {
               }}
             />
           </div>
-          <button
-            type="submit"
-            className="inline-flex items-center gap-2 rounded bg-accent px-3 py-1 text-on-accent hover:bg-accent-strong"
-          >
-            <Icon name="filter" decorative />
+          <Button type="submit" variant="primary" icon="filter">
             {t("filter.apply")}
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded border border-line-strong px-3 py-1"
-            onClick={reset}
-          >
-            <Icon name="resetFilter" decorative />
+          </Button>
+          <Button type="button" icon="resetFilter" onClick={reset}>
             {t("filter.reset")}
-          </button>
+          </Button>
         </fieldset>
       </form>
       <AuditTrail {...filter} />

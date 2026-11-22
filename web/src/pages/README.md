@@ -53,6 +53,8 @@ loaded when it is opened (work order 062): `routes.tsx` wraps it with `lazyPage(
   `/import` and `/audit` need `manage`, the others `read`. Pages with a parameter and the sign-in page are not listed.
 - Page headings are `<h2>`, written with `AnimatedHeading` (`MaskedTitle` for the device and file title, `../components/TextMotion.tsx`); the `<h1>` is the name in the header.
 - Colours only through the theme tokens (`bg-surface`, `text-fg-muted`, `border-line` …), never Tailwind's palette; see `../theme/README.md`.
+- Buttons, text fields and choices only through the building blocks `Button`, `Input`, `Select` and `Textarea`
+  (`../components/ui/README.md`): one height per size (36 px, 28 px), one disabled and one loading state.
 - A page that throws while rendering shows `ErrorMessage` inside the frame (`../components/RouteError.tsx`).
 
 ## Sign-in and roles
@@ -69,10 +71,11 @@ loaded when it is opened (work order 062): `routes.tsx` wraps it with `lazyPage(
 - Buttons that write are shown only to `manage`:
 
   ```tsx
+  import { Button } from "../components/ui/Button.tsx";
   import { useRole } from "../session.ts";
 
   const { canManage } = useRole();
-  return canManage ? <button type="button">…</button> : null;
+  return canManage ? <Button type="button">…</Button> : null;
   ```
 
 - Sign-in and sign-out go through the browser API of django-allauth (`../api/auth.ts`); allauth is not part of

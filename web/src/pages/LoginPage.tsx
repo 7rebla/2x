@@ -7,6 +7,8 @@ import { type SignInResult, signIn } from "../api/auth.ts";
 import { openServerPage } from "../browserLocation.ts";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Loading } from "../components/Loading.tsx";
+import { Button } from "../components/ui/Button.tsx";
+import { Input } from "../components/ui/fields.tsx";
 import { isServerPage, refreshSession, safeNextPath, useSession } from "../session.ts";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
 
@@ -97,7 +99,7 @@ function LoginForm(): ReactElement {
     <form onSubmit={onSubmit} noValidate className="space-y-4" data-testid="login-form">
       <label className="block space-y-1">
         <span className="text-sm text-fg-muted">{t("username")}</span>
-        <input
+        <Input
           name="username"
           autoComplete="username"
           autoCapitalize="none"
@@ -107,12 +109,12 @@ function LoginForm(): ReactElement {
           onChange={(event) => {
             setUsername(event.target.value);
           }}
-          className="w-full rounded border border-line-strong bg-surface px-3 py-2"
+          className="w-full"
         />
       </label>
       <label className="block space-y-1">
         <span className="text-sm text-fg-muted">{t("password")}</span>
-        <input
+        <Input
           name="password"
           type="password"
           autoComplete="current-password"
@@ -121,17 +123,13 @@ function LoginForm(): ReactElement {
           onChange={(event) => {
             setPassword(event.target.value);
           }}
-          className="w-full rounded border border-line-strong bg-surface px-3 py-2"
+          className="w-full"
         />
       </label>
       {failure === null ? null : <SignInError failure={failure} />}
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong disabled:opacity-50"
-      >
+      <Button type="submit" variant="primary" loading={pending}>
         {pending ? t("submitting") : t("submit")}
-      </button>
+      </Button>
     </form>
   );
 }

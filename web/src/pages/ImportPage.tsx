@@ -9,6 +9,7 @@ import type { ImportReport } from "../api/generated";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Icon } from "../icons/Icon.tsx";
 import { ImportReportView } from "../components/ImportReportView.tsx";
+import { Button } from "../components/ui/Button.tsx";
 import { deviceClasses } from "./structure/deviceClass.ts";
 import { reloadAfterSave, save } from "./structure/save.ts";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
@@ -147,15 +148,16 @@ export function ImportPage(): ReactElement {
             }}
           />
         </div>
-        <button
+        <Button
           type="submit"
+          variant="primary"
+          icon="upload"
           data-testid="import-check"
           disabled={file === null || running !== null}
-          className="inline-flex items-center gap-2 rounded bg-accent px-3 py-1 text-on-accent hover:bg-accent-strong disabled:opacity-50"
+          loading={running === "check"}
         >
-          <Icon name="upload" decorative />
           {running === "check" ? t("import:file.checking") : t("import:file.check")}
-        </button>
+        </Button>
       </form>
 
       {outcome === null ? null : (
@@ -166,20 +168,21 @@ export function ImportPage(): ReactElement {
           <OutcomeView outcome={outcome} />
           {report === null ? null : <NextStep report={report} />}
           {canApply ? (
-            <button
+            <Button
               type="button"
+              variant="primary"
+              icon="apply"
               data-testid="import-apply"
               disabled={file === null || running !== null}
-              className="inline-flex items-center gap-2 rounded bg-accent px-3 py-1 text-on-accent hover:bg-accent-strong disabled:opacity-50"
+              loading={running === "save"}
               onClick={() => {
                 if (file !== null && running === null) {
                   void run("save", file);
                 }
               }}
             >
-              <Icon name="apply" decorative />
               {running === "save" ? t("import:file.saving") : t("import:file.save")}
-            </button>
+            </Button>
           ) : null}
         </section>
       )}

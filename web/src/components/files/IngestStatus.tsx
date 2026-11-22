@@ -17,6 +17,7 @@ import { Icon } from "../../icons/Icon.tsx";
 import type { IconName } from "../../icons/names.ts";
 import { reloadAfterSave } from "../../pages/structure/save.ts";
 import { ErrorMessage } from "../ErrorMessage.tsx";
+import { Button } from "../ui/Button.tsx";
 
 /** How often a page asks again while a job is queued or running. */
 export const INGEST_POLL_INTERVAL_MS = 5000;
@@ -224,23 +225,24 @@ export function IngestRetryButton({ version }: { version: IngestRetryTarget }): 
   return (
     <div className="space-y-1">
       {active ? null : (
-        <button
+        <Button
           type="button"
+          size="sm"
+          icon="retry"
           data-testid="ingest-retry"
           aria-label={
             version.ingest === null
               ? t("ingest.startVersion", { number: version.number })
               : t("ingest.retryVersion", { number: version.number })
           }
-          disabled={mutation.isPending}
+          loading={mutation.isPending}
           onClick={() => {
             mutation.mutate({ path: { version_id: version.id } });
           }}
-          className="inline-flex items-center gap-1 rounded border border-line-strong bg-surface px-2 py-1 text-xs whitespace-nowrap hover:bg-surface-muted disabled:opacity-60"
+          className="whitespace-nowrap"
         >
-          <Icon name="retry" decorative />
           {mutation.isPending ? t("ingest.starting") : version.ingest === null ? t("ingest.start") : t("ingest.retry")}
-        </button>
+        </Button>
       )}
       {message}
     </div>

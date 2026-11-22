@@ -12,6 +12,8 @@ import type { Duplicate, KindEnum } from "../../api/generated";
 import { Icon } from "../../icons/Icon.tsx";
 import { reloadAfterSave } from "../../pages/structure/save.ts";
 import { ErrorMessage } from "../ErrorMessage.tsx";
+import { Button } from "../ui/Button.tsx";
+import { Input, Select } from "../ui/fields.tsx";
 import { devicePath, documentPath, formatDateTime, formatSize } from "./format.ts";
 import { DownloadLink } from "./parts.tsx";
 import { type UploadOutcome, uploadDocument, uploadVersion } from "./upload.ts";
@@ -74,8 +76,6 @@ function useUploadAction(send: (formData: FormData, file: File) => Promise<Uploa
   }, initialState);
   return { state, action, pending, onFileChange };
 }
-
-const inputClass = "w-full rounded border border-line-strong bg-surface px-3 py-2 aria-[invalid=true]:border-danger";
 
 function fieldErrors(state: UploadState, field: UploadField): readonly string[] {
   return state.outcome?.kind === "invalid" ? (state.outcome.fieldErrors[field] ?? []) : [];
@@ -285,14 +285,9 @@ function UploadShell({
       <div key={state.attempt} className="space-y-3">
         {children}
       </div>
-      <button
-        type="submit"
-        disabled={pending}
-        className="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong disabled:opacity-50"
-      >
-        <Icon name="upload" size={20} decorative />
+      <Button type="submit" variant="primary" icon="upload" loading={pending}>
         {pending ? t("upload.submitting") : t("upload.submit")}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -317,16 +312,16 @@ export function NewDocumentForm({ deviceId }: { deviceId: number }): ReactElemen
       <FileField upload={upload} />
       <FieldFrame label={t("upload.title")} name="title" errors={fieldErrors(upload.state, "title")} hint={t("upload.titleHint")}>
         {({ id, invalid, describedBy }) => (
-          <input
+          <Input
             id={id}
             name="title"
             type="text"
             autoComplete="off"
             maxLength={255}
             defaultValue={upload.state.title}
-            aria-invalid={invalid}
+            invalid={invalid}
             aria-describedby={describedBy}
-            className={inputClass}
+            className="w-full"
           />
         )}
       </FieldFrame>
@@ -337,20 +332,20 @@ export function NewDocumentForm({ deviceId }: { deviceId: number }): ReactElemen
         hint={<span data-testid="upload-configuration-hint">{t("upload.configurationHint")}</span>}
       >
         {({ id, invalid, describedBy }) => (
-          <select
+          <Select
             id={id}
             name="kind"
             defaultValue="document"
-            aria-invalid={invalid}
+            invalid={invalid}
             aria-describedby={describedBy}
-            className={inputClass}
+            className="w-full"
           >
             <option value="document">{t("kind.document")}</option>
             {/* Shown but not selectable: configurations follow with redaction in M5 (E-42). */}
             <option value="configuration" disabled>
               {t("upload.configurationLocked")}
             </option>
-          </select>
+          </Select>
         )}
       </FieldFrame>
     </UploadShell>

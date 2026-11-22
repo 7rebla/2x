@@ -7,11 +7,13 @@ Work order 071 (decision E-51). Basis: `docs/design/icon-bedarfsanalyse.md`, par
 ```tsx
 import { Icon } from "../icons/Icon.tsx";
 
-<button type="button" className="inline-flex items-center gap-2 …">
-  <Icon name="upload" size={20} decorative />
-  {t("upload.submit")}
-</button>
+<p className="text-danger">
+  <Icon name="error" className="mr-2" decorative />
+  {t("error.signOutFailed")}
+</p>
 ```
+
+Buttons take their icon by name (`<Button type="button" icon="upload">`, `../components/ui/README.md`), in the size that fits the button.
 
 - **By name only.** Code never imports from `lucide-react`; `names.ts` is the only file that does (checked by `git grep -n "lucide-react" -- web/src`). A later change of library or drawing is a change in one table.
 - **Meaning is required by the type.** `decorative` hides the icon from assistive technology (`aria-hidden`), for every icon next to a text that says the same. `label="…"` makes it an image with that name, for an icon that stands alone. An icon-only button keeps `decorative` on the icon and gets its own `aria-label`.
