@@ -38,7 +38,7 @@ function Heading({
  */
 export function AnimatedHeading({
   text,
-  level = 2,
+  level = 1,
   className = "text-2xl font-semibold",
   testId,
 }: {
@@ -77,7 +77,7 @@ export function AnimatedHeading({
  */
 export function MaskedTitle({
   text,
-  level = 2,
+  level = 1,
   className = "text-2xl font-semibold",
   testId,
 }: {
