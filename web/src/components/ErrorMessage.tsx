@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../api/errors.ts";
+import { Icon, type IconProps } from "../icons/Icon.tsx";
 
 /**
  * Error state of a page or a part of it. For an API error it shows the HTTP
@@ -11,6 +12,7 @@ export function ErrorMessage({ error }: { error: unknown }): ReactElement {
   const { t } = useTranslation(["common", "auth"]);
 
   let summary: string;
+  let icon: IconProps["name"] = "error";
   let detail: string | null = null;
   if (error instanceof ApiError) {
     detail = error.detail;
@@ -18,6 +20,7 @@ export function ErrorMessage({ error }: { error: unknown }): ReactElement {
       // A 403 with a valid session (an expired one leads to the sign-in page,
       // see session.ts): the role does not allow this.
       summary = t("auth:noPermission");
+      icon = "noPermission";
     } else if (error.kind === "http" && error.status !== null) {
       summary = t("error.http", { status: error.status });
     } else if (error.kind === "network") {
@@ -35,7 +38,10 @@ export function ErrorMessage({ error }: { error: unknown }): ReactElement {
       data-testid="error-message"
       className="space-y-1 rounded border border-danger-line bg-danger-soft p-4 text-danger"
     >
-      <p data-testid="error-summary">{summary}</p>
+      <p data-testid="error-summary">
+        <Icon name={icon} className="mr-2" decorative />
+        {summary}
+      </p>
       {detail === null ? null : (
         <p className="text-sm">
           {t("error.detailLabel")}: <span data-testid="error-detail">{detail}</span>

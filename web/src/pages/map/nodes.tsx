@@ -1,10 +1,12 @@
-// Node components of the map. One uniform shape per kind (no icons by device
-// type yet, see docs/design/icon-bedarfsanalyse.md). Every text from the data
-// is rendered as text.
+// Node components of the map. One uniform shape per kind, each with the icon
+// of its kind (work order 071); devices show the generic device icon until
+// work order 074 adds one per device class. Every text from the data is
+// rendered as text; the icons are decorative, the kind is also written out.
 import { Handle, type NodeProps, type NodeTypes, Position } from "@xyflow/react";
 import type { ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Icon } from "../../icons/Icon.tsx";
 import type { DeviceNode, GroupKind, GroupNode, NetworkNode } from "./graph.ts";
 
 const GROUP_STYLE: Record<GroupKind, string> = {
@@ -29,7 +31,10 @@ function GroupNodeView({ data }: NodeProps<GroupNode>): ReactElement {
       className={`h-full w-full rounded-lg border-2 ${GROUP_STYLE[data.kind]} ${matchRing(data.match)}`}
     >
       <div className="px-4 pt-2">
-        <div className="text-xs uppercase tracking-wide text-fg-muted">{t(`kind.${data.kind}`)}</div>
+        <div className="flex items-center gap-1 text-xs uppercase tracking-wide text-fg-muted">
+          <Icon name={data.kind} decorative />
+          {t(`kind.${data.kind}`)}
+        </div>
         <div className="truncate font-semibold text-fg" title={data.name}>
           {data.name}
         </div>
@@ -54,8 +59,11 @@ function DeviceNodeView({ data, selected }: NodeProps<DeviceNode>): ReactElement
         active ? "border-fg border-2" : "border-line-strong"
       } ${matchRing(data.match)}`}
     >
-      <div className="truncate font-semibold text-fg" title={data.name}>
-        {data.name}
+      <div className="flex min-w-0 items-center gap-1.5 font-semibold text-fg">
+        <Icon name="device" className="text-fg-muted" decorative />
+        <span className="truncate" title={data.name}>
+          {data.name}
+        </span>
       </div>
       <div className="truncate text-xs tabular-nums slashed-zero text-fg-muted" title={data.key}>
         {data.key}
@@ -88,7 +96,10 @@ function NetworkNodeView({ data }: NodeProps<NetworkNode>): ReactElement {
       } ${matchRing(data.match)}`}
     >
       <Handle type="target" position={Position.Left} isConnectable={false} className={HIDDEN_HANDLE} />
-      <div className="text-xs uppercase tracking-wide text-fg-muted">{t("kind.network")}</div>
+      <div className="flex items-center gap-1 text-xs uppercase tracking-wide text-fg-muted">
+        <Icon name="network" decorative />
+        {t("kind.network")}
+      </div>
       <div className="truncate text-sm tabular-nums slashed-zero font-semibold text-fg" title={data.cidr}>
         {data.cidr}
       </div>

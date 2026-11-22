@@ -13,6 +13,7 @@ import { Checksum, DateTime, DownloadLink, KindLabel, Size, UserName } from "../
 import { NewVersionForm } from "../components/files/UploadForm.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { NotFound } from "../components/NotFound.tsx";
+import { Icon } from "../icons/Icon.tsx";
 import { useRole } from "../session.ts";
 import { AnimatedHeading, MaskedTitle } from "../components/TextMotion.tsx";
 
@@ -51,6 +52,7 @@ function DeviceLink({ deviceId }: { deviceId: number }): ReactElement {
   const query = useQuery(devicesRetrieveOptions({ path: { id: deviceId } }));
   return (
     <Link to={devicePath(deviceId)} className="text-accent underline hover:text-accent-strong">
+      <Icon name="device" className="mr-1" decorative />
       {query.data === undefined ? (
         t("document.deviceFallback", { id: deviceId })
       ) : (
@@ -70,7 +72,10 @@ function DocumentView({ document, error }: { document: DocumentDetail; error: un
 
   return (
     <section className="space-y-4">
-      <p className="text-sm text-fg-muted">{t("document.heading")}</p>
+      <p className="text-sm text-fg-muted">
+        <Icon name="document" className="mr-1" decorative />
+        {t("document.heading")}
+      </p>
       <MaskedTitle text={document.title} className="text-2xl font-semibold break-words" testId="document-title" />
 
       {/* A failed reload keeps the last data on screen and says so. */}
@@ -130,7 +135,8 @@ function VersionTable({ versions }: { versions: readonly DocumentVersion[] }): R
         <tbody>
           {versions.map((version) => (
             <tr key={version.id} data-testid="document-version" data-version={version.number} className="border-b border-line align-top">
-              <td data-testid="version-number" className="py-2 pr-4">
+              <td data-testid="version-number" className="py-2 pr-4 whitespace-nowrap">
+                <Icon name="version" className="mr-1 text-fg-muted" decorative />
                 {version.number}
               </td>
               <td data-testid="version-date" className="py-2 pr-4">

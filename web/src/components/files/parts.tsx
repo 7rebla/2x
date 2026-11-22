@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { KindEnum } from "../../api/generated";
+import { Icon } from "../../icons/Icon.tsx";
 import { downloadPath, formatDateTime, formatSize, shortChecksum } from "./format.ts";
 
 /** The checksum, shortened; a click on it shows the whole value. */
@@ -50,8 +51,9 @@ export function DownloadLink({ versionId, number }: { versionId: number; number:
       href={downloadPath(versionId)}
       aria-label={t("download.version", { number })}
       data-testid="download-link"
-      className="text-accent underline hover:text-accent-strong"
+      className="whitespace-nowrap text-accent underline hover:text-accent-strong"
     >
+      <Icon name="download" className="mr-1" decorative />
       {t("download.link")}
     </a>
   );

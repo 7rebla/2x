@@ -2,6 +2,7 @@ import type { ReactElement, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, Outlet, useLocation } from "react-router";
 
+import { Icon } from "../icons/Icon.tsx";
 import { hasRole, loginPathFor, type Role, useRole, useSession } from "../session.ts";
 import { ErrorMessage } from "./ErrorMessage.tsx";
 import { Loading } from "./Loading.tsx";
@@ -43,6 +44,7 @@ export function NoPermission(): ReactElement {
   const { t } = useTranslation("auth");
   return (
     <p role="alert" data-testid="no-permission" className="rounded border border-warning-line bg-warning-soft p-4 text-warning">
+      <Icon name="noPermission" className="mr-2" decorative />
       {t("noPermission")}
     </p>
   );

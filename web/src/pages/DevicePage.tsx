@@ -10,6 +10,8 @@ import { DeviceFiles } from "../components/DeviceFiles.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { NotFound } from "../components/NotFound.tsx";
+import { Icon } from "../icons/Icon.tsx";
+import type { IconName } from "../icons/names.ts";
 import { useRole } from "../session.ts";
 import { DeviceForm, type FieldName } from "./structure/forms.tsx";
 import { AnimatedHeading, MaskedTitle } from "../components/TextMotion.tsx";
@@ -78,17 +80,18 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
     <section className="space-y-4">
       <nav aria-label={t("assets:device.breadcrumb")} data-testid="device-breadcrumb">
         <ol className="flex flex-wrap gap-x-2 text-sm text-fg-muted">
-          <Crumb>
+          <Crumb icon="structure">
             <Link to="/" className="text-accent underline hover:text-accent-strong">
               {t("nav:structure")}
             </Link>
           </Crumb>
-          <Crumb testId="breadcrumb-site">{device.site.name}</Crumb>
-          <Crumb testId="breadcrumb-area">{device.area.name}</Crumb>
-          <Crumb testId="breadcrumb-plant">
+          <Crumb icon="site" testId="breadcrumb-site">{device.site.name}</Crumb>
+          <Crumb icon="area" testId="breadcrumb-area">{device.area.name}</Crumb>
+          <Crumb icon="plant" testId="breadcrumb-plant">
             {device.plant.name} <span className="tabular-nums slashed-zero">({device.plant.key})</span>
           </Crumb>
           <li data-testid="breadcrumb-device" aria-current="page" className="font-semibold text-fg">
+            <Icon name="device" className="mr-1" decorative />
             {device.name}
           </li>
         </ol>
@@ -103,8 +106,9 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
             onClick={() => {
               setEditing(true);
             }}
-            className="rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong"
+            className="inline-flex items-center gap-2 rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong"
           >
+            <Icon name="edit" size={20} decorative />
             {t("assets:actions.edit")}
           </button>
         ) : null}
@@ -162,9 +166,11 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
   );
 }
 
-function Crumb({ testId, children }: { testId?: string; children: ReactNode }): ReactElement {
+/** One level of the breadcrumb, with the icon of its kind (site, area, plant). */
+function Crumb({ icon, testId, children }: { icon: IconName; testId?: string; children: ReactNode }): ReactElement {
   return (
     <li data-testid={testId} className="after:ml-2 after:content-['›']">
+      <Icon name={icon} className="mr-1" decorative />
       {children}
     </li>
   );
