@@ -1,15 +1,20 @@
 {
   "schema_version": 1,
-  "notes": "Search probes of milestone M2 (work order 056) for the command evaluate_search. References only: manifest_id and sha256 name a file of testfactory/manifest.yaml, pages are page indexes of the PDF file counted from 1 ('PDF-S.'), taken from the sources of testfactory/questions.yaml (basis 'question') or from the column address_source of testfactory/layout/devices.csv (basis 'device', 'Handbuch' is aps-documentation-de). Queries are written in the project's own words; no text of a vendor document is quoted. Sources in the git repositories of the test factory (README and other files, located by line) have no pages and no file checksum and are left out. tests/search/test_probes.py checks every reference.",
+  "notes": "Search probes of milestone M2 (work order 056) for the command evaluate_search. References only: manifest_id and sha256 name a file of testfactory/manifest.yaml, pages are page indexes of the PDF file counted from 1 ('PDF-S.'), taken from the sources of testfactory/questions.yaml (basis 'question') or from the column address_source of testfactory/layout/devices.csv (basis 'device', 'Handbuch' is aps-documentation-de). A place in the other language edition of the same manual counts as correct as well (E-61, work order 067): basis 'other_language_edition' maps such a place to the place it corresponds to, and both name the same pages. The English pages of aps-documentation-en were compared with the German ones at the files of the manifest in work order 067 (same page count, the same content on the same page index). Queries are written in the project's own words; no text of a vendor document is quoted. Sources in the git repositories of the test factory (README and other files, located by line) have no pages and no file checksum and are left out. tests/search/test_probes.py checks every reference.",
   "probes": [
     {
       "id": "ip-ccu",
       "query": "192.168.0.100",
-      "basis": {"question": 1},
+      "basis": {"question": 1, "other_language_edition": {"aps-documentation-en": "aps-documentation-de"}},
       "expected": [
         {
           "manifest_id": "aps-documentation-de",
           "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [18, 31, 38]
+        },
+        {
+          "manifest_id": "aps-documentation-en",
+          "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
           "pages": [18, 31, 38]
         }
       ]
@@ -17,11 +22,16 @@
     {
       "id": "ip-drill-plc",
       "query": "192.168.0.50",
-      "basis": {"device": "drill-plc"},
+      "basis": {"device": "drill-plc", "other_language_edition": {"aps-documentation-en": "aps-documentation-de"}},
       "expected": [
         {
           "manifest_id": "aps-documentation-de",
           "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [38]
+        },
+        {
+          "manifest_id": "aps-documentation-en",
+          "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
           "pages": [38]
         }
       ]
@@ -29,11 +39,16 @@
     {
       "id": "question-1",
       "query": "Welche IP-Adresse hat der zentrale Rechner der Produktionsanlage?",
-      "basis": {"question": 1},
+      "basis": {"question": 1, "other_language_edition": {"aps-documentation-en": "aps-documentation-de"}},
       "expected": [
         {
           "manifest_id": "aps-documentation-de",
           "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [18, 31, 38]
+        },
+        {
+          "manifest_id": "aps-documentation-en",
+          "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
           "pages": [18, 31, 38]
         }
       ]
@@ -41,11 +56,16 @@
     {
       "id": "question-3",
       "query": "Mit welchem Kommunikationsprotokoll reden die TXT-Steuerungen mit dem zentralen Rechner?",
-      "basis": {"question": 3},
+      "basis": {"question": 3, "other_language_edition": {"aps-documentation-en": "aps-documentation-de"}},
       "expected": [
         {
           "manifest_id": "aps-documentation-de",
           "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [36, 38]
+        },
+        {
+          "manifest_id": "aps-documentation-en",
+          "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
           "pages": [36, 38]
         }
       ]
@@ -53,11 +73,16 @@
     {
       "id": "question-7",
       "query": "Das fahrerlose Fahrzeug ist von seiner Fahrlinie abgekommen. Wie geht man vor?",
-      "basis": {"question": 7},
+      "basis": {"question": 7, "other_language_edition": {"aps-documentation-en": "aps-documentation-de"}},
       "expected": [
         {
           "manifest_id": "aps-documentation-de",
           "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [22, 27]
+        },
+        {
+          "manifest_id": "aps-documentation-en",
+          "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
           "pages": [22, 27]
         }
       ]

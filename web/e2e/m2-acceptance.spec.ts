@@ -331,6 +331,13 @@ const APS_DOCUMENTATION_DE: Manual = {
   manifestId: "aps-documentation-de",
   sha256: "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
 };
+// The English edition of the same documentation. A place in the other language
+// edition counts as correct (E-61); it has the same pages as the German one
+// (compared at the files in work order 067, like backend/twox/search/probes/m2.json).
+const APS_DOCUMENTATION_EN: Manual = {
+  manifestId: "aps-documentation-en",
+  sha256: "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
+};
 const UR5E_USER_MANUAL_DE: Manual = {
   manifestId: "ur5e-user-manual-de",
   sha256: "70940ab1cd824a2af60e75d1f2437f45fe479f2394057e267fecfe8448266102",
@@ -340,7 +347,10 @@ const UR5E_SOFTWARE_HANDBOOK_EN: Manual = {
   sha256: "06488da8a8bc2be51e796d2e62e2f90ad4b00412acbac016c232780b1d0ee3ba",
 };
 
-/** A search of the acceptance: the query and where the answer must be found (PDF pages of questions.yaml). */
+/**
+ * A search of the acceptance: the query and where the answer must be found (PDF pages of
+ * questions.yaml, or the same pages in the other language edition of the manual, E-61).
+ */
 interface Probe {
   readonly name: string;
   readonly query: string;
@@ -350,11 +360,14 @@ interface Probe {
 
 const PROBES: readonly Probe[] = [
   {
-    // Test question 1: the address of the central control.
+    // Test question 1: the address of the central control, in either language edition (E-61).
     name: "IP address of the central control (question 1)",
     query: "192.168.0.100",
     within: 3,
-    expected: [{ manual: APS_DOCUMENTATION_DE, pages: [18, 31, 38] }],
+    expected: [
+      { manual: APS_DOCUMENTATION_DE, pages: [18, 31, 38] },
+      { manual: APS_DOCUMENTATION_EN, pages: [18, 31, 38] },
+    ],
   },
   {
     // Test question 9: the payload of the robot arm, in the project's own words.
