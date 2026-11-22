@@ -69,7 +69,7 @@ describe("user menu", () => {
     renderApp("/");
     const button = await screen.findByTestId("user-menu-button");
     expect(button.getAttribute("aria-expanded")).toBe("false");
-    expect(screen.getByRole("button", { name: `User menu: ${reader.username}` })).toBe(button);
+    expect(screen.getByRole("button", { name: `Account menu: ${reader.username}` })).toBe(button);
     expect(button.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
     const menu = screen.getByTestId("user-menu");
     expect(menu.hidden).toBe(true);
