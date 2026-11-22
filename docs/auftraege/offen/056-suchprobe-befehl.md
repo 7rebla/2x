@@ -1,6 +1,6 @@
 # Auftrag 056 – Suchprobe: Befehl `evaluate_search` und Probenliste
 
-Meilenstein: M2 · Freigabestufe: B · Status: offen
+Meilenstein: M2 · Freigabestufe: B · Status: zur Prüfung
 
 ## Ziel
 
@@ -76,7 +76,21 @@ Voraussetzung: 050 ist nach `main` zusammengeführt.
 Keine.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+- **Was wurde gebaut?**
+  - `backend/twox/search/evaluation.py`: Probenliste lesen und prüfen (`load_probes`, klare Meldungen mit Fundort wie `probes[0].expected[0].sha256: …`), Messung über die Such-Schnittstelle, Auswertung und Ausgabe. Drei Listen je Probe: Stichwort (Suche über `get_search_backend()` mit `override_settings(TWOX_AI_ENABLED=False)` für genau diese Anfrage), Vektor (`embed_query` + `nearest_sections` aus `postgres.py`, Abschnitte mit gleichem Rang = gleicher Abstand zu einem Eintrag zusammengefasst), zusammen (Suche wie für Nutzer). Je Probe und Art: Rang der ersten richtigen Fundstelle (innerhalb der ersten 50 = `VECTOR_CANDIDATES`), Zahl richtiger Einträge unter den ersten 5 und 10, Kehrwert des Rangs, Zeit, `manifest_id` und Seite der ersten richtigen Fundstelle. Je Art: Recall@5 und Recall@10 (Anteil gemessener Proben mit richtigem Eintrag unter den ersten 5 bzw. 10), MRR, Gesamt- und Mittelzeit; dazu Modellname und `TWOX_SECTION_MAX_CHARS`. Richtig ist ein Eintrag, wenn ein Fundort die erwartete Prüfsumme, eine erwartete Seite im Seitenbereich und (falls angegeben) das erwartete Gerät hat.
+  - „Nicht eingelesen“: keine Dokumentversion (Art „Dokument“) mit der Prüfsumme hat Abschnitte. Solche Proben werden gar nicht gesucht (kein Modellaufruf) und zählen nicht gegen die Suche; bei teilweise eingelesenen Proben wird gegen die vorhandenen Dateien gemessen und der Rest genannt.
+  - E-59: KI aus → nur Stichwort gemessen, Vektor und zusammen „not measured: AI features not enabled“, eigene Hinweiszeile, Ollama wird nie angesprochen. KI an, Modell fällt aus → Vektor und zusammen „not measured: model service not available“.
+  - Befehl `evaluate_search` (Tabelle oder `--json`), liest UTF-8 von der Standardeingabe (BOM wird entfernt), Terminal ohne Umleitung und kaputte Eingabe enden mit `CommandError` und Exit-Code 1. Ausgegeben werden nur Kennungen, Ränge, Seiten, Zahlen – weder Abschnittstexte noch Ausschnitte noch die Anfragen.
+  - `backend/twox/search/probes/m2.json`: 7 Proben, nur Verweise (`manifest_id`, `sha256`, Seiten, Feld `basis` mit Prüffrage oder Gerät): IP `192.168.0.100` (Prüffrage 1: PDF-S. 18, 31, 38), SPS Bohrstation `192.168.0.50` (`devices.csv` drill-plc: PDF-S. 38), Prüffragen 1, 3, 7, 9, 10 in eigenen Worten mit allen PDF-Seiten ihrer Quellen (10 nach E-33, mit `ur5e-software-handbook-en` S. 46). Quellen in den Git-Repositorien (Zeilenangaben, keine Prüfsumme) sind weggelassen.
+  - `deploy/compose/compose.yaml`, nur `backend-dev`: `testfactory/manifest.yaml` und `testfactory/questions.yaml` je `:ro`.
+- **Wie wurde getestet?** `tests/search/test_evaluation.py` (32 Tests: Rang/Zählungen/RR und Recall@5/10/MRR an von Hand gerechneten Beispielen, Seitenbereiche und Gerät, Tiefe 50; gegen die Datenbank mit eigenen Texten: KI aus nur Stichwort ohne Modellaufruf, KI an mit `FakeEmbedder` alle drei Listen mit von Hand bestimmten Rängen, Modellausfall, nicht/teilweise eingelesen, Datei ohne Abschnitte; Befehl: Tabelle, JSON, keine Abschnittstexte/Wörter/Anfragen in der Ausgabe, 12 fehlerhafte Eingaben mit klarer Meldung, UTF-8/BOM). `tests/search/test_probes.py` (6 Tests: Probenliste gültig, jede `manifest_id`/`sha256` im Manifest, jede Seite in `questions.yaml` bzw. `devices.csv` belegt und umgekehrt alle PDF-Seiten der Prüffrage erwartet, Prüffragen 1/3/7/9/10 in eigenen Worten, Adressen aus `questions.yaml`/`devices.csv`).
+  - Akzeptanzkriterien mit `-p twox-056`, `TWOX_API_PORT=18056`: 0 Docker vorhanden; 1 build und up Exit 0; 2 `pytest tests/search -v` 238 passed, `pytest` 1851 passed / 5 deselected / 0 failed / 0 skipped, `pytest -m worker` 5 passed; 3 ruff `All checks passed!`, format ohne Änderung, mypy `Success: no issues found in 166 source files`; 4 makemessages ohne Unterschied, makemigrations „No changes detected“, Lizenzprüfung bestanden, OpenAPI ohne Unterschied; 5 `D exec -T api python manage.py evaluate_search < backend/twox/search/probes/m2.json` Exit 0, alle 7 Proben „not ingested“ („Not ingested: 7 of 7 probes“), auch mit `--json`; fehlerhafte Liste Exit 1 mit Meldung; 6 `down -v` Exit 0.
+- **Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-a2610cacabe013069`, Arbeitsverzeichnis `.claude/worktrees/agent-a2610cacabe013069`.
+- **Abweichungen:**
+  - Ausgabe auf Englisch wie die übrigen Befehle: „not ingested“ statt „nicht eingelesen“, JSON-Status `not_ingested`.
+  - Recall@k ist als Trefferquote je Probe definiert (mindestens eine richtige Fundstelle unter den ersten k), nicht als Anteil aller erwarteten Seiten; die Zahl richtiger Einträge unter den ersten 5/10 steht zusätzlich je Probe.
+  - In der Tabelle steht bei nicht eingelesenen Proben die fehlende `manifest_id` in der letzten Spalte (Überschrift „first correct place“), ein kleiner Schönheitsfehler.
+  - Die Stichwortliste nutzt `django.test.utils.override_settings` im Produktcode, um die KI für eine Anfrage abzuschalten, weil `postgres.py` und `interface.py` nicht geändert werden sollten; mit 052 ließe sich das durch einen Schalter in `SearchRequest` ersetzen.
+  - README nicht ergänzt (nicht im Bereich des Auftrags); die Bedienung steht im Docstring des Befehls.
+  - Keine offenen Fragen.
