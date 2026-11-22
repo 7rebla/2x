@@ -120,7 +120,7 @@ Nichts davon hält die laufende Arbeit auf.
 | 035 | Oberfläche: CSV-Import | B | 7 | erledigt |
 | 036 | Oberfläche: Dateien | B | 7 | erledigt |
 | 037 | Nachweis der M1-Abnahme | B | 8 | in Arbeit |
-| 038 | README und ARCHITECTURE für M1 | B | 8 | in Arbeit |
+| 038 | README und ARCHITECTURE für M1 | B | 8 | erledigt |
 | 039 | Landkarte als interaktive Vorschau (M1b, E-48) | C | – | in Arbeit |
 
 Hinweise aus Welle 1:
