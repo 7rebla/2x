@@ -63,6 +63,8 @@ Voraussetzung: 051, 053 und 054 sind nach `main` zusammengeführt (053 wegen der
 - Die CI hat nur das Testkonto `e2e-manager`; die Rolle `read` deshalb in Vitest.
 - `docs/DECISIONS.md` und `docs/STATUS.md` ändert nur die Leitstelle. Kein Push (E-14).
 
+- **Nachtrag der Leitstelle (Prüfung 054):** Mit sechs Navigationseinträgen bleiben bei 1024 px nur 11 px Reserve in der Kopfzeile (054 hat Abstände in `Layout.tsx` und `index.css` schon verkleinert). Für den siebten Eintrag eine tragfähige Lösung bauen, z. B. Texte der Einträge erst ab `xl` zeigen und darunter nur Icons mit `aria-label` und Tooltip, oder ein Menü „Mehr“; die Kopfzeile bleibt in Deutsch und Englisch einzeilig (`web/e2e/navigation.spec.ts` bei 1024 und 1280 px). `Layout.tsx` und `index.css` gehören dafür zu den betroffenen Bereichen.
+
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
 **Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).

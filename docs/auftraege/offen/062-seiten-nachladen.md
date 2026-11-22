@@ -12,6 +12,8 @@ Voraussetzung: 054 und 055 sind nach `main` zusammengeführt (beide ändern `web
 
 - Seiten in `web/src/routes.tsx` mit `React.lazy()` und `Suspense` laden, mindestens die Landkarte (React Flow) und alle anderen Seiten außer Anmeldung und Startseite; ein gemeinsamer, ruhiger Ladezustand (Theme-Tokens aus 070, Animationen dezent nach E-52, respektiert `prefers-reduced-motion`).
 - Fehler beim Nachladen eines Teils (z. B. nach einem neuen Bau, während die Seite offen ist) zeigen eine verständliche Meldung mit „Neu laden“ statt einer leeren Seite.
+- Seit 054 lädt Rolldown den erzeugten API-Client als eigenes Stück (`react-query.gen-…js`, 218 kB) per `modulepreload` beim Start mit; die Startlast ist damit nicht gesunken (zusammen 565 kB). Ziel ist eine echte Verringerung der Startlast, nicht nur das Verschwinden der Warnung.
+- Wackeliger Test `web/src/session.test.tsx` › „signs out … leads to /login“ (2 von 10 Läufen: `/login?next=%2Fselftest` statt `/login`; vermutlich Wettlauf zwischen `RequireSession` und `navigate("/login")` in `UserMenu.tsx`) beheben; `session.test.tsx` und `UserMenu.tsx` gehören dafür zu den betroffenen Bereichen.
 - Bündelgrößen vor und nach dem Auftrag im Kurzbericht (Hauptbündel und größte Teile, jeweils roh und gzip).
 - Tests: Vitest für Ladezustand und Fehler beim Nachladen; die bestehenden e2e-Tests laufen unverändert grün.
 
