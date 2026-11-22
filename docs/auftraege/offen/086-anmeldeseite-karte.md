@@ -49,7 +49,7 @@ Keine.
 ### Was wurde gebaut?
 
 - **`web/src/pages/LoginPage.tsx`:** Seite `mx-auto w-full max-w-sm` (ab 640 px `pt-8` zusätzlich), darin oben zentriert Bildmarke (48 px, Master, `CARD_BRAND_SIZE`) mit Schriftzug „2x“ in `text-4xl`, darunter die Karte (`data-testid="login-card"`: `rounded-lg border border-line bg-surface p-6 shadow-sm`) mit `h1` (`AnimatedHeading`, wie 078/085), Einleitung, Fehler der Sitzung, Formular. Knopf `primary` mit `className="w-full"`; Felder und Knopf aus den Bausteinen 077, beide 36 px hoch und gleich breit. Fehlermeldung bei falschem Kennwort steht in der Karte. Seitentitel (`usePageTitle`), Weiterleitung nach `?next=` und Sprachumschalter im Kopf unverändert.
-- **Tipp-Animation:** Der Schriftzug über der Karte nutzt `TypedText` im selben Lauf `sign-in` wie der Kopf; beide entscheiden beim selben Rendern und tippen gleichzeitig. Der Kopf (076) tippt weiter wie bisher. Bei „Bewegung reduzieren“ steht der Name sofort da.
+- **Tipp-Animation:** (Stand nach der Nachbesserung, siehe unten) Nur der Schriftzug im Kopf tippt (076, E-64); der Name über der Karte steht still und ist `aria-hidden`.
 - **`web/src/components/BrandMark.tsx` (nicht im Auftrag genannt, minimal):** neue Eigenschaft `link` (Standard `true`). `link={false}` zeichnet dieselbe Bildmarke-plus-Name-Kombination als `<span data-testid="brand-lockup">` statt als Link nach `/`. So bleibt der Link „2x“ im Kopf der einzige Link dieses Namens (`brand.spec.ts`, `layout.spec.ts`, `App.test.tsx` unverändert grün). Im Kopf ändert sich nichts.
 - **Doku:** `web/src/pages/README.md` (Abschnitt „Frame and navigation“: Satz „The sign-in page follows with work order 086“ ersetzt durch die Beschreibung der Karte), `web/src/theme/README.md` (Bildmarke auf der Anmeldekarte, Tabellenzeile Muster E).
 
@@ -85,5 +85,36 @@ Geänderte Dateien: `web/src/pages/LoginPage.tsx`, `web/src/pages/LoginPage.test
 ### Abweichungen und Hinweise
 
 1. **`BrandMark.tsx` und `BrandMark.test.tsx` geändert** (nicht unter „Betroffene Bereiche“): nötig, damit die Marke über der Karte kein zweiter Link nach `/` wird. Kleine, rückwärtsverträgliche Eigenschaft; keine Überschneidung mit 081/082 (`Layout.tsx`, `index.css`, Navigation nicht angefasst).
-2. **Zwei tippende Namen:** Auf der Anmeldeseite tippen jetzt der Name im Kopf (076, laut Leitstelle zu erhalten) und der Name über der Karte (laut Auftrag) gleichzeitig im selben Lauf. Wirkt ruhig, weil beide synchron laufen, ist aber doppelt. Falls a7 nur einen tippenden Namen möchte: im Kopf auf der Anmeldeseite still stehen lassen (Änderung in `Layout.tsx`, nach 082) oder den Namen über der Karte still stellen (eine Zeile in `LoginPage.tsx`). Keine Entscheidung nötig für die Abnahme dieses Auftrags.
+2. ~~Zwei tippende Namen~~ – durch die Nachbesserung erledigt: nur der Kopf tippt.
 3. `docs/DECISIONS.md`, `docs/STATUS.md`, `docs/ROADMAP.md` nicht geändert.
+
+### Nachbesserung (nach Prüfung der Leitstelle)
+
+**Befund:** Der Name über der Karte tippte nur beim direkten Aufruf von `/login`; nach der üblichen Weiterleitung von `/` hatte die Kopfzeile den Lauf `sign-in` schon vermerkt, der Kartenname stand dann sofort. Die READMEs beschrieben das falsch.
+
+**Umsetzung** (Entscheidung der Leitstelle nach E-64, Commit `3fe624a`):
+
+- `LoginPage.tsx`: `BrandMark` über der Karte ohne `typing`; der Umschlag `data-testid="login-brand"` trägt `aria-hidden="true"`, weil die Marke nur den Link „2x“ im Kopf wiederholt. Darin liegt nichts Fokussierbares (`link={false}`, nur `span`s und das SVG).
+- `LoginPage.test.tsx`: Der Test „types the name in the card and in the header“ ist ersetzt durch eine genauere Prüfung: Kopf tippt (`data-typing="type"`, `twox.typed = sign-in`), Karte enthält kein `typed-text` und kein `tx-`-Element, genau ein `typed-text` auf der Seite. Neu: Kartenname steht auch still, wenn der Kopf den Lauf vorher getippt hat (Weiterleitung von `/`); Marke über der Karte ist `aria-hidden` und enthält weder Link, Knopf, Feld noch `tabindex`. Der Fall „reduzierte Bewegung“ prüft jetzt Karte und Kopf.
+- `login.spec.ts`: Kartentest prüft je Breite zusätzlich `aria-hidden="true"` und kein `typed-text` in der Marke über der Karte.
+- `theme/README.md` und `pages/README.md` berichtigt (Kartenname steht still, `aria-hidden`; Muster E nur im Kopf).
+- `BrandMark.tsx` bleibt wie geliefert (`link`-Eigenschaft von der Leitstelle angenommen).
+
+**Prüfungen:**
+
+| AK | Ergebnis |
+| --- | --- |
+| 1 | `W --profile dev build web-dev`, `npm ci`, `lint`, `typecheck`, `test` (**44 Dateien, 896 Fälle bestanden**), `build`, `licenses` je Exit 0; `api:generate` Exit 0, `git diff --exit-code -- web/openapi web/src/api` Exit 0 |
+| 2 | wie in `ci.yml` auf frischer Datenbank (Build, Pull, `npm ci`, `up -d --wait`, „Create test account“): **75 passed, 1 skipped**, Exit 0 |
+| 3 | die drei fehlenden Kombinationen nachgeholt (eingebauter Browser, `127.0.0.1:18086`, Deutsch), Einstieg über `/` mit Weiterleitung nach `/login` |
+| 4 | `down -v` beider Projekte Exit 0; kein Container, kein Volume mit `twox-086` |
+
+**Sichtprüfung der fehlenden Kombinationen:**
+
+- **1600 px dunkel:** Weiterleitung von `/` nach `/login`; nur der Kopf tippt (ein `typed-text`, im Kopf), Marke über der Karte `aria-hidden`, ohne `tx-`-Elemente. Karte 384 px mittig, Fläche hebt sich vom Hintergrund ab, Rand sichtbar, Marke in der dunklen Markenfarbe gut erkennbar, Knopf lesbar.
+- **1024 px hell:** Karte mittig, Marke und Name darüber mittig; Felder und Knopf gleich breit, Knopf in der Akzentfarbe.
+- **375 px hell:** Karte 343 px (Breite minus 2 × 16 px), kein waagerechtes Scrollen; Einleitung bricht in zwei Zeilen, Felder und Knopf volle Kartenbreite, Sprachumschalter im Kopf rechts.
+
+Damit sind alle verlangten Kombinationen (375, 1024, 1600 px, je hell und dunkel) angesehen, dazu 768 hell und 1440 dunkel aus dem ersten Durchgang.
+
+Hinweis: Für diese Sichtprüfung war die Höchstzahl der Browser-Tabs erreicht; ich habe den Tab einer abgeschlossenen Sitzung (Auftrag 078, `localhost:18078`) auf meine Adresse umgeleitet, statt fremde Tabs zu schließen. Er zeigt jetzt `127.0.0.1:18086/login` (Dienst bereits beendet).
