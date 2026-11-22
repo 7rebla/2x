@@ -2,8 +2,10 @@
 
 import shutil
 import subprocess
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import pytest
 from django.conf import settings as django_settings
@@ -17,6 +19,9 @@ TEST_CACHES = {
         "LOCATION": "twox-tests",
     }
 }
+
+#: Tasks whose messages the fixture ingest_messages records instead of sending.
+INGEST_TASK_PREFIX = "twox.ingest."
 
 
 def compile_catalogues(source: Path, target: Path) -> list[Path]:
@@ -53,6 +58,69 @@ def compiled_catalogues(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Pa
     locale_paths = [str(target / str(index)) for index in range(len(django_settings.LOCALE_PATHS))]
     with override_settings(LOCALE_PATHS=locale_paths):
         yield target
+
+
+@dataclass
+class IngestMessages:
+    """Messages to the tasks ``twox.ingest.*``, recorded instead of sent to the broker.
+
+    ``sent`` holds ``(task name, args)`` per message. While ``error`` is set,
+    every send raises it instead, like a broker that is down.
+    """
+
+    sent: list[tuple[str, tuple[Any, ...]]] = field(default_factory=list)
+    error: Exception | None = None
+
+    def record(self, name: str, args: object) -> None:
+        if self.error is not None:
+            raise self.error
+        self.sent.append((name, tuple(args) if isinstance(args, list | tuple) else ()))
+
+    def names(self) -> list[str]:
+        return [name for name, _args in self.sent]
+
+
+@pytest.fixture(autouse=True)
+def ingest_messages(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> IngestMessages:
+    """Keep every message to ``twox.ingest.*`` away from the broker (work order 049).
+
+    Since 049 every upload sends ``twox.ingest.convert`` after its commit, in
+    tests with ``transaction=True`` as well. Outside the marker ``worker``,
+    ``apply_async`` (and with it ``delay``) of each ingest task and
+    ``send_task`` with an ingest task name only record the message, so plain
+    ``pytest`` needs no Valkey. Tests with the marker ``worker`` send for real.
+    """
+    record = IngestMessages()
+    if request.node.get_closest_marker("worker") is not None:
+        return record
+
+    # Imported here: Django is set up by now, and the tasks are registered.
+    import twox.ingest.tasks  # noqa: F401
+    from twox.config import celery_app
+
+    for name, task in list(celery_app.tasks.items()):
+        if name.startswith(INGEST_TASK_PREFIX):
+            monkeypatch.setattr(task, "apply_async", _recording_apply_async(record, name))
+
+    original_send_task: Callable[..., object] = celery_app.send_task
+
+    def send_task(name: str, *args: object, **options: object) -> object:
+        if name.startswith(INGEST_TASK_PREFIX):
+            record.record(name, args[0] if args else options.get("args"))
+            return None
+        return original_send_task(name, *args, **options)
+
+    monkeypatch.setattr(celery_app, "send_task", send_task)
+    return record
+
+
+def _recording_apply_async(record: IngestMessages, name: str) -> Callable[..., None]:
+    def apply_async(args: object = None, kwargs: object = None, **options: object) -> None:
+        record.record(name, args)
+
+    return apply_async
 
 
 @pytest.fixture(autouse=True)

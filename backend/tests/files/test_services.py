@@ -1,6 +1,7 @@
 """Document and version services (twox.files.services) and their models."""
 
 import hashlib
+import logging
 import threading
 from collections.abc import Iterator
 from pathlib import Path
@@ -8,10 +9,11 @@ from pathlib import Path
 import pytest
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import connection
+from django.db import connection, transaction
 from django.db.models import ProtectedError
-from pytest_django.fixtures import Settings
+from pytest_django.fixtures import DjangoCaptureOnCommitCallbacks, Settings
 
+from tests.conftest import IngestMessages
 from twox.accounts.models import User
 from twox.assets.models import Area, Device, Plant, Site
 from twox.files.models import Document, DocumentKind, DocumentVersion, VersionImmutableError
@@ -29,6 +31,8 @@ from twox.files.services import (
     create_document,
 )
 from twox.files.storage import key_for_sha256
+from twox.ingest import services as ingest_services
+from twox.ingest.models import IngestJob, IngestStatus
 
 pytestmark = pytest.mark.django_db
 
@@ -389,7 +393,9 @@ def test_verbose_names_are_set() -> None:
 
 
 @pytest.mark.django_db(transaction=True)
-def test_concurrent_versions_get_consecutive_numbers(media_root: Path) -> None:
+def test_concurrent_versions_get_consecutive_numbers(
+    media_root: Path, ingest_messages: IngestMessages
+) -> None:
     document = create_document(make_device(), upload(b"v1"), "Manual", "document", None).document
     workers = 4
     barrier = threading.Barrier(workers)
@@ -414,3 +420,138 @@ def test_concurrent_versions_get_consecutive_numbers(media_root: Path) -> None:
 
     assert errors == []
     assert sorted(numbers) == [2, 3, 4, 5]
+    # Each committed version asked for its ingestion; the stand-in contents
+    # are no PDF, so every job is skipped and nothing was sent.
+    assert IngestJob.objects.filter(status=IngestStatus.SKIPPED).count() == 5
+    assert ingest_messages.sent == []
+
+
+# --- ingestion after the commit (work order 049) -------------------------------
+
+PDF = b"%PDF-1.7\n%stand-in, never converted\n"
+
+
+def test_new_document_asks_for_its_ingestion_after_the_commit(
+    media_root: Path,
+    ingest_messages: IngestMessages,
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+) -> None:
+    user = User.objects.create_user("uploader")
+
+    with django_capture_on_commit_callbacks(execute=False) as callbacks:
+        result = create_document(make_device(), upload(PDF), "Manual", "document", user)
+    # Before the commit: no job, no message.
+    assert not IngestJob.objects.exists()
+    assert len(callbacks) == 1
+
+    # The callback creates the job; the message itself leaves after its commit.
+    with django_capture_on_commit_callbacks(execute=True):
+        callbacks[0]()
+
+    job = IngestJob.objects.get()
+    assert job.document_version == result.version
+    assert job.status == IngestStatus.QUEUED
+    assert job.requested_by == user
+    assert ingest_messages.sent == [("twox.ingest.convert", (job.pk,))]
+
+
+def test_new_version_gets_a_new_job(
+    media_root: Path,
+    ingest_messages: IngestMessages,
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+) -> None:
+    with django_capture_on_commit_callbacks(execute=True):
+        first = create_document(make_device(), upload(PDF), "Manual", "document", None)
+    with django_capture_on_commit_callbacks(execute=True):
+        second = add_version(first.document, upload(PDF + b"%edition 2\n"), None)
+
+    jobs = list(IngestJob.objects.order_by("pk"))
+    assert [job.document_version for job in jobs] == [first.version, second.version]
+    assert ingest_messages.names() == ["twox.ingest.convert", "twox.ingest.convert"]
+
+
+def test_rolled_back_upload_creates_no_job(
+    media_root: Path,
+    ingest_messages: IngestMessages,
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+) -> None:
+    device = make_device()
+
+    with (
+        django_capture_on_commit_callbacks(execute=True) as callbacks,
+        pytest.raises(RuntimeError),
+        transaction.atomic(),
+    ):
+        create_document(device, upload(PDF), "Manual", "document", None)
+        raise RuntimeError("the surrounding transaction fails")
+
+    assert callbacks == []
+    assert not Document.objects.exists()
+    assert not IngestJob.objects.exists()
+    assert ingest_messages.sent == []
+
+
+def test_refused_version_creates_no_job(
+    media_root: Path,
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+) -> None:
+    with django_capture_on_commit_callbacks(execute=True):
+        result = create_document(make_device(), upload(PDF), "Manual", "document", None)
+
+    with (
+        django_capture_on_commit_callbacks(execute=True) as callbacks,
+        pytest.raises(DuplicateVersionError),
+    ):
+        add_version(result.document, upload(PDF), None)
+
+    assert callbacks == []
+    assert IngestJob.objects.count() == 1
+
+
+def test_failed_send_does_not_fail_the_upload(
+    media_root: Path,
+    ingest_messages: IngestMessages,
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+) -> None:
+    ingest_messages.error = ConnectionRefusedError("broker down")
+
+    with django_capture_on_commit_callbacks(execute=True):
+        result = create_document(make_device(), upload(PDF), "Manual", "document", None)
+
+    assert DocumentVersion.objects.get() == result.version
+    assert IngestJob.objects.get().status == IngestStatus.QUEUED
+
+
+def test_any_ingest_error_is_logged_and_does_not_fail_the_upload(
+    media_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+) -> None:
+    def broken(version: DocumentVersion, user: User | None) -> None:
+        raise RuntimeError("ingestion broken")
+
+    monkeypatch.setattr(ingest_services, "request_ingest", broken)
+
+    with (
+        caplog.at_level(logging.ERROR, logger="twox.files.services"),
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        result = create_document(make_device(), upload(PDF), "Manual", "document", None)
+
+    assert DocumentVersion.objects.get() == result.version
+    assert f"ingestion of version {result.version.pk} could not be requested" in caplog.text
+    assert not IngestJob.objects.exists()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_committed_upload_sends_without_capturing(
+    media_root: Path, ingest_messages: IngestMessages
+) -> None:
+    # A real commit (no test transaction): the autouse fixture keeps the
+    # message away from the broker all the same.
+    result = create_document(make_device(), upload(PDF), "Manual", "document", None)
+
+    job = IngestJob.objects.get(document_version=result.version)
+    assert job.status == IngestStatus.QUEUED
+    assert ingest_messages.sent == [("twox.ingest.convert", (job.pk,))]
