@@ -140,6 +140,11 @@ test("the map shows a device and its network, finds it and opens its page", asyn
   // Its network line is drawn and highlighted; a device without an address has none.
   await expect(canvas.locator(".react-flow__edge.map-membership-active")).toHaveCount(1);
   await expect(canvas.locator(`[data-id="member:device:${String(device.id)}"]`)).toHaveCount(1);
+  // The label of the line is metadata (work order 094, E-65 (5)): 13 px as the
+  // token text-meta, measured as computed size of the SVG text in the built page.
+  const lineLabel = canvas.locator(".react-flow__edge-text").first();
+  await expect(lineLabel).toHaveText("in network");
+  expect(await lineLabel.evaluate((element) => getComputedStyle(element).fontSize)).toBe("13px");
   await search.fill(plainKey);
   await expect(page.getByTestId("map-search-status")).toHaveText("1 match");
   await expect(canvas.locator(".react-flow__edge.map-membership-active")).toHaveCount(0);

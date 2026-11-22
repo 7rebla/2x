@@ -1,6 +1,6 @@
 # Auftrag 094 – Beschriftung der Netzlinien auf der Landkarte nach E-65
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: in Arbeit
+Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: zur Prüfung
 
 ## Ziel
 
@@ -34,7 +34,29 @@ Folgepunkt aus der Prüfung von 084: Die Beschriftung der Netzlinien auf der Lan
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+Status: zur Prüfung
+
+**Was wurde gebaut?**
+
+- `web/src/pages/MapPage.tsx`: `labelStyle` der Netzlinien jetzt `fontSize: "var(--text-meta)"` statt `11`. Der Token wirkt: React Flow setzt `labelStyle` als Inline-Stil am SVG-Text, die berechnete Schriftgröße ist 13 px (gemessen, siehe unten). Der Rückfall auf die Zahl 13 war nicht nötig.
+- `web/src/theme/sourceTypography.test.ts`: neue Regel „keine Inline-Schriftgröße unter 13 px“. Erfasst `fontSize: 11`, `fontSize: "12px"`, `fontSize: "0.75rem"` und `font-size: 11px` in Quelltextstrings (rem/em mal 16). Ausnahme: ein Stilobjekt, das auch `textTransform: "uppercase"` setzt. Keine Treffer bei `var(--text-meta)`, ab 13 px, bei anderen Zahlen (`strokeWidth: 11`, `zIndex: 12`, `width: 11`) und bei `const fontSizes = [11, 12]`.
+- Beleg, dass die Regel fehlschlägt: Testfall mit Beispieltexten (`finds an inline font size below 13 px in an example text, and nothing else`) und zusätzlich Gegenprobe am echten Quelltext: `MapPage.tsx` kurz auf `fontSize: 11` zurückgesetzt, `sourceTypography.test.ts` schlägt fehl („../pages/MapPage.tsx: fontSize: 11“), danach wiederhergestellt.
+- `web/e2e/map.spec.ts`: misst im gebauten Frontend die Beschriftung der aktiven Linie („in network“) mit 13 px.
+- `web/src/theme/README.md`: Abschnitt „Small text“ um die neue Regel und die Linienbeschriftung ergänzt.
+
+**Wie wurde getestet?**
+
+- Web-Job wie `ci.yml` (Projekt `twox-094-web`): `npm ci`, lint, typecheck, test, build, licenses alle Exit 0; `api:generate` Exit 0, keine Änderung an `web/openapi` oder `web/src/api`.
+- e2e wie `ci.yml` (Projekt `twox-094`, API-Port 18094, Testkonto per `create_account`): 82 bestanden, 1 übersprungen (lokaler Teil der M2-Abnahme, wie in der CI), darunter `map.spec.ts` mit der 13-px-Messung.
+- Sichtprüfung (eigener Tab, `twox094.localhost:18094`, Testdatenbank mit vielen Linien aus den e2e-Läufen): bei 1600 px dunkel, 1600 px hell, 1024 px hell und 1024 px dunkel je 37 Linienbeschriftungen, berechnete Größe überall 13 px, keine überdeckt einen Knoten (Messung der Rechtecke aller Beschriftungen gegen alle Knoten, 0 Überschneidungen), kein seitliches Scrollen bei 1024 px. Bildschirmfotos nur im Fenster, nicht eingecheckt. Die Beschriftung bleibt klein auf dem Bildschirm, weil die Karte bei dieser Datenmenge auf etwa 0,6 herausgezoomt ist (wie die Knotentexte); die Schrift selbst ist 13 px im Kartenmaß.
+- `down -v` beider Projekte Exit 0; Tab geschlossen, Viewport zurückgesetzt.
+
+**Zweig und Arbeitsverzeichnis**
+
+- Zweig `worktree-agent-a6dbfd129c6f44d8f`, Arbeitsverzeichnis `.claude/worktrees/agent-a6dbfd129c6f44d8f`. Nicht gepusht.
+
+**Abweichungen**
+
+- Zusätzlich angefasst: `web/e2e/map.spec.ts` (Messung) statt `MapPage.test.tsx`, weil jsdom keine berechneten Stile aus CSS-Variablen auflöst. Kein Eingriff in Landkarte, Einpassen oder Zoom; keine neue Abhängigkeit.
+- Es gibt keine Inline-Großbuchstaben-Kennzeichen im Quelltext; die Ausnahme in der Regel ist daher nur vorsorglich und im Testfall belegt.

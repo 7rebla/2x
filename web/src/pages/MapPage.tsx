@@ -341,7 +341,7 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
             stroke: active ? "var(--twox-fg)" : "var(--twox-fg-muted)",
             strokeWidth: active ? 2.5 : 1.25,
           },
-          labelStyle: { fontSize: 11, fill: active ? "var(--twox-fg)" : "var(--twox-fg-muted)" },
+          labelStyle: { fontSize: "var(--text-meta)", fill: active ? "var(--twox-fg)" : "var(--twox-fg-muted)" },
           labelBgStyle: { fill: "var(--twox-surface)" },
         };
       }),
