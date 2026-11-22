@@ -5,6 +5,7 @@ taken from a manual.
 """
 
 import time
+from collections.abc import Callable
 
 import pytest
 
@@ -135,6 +136,14 @@ def test_identifier_with_leading_dash_is_checked() -> None:
         # Digits that start a number with a unit stay apart.
         ("Der Greifer G-12 traegt 5 kg [1].", "Greifer G-12, Last 5 kg.", "answered"),
         ("Greifer G-12 5 kg zulaessig [1].", "Greifer G-12, Last 5 kg.", "answered"),
+        # Punctuation after the designation keeps it apart from the digits.
+        (
+            "Die Steuerung S7-1200, 2 Erweiterungsmodule [1].",
+            "Die Steuerung S7-1200, 2 Erweiterungsmodule.",
+            "answered",
+        ),
+        ("G-1, 2 Stück [1].", "Greifer G-12 im Lager.", "no_evidence"),
+        ("Typ G-12: 3 Finger [1].", "Typ G-12: 3 Finger.", "answered"),
     ],
 )
 def test_type_designation_with_separate_digits_is_one_value(
@@ -152,6 +161,10 @@ def test_type_designation_with_separate_digits_is_one_value(
         ("Der Bereich ist 2-5 kg [1].", "Last 2-5 kg.", "answered"),
         ("Die S7-1200-Steuerung ist vorgesehen [1].", "Modul S7-1200.", "answered"),
         ("Die S7-1500-Steuerung ist vorgesehen [1].", "Modul S7-1200.", "no_evidence"),
+        ("Die S7-1500-Ausführung ist vorgesehen [1].", "Modul S7-1200.", "no_evidence"),
+        ("Das S7-1200-Gerät ist vorgesehen [1].", "Modul S7-1200.", "answered"),
+        ("Die G-12-Baugröße passt [1].", "Greifer G-12.", "answered"),
+        ("Die G-14-Baugröße passt [1].", "Greifer G-12.", "no_evidence"),
         ("Die 24-V-Versorgung ist vorgesehen [1].", "Versorgung 24 V DC.", "answered"),
         ("Die 48-V-Versorgung ist vorgesehen [1].", "Versorgung 24 V DC.", "no_evidence"),
     ],
@@ -488,6 +501,10 @@ def test_supported_sentences_stay_verbatim() -> None:
             "Die Zykluszeit betraegt 10 s. Der Greifer schliesst danach [1].",
             ["Die Zykluszeit betraegt 10 s.", "Der Greifer schliesst danach [1]."],
         ),
+        (
+            "Der Greifer ist geprueft (s. Abb. 3) [1]. Weiter geht es.",
+            ["Der Greifer ist geprueft (s. Abb. 3) [1].", "Weiter geht es."],
+        ),
     ],
 )
 def test_sentence_splitting(text: str, expected: list[str]) -> None:
@@ -590,7 +607,55 @@ def test_verify_grows_linearly_for_unfavourable_input(pattern: str, tail: str) -
 
     small = _best_time(answer(5000), sources)
     large = _best_time(answer(20000), sources)
+    # One second is the absolute limit set by the coordinator for these inputs.
     assert large < 1.0
     # Four times the input may take at most eight times as long (linear with
     # room for noise); below one millisecond the clock is too coarse to compare.
+    assert large / max(small, 0.001) < 8
+
+
+SPACE_SOURCES: dict[int, str] = {1: "Der Greifer G-12 wiegt 5 kg und antwortet auf Port 502."}
+
+
+@pytest.mark.parametrize(
+    ("build", "expected_text"),
+    [
+        # _PORT_WORD: "Port" followed by a long run of spaces.
+        (lambda n: "Der Greifer G-12 antwortet auf Port" + " " * n + "x [1].", None),
+        (lambda n: "Der Greifer G-12 antwortet auf Port" + " " * n + "502 [1].", None),
+        # _CITATION_RUN: a supported sentence with an invalid number and long
+        # runs of spaces, with and without a bracket after them.
+        (
+            lambda n: "Der Greifer G-12 wiegt 5 kg [1][9]" + " " * n + "x.",
+            "Der Greifer G-12 wiegt 5 kg [1]{spaces}x.",
+        ),
+        (
+            lambda n: "Der Greifer G-12 wiegt 5 kg" + " " * n + "[9]" + " " * n + "[1].",
+            "Der Greifer G-12 wiegt 5 kg{spaces}[1].",
+        ),
+    ],
+)
+def test_space_runs_in_checked_sentences_stay_linear(
+    build: Callable[[int], str],
+    expected_text: str | None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
+    check_values = citations._check_values
+
+    def counting(sentence: str) -> list[citations._Value]:
+        calls.append(sentence)
+        return check_values(sentence)
+
+    # The counter proves that the sentence reaches the check values (and with
+    # them _PORT_WORD); an unchecked sentence would not test that path.
+    monkeypatch.setattr(citations, "_check_values", counting)
+    verdict = verify(build(5000), SPACE_SOURCES, drop_unsupported=True)
+    assert calls
+    assert verdict.status == "answered"
+    if expected_text is not None:
+        assert verdict.cleaned_text == expected_text.format(spaces=" " * 5000)
+    small = _best_time(build(5000), SPACE_SOURCES)
+    large = _best_time(build(20000), SPACE_SOURCES)
+    assert large < 1.0
     assert large / max(small, 0.001) < 8

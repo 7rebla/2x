@@ -17,7 +17,8 @@ Sentences
     is no sentence end after the abbreviations in :data:`ABBREVIATIONS`
     (``z. B.``, ``S. 34``, ``Nr.`` ...; ``S.``, ``Nr.``, ``No.``, ``Abb.``,
     ``Tab.``, ``Kap.`` and ``Fig.`` only as written, so ``10 s.`` ends a
-    sentence, the others in any case), inside numbers, IP addresses and
+    sentence, the others in any case; lower-case ``s.`` (siehe) too, except
+    right after a number, where it is the unit second), inside numbers, IP addresses and
     versions (``1.5``, ``192.168.0.5``, ``V2.3.1``: the full stop is not
     followed by white space), nor after an ordinal number (``3.``) followed by
     a digit or a lower-case letter. Source numbers right after the
@@ -42,11 +43,13 @@ Check values
     and type designations come from :func:`twox.search.identifiers.find_identifiers`,
     called for each white-space token on its own, so that no value is skipped:
     there is no limit of ten, and a leading ``-`` (``-K7``) is removed before
-    the token is classified. A type designation directly followed by a token
+    the token is classified. A token that is exactly a type designation
+    (nothing cut off, no punctuation after it) directly followed by a token
     of digits only is one value (``S7 1500`` gives ``s71500``), unless the
-    digits start a number with a unit; ``Seite 34`` and ``Port 502`` are not
-    joined. Trailing ``-`` parts of a type designation that are words of at
-    least four letters are cut off (``S7-1200-Steuerung`` checks ``S7-1200``);
+    digits start a number with a unit; ``S7-1200, 2 Module``, ``Seite 34``
+    and ``Port 502`` are not joined. Before a token is classified, trailing
+    ``-`` parts that are words of at least four letters in any script are
+    cut off (``S7-1200-Steuerung`` and ``S7-1200-Gerät`` check ``S7-1200``);
     a number and unit may be joined by ``-`` (``24-V-Versorgung`` checks
     ``24 V``). A minus sign belongs to the number (``-20 °C``).
     Source numbers are no check values. The units are: V, mV, kV, A, mA,
@@ -161,14 +164,18 @@ _QUOTES: Final = str.maketrans(dict.fromkeys(_QUOTE_CHARS, " "))
 #: List markers at the start of a line: hyphen, asterisk, bullet (U+2022), ``1.``, ``1)``.
 _BULLET: Final = chr(0x2022)
 
-_CIT: Final = r"\[[ \t]*\d{1,6}(?:[ \t]*[,;][ \t]*\d{1,6})*[ \t]*\]"
+#: Possessive quantifiers throughout: white space is never given back, so long
+#: runs of spaces cost linear time.
+_CIT: Final = r"\[[ \t]*+\d{1,6}(?:[ \t]*+[,;][ \t]*+\d{1,6})*+[ \t]*+\]"
 _CITATION: Final = re.compile(_CIT)
-_CITATION_RUN: Final = re.compile(rf"[ \t]*{_CIT}(?:[ \t]*{_CIT})*")
+#: Starts only where a run of spaces starts (or at a bracket), so a long run
+#: that is not followed by ``[`` is tried once.
+_CITATION_RUN: Final = re.compile(rf"(?<![ \t])[ \t]*+{_CIT}(?:[ \t]*+{_CIT})*+")
 _NUMBER: Final = re.compile(r"\d+")
 #: A run of sentence punctuation is only tried where it starts, and possessive
 #: quantifiers keep the scan linear (``"." * 20000 + "x"``).
 _SENTENCE_END: Final = re.compile(
-    rf"(?<![.!?])[.!?]++[{re.escape(_QUOTE_CHARS)})]*+(?:[ \t]*{_CIT})*(?=\s|$)"
+    rf"(?<![.!?])[.!?]++[{re.escape(_QUOTE_CHARS)})]*+(?:[ \t]*+{_CIT})*+(?=\s|$)"
 )
 _LIST_MARKER: Final = re.compile(rf"[ \t]*(?:[-*{_BULLET}]|\d{{1,3}}[.)])[ \t]+")
 #: These abbreviations count only as written (``s.`` after a unit ends a sentence).
@@ -183,7 +190,11 @@ def _abbreviation_pattern(abbreviation: str) -> str:
 
 
 _ABBREVIATION: Final = re.compile(
-    r"(?<!\w)(?:" + "|".join(_abbreviation_pattern(a) for a in ABBREVIATIONS) + r")"
+    r"(?<!\w)(?:"
+    + "|".join(_abbreviation_pattern(a) for a in ABBREVIATIONS)
+    # Lower-case "s." (siehe), but not right after a number: "10 s." is seconds.
+    + r"|(?<!\d\s)s\."
+    + r")"
 )
 #: A minus sign: ``-`` before a digit that does not join it to a word or number.
 _MINUS: Final = re.compile(r"(?<![\w.,])-(?=\d)")
@@ -206,11 +217,11 @@ _UNIT_VALUE: Final = re.compile(
     + r")(?![\w%°])"
 )
 _PORT_WORD: Final = re.compile(
-    r"(?<!\w)ports?[ \t]*(?:nr\.|no\.)?[ \t]*(\d{1,5})(?!\d)", re.IGNORECASE
+    r"(?<!\w)ports?[ \t]*+(?:(?:nr|no)\.[ \t]*+)?(\d{1,5})(?!\d)", re.IGNORECASE
 )
 _IPV4_PORT: Final = re.compile(r"(?<![\w.])(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})(?!\d)")
 _VERSION_WORD: Final = re.compile(
-    r"(?<!\w)(?:version|firmware|fw|release|rev\.?)[ \t]*v?(\d++(?:\.\d++)*+)(?![\w])",
+    r"(?<!\w)(?:version|firmware|fw|release|rev\.?)[ \t]*+v?(\d++(?:\.\d++)*+)(?![\w])",
     re.IGNORECASE,
 )
 _VERSION_TOKEN: Final = re.compile(r"(?<![\w.])v(\d++(?:\.\d++)*+)(?![\w])", re.IGNORECASE)
@@ -462,7 +473,9 @@ def _check_values(sentence: str) -> list[_Value]:
             continue
         # One token at a time: find_identifiers stops after ten identifiers and
         # skips tokens with a leading "-" (an exclusion in the search syntax).
-        identifiers = find_identifiers(token.group().lstrip(_TOKEN_LEAD).lstrip("-"))
+        core = token.group().lstrip(_TOKEN_LEAD).lstrip("-")
+        trimmed = _trim_compound(core)
+        identifiers = find_identifiers(trimmed)
         if not identifiers:
             continue
         identifier = identifiers[0]
@@ -474,14 +487,14 @@ def _check_values(sentence: str) -> list[_Value]:
             continue
         if _VERSION_IDENTIFIER.fullmatch(identifier.value):
             continue
-        value = _trim_compound(identifier.value)
-        if value.isdigit():
-            continue
+        value = identifier.value
         following = tokens[position + 1] if position + 1 < len(tokens) else None
         if (
             following is not None
+            # Joined only if the token is exactly the designation: nothing cut
+            # off, no punctuation after it ("S7-1200, 2 Module" stays apart).
+            and core == value
             and any(char.isalpha() for char in value)
-            and value == identifier.value
             and _DIGITS_TOKEN.fullmatch(following.group())
             and following.start() not in unit_starts
         ):
@@ -493,16 +506,22 @@ def _check_values(sentence: str) -> list[_Value]:
     return list(found.values())
 
 
-def _trim_compound(value: str) -> str:
-    """``value`` without trailing ``-`` parts that are words (``S7-1200-Steuerung``).
+def _trim_compound(token: str) -> str:
+    """``token`` without trailing ``-`` parts that are words (``S7-1200-Gerät``).
 
-    A trailing part of at least four letters is a word joined to the
-    identifier, not part of it; shorter letter parts (``G-12-A``) stay.
+    A trailing part of at least four letters (any script, :meth:`str.isalpha`)
+    is a word joined to the identifier, not part of it; shorter letter parts
+    (``G-12-A``) stay. Punctuation at the end of the token is kept.
     """
-    parts = value.split("-")
-    while len(parts) > 1 and len(parts[-1]) >= 4 and parts[-1].isalpha():
-        parts.pop()
-    return "-".join(parts)
+    end = len(token)
+    while end > 0 and not token[end - 1].isalnum():
+        end -= 1
+    tail = token[end:]
+    while True:
+        cut = token.rfind("-", 0, end)
+        if cut <= 0 or end - cut - 1 < 4 or not token[cut + 1 : end].isalpha():
+            return token[:end] + tail
+        end = cut
 
 
 def _strip_invalid(sentence: str, valid: Mapping[int, str]) -> str:
