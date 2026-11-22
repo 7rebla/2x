@@ -10,6 +10,7 @@ import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Icon } from "../icons/Icon.tsx";
 import { ImportReportView } from "../components/ImportReportView.tsx";
 import { Button } from "../components/ui/Button.tsx";
+import { FileInput } from "../components/ui/FileInput.tsx";
 import { deviceClasses } from "./structure/deviceClass.ts";
 import { reloadAfterSave, save } from "./structure/save.ts";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
@@ -57,13 +58,14 @@ type Step = "check" | "save";
  * sends the same file again with dry_run=false.
  */
 export function ImportPage(): ReactElement {
-  const { t } = useTranslation(["nav", "import"]);
+  const { t } = useTranslation(["nav", "import", "common"]);
   const queryClient = useQueryClient();
   const importDevices = useMutation(devicesImportMutation());
   const [file, setFile] = useState<File | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [running, setRunning] = useState<Step | null>(null);
   const fileInputId = useId();
+  const chooseFirstId = useId();
 
   async function run(step: Step, chosen: File): Promise<void> {
     setRunning(step);
@@ -133,31 +135,41 @@ export function ImportPage(): ReactElement {
         </ul>
       </section>
 
-      <form data-testid="import-form" onSubmit={check} className="flex flex-wrap items-end gap-3">
-        <div className="flex flex-col gap-1 text-sm">
-          <label htmlFor={fileInputId}>{t("import:file.label")}</label>
-          <input
+      <form data-testid="import-form" onSubmit={check} className="space-y-3">
+        <div className="flex max-w-2xl flex-col gap-1">
+          <label htmlFor={fileInputId} className="text-sm text-fg-muted">
+            {t("import:file.label")}
+          </label>
+          <FileInput
             id={fileInputId}
             data-testid="import-file"
-            type="file"
             accept=".csv,text/csv"
             disabled={running !== null}
-            onChange={(event) => {
-              setFile(event.target.files?.[0] ?? null);
+            file={file}
+            onFileChange={(chosen) => {
+              setFile(chosen);
               setOutcome(null);
             }}
           />
         </div>
-        <Button
-          type="submit"
-          variant="primary"
-          icon="upload"
-          data-testid="import-check"
-          disabled={file === null || running !== null}
-          loading={running === "check"}
-        >
-          {running === "check" ? t("import:file.checking") : t("import:file.check")}
-        </Button>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <Button
+            type="submit"
+            variant="primary"
+            icon="upload"
+            data-testid="import-check"
+            disabled={file === null || running !== null}
+            loading={running === "check"}
+            aria-describedby={file === null ? chooseFirstId : undefined}
+          >
+            {running === "check" ? t("import:file.checking") : t("import:file.check")}
+          </Button>
+          {file === null ? (
+            <p id={chooseFirstId} data-testid="import-choose-first" className="text-sm text-fg-muted">
+              {t("common:fileInput.chooseFirst")}
+            </p>
+          ) : null}
+        </div>
       </form>
 
       {outcome === null ? null : (
