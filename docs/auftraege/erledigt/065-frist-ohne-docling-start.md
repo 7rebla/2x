@@ -1,6 +1,6 @@
 # Auftrag 065 – Frist für Einlese-Aufträge, deren Docling-Aufgabe nie startet
 
-Meilenstein: M2 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 048 und 049 sind nach `main` zusammengeführt.
 
