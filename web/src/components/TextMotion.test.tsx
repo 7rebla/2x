@@ -7,7 +7,10 @@ import { refreshDisplay, updateDisplaySettings } from "../theme/store.ts";
 import indexCss from "../index.css?raw";
 import {
   AnimatedHeading,
+  HEADING_STORAGE_KEY,
+  headingShown,
   LoadingText,
+  markHeadingShown,
   MaskedTitle,
   markTyped,
   TYPED_STORAGE_KEY,
@@ -96,6 +99,73 @@ describe("text animations", () => {
       updateDisplaySettings({ reduceMotion: true });
     });
     expect(animationClasses(screen.getByRole("heading"))).toEqual([]);
+  });
+});
+
+describe("heading fade (pattern A, E-65)", () => {
+  it("fades in only the first heading of a browser session", () => {
+    const first = render(<AnimatedHeading text="Geräte" />);
+    expect(animationClasses(screen.getByRole("heading"))).toEqual(["tx-clear", "tx-word"]);
+    expect(window.sessionStorage.getItem(HEADING_STORAGE_KEY)).toBe("1");
+    expect(headingShown()).toBe(true);
+    // Still fading on the same page, although the session is marked now.
+    first.rerender(<AnimatedHeading text="Geräte" />);
+    expect(animationClasses(screen.getByRole("heading"))).toEqual(["tx-clear", "tx-word"]);
+    first.unmount();
+
+    // Next page in the same session: the heading stands there at once.
+    const { container } = render(<AnimatedHeading text="Änderungsprotokoll" />);
+    expect(container.innerHTML).toBe('<h2 class="text-2xl font-semibold">Änderungsprotokoll</h2>');
+  });
+
+  it("shows a changed text at once instead of fading in again", () => {
+    const { rerender } = render(<AnimatedHeading text="Einstellungen" />);
+    rerender(<AnimatedHeading text="Settings" />);
+    const heading = screen.getByRole("heading", { name: "Settings" });
+    expect(animationClasses(heading)).toEqual([]);
+    expect(heading.textContent).toBe("Settings");
+  });
+
+  it("counts the session as done when the user reduces motion", () => {
+    act(() => {
+      updateDisplaySettings({ reduceMotion: true });
+    });
+    render(<AnimatedHeading text="Map" />).unmount();
+    expect(headingShown()).toBe(true);
+    act(() => {
+      updateDisplaySettings({ reduceMotion: false });
+    });
+    expect(animationClasses(render(<AnimatedHeading text="Map" />).container)).toEqual([]);
+  });
+
+  it("never fades in and never fails without a usable storage", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    expect(headingShown()).toBe(true);
+    expect(() => {
+      markHeadingShown();
+    }).not.toThrow();
+    const { container } = render(<AnimatedHeading text="Map" />);
+    expect(animationClasses(container)).toEqual([]);
+    expect(screen.getByRole("heading", { name: "Map" })).toBeDefined();
+  });
+
+  it("fades without blur and is done within 400 ms", () => {
+    const keyframes = /@keyframes tx-clear \{([\s\S]*?)\n\}/.exec(indexCss)?.[1] ?? "";
+    expect(keyframes).toMatch(/opacity: 0;/);
+    expect(keyframes).not.toMatch(/filter|blur/);
+    const rule = cssRule(".tx-clear .tx-word");
+    expect(rule).not.toMatch(/filter|blur/);
+    const duration = Number(/animation: tx-clear (\d+)ms /.exec(rule)?.[1]);
+    const delay = /animation-delay: calc\(min\(var\(--tx-index, 0\), (\d+)\) \* (\d+)ms\);/.exec(rule);
+    const maxSteps = Number(delay?.[1]);
+    const step = Number(delay?.[2]);
+    expect(duration).toBeGreaterThan(0);
+    expect(duration + maxSteps * step).toBeLessThanOrEqual(400);
   });
 });
 

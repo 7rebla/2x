@@ -32,9 +32,51 @@ function Heading({
   );
 }
 
+/** sessionStorage key set once a heading has faded in during this browser session (E-65). */
+export const HEADING_STORAGE_KEY = "twox.heading";
+
 /**
- * Pattern A, page headings: the words clear up one after the other when the
- * page opens. Spaces stay text nodes, so the heading reads as before.
+ * Whether a heading has faded in during this browser session. Without a
+ * usable storage it counts as done, so headings never animate on every page.
+ */
+export function headingShown(): boolean {
+  try {
+    return window.sessionStorage.getItem(HEADING_STORAGE_KEY) === "1";
+  } catch {
+    return true;
+  }
+}
+
+/** Remembers that a heading has faded in; ignored without a usable storage. */
+export function markHeadingShown(): void {
+  try {
+    window.sessionStorage.setItem(HEADING_STORAGE_KEY, "1");
+  } catch {
+    // headingShown() already treats a missing storage as done.
+  }
+}
+
+/**
+ * Decides once, when the heading mounts, whether it fades in: only the first
+ * heading of a browser session does (E-65). The text is part of the decision,
+ * so a heading whose text changes later (language switch) shows the new text
+ * at once instead of fading in again.
+ */
+function useHeadingReveal(text: string): boolean {
+  const reduced = useReducedMotion();
+  const [revealText] = useState(() => (headingShown() ? null : text));
+  useEffect(() => {
+    // Also with reduced motion: switching it off later does not start the fade.
+    markHeadingShown();
+  }, []);
+  return !reduced && revealText === text;
+}
+
+/**
+ * Pattern A, page headings: the words fade in one after the other, without
+ * blur and within 400 ms, but only for the first heading of a browser session
+ * (E-65); every later heading stands there at once. Spaces stay text nodes,
+ * so the heading reads as before.
  */
 export function AnimatedHeading({
   text,
@@ -47,8 +89,8 @@ export function AnimatedHeading({
   className?: string;
   testId?: string;
 }): ReactElement {
-  const reduced = useReducedMotion();
-  if (reduced) {
+  const reveal = useHeadingReveal(text);
+  if (!reveal) {
     return (
       <Heading level={level} className={className} testId={testId}>
         {text}

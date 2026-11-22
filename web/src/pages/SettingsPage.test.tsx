@@ -128,6 +128,8 @@ describe("settings page", () => {
   });
 
   it("reduces motion: no animation class on the page any more", async () => {
+    // A new browser session, so the heading fades in once (E-65).
+    window.sessionStorage.clear();
     fakeApi(reader);
     renderApp("/settings");
     await openSettings();
