@@ -1,5 +1,6 @@
 {
   "label": "Hauptnavigation",
+  "menu": "Menü",
   "structure": "Struktur",
   "map": "Landkarte",
   "search": "Suche",
@@ -10,5 +11,14 @@
   "audit": "Änderungsprotokoll",
   "login": "Anmelden",
   "selftest": "Selbsttest",
-  "settings": "Einstellungen"
+  "settings": "Einstellungen",
+  "short": {
+    "structure": "Struktur",
+    "map": "Karte",
+    "search": "Suche",
+    "ingest": "Einlesen",
+    "import": "Import",
+    "audit": "Protokoll",
+    "selftest": "Selbsttest"
+  }
 }

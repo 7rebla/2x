@@ -33,6 +33,7 @@ import {
   LogOut,
   Map as MapGlyph,
   MapPin,
+  Menu,
   Network,
   Pencil,
   Plus,
@@ -44,6 +45,7 @@ import {
   Settings,
   TriangleExclamationPoint,
   Upload,
+  X,
 } from "lucide-react";
 
 import type { Glyph } from "./glyph.tsx";
@@ -70,6 +72,8 @@ const glyphs = {
   selftest: Activity, // NAV-04
   settings: Settings, // NAV-15
   user: CircleUser, // OBJ-08
+  menu: Menu, // menu button of the navigation below 768 px (work order 082); no ID in H2
+  close: X, // the same button while its menu is open (work order 082); no ID in H2
 
   // Objects and hierarchy (OBJ)
   site: MapPin, // OBJ-01
