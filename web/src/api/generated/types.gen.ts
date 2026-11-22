@@ -76,6 +76,8 @@ export type AuditLogEntry = {
     };
 };
 
+export type BlankEnum = '';
+
 export type DatabaseCheck = {
     ok: boolean;
     server_version: string;
@@ -226,6 +228,10 @@ export type DocumentVersion = {
      */
     readonly uploaded_by: string | null;
     readonly created_at: string;
+    /**
+     * The newest ingest job of the version; null if it was never ingested.
+     */
+    ingest: IngestJobSummary | null;
 };
 
 /**
@@ -251,6 +257,20 @@ export type DuplicateVersionError = {
 };
 
 /**
+ * * `docling_unavailable` - converter unavailable
+ * * `docling_rejected` - converter rejected the file
+ * * `conversion_failed` - conversion failed
+ * * `content_missing` - stored content missing
+ * * `unsupported_format` - unsupported format
+ * * `embedding_unavailable` - embedding service unavailable
+ * * `embedding_rejected` - embedding service rejected the request
+ * * `embedding_dimension_mismatch` - embedding has the wrong number of dimensions
+ * * `timeout` - time limit exceeded
+ * * `internal` - internal error
+ */
+export type ErrorCodeEnum = 'docling_unavailable' | 'docling_rejected' | 'conversion_failed' | 'content_missing' | 'unsupported_format' | 'embedding_unavailable' | 'embedding_rejected' | 'embedding_dimension_mismatch' | 'timeout' | 'internal';
+
+/**
  * An error with a message, for example 404 or 413.
  */
 export type ErrorDetail = {
@@ -261,8 +281,13 @@ export type ErrorDetail = {
  * Shape of the health response, used for the OpenAPI schema.
  */
 export type Health = {
-    status: StatusEnum;
+    status: HealthStatusEnum;
 };
+
+/**
+ * * `ok` - ok
+ */
+export type HealthStatusEnum = 'ok';
 
 /**
  * What an import did, or would do in a dry run, at one level of the structure.
@@ -309,6 +334,164 @@ export type ImportRowError = {
 };
 
 /**
+ * 409: the version has a queued or running ingest job already.
+ */
+export type IngestConflict = {
+    detail: string;
+    code: string;
+    /**
+     * The queued or running job.
+     */
+    job: IngestJobSummary;
+};
+
+/**
+ * An ingest job with its document, version and device.
+ *
+ * ``requested_by`` is the user name only when the context says so
+ * (:data:`SHOW_REQUESTED_BY`, the role ``manage``); otherwise ``null``.
+ */
+export type IngestJob = {
+    readonly id: number;
+    status: IngestStatusEnum;
+    /**
+     * Step the job is in or failed in; empty before the first step.
+     *
+     * * `convert` - convert
+     * * `sections` - sections
+     * * `embed` - embed
+     */
+    step: StepEnum | BlankEnum;
+    /**
+     * Kind of error of a failed or skipped job; empty otherwise.
+     *
+     * * `docling_unavailable` - converter unavailable
+     * * `docling_rejected` - converter rejected the file
+     * * `conversion_failed` - conversion failed
+     * * `content_missing` - stored content missing
+     * * `unsupported_format` - unsupported format
+     * * `embedding_unavailable` - embedding service unavailable
+     * * `embedding_rejected` - embedding service rejected the request
+     * * `embedding_dimension_mismatch` - embedding has the wrong number of dimensions
+     * * `timeout` - time limit exceeded
+     * * `internal` - internal error
+     */
+    error_code: ErrorCodeEnum | BlankEnum;
+    /**
+     * Technical detail in English. Set for failed and skipped jobs, and for a done job that was converted only in part (then it starts with 'converted with ').
+     */
+    readonly error_detail: string;
+    /**
+     * True for a done job that was converted only in part; see error_detail.
+     */
+    readonly partly_converted: boolean;
+    readonly section_count: number | null;
+    readonly page_count: number | null;
+    readonly created_at: string;
+    readonly finished_at: string | null;
+    document: IngestJobDocument;
+    version: IngestJobVersion;
+    device: IngestJobDevice;
+    /**
+     * User name of the user who started the job; null for the system, and always null for the role read.
+     */
+    readonly requested_by: string | null;
+};
+
+/**
+ * The device the document of an ingest job belongs to.
+ */
+export type IngestJobDevice = {
+    readonly id: number;
+    readonly key: string;
+    readonly name: string;
+};
+
+/**
+ * The document of an ingest job.
+ */
+export type IngestJobDocument = {
+    readonly id: number;
+    readonly title: string;
+};
+
+/**
+ * State of one ingest job of a version (work order 051).
+ *
+ * ``error_code`` is a fixed key that the web UI translates; ``error_detail``
+ * is a short English technical text, cleaned of paths, addresses and file
+ * names (046). Every role sees both (E-57).
+ */
+export type IngestJobSummary = {
+    readonly id: number;
+    status: IngestStatusEnum;
+    /**
+     * Step the job is in or failed in; empty before the first step.
+     *
+     * * `convert` - convert
+     * * `sections` - sections
+     * * `embed` - embed
+     */
+    step: StepEnum | BlankEnum;
+    /**
+     * Kind of error of a failed or skipped job; empty otherwise.
+     *
+     * * `docling_unavailable` - converter unavailable
+     * * `docling_rejected` - converter rejected the file
+     * * `conversion_failed` - conversion failed
+     * * `content_missing` - stored content missing
+     * * `unsupported_format` - unsupported format
+     * * `embedding_unavailable` - embedding service unavailable
+     * * `embedding_rejected` - embedding service rejected the request
+     * * `embedding_dimension_mismatch` - embedding has the wrong number of dimensions
+     * * `timeout` - time limit exceeded
+     * * `internal` - internal error
+     */
+    error_code: ErrorCodeEnum | BlankEnum;
+    /**
+     * Technical detail in English. Set for failed and skipped jobs, and for a done job that was converted only in part (then it starts with 'converted with ').
+     */
+    readonly error_detail: string;
+    /**
+     * True for a done job that was converted only in part; see error_detail.
+     */
+    readonly partly_converted: boolean;
+    readonly section_count: number | null;
+    readonly page_count: number | null;
+    readonly created_at: string;
+    readonly finished_at: string | null;
+};
+
+/**
+ * The document version of an ingest job.
+ */
+export type IngestJobVersion = {
+    readonly id: number;
+    readonly number: number;
+    /**
+     * Original file name
+     */
+    readonly original_filename: string;
+};
+
+/**
+ * 400: the version cannot be ingested (a configuration).
+ */
+export type IngestRequestError = {
+    detail: string;
+    code: string;
+};
+
+/**
+ * * `queued` - queued
+ * * `running` - running
+ * * `done` - done
+ * * `failed` - failed
+ * * `skipped` - skipped
+ */
+export type IngestStatusEnum = 'queued' | 'running' | 'done' | 'failed' | 'skipped';
+
+/**
  * * `document` - document
  * * `configuration` - configuration
  */
@@ -330,6 +513,13 @@ export type PaginatedAuditLogEntryList = {
     next?: string | null;
     previous?: string | null;
     results: Array<AuditLogEntry>;
+};
+
+export type PaginatedIngestJobList = {
+    count: number;
+    next?: string | null;
+    previous?: string | null;
+    results: Array<IngestJob>;
 };
 
 /**
@@ -438,9 +628,11 @@ export type SiteRef = {
 };
 
 /**
- * * `ok` - ok
+ * * `convert` - convert
+ * * `sections` - sections
+ * * `embed` - embed
  */
-export type StatusEnum = 'ok';
+export type StepEnum = 'convert' | 'sections' | 'embed';
 
 /**
  * Answer to an upload: the document, the new version and other places of its content.
@@ -491,11 +683,30 @@ export type DuplicateVersionErrorWritable = {
     code: string;
 };
 
+/**
+ * 409: the version has a queued or running ingest job already.
+ */
+export type IngestConflictWritable = {
+    detail: string;
+    code: string;
+    /**
+     * The queued or running job.
+     */
+    job: unknown;
+};
+
 export type PaginatedAuditLogEntryListWritable = {
     count: number;
     next?: string | null;
     previous?: string | null;
     results: Array<AuditLogEntryWritable>;
+};
+
+export type PaginatedIngestJobListWritable = {
+    count: number;
+    next?: string | null;
+    previous?: string | null;
+    results: Array<unknown>;
 };
 
 /**
@@ -846,6 +1057,42 @@ export type DocumentVersionDownloadResponses = {
 
 export type DocumentVersionDownloadResponse = DocumentVersionDownloadResponses[keyof DocumentVersionDownloadResponses];
 
+export type DocumentVersionIngestData = {
+    body?: never;
+    path: {
+        version_id: number;
+    };
+    query?: never;
+    url: '/api/v1/document-versions/{version_id}/ingest/';
+};
+
+export type DocumentVersionIngestErrors = {
+    /**
+     * The version belongs to a configuration, which is not ingested.
+     */
+    400: IngestRequestError;
+    /**
+     * No role, or not allowed.
+     */
+    403: ErrorDetail;
+    /**
+     * Not found.
+     */
+    404: ErrorDetail;
+    /**
+     * The version has a queued or running ingest job already.
+     */
+    409: IngestConflict;
+};
+
+export type DocumentVersionIngestError = DocumentVersionIngestErrors[keyof DocumentVersionIngestErrors];
+
+export type DocumentVersionIngestResponses = {
+    202: IngestJob;
+};
+
+export type DocumentVersionIngestResponse = DocumentVersionIngestResponses[keyof DocumentVersionIngestResponses];
+
 export type DocumentRetrieveData = {
     body?: never;
     path: {
@@ -953,6 +1200,53 @@ export type DevicesImportResponses = {
 };
 
 export type DevicesImportResponse = DevicesImportResponses[keyof DevicesImportResponses];
+
+export type IngestJobsListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Only jobs of documents of the device with this id.
+         */
+        device?: number;
+        /**
+         * Only jobs of the document with this id.
+         */
+        document?: number;
+        /**
+         * A page number within the paginated result set.
+         */
+        page?: number;
+        /**
+         * Only jobs in one of these states; repeat the parameter for more.
+         */
+        status?: Array<'done' | 'failed' | 'queued' | 'running' | 'skipped'>;
+        /**
+         * Only jobs of the document version with this id.
+         */
+        version?: number;
+    };
+    url: '/api/v1/ingest-jobs/';
+};
+
+export type IngestJobsListErrors = {
+    /**
+     * Invalid filter value.
+     */
+    400: unknown;
+    /**
+     * No role, or not allowed.
+     */
+    403: ErrorDetail;
+};
+
+export type IngestJobsListError = IngestJobsListErrors[keyof IngestJobsListErrors];
+
+export type IngestJobsListResponses = {
+    200: PaginatedIngestJobList;
+};
+
+export type IngestJobsListResponse = IngestJobsListResponses[keyof IngestJobsListResponses];
 
 export type MeRetrieveData = {
     body?: never;

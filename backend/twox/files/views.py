@@ -36,6 +36,7 @@ from twox.files.serializers import (
     ErrorDetailSerializer,
     UploadResultSerializer,
     VersionUploadSerializer,
+    prefetch_latest_ingest_job,
 )
 from twox.files.services import (
     ConfigurationNotAcceptedError,
@@ -56,8 +57,16 @@ _ERROR_413 = OpenApiResponse(
 
 
 def documents_with_versions() -> QuerySet[Document]:
-    """Documents with uploader names and all versions, oldest version first."""
-    versions = DocumentVersion.objects.select_related("uploaded_by").order_by("number")
+    """Documents with uploader names and all versions, oldest version first.
+
+    The newest ingest job of every version comes with one more query, however
+    many documents and versions there are (work order 051).
+    """
+    versions = (
+        DocumentVersion.objects.select_related("uploaded_by")
+        .order_by("number")
+        .prefetch_related(prefetch_latest_ingest_job())
+    )
     return Document.objects.select_related("created_by").prefetch_related(
         Prefetch("versions", queryset=versions)
     )

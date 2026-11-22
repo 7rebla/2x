@@ -4,7 +4,7 @@ A work order that adds or removes endpoints changes only the module of its
 app. The schema test compares with the union of all lists.
 """
 
-from tests.config.expected_paths import accounts, assets, config, files
+from tests.config.expected_paths import accounts, assets, config, files, ingest
 
 ALL_EXPECTED_PATHS: list[str] = sorted(
     [
@@ -12,5 +12,6 @@ ALL_EXPECTED_PATHS: list[str] = sorted(
         *accounts.EXPECTED_PATHS,
         *assets.EXPECTED_PATHS,
         *files.EXPECTED_PATHS,
+        *ingest.EXPECTED_PATHS,
     ]
 )

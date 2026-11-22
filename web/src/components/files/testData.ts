@@ -31,6 +31,7 @@ export function version(
     original_filename: `test-file-${String(number)}.txt`,
     uploaded_by: "test-manager",
     created_at: STAMP,
+    ingest: null,
     ...more,
   };
 }
