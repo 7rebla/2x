@@ -1,6 +1,6 @@
 # Status
 
-Stand: 21.11.2026 · gepflegt von der Leitstelle
+Stand: 22.11.2026 · gepflegt von der Leitstelle
 
 ## Freigegeben
 
@@ -158,7 +158,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 071 | Icon-Schicht mit Lucide | C | 070 (E-51) | erledigt |
 | 072 | Marke: Bildmarke im Kopf, Favicon | C | 070 (E-52) | erledigt |
 | 073 | Gerätetyp als Feld, API, Admin, CSV-Spalte, Testfabrik | C | – (E-53) | erledigt |
-| 074 | Eigene Geräte-Icons in Baum, Geräteseite, Landkarte | B | 071, 073 | in Arbeit |
+| 074 | Eigene Geräte-Icons in Baum, Geräteseite, Landkarte | B | 071, 073 | erledigt |
 
 ## M2 – Einlesen und Suche (freigegeben 22.11.2026, E-54)
 
@@ -173,10 +173,10 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 044 | Einbettungen über Ollama: Client und Prüfung | C | 040, 041 | erledigt |
 | 045 | Celery und Einlese-Einstellungen | C | 044 | in Arbeit |
 | 046 | Einlese-Ablauf im Worker | B | 042, 043, 045 | offen |
-| 047 | Such-Schnittstelle und Stichwortsuche | C | 042 | in Arbeit |
+| 047 | Such-Schnittstelle und Stichwortsuche | C | 042 | erledigt |
 | 048 | Einbettungs-Aufgabe im Worker | B | 046 | offen |
 | 049 | Einlesen anstoßen, Formatprüfung, Befehl | C | 046 | offen |
-| 050 | Vektorsuche und Kombination | B | 044, 047 | offen |
+| 050 | Vektorsuche und Kombination | B | 044, 047 | in Arbeit |
 | 051 | Einlese-API | C | 049 | offen |
 | 052 | Such-API | C | 050, 051 | offen |
 | 053 | Oberfläche: Einlese-Status | B | 051 | offen |
@@ -197,3 +197,5 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 - 043: Abschnitte aus dem Docling-JSON (`ingest/sections.py`), Seiten nie zu eng, Tabellen wortgetreu. Hinweise: aufeinanderfolgende Überschriften ohne Text verschiedener Ebenen landen in umgekehrter Reihenfolge im nächsten Abschnitt; jede Schemaversion 1.x.y wird angenommen (geprüft nur 1.10.0).
 - 044: Einbettungs-Client (`answers/embeddings.py`), Schalter `TWOX_AI_ENABLED` (Standard aus, `.env.example` an), `check_llm --embed` mit neutralem `DISABLED:`; Cloud-Modelle werden am Namen und über `/api/tags` abgewiesen, `/api/show` wird nie aufgerufen. Offen (E-59): Selbsttest und Testseite zeigen noch keinen KI-Zustand – für 048 vorgemerkt. Doku zu `--embed` und den neuen Variablen in 059.
 - 071: Lucide-Icons über `web/src/icons/` (Pflichtfeld `icon` in `navigation.ts`), einzeilige Kopfzeile, Benutzermenü mit Sprache, Einstellungen, Abmelden. Für 054/055: neue Navigationseinträge brauchen ein eigenes Icon in `names.ts` und Anpassungen in `web/e2e/navigation.spec.ts`.
+- 047: Such-Schnittstelle `search/interface.py` mit Stichwortsuche in PostgreSQL (`postgres.py`, drei Sprachkonfigurationen, exakte Kennungen mit Wortgrenzen, höchstens 10, neueste eingelesene Version, gleiche Inhalte zusammengefasst). Beim Zusammenführen korrigiert: Phrasen-Nachprüfung mit Lücke zwischen Überschrift und Text; IPv4/IPv6 nur mit ASCII-Ziffern. An 052 übergeben: Dateiname der Version in `HitLocation`, Ausschlüsse auch für exakte Treffer.
+- 074: Acht eigene Icons (Anlage, Gerät, sechs Gerätetypen) unter `web/src/icons/industrial/`, Zuordnung nur in `deviceClass.ts` (Rückfall: generisches Gerät). Typ als Text im Baum, als Feld „Gerätetyp“ auf der Geräteseite, als Tooltip auf der Karte. Notwendig mitgeändert: `graph.ts`, `MapPage.tsx`, `map.json`. Nicht von Hand bei 16 px gesichtet.

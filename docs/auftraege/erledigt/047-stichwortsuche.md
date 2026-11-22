@@ -1,6 +1,6 @@
 # Auftrag 047 – Such-Schnittstelle und Stichwortsuche in PostgreSQL
 
-Meilenstein: M2 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 

@@ -1,6 +1,6 @@
 # Auftrag 074 – Eigene Geräte-Icons in Baum, Geräteseite und Landkarte
 
-Meilenstein: Gestaltung (D1, parallel zu M2) · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: Gestaltung (D1, parallel zu M2) · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 
