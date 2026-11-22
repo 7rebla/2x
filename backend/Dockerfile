@@ -92,7 +92,15 @@ RUN npm run build
 # @types/d3-* packages are regular dependencies of @xyflow/system. All of them
 # are type information only, nothing of them reaches the bundle, so they get
 # no notice.
+# The font Inter 4.1 (SIL OFL 1.1, E-50) is not an npm package: its file lies
+# in web/src/assets/fonts/inter/ and is shipped unchanged. The build checks
+# that the file and the copy Vite emits match the SHA-256 of the release
+# file, and quotes the licence text next to the font.
 RUN set -eu; \
+    font=src/assets/fonts/inter/InterVariable.woff2; \
+    echo "693b77d4f32ee9b8bfc995589b5fad5e99adf2832738661f5402f9978429a8e3  $font" | sha256sum -c -; \
+    emitted=$(find dist/assets -maxdepth 1 -name 'InterVariable-*.woff2'); \
+    if [ -z "$emitted" ] || ! cmp -s "$font" "$emitted"; then echo "Inter missing or changed in dist/assets" >&2; exit 1; fi; \
     runtime=$(npm ls --omit=dev --all --parseable | sed -n 's|^/web/node_modules/||p' | sort | tr '\n' ' '); \
     if [ "$runtime" != "@remix-run/route-pattern @tanstack/query-core @tanstack/react-query @types/d3-color @types/d3-drag @types/d3-interpolate @types/d3-selection @types/d3-transition @types/d3-zoom @types/react @types/react-dom @xyflow/react @xyflow/system classcat cookie-es csstype d3-color d3-dispatch d3-drag d3-ease d3-interpolate d3-selection d3-timer d3-transition d3-zoom html-parse-stringify i18next react react-compiler-runtime react-dom react-i18next react-router scheduler typescript zustand " ]; then \
         echo "Production dependencies changed ($runtime): update the notice list in backend/Dockerfile." >&2; \
@@ -126,6 +134,14 @@ RUN set -eu; \
             echo; \
             cat "$licence_file"; \
         done; \
+        echo; \
+        echo "------------------------------------------------------------"; \
+        echo "Inter 4.1 (OFL-1.1)"; \
+        echo "https://github.com/rsms/inter"; \
+        echo "Used for: the font of the web interface (${emitted#dist/}), shipped unchanged."; \
+        echo "------------------------------------------------------------"; \
+        echo; \
+        cat src/assets/fonts/inter/LICENSE.txt; \
     } > "$out"
 
 # Collects the static files once, at image build time. Needs neither a
