@@ -71,6 +71,7 @@ Voraussetzung: 055, 056 und 058 sind nach `main` zusammengeführt. Messwerte aus
 
 - **Nachtrag der Leitstelle (Prüfung 052):** Neuer Endpunkt `GET /api/v1/search/` (Parameter, Grenzen, Antwortform mit `semantic` used/disabled/unavailable), neue Variable `TWOX_SEARCH_EMBED_TIMEOUT_SECONDS` (Vorgabe 20), Logfilter in `config/logging.py`: Suchtexte stehen nicht im Zugriffsprotokoll (nicht mehr als Grenze führen). `uvicorn --no-access-log` wirkt wegen der Django-Konfiguration nicht – erwähnen.
 
+- **Nachtrag der Leitstelle (Prüfungen 053, 055, 062, 063):** In `web/src/pages/README.md` die Adressentabelle angleichen: alle Seiten außer Anmeldung und Struktur werden über `lazyPage()` nachgeladen (062); Abschnitte zu Suche, Einlese-Übersicht und Landkarte sagen noch `lazy()`. In `docs/ARCHITECTURE.md` den veralteten Satz zur Bündelgröße („just below the 500 kB warning threshold“) durch die Messwerte aus 062 ersetzen. Kopfzeile unter 1280 px nur Icons (055). Statuswechsel des Einlesens werden Screenreadern nicht angesagt (053) – als bekannte Grenze nennen. Such-Rangfolge nach 063 (exakte Treffer nur bei Kennungsanfragen absolut vorne) beschreiben. Neue Seiten `/search` und `/ingest`.
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
 **Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).

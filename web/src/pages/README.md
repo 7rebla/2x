@@ -24,6 +24,20 @@ so each address can be opened directly or reloaded.
 A work order that builds a page replaces only its file here (and fills its own catalog, see `../locales/README.md`).
 Routes, the frame (`../components/Layout.tsx`) and the navigation stay as they are.
 
+### Loading on demand
+
+Only the sign-in page and the start page (`/`, structure) are part of the main bundle. Every other page is
+loaded when it is opened (work order 062): `routes.tsx` wraps it with `lazyPage()` from
+`../components/PageLoading.tsx`, which combines `React.lazy`, `Suspense` and a boundary:
+
+- While the code arrives, `PageLoading` keeps some room and shows the common loading state after 300 ms
+  (turning icon and loading shimmer, pattern D; both stand still with reduced motion).
+- If the code cannot be loaded (connection lost, or a new build replaced the files while the page was open),
+  `PageLoadFailed` explains this and offers "Reload". Every other error of the page goes to the route's
+  error element as before.
+- A new page is added to the `pages` table in `routes.tsx`; tests get its code through `preloadPages()`,
+  which `../test/renderApp.tsx` calls once per test file.
+
 ## Frame and navigation
 
 - `../components/Layout.tsx` draws the header (name, navigation, user menu) around every page, always on one line:

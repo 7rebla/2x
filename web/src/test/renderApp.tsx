@@ -7,7 +7,12 @@ import { installClientConfig } from "../api/client.ts";
 import { installApiErrorHandling } from "../api/errors.ts";
 import { createQueryClient } from "../api/queryClient.ts";
 import { App, type AppRouter } from "../App.tsx";
-import { routes } from "../routes.tsx";
+import { preloadPages, routes } from "../routes.tsx";
+
+// Most pages are loaded when they are opened (work order 062). Loading their
+// code once here keeps the first render of a page within the usual waiting
+// time of the tests; the page still goes through React.lazy and Suspense.
+await preloadPages();
 
 export interface RenderedApp extends RenderResult {
   router: AppRouter;
