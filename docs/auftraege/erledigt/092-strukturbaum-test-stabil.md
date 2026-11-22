@@ -1,6 +1,6 @@
 # Auftrag 092 – Wackeligen e2e-Test des Strukturbaums stabilisieren
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 

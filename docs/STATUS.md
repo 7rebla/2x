@@ -181,14 +181,15 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 089 | Ergebniszahl als Live-Region, Brotkrumen Dateiseite | B | 077, 079, 083 | erledigt |
 | 090 | Abnahmetest M2 auf das ROADMAP-Kriterium (E-67) | C (entschieden) | 058, 067 | erledigt |
 | 091 | Seite „keine Berechtigung“ mit Titel und h1 | B | 078 | erledigt |
-| 092 | Wackeligen e2e-Test des Strukturbaums stabilisieren | B | 083 | in Arbeit |
+| 092 | Wackeligen e2e-Test des Strukturbaums stabilisieren | B | 083 | erledigt |
 
 - 078/079/083/085/087/088 zusammengeführt am 22.11.2026. Lücke aus 078: Die Seite „keine Berechtigung“ (RequireRole) hat weder Seitentitel noch h1 – Auftrag 091.
-- Reihenfolge: 080, 081, 086, 089 und 091 erledigt; 082 in Prüfung, 092 läuft; zuletzt 084 (berührt fast alle Seiten).
+- Reihenfolge: 080, 081, 086, 089, 091 und 092 erledigt; 082 in Nachbesserung; zuletzt 084 (berührt fast alle Seiten).
 - 080: Hinweise aus der Prüfung – der Warnkasten der Seite „keine Berechtigung“ (091) ist jetzt auf Lesebreite begrenzt (gewollt gelassen). Gesehen vom Bearbeiter: Übersichtskarte (MiniMap) bei vielen Knoten fast leer und bei 375 px groß; Einpassen großer Strukturen zeigt die Mitte – Kandidaten für einen späteren Auftrag.
 - 081: Kartenansicht unter 768 px (E-65). Zwischen 768 und etwa 900 px scrollen Protokoll, Einlesen und Dateien noch im eigenen Kasten (Seite scrollt nicht); Grenze ließe sich mit `WIDE_TABLE_QUERY` auf 1024 px setzen – a7 gefragt, bis dahin 768 px.
 - 086: Name über der Karte steht still und ist für Screenreader verborgen (nur der Kopf tippt, E-64); `BrandMark` hat dafür `link={false}`.
 - 089: Ergebniszahl als höfliche Statusregion über Protokoll und Einlesen (ersetzt die Gesamtzahl unter der Liste), Brotkrumen auf der Dateiseite (Baustein auch auf der Geräteseite, Struktur-Icon jetzt Teil des Links), „Nur teilweise umgewandelt“ auch bei gescheiterten und Einbett-Aufträgen (Nachtrag 068).
+- 092: Ursache des wackeligen Spaltentests war ein Umbruch des zufälligen Testgerätenamens bei 1024 px (14 px = Versatz bei zweizeiligem Namen; 16 von 20 000 Namen). Testnamen kürzer, Messung im gesetzten Zustand und in einem Schritt; Grenzen unverändert.
 
 ## M2 – Einlesen und Suche (freigegeben 22.11.2026, E-54; abgenommen 22.11.2026, E-67)
 
