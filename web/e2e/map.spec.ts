@@ -30,6 +30,39 @@ async function create(page: Page, path: string, body: Record<string, unknown>): 
   );
 }
 
+/**
+ * An address from 192.0.2.0/24 that no device has yet and that is no part of
+ * another address ("192.0.2.1" is part of "192.0.2.10" and "192.0.2.143").
+ *
+ * The map search finds devices by a part of the address. Other specs and
+ * earlier runs leave many devices with addresses of this range, so a search
+ * for a short or a used address matches dozens of devices spread over the
+ * whole map; the view then cannot show them all (it stops at its smallest
+ * zoom) and the own device may lie outside. With an address of its own the
+ * search matches exactly this test's device, whatever the database holds.
+ */
+async function unusedAddress(page: Page): Promise<string> {
+  const used = await page.evaluate(async (): Promise<string[]> => {
+    const response = await fetch("/api/v1/devices/");
+    if (!response.ok) {
+      throw new Error(`GET /api/v1/devices/ answered ${String(response.status)}`);
+    }
+    const devices = (await response.json()) as { ip_address: string | null }[];
+    return devices.flatMap((device) => (device.ip_address === null ? [] : [device.ip_address]));
+  });
+  // In a shuffled order: three-digit endings only, which can never be part of
+  // another address, so a device that another spec creates meanwhile cannot
+  // match too; among them any n whose address is not used yet.
+  const candidates = Array.from({ length: 155 }, (_, index) => index + 100).sort(() => Math.random() - 0.5);
+  for (const n of candidates) {
+    const ip = testIp(n);
+    if (!used.some((address) => address.includes(ip))) {
+      return ip;
+    }
+  }
+  throw new Error("no unused address left in 192.0.2.0/24");
+}
+
 /** Whether the element lies completely inside the box of another one (for example a node inside the map). */
 async function insideBox(inner: Locator, outer: Locator): Promise<boolean> {
   const [innerBox, outerBox] = await Promise.all([inner.boundingBox(), outer.boundingBox()]);
@@ -62,7 +95,7 @@ test("the map shows a device and its network, finds it and opens its page", asyn
   const plant = await create(page, "/api/v1/plants/", { area: area.id, key: plantKey, name: testName("plant") });
   const deviceKey = testName("device");
   const deviceName = testName("device");
-  const ip = testIp(1 + Math.floor(Math.random() * 254));
+  const ip = await unusedAddress(page);
   const device = await create(page, "/api/v1/devices/", {
     plant: plant.id,
     key: deviceKey,
@@ -112,9 +145,9 @@ test("the map shows a device and its network, finds it and opens its page", asyn
   await expect(canvas.locator(".react-flow__edge.map-membership-active")).toHaveCount(0);
 
   await search.fill(ip);
-  // The address may also match longer addresses of other devices (192.0.2.24 and
-  // 192.0.2.242); the view then fits all matches, so the node is inside the map,
-  // though not necessarily inside the browser window.
+  // The address is no part of another one (unusedAddress), so it finds this
+  // device only, and the view brings it into the map.
+  await expect(page.getByTestId("map-search-status")).toHaveText("1 match");
   await expect.poll(() => insideBox(deviceNode, canvas)).toBe(true);
   await expect(deviceNode.getByTestId("map-device")).toHaveAttribute("data-match", "true");
 
