@@ -1,6 +1,6 @@
 # Auftrag 126 – Antwortdienst und Befehl `ask`
 
-Meilenstein: M3 · Freigabestufe: B · Status: offen
+Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
 
 ## Ziel
 
@@ -145,7 +145,64 @@ Keine, die den Auftrag aufhalten. Umgesetzt werden die Vorgaben nach Empfehlung:
 - **D10 KI aus:** (a) keine Antwort, `error(ai_disabled)`; (b) Fundstellen ohne Antworttext. Vorgabe: (a).
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Eigenes Compose-Projekt `twox-126`, `TWOX_API_PORT=18126`. „2x“ und „twox-leit“ nicht angefasst. Keine neue Abhängigkeit, keine Migration, keine Einstellung.
+
+### Was wurde gebaut?
+
+- **`backend/twox/answers/service.py` (neu):** `answer(question, *, device_ids, plant_ids, chat, seed) -> Iterator[AnswerEvent]`, Ablauf in der Reihenfolge des Auftrags. Importform wie verlangt (`from twox.answers import chat as chat_module, citations, context, prompt, types`; Aufrufe über die Module; aus `chat` nur die Typen `ChatModel`, `ChatStream`). Öffentliche Hilfen `chat_error_code()` und `context_error_code()`.
+  - Fehlercodes: `ChatDisabledError` → `ai_disabled`; `ChatRejectedError`, `ChatRemoteModelError` → `model_rejected`; übrige `ChatError` → `model_unavailable`, bei Zeitgrenze als Ursache (`llm_guard.is_timeout(__cause__)`) → `timeout`; `ContextDisabledError` → `ai_disabled`; `ContextUnavailableError` → `model_unavailable`; jede andere Ausnahme der Kontextauswahl (Datenbank, Suche) → `search_failed`; alles Unerwartete (auch in `build_messages`/`verify`) → `internal`.
+  - Abbruch: `finally` schließt den `ChatStream`; ein selbst geholtes Modell wird geschlossen, ein übergebenes nicht.
+  - Protokoll: genau eine Zeile je Anfrage, Logger `twox.answers.service`, z. B. `Answer: result=answered model=… duration_ms=… sources=2 cited=1 removed_sentences=0`, bei Fehlern zusätzlich `exception=<Typname>`; Fehler auf WARNING, sonst INFO; Abbruch als `result=cancelled`.
+  - Docstring von `answer()` nennt D9 (a) (`delta` vorläufig, maßgeblich `final_text`).
+- **`backend/twox/answers/management/commands/ask.py` (neu):** `ask "<Frage>" [--device ID …] [--plant ID …] [--seed N] [--json]` wie beschrieben; JSON-Zeilen über `types.to_json`; Quellenzeile `[n] Titel, version N, p. X` bzw. `pp. X-Y` bzw. Überschriftenpfad; `final:` bei Abweichung; Schlusszeile `status: <status> (k valid citation(s): …; m removed sentence(s))`.
+- **Tests:** `backend/tests/answers/test_service.py` und `backend/tests/answers/test_ask.py` (zusammen 83 Fälle) mit `FakeChatModel`, nur selbst geschriebene Texte (erfundener Greifer G-12).
+- **`docs/ARCHITECTURE.md`:** Zeile `answers` der Modultabelle ergänzt, Absatz „Answer service“ mit Ablauf, Fehlercodes, Abbruch, Protokoll und `ask` im Abschnitt „The package answers“.
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-126`.
+
+| Nr. | Ergebnis | Nachweis |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` 29.9.3, `docker compose version` v5.7.0, je Exit 0 |
+| 1 | erfüllt | Build und `up -d --wait` Exit 0 (nach den Code-Commits erneut gebaut und gestartet, Exit 0) |
+| 2.1 | erfüllt | `test_supported_answer_gives_sources_deltas_and_done`, Ende zu Ende `test_end_to_end_over_the_real_context_selection` |
+| 2.2 | erfüllt | `test_invented_number_is_dropped_and_alone_gives_no_evidence`, `test_invented_number_next_to_a_valid_one_is_removed` |
+| 2.3 | erfüllt | `test_refusal_of_the_model_gives_no_evidence` (Absage mit/ohne Punkt, andere Absage, leere Antwort) |
+| 2.4 | erfüllt | `test_below_threshold_the_model_is_not_asked` (Fake mit `fail_on_call`, `get_chat_model` schlägt fehl, Netzsperre), dazu `test_end_to_end_below_the_threshold` über die echte Kontextauswahl |
+| 2.5 | erfüllt | `test_ai_off_gives_only_ai_disabled` (Spion auf `select_context`, `get_chat_model`, Netzsperre) |
+| 2.6 | erfüllt | `test_model_failure_in_the_middle_gives_error_without_done` (nach zwei Stücken, je Fehlerklasse inkl. Zeitgrenze und unerwarteter Ausnahme), `test_failing_call_of_the_model_gives_error`, `test_failing_get_chat_model_gives_error`, `test_chat_errors_map_to_fixed_codes`; kein Ausnahmetext im JSON |
+| 2.7 | erfüllt | `test_closing_after_the_first_delta_closes_the_stream` (`ChatStream.closed`, `close_count == 0`), `test_a_model_fetched_by_the_service_is_closed` (`close_count == 1`) |
+| 2.8 | erfüllt | `test_logs_hold_no_question_text_title_or_filename` (Erfolg, Absage, Fehler, unerwartete Ausnahme, Abbruch; Wurzel und `twox` auf DEBUG; echte Kontextauswahl mit Titel und Dateiname als Markierung), dazu Zähltest und KI aus |
+| 2.9 | erfüllt | `test_ask.py`: `--json` (gültige JSON-Zeilen, Roundtrip über `from_json`, `--seed`), Textausgabe mit Schlusszeile und `final:`, `--device` mit zwei Geräten, KI aus `DISABLED:` Exit 0, Fehler `FAILED: model_rejected` Exit 1, leeres Modell `FAILED: model_unavailable`, leere Frage `CommandError` |
+| 2.10 | erfüllt | Ende-zu-Ende-Test mit `CaptureQueriesContext`: kein `INSERT`/`UPDATE`/`DELETE` |
+| 2.11 | erfüllt | `test_seed_is_passed_on_and_settings_decide_the_rest` (7 bzw. `None`; `max_tokens`/`temperature` `None`), `test_a_patched_nonce_reaches_build_messages`, `test_each_request_gets_a_fresh_nonce` |
+| Zusatz (122) | erfüllt | `test_contradiction_with_two_valid_citations_is_recognised`: `CONTRADICTION_PHRASE` + Doppelpunkt + zwei gültige Zitate ergibt `contradiction` |
+| 3 | erfüllt | `pytest tests/answers` 798 passed; `pytest` 3222 passed, 6 deselected, 0 failed, 0 skipped; `pytest -m worker` 6 passed |
+| 4 | erfüllt | `ruff check .` „All checks passed!“, `ruff format --check .` Exit 0, `mypy .` „Success: no issues found in 217 source files“ |
+| 5 | erfüllt | `makemessages` Exit 0, kein Diff in `backend/locale`; `makemigrations --check --dry-run` „No changes detected“; Lizenzprüfung „License check passed.“; `spectacular` Exit 0, kein Diff in `web/openapi` |
+| 6.1 | erfüllt | `D exec -T -e TWOX_AI_ENABLED=false api python manage.py ask "Testfrage"` → `DISABLED: AI features are not enabled (TWOX_AI_ENABLED is false); nothing was searched and the model service was not contacted`, Exit 0 |
+| 6.2 | erfüllt | `D exec -T api python manage.py ask "Testfrage"` (leere Datenbank) → `sources: none`, `final:`, `Dazu finde ich nichts in den Unterlagen.`, `status: no_evidence (0 valid citation(s): none; 0 removed sentence(s))`, Exit 0; kein Traceback, keine Adresse. Auf der Fehlerausgabe die Logzeile `Answer: result=no_evidence model=- duration_ms=2924 sources=0 cited=0 removed_sentences=0` |
+| 7 | erfüllt | `git diff main --stat`: nur `service.py`, `ask.py`, `test_service.py`, `test_ask.py`, `docs/ARCHITECTURE.md` (+ diese Auftragsdatei); `pyproject.toml`/Lock unverändert |
+| 8 | erfüllt | `D --profile dev down -v` Exit 0 |
+
+**Kurzer echter Probelauf (erlaubt laut Leitstelle):** zwei selbst geschriebene Abschnitte zu einem erfundenen Greifer G-12 per `manage.py shell` in die eigene Datenbank, eingebettet mit bge-m3 am Host; `TWOX_CHAT_MODEL=qwen3.8:27b-q4_K_M` nur per `exec -e` (nicht in Dateien). „Wie schwer darf die Last am Greifer G-12 sein?“ → `status: answered`, Zitat [1], 0 entfernte Sätze, rund 26 s. Eine fremde Frage lag unter der Schwelle → `no_evidence` ohne Modellaufruf. Danach `down -v`.
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-a0d448c0e3e77d448`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-a0d448c0e3e77d448` (relativ zum Projektordner)
+- Nicht gepusht, nichts zusammengeführt.
+
+### Abweichungen und Hinweise
+
+1. **Leere Frage:** `answer()` ist eine normale Funktion, die bei KI an und leerer Frage sofort `ValueError` wirft und sonst den Generator zurückgibt. So kommt der Fehler schon beim Aufruf (vor dem ersten Ereignis); bei KI aus gilt Schritt 1 (`error(ai_disabled)`), auch für eine leere Frage.
+2. **Keine Quelle trotz Schwelle:** Ist `below_threshold` falsch, aber die Auswahl leer (z. B. alles über dem Zeichenbudget), behandelt der Dienst das wie „unter der Schwelle“ (leeres `sources`, `done(no_evidence)`, kein Modellaufruf).
+3. **Fehlercodes:** `ChatRemoteModelError` → `model_rejected`; jede andere Ausnahme aus `select_context` (auch nicht aus der Datenbank) → `search_failed`.
+4. **`ask` mit `--json`:** Stdout enthält nur JSON-Zeilen; die Zeile `DISABLED:` geht dann auf die Fehlerausgabe (ohne `--json` auf die Standardausgabe, wie `check_llm`). `ask` hat `requires_system_checks = []` (wie `check_llm`), damit W001 nicht jede Ausgabe einleitet. Die Logzeile des Dienstes erscheint im Container auf der Fehlerausgabe (bestehender Handler).
+5. **Keine Gesamtzeitgrenze:** Der Docstring von `chat.py` sagt, eine Gesamtzeit setze „der Dienst“. Der Auftrag verbietet neue Einstellungen; der Dienst setzt deshalb keine. Die Lesegrenze zwischen zwei Stücken (`TWOX_CHAT_TIMEOUT_SECONDS`) bleibt der einzige Schutz. Vorschlag: Gesamtgrenze in 130 (API) oder mit eigener Einstellung in einem Folgeauftrag.
+6. Der Dienst stützt sich nicht auf die „Limits“ aus `citations.py`; er übernimmt das Urteil unverändert und ersetzt bei `no_evidence` nur Text und Zitate durch die feste Fassung aus `types.py`.
+7. Lokal bleiben die Images `twox-126-*`; die ignorierte `.env` hat `TWOX_API_PORT=18126` und ein leeres `TWOX_CHAT_MODEL`.
+
+Offene Fragen an a7: keine.
