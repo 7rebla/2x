@@ -10,6 +10,7 @@ dependencies = [
     "django-auditlog>=3.4.2,<3.5",
     "djangorestframework>=3.18.3,<3.19",
     "drf-spectacular>=0.30.0,<0.31",
+    "pgvector>=0.5.1,<0.6",
     "psycopg[binary]>=3.3.9,<3.4",
     "uvicorn>=0.54.0,<0.55",
     "whitenoise>=6.12.0,<6.13",

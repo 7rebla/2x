@@ -1,6 +1,6 @@
 # Auftrag 040 – Datenbank: Erweiterungen vector und pg_trgm, Paket pgvector
 
-Meilenstein: M2 · Freigabestufe: C · Status: offen
+Meilenstein: M2 · Freigabestufe: C · Status: zur Prüfung
 
 ## Ziel
 
@@ -75,7 +75,46 @@ Voraussetzung: M2-Liste von a7 freigegeben; Frage 1 (pgvector) entschieden.
    Empfehlung: (a). Standardweg der pgvector-Macher für Django, MIT, ohne weitere Abhängigkeiten; (b) wäre eigener Code ohne Gewinn.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Alle Akzeptanzkriterien erfüllt; Läufe am 22.11.2026 im Container. Keine offene Frage, die den Auftrag aufhält.
+
+### Was wurde gebaut?
+
+- `backend/pyproject.toml`, `backend/uv.lock`: `pgvector>=0.5.1,<0.6`. `uv lock` lief wie verlangt mit `D run --rm --no-deps backend-dev uv lock` (das Dev-Image war vorher mit der alten Lock-Datei gebaut; der Quellbaum ist eingebunden). Ergebnis: `Added pgvector v0.5.1`, sonst keine Änderung im Lock, keine mitgezogenen Pakete, kein NumPy.
+- `backend/twox/config/settings.py`: `django.contrib.postgres` in `INSTALLED_APPS` (nach `django.contrib.staticfiles`, mit Kommentar).
+- neu `backend/twox/ingest/migrations/__init__.py` und `0001_extensions.py`: `VectorExtension()` und `TrigramExtension()`, ohne Abhängigkeiten. Djangos `CreateExtension` legt eine Erweiterung nur an, wenn sie fehlt; rückwärts entfernt sie beide.
+- `backend/tests/config/test_database.py`: vier neue Fälle – `vector` und `pg_trgm` stehen in `pg_extension`; `'[1,2,3]'::vector <=> '[1,2,4]'::vector` liefert eine Zahl (gegen den von Hand gerechneten Kosinusabstand geprüft); `similarity('abc', 'abd')` liefert eine Zahl zwischen 0 und 1; `django.contrib.postgres` ist installiert. Der bisherige Verfügbarkeitstest bleibt unverändert.
+- mypy brauchte keine Ausnahme: pgvector bringt eigene Typangaben mit (`Success: no issues found`). `backend/scripts/license-rules.txt` blieb unverändert (pip-licenses erkennt MIT).
+
+### Wie wurde getestet?
+
+Alle Befehle mit `D` = `docker compose -p twox-040` im Wurzelverzeichnis des Arbeitsverzeichnisses, `.env` aus `.env.example` mit `TWOX_API_PORT=18040`. Docker Engine 29.9.3, Compose v5.7.0. Kriterien 1, 5 und 6 liefen nach `down -v` noch einmal frisch auf dem committeten Stand.
+
+| Nr. | Ergebnis | Tatsächliche Ausgabe (gekürzt) |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` (29.9.3), `docker compose version` (v5.7.0), Exit-Code 0 |
+| 1 | erfüllt | vier Images `Built`, Exit-Code 0; `up -d --wait` Exit-Code 0; `D ps -a`: `migrate Exited (0)`, `db`, `valkey`, `worker`, `api` healthy; Protokoll `Applying ingest.0001_extensions... OK` |
+| 2 | erfüllt | `test_database.py -v`: `6 passed` (die vier neuen dabei); `pytest`: `1101 passed, 4 deselected`, nichts übersprungen; `pytest -m worker`: `4 passed, 1101 deselected` |
+| 3 | erfüllt | `All checks passed!`; `136 files already formatted`; `Success: no issues found in 136 source files` |
+| 4 | erfüllt | `makemessages`: Exit-Code 0, `git diff -- backend/locale` ohne Unterschied; `makemigrations --check --dry-run`: `No changes detected`; Lizenzprüfung: `pgvector 0.5.1 MIT`, `License check passed.`; `spectacular`: Exit-Code 0, `git diff -- web/openapi` ohne Unterschied |
+| 5 | erfüllt | `pg_trgm`, `plpgsql`, `vector` |
+| 6 | erfüllt | `D run --rm migrate`: `No migrations to apply.`, Exit-Code 0 |
+| 7 | erfüllt | `D --profile dev down -v` Exit-Code 0 |
+
+Zusätzlich: `migrate ingest zero` entfernt beide Erweiterungen, `migrate ingest` legt sie wieder an.
+
+**Befund für den Betrieb ohne Superuser (M6):** `select name, version, trusted, superuser from pg_available_extension_versions where name in ('vector','pg_trgm')` ergibt im Image `pgvector/pgvector:0.8.7-pg18`: `pg_trgm` 1.3 bis 1.6 `trusted = t`; `vector` 0.8.7 `trusted = f`, `superuser = t`. `pg_trgm` kann also jede Rolle mit `CREATE` auf der Datenbank anlegen, `vector` nur ein Superuser. Im Compose-Aufbau ist der Datenbankbenutzer `twox` Superuser (`rolsuper = t`), deshalb läuft die Migration. Ohne Superuser muss ein Administrator `CREATE EXTENSION vector` vor der ersten Migration ausführen; die Migration überspringt eine vorhandene Erweiterung. Das steht auch im Docstring der Migration.
+
+### Vorschlag für die Abhängigkeitstabelle in `docs/DECISIONS.md`
+
+| pgvector 0.5.1 (pgvector-python; reines Python, keine Pflichtabhängigkeiten, kein NumPy) | MIT | Feldtypen, Indizes und `VectorExtension` für die Erweiterung `vector` in Django; Quelle PyPI `pgvector` (https://github.com/pgvector/pgvector-python) | 040 | E-55 |
+
+### Zweig und Arbeitsverzeichnis
+
+Zweig `worktree-agent-a0b2b48071e03c11e`, Arbeitsverzeichnis `.claude/worktrees/agent-a0b2b48071e03c11e`. Nicht gepusht.
+
+### Abweichungen
+
+- `uv lock` mit `--no-deps` aufgerufen, damit dafür keine Datenbank startet; sonst wie im Auftrag.
+- Zusätzlicher Testfall „`django.contrib.postgres` ist installiert“ in `test_database.py` statt in `test_settings.py`, weil `test_settings.py` nicht im Auftragsbereich liegt.
+- Hinweis zum Zusammenführen mit 041: Beide Aufträge berühren `backend/twox/ingest/`. 040 legt nur `migrations/` an; legt 041 Modelle mit Migration an, muss deren Migration auf `ingest.0001_extensions` aufbauen.
