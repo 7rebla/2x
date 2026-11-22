@@ -290,6 +290,10 @@ test("M1 acceptance: device list of the test factory, a file with two versions, 
       await expect(plc.getByTestId("audit-change").filter({ hasText: /^ip_address: / })).toHaveText(
         "ip_address: (empty) → 192.168.0.90",
       );
+      // The device class of the test factory's list (E-53).
+      await expect(plc.getByTestId("audit-change").filter({ hasText: /^device_class: / })).toHaveText(
+        "device_class: (empty) → plc",
+      );
     });
   }
 

@@ -294,6 +294,7 @@ describe("forms", () => {
       plant: 101,
       key: "test-new-2",
       name: "Test new device",
+      device_class: "other",
       manufacturer: "",
       model: "",
       software_version: "",
@@ -302,6 +303,77 @@ describe("forms", () => {
       protocols: "",
       notes: "",
     });
+  });
+
+  it("offers the seven device classes, starts with Other and sends the chosen one", async () => {
+    const api = fakeApi(manager, fakeStructureApi().handler);
+    renderApp("/");
+    await openTree();
+
+    fireEvent.click(screen.getByRole("button", { name: "New device in Test plant two" }));
+    const deviceForm = form("New device");
+    const select = within(deviceForm).getByLabelText<HTMLSelectElement>("Device class");
+    expect([...select.options].map((option) => [option.value, option.textContent])).toEqual([
+      ["plc", "PLC"],
+      ["controller", "Controller / embedded"],
+      ["computer", "Computer / edge"],
+      ["router", "Router"],
+      ["firewall", "Firewall"],
+      ["robot", "Robot"],
+      ["other", "Other"],
+    ]);
+    expect(select.value).toBe("other");
+    type(deviceForm, "Key", "test-robot-1");
+    type(deviceForm, "Name", "Test robot");
+    fireEvent.change(select, { target: { value: "robot" } });
+    fireEvent.click(within(deviceForm).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "Test robot" })).toBeDefined();
+    });
+    const post = api.requestsTo("/api/v1/devices/").find((request) => request.method === "POST");
+    expect(((await post?.clone().json()) as { device_class: unknown }).device_class).toBe("robot");
+  });
+
+  it("shows an error of the API at the device class and keeps the choice", async () => {
+    const structureApi = fakeStructureApi();
+    fakeApi(manager, structureApi.handler);
+    renderApp("/");
+    await openTree();
+
+    fireEvent.click(screen.getByRole("button", { name: "New device in Test plant two" }));
+    const deviceForm = form("New device");
+    type(deviceForm, "Key", "test-new-3");
+    type(deviceForm, "Name", "Test new device");
+    fireEvent.change(within(deviceForm).getByLabelText("Device class"), { target: { value: "firewall" } });
+    structureApi.rejectNextWrite(400, { device_class: ['"x" is not a valid choice.'] });
+    fireEvent.click(within(deviceForm).getByRole("button", { name: "Save" }));
+
+    const error = await within(deviceForm).findByTestId("field-error-device_class");
+    expect(error.textContent).toBe('"x" is not a valid choice.');
+    const select = within(deviceForm).getByLabelText<HTMLSelectElement>("Device class");
+    expect(select.getAttribute("aria-invalid")).toBe("true");
+    expect(select.value).toBe("firewall");
+  });
+
+  it("names the device classes in German", async () => {
+    await changeLanguage("de");
+    fakeApi(manager, fakeStructureApi().handler);
+    renderApp("/");
+    await openTree();
+
+    fireEvent.click(screen.getByRole("button", { name: "Neues Gerät in Test plant two" }));
+    const deviceForm = form("Neues Gerät");
+    const select = within(deviceForm).getByLabelText<HTMLSelectElement>("Gerätetyp");
+    expect([...select.options].map((option) => option.textContent)).toEqual([
+      "SPS",
+      "Controller/Embedded",
+      "Rechner/Edge",
+      "Router",
+      "Firewall",
+      "Roboter",
+      "Sonstiges",
+    ]);
   });
 
   it.each([

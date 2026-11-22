@@ -8,6 +8,7 @@ import { devicesImportMutation } from "../api/generated/@tanstack/react-query.ge
 import type { ImportReport } from "../api/generated";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { ImportReportView } from "../components/ImportReportView.tsx";
+import { deviceClasses } from "./structure/deviceClass.ts";
 import { reloadAfterSave, save } from "./structure/save.ts";
 
 /** The 13 columns of the device list, in the order the first line must name them (E-44). */
@@ -26,6 +27,9 @@ export const deviceListColumns = [
   "protocols",
   "notes",
 ] as const;
+
+/** The optional 14th column (E-53); its values are the device classes. */
+export const deviceListOptionalColumn = "device_class";
 
 /** What the last call to the import endpoint gave. */
 type Outcome =
@@ -109,7 +113,16 @@ export function ImportPage(): ReactElement {
         <code data-testid="import-columns" className="block font-mono break-words">
           {deviceListColumns.join(",")}
         </code>
+        <p>{t("import:format.optionalColumn")}</p>
+        <code data-testid="import-optional-column" className="block font-mono break-words">
+          {deviceListOptionalColumn}
+        </code>
+        <p>{t("import:format.deviceClassValues")}</p>
+        <code data-testid="import-device-classes" className="block font-mono break-words">
+          {deviceClasses.join(", ")}
+        </code>
         <ul className="list-disc space-y-1 pl-5">
+          <li>{t("import:format.deviceClassEmpty")}</li>
           <li>{t("import:format.encoding")}</li>
           <li>{t("import:format.matching")}</li>
           <li>{t("import:format.plantRow")}</li>

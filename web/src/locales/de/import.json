@@ -3,6 +3,9 @@
   "format": {
     "heading": "Erwartetes Format",
     "header": "Die erste Zeile enthält genau diese 13 Spalten in dieser Reihenfolge:",
+    "optionalColumn": "Am Ende darf eine 14. Spalte folgen; dann hat jede Zeile 14 Werte:",
+    "deviceClassValues": "Sie enthält den Gerätetyp, einen dieser Werte:",
+    "deviceClassEmpty": "Ohne diese Spalte oder mit leerem Wert erhält ein neues Gerät den Typ other, ein vorhandenes behält seinen Typ. Ein unbekannter Wert ist ein Fehler.",
     "encoding": "UTF-8, Spalten durch Komma getrennt, Werte mit Komma oder Zeilenumbruch in doppelten Anführungszeichen.",
     "matching": "Anlagen werden über plant_id erkannt, Geräte über device_id. Vorhandene Einträge werden aktualisiert, neue angelegt, nichts wird gelöscht.",
     "plantRow": "Eine Zeile ohne device_id beschreibt nur die Anlage; sie darf notes füllen, aber keine Gerätespalte.",

@@ -25,6 +25,7 @@ import type { Area, Device, Plant, Site } from "../../api/generated";
 import { ErrorMessage } from "../../components/ErrorMessage.tsx";
 import { Loading } from "../../components/Loading.tsx";
 import type assetsCatalog from "../../locales/en/assets.json";
+import { DEFAULT_DEVICE_CLASS, deviceClasses, isDeviceClass } from "./deviceClass.ts";
 import { type FieldErrors, reloadAfterSave, save } from "./save.ts";
 
 /** Name of a field as sent to the API; its label is fields.<name> in assets.json. */
@@ -201,6 +202,31 @@ function SelectField({
           {choices.map((choice) => (
             <option key={choice.id} value={String(choice.id)}>
               {choice.label}
+            </option>
+          ))}
+        </select>
+      )}
+    </FieldFrame>
+  );
+}
+
+/** The device class as a fixed choice (E-53); there is no empty option, a new device starts as "other". */
+function DeviceClassField({ state }: { state: FormState }): ReactElement {
+  const { t } = useTranslation("assets");
+  return (
+    <FieldFrame name="device_class" errors={state.fieldErrors.device_class ?? []}>
+      {({ id, invalid, describedBy }) => (
+        <select
+          id={id}
+          name="device_class"
+          defaultValue={text(state.values, "device_class")}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
+          className={inputClass}
+        >
+          {deviceClasses.map((value) => (
+            <option key={value} value={value}>
+              {t(`deviceClass.${value}`)}
             </option>
           ))}
         </select>
@@ -407,6 +433,7 @@ const DEVICE_FIELDS: readonly FieldName[] = [
   "plant",
   "key",
   "name",
+  "device_class",
   "manufacturer",
   "model",
   "software_version",
@@ -434,6 +461,7 @@ export function DeviceForm({
       plant: String(device?.plant.id ?? plantId),
       key: device?.key ?? "",
       name: device?.name ?? "",
+      device_class: device?.device_class ?? DEFAULT_DEVICE_CLASS,
       manufacturer: device?.manufacturer ?? "",
       model: device?.model ?? "",
       software_version: device?.software_version ?? "",
@@ -444,10 +472,13 @@ export function DeviceForm({
     },
     (values, fetchFn) => {
       const ipAddress = text(values, "ip_address").trim();
+      const deviceClass = text(values, "device_class");
       const body = {
         plant: parentId(values.plant),
         key: text(values, "key"),
         name: text(values, "name"),
+        // The select offers only known classes; anything else is left out (the API keeps the stored one).
+        ...(isDeviceClass(deviceClass) ? { device_class: deviceClass } : {}),
         manufacturer: text(values, "manufacturer"),
         model: text(values, "model"),
         software_version: text(values, "software_version"),
@@ -481,6 +512,7 @@ export function DeviceForm({
       <SelectField name="plant" state={state} choices={plantChoices(sites.data, areas.data, plants.data)} />
       <TextField name="key" state={state} monospace />
       <TextField name="name" state={state} />
+      <DeviceClassField state={state} />
       <TextField name="manufacturer" state={state} />
       <TextField name="model" state={state} />
       <TextField name="software_version" state={state} />

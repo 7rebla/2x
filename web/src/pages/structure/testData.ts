@@ -45,6 +45,7 @@ export function device(
     site: { id: ownerSite.id, name: ownerSite.name },
     key,
     name,
+    device_class: "other",
     manufacturer: "",
     model: "",
     software_version: "",
@@ -76,6 +77,7 @@ export function sampleStructure(): Structure {
     ...base,
     devices: [
       device(base, 1000, 100, "test-plc-1", "Test controller", {
+        device_class: "plc",
         ip_address: "192.0.2.10",
         manufacturer: "Test maker",
         model: "Test model",

@@ -29,12 +29,15 @@ const COLUMNS = [
   "notes",
 ] as const;
 
-type Row = Partial<Record<(typeof COLUMNS)[number], string>>;
+/** The header with the optional 14th column (E-53). */
+const COLUMNS_WITH_DEVICE_CLASS = [...COLUMNS, "device_class"] as const;
+
+type Row = Partial<Record<(typeof COLUMNS_WITH_DEVICE_CLASS)[number], string>>;
 
 /** A CSV file with the header and one line per row; the test values need no quoting. */
-function csv(rows: readonly Row[]): string {
-  const lines = rows.map((row) => COLUMNS.map((column) => row[column] ?? "").join(","));
-  return `${[COLUMNS.join(","), ...lines].join("\n")}\n`;
+function csv(rows: readonly Row[], columns: readonly (keyof Row)[] = COLUMNS): string {
+  const lines = rows.map((row) => columns.map((column) => row[column] ?? "").join(","));
+  return `${[columns.join(","), ...lines].join("\n")}\n`;
 }
 
 /** Errors in the browser console. */
@@ -163,6 +166,70 @@ test("a CSV file with an invalid IP address shows the error with its line number
   await expect(page.getByRole("button", { name: "Apply" })).toHaveCount(0);
 
   // Nothing was saved.
+  await page.goto("/");
+  await page.getByLabel("Search", { exact: true }).fill(site);
+  await expect(nothingFound(page)).toBeVisible();
+
+  expect(consoleErrors, "errors in the browser console").toEqual([]);
+});
+
+test("a CSV file with the column device_class sets the class of each device", async ({ page }) => {
+  const consoleErrors = collectConsoleErrors(page);
+  const { rows, site, plant, devices } = twoDevices();
+  const classes = ["plc", "robot"] as const;
+  const classified = rows.map((row, index) => ({ ...row, device_class: classes[index] ?? "" }));
+
+  await page.goto("/import");
+  await expect(page.getByTestId("import-optional-column")).toHaveText("device_class");
+  await chooseCsv(page, csv(classified, COLUMNS_WITH_DEVICE_CLASS));
+  await page.getByRole("button", { name: "Start dry run" }).click();
+  await expect(page.getByTestId("import-count-devices-created")).toHaveText("2");
+  await page.getByRole("button", { name: "Apply" }).click();
+  await expect(page.getByTestId("import-summary")).toHaveText("Saved. 2 rows imported.");
+
+  // Each device shows its class in the edit form of its page.
+  const plantItem = page
+    .getByTestId("plant-item")
+    .filter({ has: page.getByTestId("plant-name").getByText(plant, { exact: true }) });
+  for (const [index, device] of devices.entries()) {
+    await page.goto("/");
+    await page.getByLabel("Search", { exact: true }).fill(site);
+    await plantItem.getByRole("link", { name: device, exact: true }).click();
+    await page.getByRole("button", { name: `Edit device ${device}` }).click();
+    const deviceForm = page.getByRole("form", { name: "Edit device" });
+    await expect(deviceForm.getByLabel("Device class")).toHaveValue(classes[index] ?? "");
+  }
+
+  // The same file with 13 columns changes nothing: the classes stay.
+  await page.goto("/import");
+  await chooseCsv(page, csv(rows));
+  await page.getByRole("button", { name: "Start dry run" }).click();
+  await expect(page.getByTestId("import-count-devices-unchanged")).toHaveText("2");
+  await expect(page.getByTestId("import-count-devices-updated")).toHaveText("0");
+
+  expect(consoleErrors, "errors in the browser console").toEqual([]);
+});
+
+test("an unknown device class is an error at its line and column", async ({ page }) => {
+  const consoleErrors = collectConsoleErrors(page);
+  const { rows, site } = twoDevices();
+  const classified = [
+    { ...rows[0], device_class: "router" },
+    { ...rows[1], device_class: "switch" },
+  ];
+
+  await page.goto("/import");
+  await chooseCsv(page, csv(classified, COLUMNS_WITH_DEVICE_CLASS));
+  await page.getByRole("button", { name: "Start dry run" }).click();
+
+  await expect(page.getByTestId("import-summary")).toHaveText("The file has 1 error. Nothing has been saved.");
+  const error = page.getByTestId("import-error");
+  await expect(error).toHaveCount(1);
+  await expect(error.getByTestId("import-error-line")).toHaveText("3");
+  await expect(error.getByTestId("import-error-column")).toHaveText("device_class");
+  await expect(error.getByTestId("import-error-message")).toContainText("is not a device class");
+  await expect(page.getByRole("button", { name: "Apply" })).toHaveCount(0);
+
   await page.goto("/");
   await page.getByLabel("Search", { exact: true }).fill(site);
   await expect(nothingFound(page)).toBeVisible();
