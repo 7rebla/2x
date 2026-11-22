@@ -139,3 +139,12 @@ Web-Job wie in `ci.yml` (`twox-059-web`, vorher `web/dist` und `web/playwright-r
 7. Für die lokalen Läufe lagen im `api`-Container kurz zwei Markdown-Dateien aus `testdata/klein/`, eine selbst geschriebene Textdatei und ein Hilfsskript unter `/tmp`; mit `down -v` entfernt. Ins Repository kam nichts davon. „2x“ und „twox-leit“ nicht berührt.
 
 Keine offene Frage an a7.
+
+### Nachbesserung aus der Prüfung der Leitstelle
+
+1. **Client-Adresse im Zugriffsprotokoll:** Der Formatter `uvicorn_access` in `settings.py` schreibt `%(client_addr)s`. ARCHITECTURE („Logging“) sagt jetzt: Der Query-String wird entfernt, Methode, Pfad, Status und Client-Adresse (mit Port) bleiben, auch bei fehlgeschlagener Anmeldung. Ob die Adresse entfernt wird, ist offen bei a7 (Stufe C). Im README sagt „Rate limit of the sign-in“ nur noch, dass die Meldung des Anmelde-Adapters keine Adresse enthält, und nennt die Adresse im Zugriffsprotokoll als bekannte Grenze, offen bei a7. Unter „Search texts“ steht dazu ein Halbsatz.
+2. **Kleinere Ungenauigkeiten:**
+   - Wartezeit bei gestopptem Docling: 10 + 20 + 40 + 60 + 60 = 190 s statt „etwa 2,5 min“.
+   - BetrSichV: 258 s in Docling, 292 s für den ganzen Auftrag (046/057) statt „about 5 minutes“.
+   - `embed_sections` im Fließtext von README und ARCHITECTURE mit `--user`; `ingest_versions --failed` dort ebenfalls mit `--user` und `--commit`.
+3. **Prüfungen:** `git diff --check` ohne Befund, `gitleaks-dir` ohne Fund (Exit 0). Nur Doku geändert.
