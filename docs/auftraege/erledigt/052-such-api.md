@@ -1,6 +1,6 @@
 # Auftrag 052 – Such-API
 
-Meilenstein: M2 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 

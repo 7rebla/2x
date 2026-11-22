@@ -178,12 +178,12 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 049 | Einlesen anstoßen, Formatprüfung, Befehl | C | 046 | erledigt |
 | 050 | Vektorsuche und Kombination | B | 044, 047 | erledigt |
 | 051 | Einlese-API | C | 049 | erledigt |
-| 052 | Such-API | C | 050, 051 | in Arbeit |
+| 052 | Such-API | C | 050, 051 | erledigt |
 | 053 | Oberfläche: Einlese-Status | B | 051 | erledigt |
-| 054 | Oberfläche: Suchseite | B | 052 | offen |
+| 054 | Oberfläche: Suchseite | B | 052 | in Arbeit |
 | 055 | Oberfläche: Einlese-Übersicht | B | 051, 053, 054 | offen |
 | 056 | Suchprobe: Befehl evaluate_search | B | 050 | erledigt |
-| 057 | Messlauf in der Testumgebung (Leitstelle) | C | 048, 049, 050, 056 | offen |
+| 057 | Messlauf in der Testumgebung (Leitstelle) | C | 048, 049, 050, 056 | in Arbeit |
 | 058 | Abnahmetests M2 | B | 052–055 | offen |
 | 059 | README und ARCHITECTURE für M2 | B | 055, 056, 058 | offen |
 | 060 | Abnahmelauf M2 (Leitstelle) | C | 057, 058, 059 | offen |
@@ -209,4 +209,5 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 - 051: `GET /api/v1/ingest-jobs/` (read; Filter status/device/document/version, 50 je Seite), `POST /api/v1/document-versions/{id}/ingest/` (manage; 202, 409 `ingest_active`, 400 `configuration_not_ingested`), Feld `ingest` an jeder Version (eine Zusatzabfrage per `DISTINCT ON`), `requested_by` nur für manage (E-57), zusätzlich `partly_converted`. Schema-Enum `StatusEnum` heißt jetzt `HealthStatusEnum`. Folgeauftrag 061: Einbettungsaufträge aus `embed_sections` als neuester Auftrag verfälschen Seitenzahl und Hinweis.
 - 061: Einbettungsaufträge aus `embed_sections` übernehmen Seitenzahl und Teilumwandlungs-Hinweis der neuesten fertigen Umwandlung (auch `failed` im Schritt `embed`). `PARTIAL_DETAIL_PREFIX` steht nur noch in `ingest/models.py`. Grenze: Scheitert das Einbetten, überschreibt `_fail` den Hinweis – nur mit eigenem Feld lösbar (siehe „Wartet auf a7“).
 - 053: Spalte „Einlesen“ auf der Dateiseite und Abzeichen auf der Geräteseite (In Warteschlange, Wird eingelesen: Schritt, Eingelesen mit Seiten und Abschnitten, Fehler mit Meldung je Fehlerart, Übersprungen, Nicht eingelesen), Abfrage alle 5 s nur bei laufendem Auftrag, „Erneut einlesen“ nur für Verwalter. Hinweis: Statuswechsel werden Screenreadern nicht angesagt (für 058/059 vormerken). Bündelwarnung bestand schon vorher → 062.
+- 052: `GET /api/v1/search/` (read; q bis 500, device/plant je bis 100, limit bis 50), Antwort `semantic` used/disabled/unavailable, Treffer mit Ausschnitt, Markierungen in Codepoints und Fundorten (mit Dateiname der Version). Ausschlüsse (`-Wort`) wirken auf alle drei Zweige, in der Vektorsuche vor dem LIMIT. Logfilter: Suchtexte stehen nicht im Zugriffsprotokoll. Eigene Zeitgrenze `TWOX_SEARCH_EMBED_TIMEOUT_SECONDS` (20 s), Modellprüfung 300 s je Prozess zwischengespeichert. Kriterium 8 (Browser) holt die Leitstelle nach 054 nach.
 - 074: Acht eigene Icons (Anlage, Gerät, sechs Gerätetypen) unter `web/src/icons/industrial/`, Zuordnung nur in `deviceClass.ts` (Rückfall: generisches Gerät). Typ als Text im Baum, als Feld „Gerätetyp“ auf der Geräteseite, als Tooltip auf der Karte. Notwendig mitgeändert: `graph.ts`, `MapPage.tsx`, `map.json`. Nicht von Hand bei 16 px gesichtet.
