@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AreasCreateData, AreasCreateResponses, AreasListData, AreasListResponses, AreasPartialUpdateData, AreasPartialUpdateResponses, AreasRetrieveData, AreasRetrieveResponses, AreasUpdateData, AreasUpdateResponses, AuditLogListData, AuditLogListResponses, DeviceDocumentsCreateData, DeviceDocumentsCreateErrors, DeviceDocumentsCreateResponses, DeviceDocumentsListData, DeviceDocumentsListErrors, DeviceDocumentsListResponses, DevicesCreateData, DevicesCreateResponses, DevicesImportData, DevicesImportErrors, DevicesImportResponses, DevicesListData, DevicesListResponses, DevicesPartialUpdateData, DevicesPartialUpdateResponses, DevicesRetrieveData, DevicesRetrieveResponses, DevicesUpdateData, DevicesUpdateResponses, DocumentRetrieveData, DocumentRetrieveErrors, DocumentRetrieveResponses, DocumentVersionCreateData, DocumentVersionCreateErrors, DocumentVersionCreateResponses, DocumentVersionDownloadData, DocumentVersionDownloadErrors, DocumentVersionDownloadResponses, DocumentVersionIngestData, DocumentVersionIngestErrors, DocumentVersionIngestResponses, HealthRetrieveData, HealthRetrieveResponses, IngestJobsListData, IngestJobsListErrors, IngestJobsListResponses, MeRetrieveData, MeRetrieveResponses, PlantsCreateData, PlantsCreateResponses, PlantsListData, PlantsListResponses, PlantsPartialUpdateData, PlantsPartialUpdateResponses, PlantsRetrieveData, PlantsRetrieveResponses, PlantsUpdateData, PlantsUpdateResponses, SelftestRetrieveData, SelftestRetrieveResponses, SitesCreateData, SitesCreateResponses, SitesListData, SitesListResponses, SitesPartialUpdateData, SitesPartialUpdateResponses, SitesRetrieveData, SitesRetrieveResponses, SitesUpdateData, SitesUpdateResponses } from './types.gen';
+import type { AreasCreateData, AreasCreateResponses, AreasListData, AreasListResponses, AreasPartialUpdateData, AreasPartialUpdateResponses, AreasRetrieveData, AreasRetrieveResponses, AreasUpdateData, AreasUpdateResponses, AuditLogListData, AuditLogListResponses, DeviceDocumentsCreateData, DeviceDocumentsCreateErrors, DeviceDocumentsCreateResponses, DeviceDocumentsListData, DeviceDocumentsListErrors, DeviceDocumentsListResponses, DevicesCreateData, DevicesCreateResponses, DevicesImportData, DevicesImportErrors, DevicesImportResponses, DevicesListData, DevicesListResponses, DevicesPartialUpdateData, DevicesPartialUpdateResponses, DevicesRetrieveData, DevicesRetrieveResponses, DevicesUpdateData, DevicesUpdateResponses, DocumentRetrieveData, DocumentRetrieveErrors, DocumentRetrieveResponses, DocumentVersionCreateData, DocumentVersionCreateErrors, DocumentVersionCreateResponses, DocumentVersionDownloadData, DocumentVersionDownloadErrors, DocumentVersionDownloadResponses, DocumentVersionIngestData, DocumentVersionIngestErrors, DocumentVersionIngestResponses, HealthRetrieveData, HealthRetrieveResponses, IngestJobsListData, IngestJobsListErrors, IngestJobsListResponses, MeRetrieveData, MeRetrieveResponses, PlantsCreateData, PlantsCreateResponses, PlantsListData, PlantsListResponses, PlantsPartialUpdateData, PlantsPartialUpdateResponses, PlantsRetrieveData, PlantsRetrieveResponses, PlantsUpdateData, PlantsUpdateResponses, SearchData, SearchErrors, SearchResponses, SelftestRetrieveData, SelftestRetrieveResponses, SitesCreateData, SitesCreateResponses, SitesListData, SitesListResponses, SitesPartialUpdateData, SitesPartialUpdateResponses, SitesRetrieveData, SitesRetrieveResponses, SitesUpdateData, SitesUpdateResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -438,6 +438,23 @@ export const plantsUpdate = <ThrowOnError extends boolean = false>(options: Opti
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * Hits for ``q``, best first, at most ``limit``; optionally only on some devices or plants.
+ *
+ * Exact identifiers come first, then keyword and meaning together.
+ * The same content stored for several devices is one hit with all its
+ * places.
+ */
+export const search = <ThrowOnError extends boolean = false>(options: Options<SearchData, ThrowOnError>): RequestResult<SearchResponses, SearchErrors, ThrowOnError> => (options.client ?? client).get<SearchResponses, SearchErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/search/',
+    ...options
 });
 
 /**
