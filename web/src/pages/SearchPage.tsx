@@ -11,8 +11,9 @@ import { type ReactElement, type SubmitEvent, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import type { Device, SearchData, SearchResult } from "../api/generated";
+import type { SearchData, SearchResult } from "../api/generated";
 import { devicesListOptions, searchOptions } from "../api/generated/@tanstack/react-query.gen.ts";
+import { devicesByPlant } from "../components/devicesByPlant.ts";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { parseId } from "../components/files/format.ts";
 import { Loading } from "../components/Loading.tsx";
@@ -50,28 +51,6 @@ export function searchAddressParams({ q, device }: SearchAddress): URLSearchPara
     params.set("device", String(device));
   }
   return params;
-}
-
-/** Devices sorted by plant, then by name, for the choice in the form. */
-function sortedDevices(devices: readonly Device[]): Device[] {
-  return [...devices].sort(
-    (a, b) =>
-      a.plant.name.localeCompare(b.plant.name) || a.name.localeCompare(b.name) || a.key.localeCompare(b.key),
-  );
-}
-
-/** Devices grouped by plant, in the order of sortedDevices. */
-function devicesByPlant(devices: readonly Device[]): { plantId: number; plantName: string; devices: Device[] }[] {
-  const groups: { plantId: number; plantName: string; devices: Device[] }[] = [];
-  for (const device of sortedDevices(devices)) {
-    const last = groups.at(-1);
-    if (last?.plantId === device.plant.id) {
-      last.devices.push(device);
-    } else {
-      groups.push({ plantId: device.plant.id, plantName: device.plant.name, devices: [device] });
-    }
-  }
-  return groups;
 }
 
 function SearchForm({

@@ -11,6 +11,7 @@ import { changeLanguage } from "../i18n.ts";
 import { fakeApi, fakeEventStream, type Handler, jsonResponse, reader } from "../test/fakeApi.ts";
 import { renderApp } from "../test/renderApp.tsx";
 import { answerLocation, answerSource, deltaEvent, doneEvent, errorEvent, sourcesEvent } from "./answer/testData.ts";
+import { fakeStructureApi } from "./structure/testData.ts";
 
 const STATUS_PATH = "/api/v1/answers/status/";
 const ANSWERS_PATH = "/api/v1/answers/";
@@ -28,9 +29,14 @@ afterEach(async () => {
   window.localStorage.clear();
 });
 
-/** A server with the given status; the answer stream is driven by the test unless `answer` is given. */
+/**
+ * A server with the given status; the answer stream is driven by the test
+ * unless `answer` is given. Devices and plants come from the test structure
+ * (structure/testData.ts) for the choice of the limit (work order 133).
+ */
 function fakeAnswerServer(status: AnswerStatus = AVAILABLE, answer?: Handler) {
   const stream = fakeEventStream();
+  const structure = fakeStructureApi();
   const api = fakeApi(reader, (request) => {
     const path = new URL(request.url).pathname;
     if (path === STATUS_PATH) {
@@ -39,7 +45,7 @@ function fakeAnswerServer(status: AnswerStatus = AVAILABLE, answer?: Handler) {
     if (path === ANSWERS_PATH) {
       return answer === undefined ? stream.response(request) : answer(request);
     }
-    return jsonResponse({ detail: "Not found." }, 404);
+    return structure.handler(request);
   });
   return { stream, posts: () => api.requestsTo(ANSWERS_PATH) };
 }
@@ -449,5 +455,262 @@ describe("end states", () => {
     const alert = await screen.findByRole("alert");
     expect(within(alert).getByTestId("error-summary").textContent).toContain("400");
     expect(statusLine()).toBe("");
+  });
+});
+
+describe("limit to one device or one plant (work order 133)", () => {
+  function choice(testId: "answer-device" | "answer-plant"): HTMLSelectElement {
+    const select = screen.getByTestId(testId);
+    if (!(select instanceof HTMLSelectElement)) {
+      throw new Error("not a choice");
+    }
+    return select;
+  }
+
+  /** Waits until both lists are loaded (the test structure has device 1003 and plant 102). */
+  async function listsLoaded(): Promise<void> {
+    await waitFor(() => {
+      expect(within(choice("answer-device")).queryByRole("option", { name: "Test drive (test-drive-1)" })).not.toBeNull();
+      expect(
+        within(choice("answer-plant")).queryByRole("option", { name: "Test plant three (test-plant-3)" }),
+      ).not.toBeNull();
+    });
+  }
+
+  function chip(): HTMLElement | null {
+    return screen.queryByTestId("answer-scope");
+  }
+
+  it("offers all devices grouped by plant and all plants sorted by name, with labels", async () => {
+    fakeAnswerServer();
+    renderApp("/ask");
+    await listsLoaded();
+
+    expect(screen.getByLabelText("Device")).toBe(choice("answer-device"));
+    expect(choice("answer-device").value).toBe("");
+    expect(
+      Array.from(choice("answer-device").querySelectorAll("optgroup")).map((group) => [
+        group.label,
+        Array.from(group.querySelectorAll("option")).map((option) => option.textContent),
+      ]),
+    ).toEqual([
+      ["Test plant one", ["Test controller (test-plc-1)", "Test panel (test-hmi-1)", "Test remote I/O (test-io-1)"]],
+      ["Test plant three", ["Test drive (test-drive-1)"]],
+    ]);
+    expect(screen.getByLabelText("Plant")).toBe(choice("answer-plant"));
+    expect(Array.from(choice("answer-plant").options).map((option) => option.textContent)).toEqual([
+      "All plants",
+      "Test plant one (test-plant-1)",
+      "Test plant three (test-plant-3)",
+      "Test plant two (test-plant-2)",
+    ]);
+    expect(chip()).toBeNull();
+  });
+
+  it("takes ?device= into the choice and the chip and lifts it again", async () => {
+    fakeAnswerServer();
+    const { router } = renderApp("/ask?device=1000");
+    await listsLoaded();
+
+    expect(choice("answer-device").value).toBe("1000");
+    expect(choice("answer-plant").value).toBe("");
+    await waitFor(() => {
+      expect(chip()?.textContent).toContain("Limited to: device Test controller (test-plc-1)");
+    });
+    expect(chip()?.getAttribute("role")).toBeNull();
+
+    // Label in name: the button is named by its visible text alone.
+    const reset = screen.getByRole("button", { name: "Remove limit" });
+    expect(reset.getAttribute("aria-label")).toBeNull();
+    fireEvent.click(reset);
+    await waitFor(() => {
+      expect(chip()).toBeNull();
+    });
+    expect(router.state.location.search).toBe("");
+    expect(choice("answer-device").value).toBe("");
+  });
+
+  it("takes ?plant= into the choice and the chip; lifting it keeps ?q=", async () => {
+    const server = fakeAnswerServer();
+    const { router } = renderApp("/ask?q=Test%20question&plant=102");
+    await listsLoaded();
+
+    expect(choice("answer-plant").value).toBe("102");
+    expect(choice("answer-device").value).toBe("");
+    expect(screen.getByTestId("answer-scope-name").textContent).toBe("Test plant three");
+    expect(chip()?.textContent).toContain("Limited to: plant Test plant three");
+
+    fireEvent.click(screen.getByTestId("answer-scope-reset"));
+    await waitFor(() => {
+      expect(chip()).toBeNull();
+    });
+    expect(router.state.location.search).toBe("?q=Test+question");
+    expect((await questionField()).value).toBe("Test question");
+    expect(server.posts()).toHaveLength(0);
+  });
+
+  it("shows the chip in German", async () => {
+    await changeLanguage("de");
+    fakeAnswerServer();
+    renderApp("/ask?device=1003");
+    await waitFor(() => {
+      expect(chip()?.textContent).toContain("Eingegrenzt auf: Gerät Test drive (test-drive-1)");
+    });
+    expect(screen.getByTestId("answer-scope-reset").textContent).toBe("Eingrenzung aufheben");
+  });
+
+  it.each([
+    ["/ask?device=1000", { device: [1000] }, "?device=1000"],
+    ["/ask?plant=100", { plant: [100] }, "?plant=100"],
+    ["/ask", {}, ""],
+  ])("%s sends the limit in the body and never the question in the address", async (path, limit, search) => {
+    const server = fakeAnswerServer();
+    const { router } = renderApp(path);
+    await listsLoaded();
+    await ask("Test question about the limit?");
+
+    await waitFor(() => {
+      expect(server.posts()).toHaveLength(1);
+    });
+    expect(await server.posts()[0]?.json()).toEqual({ question: "Test question about the limit?", ...limit });
+    expect(new URL(server.posts()[0]?.url ?? "").search).toBe("");
+    expect(router.state.location.search).toBe(search);
+    expect(router.state.location.search).not.toContain("question");
+  });
+
+  it("a chosen device replaces the address without sending, and goes into the next question", async () => {
+    const server = fakeAnswerServer();
+    const { router } = renderApp("/ask");
+    await listsLoaded();
+
+    fireEvent.change(choice("answer-device"), { target: { value: "1001" } });
+    await waitFor(() => {
+      expect(router.state.location.search).toBe("?device=1001");
+    });
+    expect(router.state.historyAction).toBe("REPLACE");
+    expect(server.posts()).toHaveLength(0);
+    expect(chip()?.textContent).toContain("Test panel (test-hmi-1)");
+
+    await ask("Test question about the panel?");
+    await waitFor(() => {
+      expect(server.posts()).toHaveLength(1);
+    });
+    expect(await server.posts()[0]?.json()).toEqual({ question: "Test question about the panel?", device: [1001] });
+    expect(router.state.location.search).toBe("?device=1001");
+  });
+
+  it("device and plant exclude each other", async () => {
+    fakeAnswerServer();
+    const { router } = renderApp("/ask?device=1000");
+    await listsLoaded();
+
+    fireEvent.change(choice("answer-plant"), { target: { value: "100" } });
+    await waitFor(() => {
+      expect(router.state.location.search).toBe("?plant=100");
+    });
+    expect(choice("answer-device").value).toBe("");
+    expect(choice("answer-plant").value).toBe("100");
+
+    fireEvent.change(choice("answer-device"), { target: { value: "1003" } });
+    await waitFor(() => {
+      expect(router.state.location.search).toBe("?device=1003");
+    });
+    expect(choice("answer-plant").value).toBe("");
+    expect(choice("answer-device").value).toBe("1003");
+
+    fireEvent.change(choice("answer-device"), { target: { value: "" } });
+    await waitFor(() => {
+      expect(router.state.location.search).toBe("");
+    });
+    expect(chip()).toBeNull();
+  });
+
+  it("with both in the address the device wins, and only the device is sent", async () => {
+    const server = fakeAnswerServer();
+    renderApp("/ask?device=1000&plant=102");
+    await listsLoaded();
+    expect(choice("answer-device").value).toBe("1000");
+    expect(choice("answer-plant").value).toBe("");
+
+    await ask();
+    await waitFor(() => {
+      expect(server.posts()).toHaveLength(1);
+    });
+    expect(await server.posts()[0]?.json()).toEqual({ question: "Test question about the inspection?", device: [1000] });
+  });
+
+  it.each(["/ask?device=abc", "/ask?device=0", "/ask?plant=-1", "/ask?device=1.5"])(
+    "%s counts as all devices",
+    async (path) => {
+      const server = fakeAnswerServer();
+      renderApp(path);
+      await listsLoaded();
+      expect(choice("answer-device").value).toBe("");
+      expect(choice("answer-plant").value).toBe("");
+      expect(chip()).toBeNull();
+
+      await ask();
+      await waitFor(() => {
+        expect(server.posts()).toHaveLength(1);
+      });
+      expect(await server.posts()[0]?.json()).toEqual({ question: "Test question about the inspection?" });
+    },
+  );
+
+  it("an unknown device id stays as its own entry and in the chip, and is sent", async () => {
+    const server = fakeAnswerServer();
+    renderApp("/ask?device=999");
+    await listsLoaded();
+
+    await waitFor(() => {
+      expect(choice("answer-device").value).toBe("999");
+    });
+    expect(choice("answer-device").selectedOptions[0]?.textContent).toBe("Unknown device (999)");
+    expect(screen.getByTestId("answer-scope-name").textContent).toBe("Unknown device (999)");
+
+    await ask();
+    await waitFor(() => {
+      expect(server.posts()).toHaveLength(1);
+    });
+    expect(await server.posts()[0]?.json()).toEqual({ question: "Test question about the inspection?", device: [999] });
+  });
+
+  it("an unknown plant id stays as its own entry and in the chip", async () => {
+    fakeAnswerServer();
+    renderApp("/ask?plant=998");
+    await listsLoaded();
+
+    await waitFor(() => {
+      expect(choice("answer-plant").value).toBe("998");
+    });
+    expect(choice("answer-plant").selectedOptions[0]?.textContent).toBe("Unknown plant (998)");
+    expect(screen.getByTestId("answer-scope-name").textContent).toBe("Unknown plant (998)");
+  });
+
+  it("lifting the limit does not stop a running answer", async () => {
+    const { stream, posts } = fakeAnswerServer();
+    const { router } = renderApp("/ask?device=1000");
+    await listsLoaded();
+    await ask();
+    stream.send(sourcesEvent(SOURCES) + deltaEvent("Provisional text [1]"));
+    await screen.findByTestId("answer-cancel");
+
+    fireEvent.click(screen.getByTestId("answer-scope-reset"));
+    await waitFor(() => {
+      expect(router.state.location.search).toBe("");
+    });
+    expect(screen.getByTestId("answer-cancel")).toBeDefined();
+    expect(stream.stopped).toBe(false);
+    expect(posts()).toHaveLength(1);
+  });
+
+  it("with the AI off the choice and the chip stay", async () => {
+    fakeAnswerServer({ enabled: false, chat_model_configured: true, available: false });
+    renderApp("/ask?device=1000");
+    await screen.findByTestId("answer-unavailable");
+    await listsLoaded();
+    expect(choice("answer-device").value).toBe("1000");
+    expect(chip()).not.toBeNull();
+    expect(askButton().disabled).toBe(true);
   });
 });

@@ -173,6 +173,43 @@ describe("device page", () => {
     expect(screen.getByRole("button", { name: "Edit device Test controller" })).toBeDefined();
   });
 
+  it("links readers and managers to a question limited to the device", async () => {
+    for (const user of [reader, manager]) {
+      fakeApi(user, fakeStructureApi().handler);
+      renderApp("/devices/1000");
+      await deviceHeading("Test controller");
+      const link = screen.getByRole("link", { name: "Ask about this device: Test controller" });
+      expect(link.getAttribute("href")).toBe("/ask?device=1000");
+      expect(link.getAttribute("data-testid")).toBe("device-ask");
+      expect(link.textContent).toBe("Ask about this device");
+      // Label in name (WCAG 2.5.3): the accessible name starts with the visible text.
+      expect(link.getAttribute("aria-label")?.startsWith(link.textContent)).toBe(true);
+      cleanup();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("names the link to the question in German", async () => {
+    await changeLanguage("de");
+    fakeApi(reader, fakeStructureApi().handler);
+    renderApp("/devices/1000");
+    await deviceHeading("Test controller");
+    const link = screen.getByTestId("device-ask");
+    expect(link.getAttribute("aria-label")).toBe("Frage zu diesem Gerät: Test controller");
+    expect(link.textContent).toBe("Frage zu diesem Gerät");
+  });
+
+  it("opens the answer page limited to the device without sending a question", async () => {
+    const api = fakeApi(reader, fakeStructureApi().handler);
+    const { router } = renderApp("/devices/1000");
+    await deviceHeading("Test controller");
+    fireEvent.click(screen.getByTestId("device-ask"));
+    await screen.findByTestId("answer-scope");
+    expect(router.state.location.pathname).toBe("/ask");
+    expect(router.state.location.search).toBe("?device=1000");
+    expect(api.requestsTo("/api/v1/answers/")).toHaveLength(0);
+  });
+
   it("edits the device and shows the new value after reloading", async () => {
     const api = fakeApi(manager, fakeStructureApi().handler);
     renderApp("/devices/1000");

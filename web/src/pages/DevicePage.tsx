@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 
 import { ApiError } from "../api/errors.ts";
 import type { Device } from "../api/generated";
@@ -12,6 +12,7 @@ import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { NotFound } from "../components/NotFound.tsx";
 import { Button } from "../components/ui/Button.tsx";
+import { buttonClasses } from "../components/ui/classes.ts";
 import { Icon } from "../icons/Icon.tsx";
 import { useRole } from "../session.ts";
 import { deviceClassIcon } from "./structure/deviceClass.ts";
@@ -26,6 +27,11 @@ export function parseDeviceId(raw: string | undefined): number | null {
   }
   const id = Number(raw);
   return Number.isSafeInteger(id) ? id : null;
+}
+
+/** The answer page limited to one device (work order 133). */
+export function askPath(deviceId: number): string {
+  return `/ask?device=${String(deviceId)}`;
 }
 
 /** One device with all its fields (address /devices/:deviceId). */
@@ -78,7 +84,7 @@ const IDENTIFIER_FIELDS = new Set<FieldName>(["key", "ip_address", "software_ver
 
 function DeviceView({ device, error }: { device: Device; error: unknown }): ReactElement {
   const { t, i18n } = useTranslation(["assets", "nav"]);
-  const { canManage } = useRole();
+  const { canRead, canManage } = useRole();
   const [editing, setEditing] = useState(false);
   const dateFormat = new Intl.DateTimeFormat(i18n.resolvedLanguage, { dateStyle: "medium", timeStyle: "short" });
   const icon = deviceClassIcon(device.device_class);
@@ -95,19 +101,35 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
           <Icon name={icon} size={24} className="text-fg-muted" decorative />
           <MaskedTitle text={device.name} testId="device-title" />
         </div>
-        {canManage && !editing ? (
-          <Button
-            type="button"
-            variant="primary"
-            icon="edit"
-            aria-label={t("assets:actions.editDevice", { name: device.name })}
-            onClick={() => {
-              setEditing(true);
-            }}
-          >
-            {t("assets:actions.edit")}
-          </Button>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* A question limited to this device (work order 133); it only fills the address, nothing is sent.
+              It stays while the AI is off: the answer page explains that state. */}
+          {canRead ? (
+            <Link
+              to={askPath(device.id)}
+              data-testid="device-ask"
+              aria-label={t("assets:actions.askDeviceNamed", { name: device.name })}
+              /* The hover of the variant uses enabled:, which a link never matches; same colour as the secondary button. */
+              className={buttonClasses("secondary", "md", "hover:bg-surface-muted")}
+            >
+              <Icon name="search" size={20} decorative />
+              {t("assets:actions.askDevice")}
+            </Link>
+          ) : null}
+          {canManage && !editing ? (
+            <Button
+              type="button"
+              variant="primary"
+              icon="edit"
+              aria-label={t("assets:actions.editDevice", { name: device.name })}
+              onClick={() => {
+                setEditing(true);
+              }}
+            >
+              {t("assets:actions.edit")}
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {/* A failed reload keeps the last data on screen and says so. */}

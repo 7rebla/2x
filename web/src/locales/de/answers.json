@@ -11,6 +11,19 @@
     "submitting": "Wird beantwortet…",
     "cancel": "Abbrechen"
   },
+  "scope": {
+    "device": "Gerät",
+    "allDevices": "Alle Geräte",
+    "plant": "Anlage",
+    "allPlants": "Alle Anlagen",
+    "unknownDevice": "Unbekanntes Gerät ({{id}})",
+    "unknownPlant": "Unbekannte Anlage ({{id}})",
+    "byId": "Nr. {{id}}",
+    "limitedTo": "Eingegrenzt auf:",
+    "kindDevice": "Gerät",
+    "kindPlant": "Anlage",
+    "reset": "Eingrenzung aufheben"
+  },
   "state": {
     "searching": "Suche Quellen…",
     "writing": "Antwort wird erstellt…",
