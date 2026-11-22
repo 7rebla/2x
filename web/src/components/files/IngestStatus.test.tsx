@@ -223,17 +223,48 @@ describe("IngestError", () => {
   });
 
   it("hints at a partial conversion of a done job", async () => {
-    const job = ingestJob("done", { partly_converted: true, error_detail: "converted with errors: page 3" });
+    const job = ingestJob("done", {
+      partly_converted: true,
+      conversion_error_count: 1,
+      error_detail: "converted with 1 errors on pages 3",
+    });
     render(<IngestError job={job} />);
     expect(screen.getByTestId("ingest-error-message").textContent).toBe(
       "Converted only in part: some pages or elements could not be read.",
     );
     expect(screen.getByTestId("ingest-error-message").className).toContain("text-warning");
-    expect(screen.getByTestId("ingest-error-detail").textContent).toBe("converted with errors: page 3");
+    expect(screen.getByTestId("ingest-error-detail").textContent).toBe("converted with 1 errors on pages 3");
     cleanup();
     await changeLanguage("de");
     render(<IngestError job={job} />);
     expect(screen.getByTestId("ingest-error-message").textContent).toMatch(/^Nur teilweise umgewandelt/);
+  });
+
+  it("hints at a partial conversion of an embedding job after a failed embedding", () => {
+    // E-62: the embedding job of embed_sections carries the count of the conversion.
+    const job = ingestJob("done", {
+      step: "embed",
+      partly_converted: true,
+      conversion_error_count: 2,
+      error_detail: "converted with 2 errors",
+    });
+    render(<IngestError job={job} />);
+    expect(screen.getByTestId("ingest-error-message").textContent).toBe(
+      "Converted only in part: some pages or elements could not be read.",
+    );
+  });
+
+  it("shows the embedding error of a failed job that was converted only in part", () => {
+    const job = ingestJob("failed", {
+      step: "embed",
+      error_code: "embedding_unavailable",
+      error_detail: "cannot reach the model service (gave up after 5 retries)",
+      partly_converted: true,
+      conversion_error_count: 2,
+    });
+    render(<IngestError job={job} />);
+    expect(screen.getByTestId("ingest-error").dataset.code).toBe("embedding_unavailable");
+    expect(screen.getByTestId("ingest-error-message").className).toContain("text-danger");
   });
 
   it.each(["queued", "running", "done"] as const)("shows nothing for a %s job without a hint", (status) => {
