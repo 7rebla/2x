@@ -146,3 +146,12 @@ Keine, die den Auftrag aufhält. Die genaue Widerspruchs-Wendung hängt an D9 (A
   3. Tests: Neue `INJECTIONS`-Fälle mit U+FE0F, U+034F, U+E0100, U+3164, U+2800, U+115F, U+1160 und U+FFA0 als Lücke sowie mit ⫷/⫸ und ⪡/⪢ als Einzelzeichen; dazu Einzeltests für jede Lücke und jede Mehrfach-Klammer. Ein Eigenschaftstest bildet für jedes der 154 abgeleiteten Zeichen eine Folge aus drei Zeichen und prüft, dass sie ersetzt wird. Weitere Tests: Stichproben der abgeleiteten Menge, Umlaute zwischen Klammern sind keine Lücke, `prompt_version()` folgt der Unicode-Version.
   4. Der Modul-Docstring und `docs/ARCHITECTURE.md` beschreiben die Ableitung und nennen die Grenze: Der eigentliche Schutz ist die zufällige Kennung, die Neutralisierung ist Verteidigung in der Tiefe.
   5. `prompt_version()` bezieht ein: `BRACKET_NFKC`, `BRACKET_NAME_WORDS`, die Ergänzungszeichen, die Seiten- und Mehrfach-Namenswörter, `GAP_CATEGORY_GROUPS`, `INVISIBLE_FILLERS`, `unicodedata.unidata_version` und die übrigen Regeln. Für jede Regel prüft ein parametrisierter Test, dass sich der Wert ändert.
+- **Nachbesserung 3:**
+  1. `main` (mit 120, 121, 136) in den Zweig zusammengeführt, ohne Konflikt.
+  2. `prompt.py` nimmt `ChatMessage` aus `twox.answers.chat`. `build_messages()` liefert `list[ChatMessage]`, und `Message` bleibt als Alias erhalten. Docstring und `docs/ARCHITECTURE.md` sind angepasst, `mypy .` ist grün.
+  3. Neu von Hand ergänzt sind die Verwechsler aus Unicode `confusables.txt` (UTS #39, Ziele U+003C/U+003E):
+     - öffnend U+16B2, U+1D236, U+2D66, U+16AEC, U+1032D, dazu U+227A ≺;
+     - schließend U+1D237, U+16F3F, dazu U+227B ≻.
+     
+     Die Quelle steht im Kommentar. Die Zeichen sind im Test der abgeleiteten Menge enthalten. **Klarstellung:** Der Eigenschaftstest prüft nur, dass jedes Zeichen der Menge in einer Folge ersetzt wird. Ob die Menge vollständig ist, prüft er nicht und kann es nicht prüfen; der eigentliche Schutz bleibt die zufällige Kennung.
+  4. Anführungszeichen: Zeichen der Mehrfachliste ohne `LESS-THAN`/`GREATER-THAN` im Namen (« » 《 》, ⟪ ⟫, ︽ ︾ u. ä.) werden zu `"`, nicht zu runden Klammern. Aus »Zitat« wird also "Zitat". ≪ ⋘ ⫷ ⪡ werden weiterhin zu runden Klammern. Das prüft ein eigener Test; der alte Test mit « «x» » ist durch einen Fall mit `<<x>>` ersetzt.
