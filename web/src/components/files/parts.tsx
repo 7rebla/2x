@@ -15,7 +15,7 @@ import { downloadPath, formatDateTime, formatSize, shortChecksum } from "./forma
 export function Checksum({ sha256 }: { sha256: string }): ReactElement {
   const { t } = useTranslation("files");
   return (
-    <details data-testid="checksum" className="text-xs text-fg-muted">
+    <details data-testid="checksum" className="text-meta text-fg-muted">
       <summary
         title={`${t("checksum.show")}: ${sha256}`}
         className="inline cursor-pointer list-none underline decoration-dotted underline-offset-2 hover:text-fg [&::-webkit-details-marker]:hidden"
@@ -106,7 +106,7 @@ export function DownloadIconLink({ versionId, number }: { versionId: number; num
 export function UploadedBy({ name, testId }: { name: string | null; testId: string }): ReactElement {
   const { t } = useTranslation("files");
   return (
-    <span className="block text-xs text-fg-muted">
+    <span className="block text-meta text-fg-muted">
       <Icon name="user" className="mr-1" decorative />
       <span className="sr-only">{t("columns.user")}: </span>
       <span data-testid={testId}>

@@ -107,7 +107,7 @@ function AccentSetting(): ReactElement {
                 data-accent-preview={accent}
                 className="flex h-8 w-14 shrink-0 overflow-hidden rounded border border-line"
               >
-                <span className="flex flex-1 items-center justify-center bg-accent text-xs font-semibold text-on-accent">
+                <span className="flex flex-1 items-center justify-center bg-accent text-meta font-semibold text-on-accent">
                   Aa
                 </span>
                 <span className="flex-1 bg-accent-soft" />

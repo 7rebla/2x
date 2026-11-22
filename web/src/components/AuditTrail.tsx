@@ -225,7 +225,7 @@ function AuditTable({
         <>
           <span>{entry.object_repr}</span>
           {entry.object_id === null ? null : (
-            <span className="block text-xs font-normal whitespace-nowrap text-fg-muted">
+            <span className="block text-meta font-normal whitespace-nowrap text-fg-muted">
               {t("objectId", { id: entry.object_id })}
             </span>
           )}
@@ -356,7 +356,7 @@ function Changes({ changes }: { changes: AuditLogEntry["changes"] }): ReactEleme
         </span>
       ) : null}
       {all.length === 0 ? null : (
-        <details data-testid="audit-technical" className="text-xs">
+        <details data-testid="audit-technical" className="text-meta">
           <summary className="cursor-pointer text-fg-muted">{t("technical")}</summary>
           <div className="mt-1 space-y-2">
             {technical.length === 0 ? null : <ChangeList entries={technical} testId="audit-technical-list" />}
@@ -364,7 +364,7 @@ function Changes({ changes }: { changes: AuditLogEntry["changes"] }): ReactEleme
               <p className="text-fg-muted">{t("raw")}</p>
               <pre
                 data-testid="audit-raw"
-                className="font-mono text-xs whitespace-pre-wrap text-fg-muted [overflow-wrap:anywhere]"
+                className="font-mono text-meta whitespace-pre-wrap text-fg-muted [overflow-wrap:anywhere]"
               >
                 {rawJson(changes)}
               </pre>
@@ -407,7 +407,7 @@ function FieldLabel({ field }: { field: string }): ReactElement {
     );
   }
   return (
-    <code className="font-sans text-xs tabular-nums slashed-zero" data-testid="audit-change-field" data-field={field}>
+    <code className="font-sans text-meta tabular-nums slashed-zero" data-testid="audit-change-field" data-field={field}>
       {field}
     </code>
   );

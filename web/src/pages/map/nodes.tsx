@@ -41,7 +41,7 @@ function GroupNodeView({ data }: NodeProps<GroupNode>): ReactElement {
           {data.name}
         </div>
         {data.key === null ? null : (
-          <div className="truncate text-xs tabular-nums slashed-zero text-fg-muted" title={data.key}>
+          <div className="truncate text-meta tabular-nums slashed-zero text-fg-muted" title={data.key}>
             {data.key}
           </div>
         )}
@@ -73,16 +73,16 @@ function DeviceNodeView({ data, selected }: NodeProps<DeviceNode>): ReactElement
           {data.name}
         </span>
       </div>
-      <div className="truncate text-xs tabular-nums slashed-zero text-fg-muted" title={data.key}>
+      <div className="truncate text-meta tabular-nums slashed-zero text-fg-muted" title={data.key}>
         {data.key}
       </div>
       {data.ip === null ? null : (
-        <div className="truncate text-xs tabular-nums slashed-zero text-fg" title={data.ip}>
+        <div className="truncate text-meta tabular-nums slashed-zero text-fg" title={data.ip}>
           {data.ip}
         </div>
       )}
       {data.model === "" ? null : (
-        <div className="truncate text-xs text-fg-muted" title={data.model}>
+        <div className="truncate text-meta text-fg-muted" title={data.model}>
           {data.model}
         </div>
       )}
