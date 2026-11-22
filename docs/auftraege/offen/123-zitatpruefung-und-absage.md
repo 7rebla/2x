@@ -180,3 +180,23 @@ Alle Befehle laufen in Git Bash im Wurzelverzeichnis des Arbeitsverzeichnisses, 
   - `ruff check .` „All checks passed!“, `ruff format --check .` Exit 0, `mypy .` „Success: no issues found in 197 source files“.
   - `makemessages`, `check-licenses.sh` und `spectacular` Exit 0, ohne Unterschied unter `backend/locale` und `web/openapi`. `makemigrations --check` meldet „No changes detected“.
   - `--profile dev down -v` Exit 0.
+- **Nachbesserung 2 (nach zweiter Prüfung der Leitstelle):**
+  1. Typbezeichnung und Ziffern werden nur zusammengezogen, wenn das Token nach Entfernen der führenden Zeichen genau die Bezeichnung ist: nichts abgeschnitten, kein nachgestelltes `,` `:` `;` `)`. Tests:
+     - `Die Steuerung S7-1200, 2 Erweiterungsmodule [1].` gegen eine wörtlich gleiche Quelle ergibt `answered`.
+     - `G-1, 2 Stück [1].` gegen eine Quelle mit `G-12` ergibt `unsupported_value`.
+     - `Typ G-12: 3 Finger [1].` wörtlich belegt ergibt `answered`.
+  2. Angehängte Wortteile werden vor `find_identifiers` abgeschnitten: `-` gefolgt von mindestens vier Buchstaben (Unicode, `str.isalpha`) am Tokenende, Satzzeichen danach bleiben. Die Laufzeit bleibt linear. Tests:
+     - `S7-1500-Ausführung` gegen `S7-1200` ergibt `unsupported_value`.
+     - `S7-1200-Gerät` gegen `S7-1200` ist belegt.
+     - `G-12-Baugröße` ist gegen `G-12` belegt, `G-14-Baugröße` nicht.
+  3. Kleines `s.` (siehe) gilt als Abkürzung, außer direkt nach einer Zahl (`10 s.` beendet den Satz). Test: `(s. Abb. 3) [1]` bleibt in einem Satz.
+  4. `_PORT_WORD`, `_CITATION`, `_CITATION_RUN`, `_SENTENCE_END` und `_VERSION_WORD` haben possessive Leerraum-Quantoren. `_CITATION_RUN` beginnt nur am Anfang eines Leerraumlaufs. Der neue Test `test_space_runs_in_checked_sentences_stay_linear` deckt `Port` + Leerraumlauf (mit und ohne Zahl) und Zitatläufe mit langen Leerräumen ab, mit und ohne folgende Klammer. Ein Zähler auf `_check_values` belegt, dass die Sätze geprüft werden. Bei Zitatläufen wird zusätzlich die bereinigte Fassung verglichen.
+  5. Absolute Grenze für ungünstige Eingaben: 1 s für 20 000 Zeichen, festgelegt von der Leitstelle. Dazu kommt das Wachstumsmaß t(20000)/t(5000) < 8.
+
+  Prüfungen nach Nachbesserung 2 (twox-123):
+  - Build und `up --wait` Exit 0.
+  - `test_citations.py`: 141 bestanden.
+  - `pytest`: 2533 bestanden, 0 fehlgeschlagen. `pytest -m worker`: 6 bestanden.
+  - `ruff check .` „All checks passed!“, `ruff format --check .` Exit 0, `mypy .` „Success: no issues found in 197 source files“.
+  - `makemessages`, `check-licenses.sh` und `spectacular` Exit 0, ohne Unterschied. `makemigrations --check` meldet „No changes detected“.
+  - `down -v` Exit 0.
