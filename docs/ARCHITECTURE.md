@@ -367,7 +367,7 @@ All search goes through the interface in `twox/search/interface.py` (`get_search
 | --- | --- | --- |
 | `/api/v1/health/` | GET | open |
 | `/api/v1/me/` | GET: user name, role, superuser flag | signed in |
-| `/api/v1/selftest/` | GET: parts `database`, `worker` and `ai` | `CanRead` |
+| `/api/v1/selftest/` | GET: parts `database`, `worker` and `ai` (embedding model; with the AI features on also `chat_model`, `chat_ok`, `chat_error` from the local model list, no generation, `/api/tags` at most once) | `CanRead` |
 | `/api/v1/sites/`, `areas/`, `plants/`, `devices/` and `{id}/` | GET list and detail; POST, PUT, PATCH; no DELETE (405) | `CanManageOrReadOnly` |
 | `/api/v1/imports/devices/` | POST `multipart/form-data` with `file` and `dry_run` (default true); always 200 with a report, 400 only for an invalid form, 413 above the upload limit | `CanManage` |
 | `/api/v1/devices/{device_id}/documents/` | GET the files of a device; POST a new file (`file`, `title`, `kind`) | `CanManageOrReadOnly` |
