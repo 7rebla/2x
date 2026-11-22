@@ -157,7 +157,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 070 | Theme, Schrift Inter, Text-Animationen, Einstellungsseite | C | – (E-50, E-52) | in Arbeit |
 | 071 | Icon-Schicht mit Lucide | C | 070 (E-51) | offen (wartet auf 070) |
 | 072 | Marke: Bildmarke im Kopf, Favicon | C | 070 (E-52) | offen (wartet auf 070) |
-| 073 | Gerätetyp als Feld, API, Admin, CSV-Spalte, Testfabrik | C | – (E-53) | in Arbeit |
+| 073 | Gerätetyp als Feld, API, Admin, CSV-Spalte, Testfabrik | C | – (E-53) | erledigt |
 | 074 | Eigene Geräte-Icons in Baum, Geräteseite, Landkarte | B | 071, 073 | offen |
 
 ## M2 – Einlesen und Suche (freigegeben 22.11.2026, E-54)
@@ -187,3 +187,4 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 058 | Abnahmetests M2 | B | 052–055 | offen |
 | 059 | README und ARCHITECTURE für M2 | B | 055, 056, 058 | offen |
 | 060 | Abnahmelauf M2 (Leitstelle) | C | 057, 058, 059 | offen |
+- 073: Feld `device_class` (plc, controller, computer, router, firewall, robot, other) in Modell, API, Admin, Protokoll und Formular; CSV mit optionaler 14. Spalte; Testfabrik: 5 SPS, 4 Controller, je 1 Rechner, Router, Roboter, Firewall. Die Geräteseite zeigt den Typ noch nur im Bearbeiten-Formular (für 074).
