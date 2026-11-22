@@ -1,6 +1,6 @@
 # Auftrag 056 – Suchprobe: Befehl `evaluate_search` und Probenliste
 
-Meilenstein: M2 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 
