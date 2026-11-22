@@ -1,6 +1,6 @@
 # Auftrag 045 – Celery und Einlese-Einstellungen für lange Aufträge
 
-Meilenstein: M2 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 

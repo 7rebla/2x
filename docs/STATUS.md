@@ -171,8 +171,8 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 042 | Datenmodell: Einlese-Auftrag und Abschnitt | C | 040 | erledigt |
 | 043 | Abschnitte aus dem Docling-Ergebnis bilden | C | 041 | erledigt |
 | 044 | Einbettungen über Ollama: Client und Prüfung | C | 040, 041 | erledigt |
-| 045 | Celery und Einlese-Einstellungen | C | 044 | in Arbeit |
-| 046 | Einlese-Ablauf im Worker | B | 042, 043, 045 | offen |
+| 045 | Celery und Einlese-Einstellungen | C | 044 | erledigt |
+| 046 | Einlese-Ablauf im Worker | B | 042, 043, 045 | in Arbeit |
 | 047 | Such-Schnittstelle und Stichwortsuche | C | 042 | erledigt |
 | 048 | Einbettungs-Aufgabe im Worker | B | 046 | offen |
 | 049 | Einlesen anstoßen, Formatprüfung, Befehl | C | 046 | offen |
@@ -198,4 +198,5 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 - 044: Einbettungs-Client (`answers/embeddings.py`), Schalter `TWOX_AI_ENABLED` (Standard aus, `.env.example` an), `check_llm --embed` mit neutralem `DISABLED:`; Cloud-Modelle werden am Namen und über `/api/tags` abgewiesen, `/api/show` wird nie aufgerufen. Offen (E-59): Selbsttest und Testseite zeigen noch keinen KI-Zustand – für 048 vorgemerkt. Doku zu `--embed` und den neuen Variablen in 059.
 - 071: Lucide-Icons über `web/src/icons/` (Pflichtfeld `icon` in `navigation.ts`), einzeilige Kopfzeile, Benutzermenü mit Sprache, Einstellungen, Abmelden. Für 054/055: neue Navigationseinträge brauchen ein eigenes Icon in `names.ts` und Anpassungen in `web/e2e/navigation.spec.ts`.
 - 047: Such-Schnittstelle `search/interface.py` mit Stichwortsuche in PostgreSQL (`postgres.py`, drei Sprachkonfigurationen, exakte Kennungen mit Wortgrenzen, höchstens 10, neueste eingelesene Version, gleiche Inhalte zusammengefasst). Beim Zusammenführen korrigiert: Phrasen-Nachprüfung mit Lücke zwischen Überschrift und Text; IPv4/IPv6 nur mit ASCII-Ziffern. An 052 übergeben: Dateiname der Version in `HitLocation`, Ausschlüsse auch für exakte Treffer.
+- 045: Celery-Routen (convert/poll → ingest, embed → embed; `embed` nur bei eingeschalteter KI, sonst `QueueNotFound`), Worker ohne `--queues`, `--concurrency 4`, Prefetch 1, globale Zeitlimits 300/360 s, weiches Herunterfahren 60 s über `REMAP_SIGTERM=SIGQUIT` und `stop_grace_period: 90s`, sieben Einlese-Variablen, Startprüfung `check_ingest_timing`. Nur Aufgaben mit `acks_late` kommen beim Herunterfahren zurück in die Warteschlange. Die Docling-Grenze von 2 h steht an drei Stellen und ist nur nach unten einstellbar – nach 057 eine gemeinsame Variable vorschlagen. Socket-Zeitlimit gegen weiche Grenze: in 048 vorgemerkt.
 - 074: Acht eigene Icons (Anlage, Gerät, sechs Gerätetypen) unter `web/src/icons/industrial/`, Zuordnung nur in `deviceClass.ts` (Rückfall: generisches Gerät). Typ als Text im Baum, als Feld „Gerätetyp“ auf der Geräteseite, als Tooltip auf der Karte. Notwendig mitgeändert: `graph.ts`, `MapPage.tsx`, `map.json`. Nicht von Hand bei 16 px gesichtet.
