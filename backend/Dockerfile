@@ -74,7 +74,8 @@ RUN npm run build
 # @tanstack/query-core, @xyflow/react with @xyflow/system, classcat, zustand,
 # react-compiler-runtime and the d3 modules it uses: d3-color, d3-dispatch,
 # d3-drag, d3-ease, d3-interpolate, d3-selection, d3-timer, d3-transition,
-# d3-zoom), the API client that @hey-api/openapi-ts copies from
+# d3-zoom, and lucide-react for the icons, which has no dependencies), the API
+# client that @hey-api/openapi-ts copies from
 # its templates into src/api/generated (including the TanStack Query options),
 # the module preload helper Vite inlines and the base styles Tailwind CSS
 # emits. The dependencies of react-router and @xyflow/react get a notice even
@@ -102,7 +103,7 @@ RUN set -eu; \
     emitted=$(find dist/assets -maxdepth 1 -name 'InterVariable-*.woff2'); \
     if [ -z "$emitted" ] || ! cmp -s "$font" "$emitted"; then echo "Inter missing or changed in dist/assets" >&2; exit 1; fi; \
     runtime=$(npm ls --omit=dev --all --parseable | sed -n 's|^/web/node_modules/||p' | sort | tr '\n' ' '); \
-    if [ "$runtime" != "@remix-run/route-pattern @tanstack/query-core @tanstack/react-query @types/d3-color @types/d3-drag @types/d3-interpolate @types/d3-selection @types/d3-transition @types/d3-zoom @types/react @types/react-dom @xyflow/react @xyflow/system classcat cookie-es csstype d3-color d3-dispatch d3-drag d3-ease d3-interpolate d3-selection d3-timer d3-transition d3-zoom html-parse-stringify i18next react react-compiler-runtime react-dom react-i18next react-router scheduler typescript zustand " ]; then \
+    if [ "$runtime" != "@remix-run/route-pattern @tanstack/query-core @tanstack/react-query @types/d3-color @types/d3-drag @types/d3-interpolate @types/d3-selection @types/d3-transition @types/d3-zoom @types/react @types/react-dom @xyflow/react @xyflow/system classcat cookie-es csstype d3-color d3-dispatch d3-drag d3-ease d3-interpolate d3-selection d3-timer d3-transition d3-zoom html-parse-stringify i18next lucide-react react react-compiler-runtime react-dom react-i18next react-router scheduler typescript zustand " ]; then \
         echo "Production dependencies changed ($runtime): update the notice list in backend/Dockerfile." >&2; \
         exit 1; \
     fi; \
@@ -113,7 +114,7 @@ RUN set -eu; \
         echo; \
         echo "The files below /static/ contain code from the following packages."; \
         echo "Each section quotes the package's licence file unchanged."; \
-        for pkg in react react-dom scheduler i18next react-i18next html-parse-stringify react-router cookie-es @remix-run/route-pattern @tanstack/react-query @tanstack/query-core @xyflow/react @xyflow/system classcat zustand react-compiler-runtime d3-color d3-dispatch d3-drag d3-ease d3-interpolate d3-selection d3-timer d3-transition d3-zoom @hey-api/openapi-ts vite tailwindcss; do \
+        for pkg in react react-dom scheduler i18next react-i18next html-parse-stringify react-router cookie-es @remix-run/route-pattern @tanstack/react-query @tanstack/query-core @xyflow/react @xyflow/system classcat zustand react-compiler-runtime d3-color d3-dispatch d3-drag d3-ease d3-interpolate d3-selection d3-timer d3-transition d3-zoom lucide-react @hey-api/openapi-ts vite tailwindcss; do \
             dir=node_modules/$pkg; \
             case "$pkg" in \
                 react-compiler-runtime) licence_file=node_modules/react/LICENSE;; \
