@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Me } from "../api/generated";
@@ -6,9 +6,17 @@ import { changeLanguage } from "../i18n.ts";
 import { fakeStructureApi } from "../pages/structure/testData.ts";
 import { jsonResponse, manager, reader } from "../test/fakeApi.ts";
 import { renderApp } from "../test/renderApp.tsx";
-import { fakeChecksum, type FakeFilesApi, fakeFilesApi, fakeUploadApi as fakeApi, textFile } from "./files/testData.ts";
+import {
+  fakeChecksum,
+  type FakeFilesApi,
+  fakeFilesApi,
+  fakeUploadApi as fakeApi,
+  ingestJob,
+  textFile,
+} from "./files/testData.ts";
 
 afterEach(async () => {
+  vi.useRealTimers();
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -17,8 +25,13 @@ afterEach(async () => {
 });
 
 /** Opens the page of device 1000 (two files) or another device, with the fake structure and file API. */
-async function openDevice(user: Me, deviceId = 1000): Promise<{ files: FakeFilesApi; api: ReturnType<typeof fakeApi> }> {
+async function openDevice(
+  user: Me,
+  deviceId = 1000,
+  prepare: (files: FakeFilesApi) => void = () => undefined,
+): Promise<{ files: FakeFilesApi; api: ReturnType<typeof fakeApi> }> {
   const files = fakeFilesApi(fakeStructureApi().handler);
+  prepare(files);
   const api = fakeApi(user, files.handler);
   renderApp(`/devices/${String(deviceId)}`);
   await screen.findByTestId("device-files");
@@ -149,11 +162,83 @@ describe("list of files", () => {
       "Benutzer",
       "Prüfsumme (SHA-256)",
       "Herunterladen",
+      "Einlesen",
     ]);
     const [manual] = rows();
     expect(manual === undefined ? null : cell(manual, "file-size")?.replace(/\s/gu, " ")).toBe("2,5 MB");
     expect(within(filesArea()).getByRole("form", { name: "Neue Datei hochladen" })).toBeDefined();
     expect(within(filesArea()).getByRole("link", { name: "Version 2 herunterladen" })).toBeDefined();
+  });
+});
+
+describe("ingestion state of the newest version", () => {
+  it("shows a small badge per file: the newest version's state without counts or messages", async () => {
+    await openDevice(reader, 1000, (files) => {
+      const [oldManual, newManual] = files.documents[0]?.versions ?? [];
+      const notes = files.documents[1]?.versions[0];
+      if (oldManual === undefined || newManual === undefined || notes === undefined) {
+        throw new Error("sample versions missing");
+      }
+      // Only the newest version counts (version 2 of the manual).
+      oldManual.ingest = ingestJob("failed", { error_code: "internal" });
+      newManual.ingest = ingestJob("done");
+      notes.ingest = ingestJob("skipped", { error_code: "unsupported_format", error_detail: "x" });
+    });
+
+    await waitFor(() => {
+      expect(rows()).toHaveLength(2);
+    });
+    const [manual, notes] = rows();
+    if (manual === undefined || notes === undefined) {
+      throw new Error("rows missing");
+    }
+    expect(within(filesArea()).getByRole("columnheader", { name: "Ingestion" })).toBeDefined();
+    expect(cell(manual, "file-ingest")).toBe("Ingested");
+    expect(cell(notes, "file-ingest")).toBe("Skipped");
+    expect(within(filesArea()).queryByTestId("ingest-counts")).toBeNull();
+    expect(within(filesArea()).queryByTestId("ingest-error")).toBeNull();
+    expect(within(filesArea()).queryByTestId("ingest-retry")).toBeNull();
+  });
+
+  it("shows a file without any job as not ingested, in German as well", async () => {
+    await changeLanguage("de");
+    await openDevice(manager);
+
+    await waitFor(() => {
+      expect(rows()).toHaveLength(2);
+    });
+    expect(rows().map((row) => cell(row, "file-ingest"))).toEqual(["Nicht eingelesen", "Nicht eingelesen"]);
+    expect(within(filesArea()).getByRole("columnheader", { name: "Einlesen" })).toBeDefined();
+  });
+
+  it("asks again every 5 seconds only while a newest version is queued or running", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { files, api } = await openDevice(reader, 1000, (served) => {
+      const notes = served.documents[1]?.versions[0];
+      if (notes !== undefined) {
+        notes.ingest = ingestJob("running");
+      }
+    });
+    const path = "/api/v1/devices/1000/documents/";
+    await waitFor(() => {
+      expect(rows()).toHaveLength(2);
+    });
+    const first = api.requestsTo(path).length;
+
+    const notes = files.documents[1]?.versions[0];
+    if (notes === undefined) {
+      throw new Error("sample version missing");
+    }
+    notes.ingest = ingestJob("done");
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+    await waitFor(() => {
+      expect(rows().map((row) => cell(row, "file-ingest"))).toEqual(["Not ingested", "Ingested"]);
+    });
+    const afterDone = api.requestsTo(path).length;
+    expect(afterDone).toBe(first + 1);
+
+    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    expect(api.requestsTo(path)).toHaveLength(afterDone);
   });
 });
 

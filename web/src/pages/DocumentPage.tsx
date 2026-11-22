@@ -9,6 +9,12 @@ import { devicesRetrieveOptions, documentRetrieveOptions } from "../api/generate
 import { AuditTrail } from "../components/AuditTrail.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { devicePath, parseId } from "../components/files/format.ts";
+import {
+  IngestError,
+  IngestRetryButton,
+  IngestStatusBadge,
+  ingestPollInterval,
+} from "../components/files/IngestStatus.tsx";
 import { Checksum, DateTime, DownloadLink, KindLabel, Size, UserName } from "../components/files/parts.tsx";
 import { NewVersionForm } from "../components/files/UploadForm.tsx";
 import { Loading } from "../components/Loading.tsx";
@@ -30,7 +36,11 @@ export function DocumentPage(): ReactElement {
 
 function DocumentDetails({ id }: { id: number }): ReactElement {
   const { t } = useTranslation("files");
-  const query = useQuery(documentRetrieveOptions({ path: { document_id: id } }));
+  // While a version is queued or being ingested, the page asks again every few seconds.
+  const query = useQuery({
+    ...documentRetrieveOptions({ path: { document_id: id } }),
+    refetchInterval: (current) => ingestPollInterval(current.state.data?.versions),
+  });
 
   if (query.data !== undefined) {
     return <DocumentView document={query.data} error={query.error} />;
@@ -101,7 +111,8 @@ function DocumentView({ document, error }: { document: DocumentDetail; error: un
 
       <section className="space-y-3 rounded border border-line bg-surface p-4">
         <h3 className="font-semibold">{t("document.versions")}</h3>
-        <VersionTable versions={versions} />
+        {/* Configurations are not ingested (the API answers 400), so they get no button. */}
+        <VersionTable versions={versions} canIngest={canManage && document.kind === "document"} />
         {canManage ? <NewVersionForm documentId={document.id} kind={document.kind} /> : null}
       </section>
 
@@ -116,7 +127,13 @@ function DocumentView({ document, error }: { document: DocumentDetail; error: un
   );
 }
 
-function VersionTable({ versions }: { versions: readonly DocumentVersion[] }): ReactElement {
+function VersionTable({
+  versions,
+  canIngest,
+}: {
+  versions: readonly DocumentVersion[];
+  canIngest: boolean;
+}): ReactElement {
   const { t } = useTranslation("files");
   return (
     <div className="overflow-x-auto">
@@ -129,7 +146,8 @@ function VersionTable({ versions }: { versions: readonly DocumentVersion[] }): R
             <th className="py-2 pr-4 font-normal">{t("columns.user")}</th>
             <th className="py-2 pr-4 font-normal">{t("columns.filename")}</th>
             <th className="py-2 pr-4 font-normal">{t("columns.checksum")}</th>
-            <th className="py-2 font-normal">{t("columns.download")}</th>
+            <th className="py-2 pr-4 font-normal">{t("columns.download")}</th>
+            <th className="py-2 font-normal">{t("columns.ingest")}</th>
           </tr>
         </thead>
         <tbody>
@@ -154,8 +172,13 @@ function VersionTable({ versions }: { versions: readonly DocumentVersion[] }): R
               <td className="py-2 pr-4">
                 <Checksum sha256={version.sha256} />
               </td>
-              <td className="py-2">
+              <td className="py-2 pr-4">
                 <DownloadLink versionId={version.id} number={version.number} />
+              </td>
+              <td data-testid="version-ingest" className="min-w-48 space-y-1 py-2">
+                <IngestStatusBadge job={version.ingest} />
+                <IngestError job={version.ingest} />
+                {canIngest ? <IngestRetryButton version={version} /> : null}
               </td>
             </tr>
           ))}
