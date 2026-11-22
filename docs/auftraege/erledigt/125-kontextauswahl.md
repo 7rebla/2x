@@ -1,6 +1,6 @@
 # Auftrag 125 – Kontextauswahl für Antworten
 
-Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 121 (Schnittstelle Sprachmodell), 122 (Antworttypen und Prompt, insbesondere `ContextSource` in `backend/twox/answers/types.py`) und 124 (Abstand und Volltext im Suchtreffer: `SearchRequest.include_text`, `SearchHit.semantic_distance`, `SearchHit.text`) sind auf `main`. 124 ist Stufe C (D11) – ohne dessen Zusammenführung startet dieser Auftrag nicht.
 

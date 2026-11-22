@@ -228,8 +228,8 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 122 | Antworttypen und Prompt mit Injektionsschutz | B | – | erledigt |
 | 123 | Zitatprüfung und feste Absage | B | – | erledigt |
 | 124 | Abstand und Volltext im Suchtreffer | C | 120 | erledigt |
-| 125 | Kontextauswahl für Antworten | B | 121, 122, 124 | in Arbeit |
-| 126 | Antwortdienst und Befehl ask | B | 121, 122, 123, 125 | offen |
+| 125 | Kontextauswahl für Antworten | B | 121, 122, 124 | erledigt |
+| 126 | Antwortdienst und Befehl ask | B | 121, 122, 123, 125 | in Arbeit |
 | 127 | Messwerkzeug evaluate_answers | B | 120, 126 | offen |
 | 128 | Messlauf Chat-Modell | C | 126, 127 | offen |
 | 129 | Selbsttest und check_llm für Chat | B | 121 | erledigt |
