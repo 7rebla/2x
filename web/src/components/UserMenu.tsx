@@ -12,7 +12,7 @@ import { Button } from "./ui/Button.tsx";
 
 /**
  * User menu in the page header: a button with the user name opens a small
- * panel with role, the link to the settings, the language and the sign-out
+ * panel with role, the links to the settings and the self-test, the language and the sign-out
  * button. The panel closes on Escape, on a click outside and on every change
  * of the address, so a link in it never leaves it open.
  */
@@ -84,7 +84,7 @@ export function UserMenu({ user }: { user: Me }): ReactElement {
 }
 
 /**
- * What the user menu holds: name and role, the link to the settings, the
+ * What the user menu holds: name and role, the links to the settings and the self-test, the
  * language and the sign-out button. The panel of `UserMenu` shows it, and
  * below 768 px the navigation menu of the header (`Layout`, work order 082).
  */
@@ -129,14 +129,27 @@ export function UserMenuContent({ user }: { user: Me }): ReactElement {
           <dd data-testid="user-role">{roleText}</dd>
         </div>
       </dl>
-      {/* Settings of this browser (work order 070); like every page they need a role. */}
+      {/*
+        Settings of this browser (work order 070) and the self-test, an
+        operations page that left the header bar (work order 134, E-69); like
+        every page they need a role.
+      */}
       {hasRole(user.role, "read") ? (
-        <NavLink to="/settings" data-testid="settings-link" className="nav-link">
-          <Icon name="settings" size={20} decorative />
-          <span className="nav-label" data-label={t("nav:settings")}>
-            {t("nav:settings")}
-          </span>
-        </NavLink>
+        // One link per line; the links keep their inline width like the entries of the header.
+        <div className="flex flex-col items-start gap-1">
+          <NavLink to="/settings" data-testid="settings-link" className="nav-link">
+            <Icon name="settings" size={20} decorative />
+            <span className="nav-label" data-label={t("nav:settings")}>
+              {t("nav:settings")}
+            </span>
+          </NavLink>
+          <NavLink to="/selftest" data-testid="selftest-link" className="nav-link">
+            <Icon name="selftest" size={20} decorative />
+            <span className="nav-label" data-label={t("nav:selftest")}>
+              {t("nav:selftest")}
+            </span>
+          </NavLink>
+        </div>
       ) : null}
       <LanguageSwitch />
       <Button

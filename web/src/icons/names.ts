@@ -20,6 +20,7 @@ import {
   CircleX,
   Clock,
   Download,
+  FileQuestionMark,
   FileText,
   Funnel,
   FunnelX,
@@ -68,6 +69,8 @@ const glyphs = {
   // Navigation (NAV)
   structure: ListTree, // NAV-01
   map: MapGlyph, // NAV-09 (library icon until an own one is drawn)
+  // Ask: a question put to the documents; no speech bubble, sparkle or bot (B6, D14 option g).
+  answer: FileQuestionMark, // NAV-06 (library icon until an own one is drawn, work order 134)
   ingest: ScanText, // NAV-07, ingest overview (work order 055)
   import: Import, // NAV-02
   audit: RotateCcwClock, // NAV-03
