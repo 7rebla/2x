@@ -84,7 +84,7 @@ class Command(BaseCommand):
         which.add_argument(
             "--missing",
             action="store_true",
-            help=("Versions with sections without an embedding of TWOX_EMBED_MODEL (default)."),
+            help="Versions with sections without an embedding of TWOX_EMBED_MODEL (default).",
         )
         which.add_argument(
             "--all",
@@ -127,11 +127,11 @@ class Command(BaseCommand):
         self.stdout.write(f"selection: {mode}")
         verb = "created" if commit else "to create"
         self.stdout.write(
-            f"versions: {counts.versions_created} {verb},"
+            f"versions: {counts.versions_created} jobs {verb},"
             f" {counts.versions_skipped} skipped (queued or running job)"
         )
         self.stdout.write(
-            f"sections: {counts.sections_created} {verb}, {counts.sections_skipped} skipped"
+            f"sections: {counts.sections_created} to embed, {counts.sections_skipped} skipped"
         )
         if commit:
             self.stdout.write("Saved; the worker embeds the sections.")

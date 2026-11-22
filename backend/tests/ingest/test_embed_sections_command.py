@@ -97,9 +97,9 @@ def test_dry_run_counts_and_changes_nothing(
 
     output = run("--user", manager.username)
 
-    assert "versions: 3 to create, 0 skipped (queued or running job)" in output
+    assert "versions: 3 jobs to create, 0 skipped (queued or running job)" in output
     # missing 3, old model 3, partly 2
-    assert "sections: 8 to create, 0 skipped" in output
+    assert "sections: 8 to embed, 0 skipped" in output
     assert "Dry run: nothing was saved" in output
     assert embed_jobs() == []
     assert sent == []
@@ -129,8 +129,8 @@ def test_missing_creates_one_job_per_version_and_sends_embed_after_the_commit(
     )
     assert len(callbacks) == 3
     assert sent == [job.pk for job in jobs]
-    assert "versions: 3 created, 0 skipped (queued or running job)" in output
-    assert "sections: 8 created, 0 skipped" in output
+    assert "versions: 3 jobs created, 0 skipped (queued or running job)" in output
+    assert "sections: 8 to embed, 0 skipped" in output
     # --missing keeps the embeddings that exist.
     assert Section.objects.filter(embedding_model=FAKE_MODEL).count() == 4
 
@@ -148,8 +148,8 @@ def test_versions_with_a_running_job_are_skipped_and_counted(
     with django_capture_on_commit_callbacks(execute=True):
         output = run("--user", manager.username, "--commit")
 
-    assert "versions: 1 created, 2 skipped (queued or running job)" in output
-    assert "sections: 3 created, 5 skipped" in output
+    assert "versions: 1 jobs created, 2 skipped (queued or running job)" in output
+    assert "sections: 3 to embed, 5 skipped" in output
     assert [job.document_version for job in embed_jobs()] == [versions["old_model"]]
     assert len(sent) == 1
 
@@ -164,8 +164,8 @@ def test_all_takes_every_version_and_clears_its_embeddings(
     with django_capture_on_commit_callbacks(execute=True):
         output = run("--user", manager.username, "--all", "--commit")
 
-    assert "versions: 4 created, 0 skipped" in output
-    assert "sections: 12 created, 0 skipped" in output
+    assert "versions: 4 jobs created, 0 skipped" in output
+    assert "sections: 12 to embed, 0 skipped" in output
     assert len(embed_jobs()) == len(sent) == 4
     assert not Section.objects.filter(embedding__isnull=False).exists()
 
@@ -176,7 +176,7 @@ def test_all_as_dry_run_keeps_the_embeddings(
 ) -> None:
     output = run("--user", manager.username, "--all")
 
-    assert "versions: 4 to create" in output
+    assert "versions: 4 jobs to create" in output
     assert Section.objects.filter(embedding__isnull=False).count() == 7
     assert embed_jobs() == []
 
@@ -200,7 +200,7 @@ def test_created_jobs_are_embedded_by_the_task(
     assert not Section.objects.exclude(embedding_model=FAKE_MODEL).exists()
     assert {job.status for job in embed_jobs()} == {IngestStatus.DONE}
     # Nothing left: a second run creates nothing.
-    assert "versions: 0 to create" in run("--user", manager.username)
+    assert "versions: 0 jobs to create" in run("--user", manager.username)
 
 
 @pytest.mark.usefixtures("ai_on")
