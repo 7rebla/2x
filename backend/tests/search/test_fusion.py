@@ -1,4 +1,4 @@
-"""Reciprocal Rank Fusion of keyword and vector list (050).
+"""Reciprocal Rank Fusion of keyword and vector list (050) and of the exact hits (063).
 
 The expected orders and scores are worked out by hand in the comments, with
 ``k = 60``: a list adds ``1 / (60 + rank)``. All texts are written for these
@@ -17,20 +17,30 @@ from tests.search.test_keyword_search import (
     search,
     sha256_of,
 )
+from twox.answers.embeddings import EmbeddingUnavailableError
 from twox.assets.models import Device, Plant
 from twox.files.models import DocumentVersion
 from twox.ingest.models import Section
+from twox.search.identifiers import find_identifiers
 from twox.search.interface import MatchKind
-from twox.search.postgres import RRF_K
+from twox.search.postgres import (
+    EXACT_FIRST_MAX_OTHER_WORDS,
+    RRF_K,
+    exact_hits_first,
+    other_words,
+)
 
 pytestmark = pytest.mark.django_db
 
 KEYWORD = [MatchKind.KEYWORD]
 SEMANTIC = [MatchKind.SEMANTIC]
 BOTH = [MatchKind.KEYWORD, MatchKind.SEMANTIC]
+EXACT = [MatchKind.EXACT]
+EXACT_SEMANTIC = [MatchKind.EXACT, MatchKind.SEMANTIC]
+ALL_THREE = [MatchKind.EXACT, MatchKind.KEYWORD, MatchKind.SEMANTIC]
 
 
-def rrf(*ranks: int) -> float:
+def rrf(*ranks: float) -> float:
     return sum(1 / (RRF_K + rank) for rank in ranks)
 
 
@@ -177,3 +187,189 @@ def test_switch_decides_whether_the_vector_list_takes_part(
     assert names(gearbox, [hit.section_id for hit in result.hits]) == expected
     assert result.semantic_used is ai_enabled
     assert fake_embedder.calls == (["gearbox"] if ai_enabled else [])
+
+
+# --- Exact hits: first, or a third list of the fusion (063) -----------------
+
+
+@pytest.mark.parametrize(
+    ("query", "expected"),
+    [
+        ("192.168.0.5", True),
+        ("E1234", True),
+        ("Fehler E1234", True),
+        ("PLC-01 PLC-02", True),
+        ("Adresse 192.168.0.5 -alt", True),
+        ('"XR7" & Öl', True),
+        ("XR7 Getriebeöl wechseln", False),
+        ("Wie tausche ich beim XR7 das Getriebeöl?", False),
+        ("Wie viel trägt der UR5e?", False),
+    ],
+)
+def test_rule_exact_hits_first_for_queries_of_identifiers(query: str, expected: bool) -> None:
+    identifiers = find_identifiers(query)
+
+    assert exact_hits_first(query, identifiers, vector_list=True) is expected
+    # Without a vector list exact hits always come first, as before 063.
+    assert exact_hits_first(query, identifiers, vector_list=False) is True
+
+
+def test_other_words_are_the_words_beside_the_identifiers() -> None:
+    assert EXACT_FIRST_MAX_OTHER_WORDS == 1
+    assert other_words("Wie viel trägt der UR5e?") == ["Wie", "viel", "trägt", "der"]
+    # Exclusions and tokens without a letter or digit are not words.
+    assert other_words('Adresse 192.168.0.5 -alt -"zwei Wörter" &') == ["Adresse"]
+    assert other_words('"Fehler E1234" -"altes Gerät"') == ['"Fehler']
+    assert other_words("(E1234).") == []
+    # A query without identifiers has nothing to put first.
+    assert exact_hits_first("Getriebeöl wechseln", [], vector_list=True) is True
+
+
+@pytest.fixture
+def xr7(version: DocumentVersion) -> dict[str, Section]:
+    """Five sections for the query "XR7 Getriebeöl wechseln" (two words beside XR7: fused).
+
+    keyword (every word, XR7 also in a heading): A 1 (XR7 in the heading,
+    weight A), B 2; exact (XR7 in the text): B, C, D; vector: B 1, A 2, C 3,
+    E 4 (D has no embedding).
+    """
+    a, b, c, d, e = add_sections(
+        version,
+        "Getriebeöl wechseln: die Ablassschraube lösen und das Öl auffangen.",
+        "Beim XR7 das Getriebeöl alle zwei Jahre wechseln.",
+        "Der XR7 wiegt 40 kg.",
+        "Das Typenschild des XR7 sitzt hinten.",
+        "Öl nur bei Stillstand nachfüllen.",
+    )
+    Section.objects.filter(pk=a.pk).update(heading_path=["XR7"], heading_text="XR7")
+    for section, degrees in ((b, 10), (a, 20), (c, 30), (e, 40)):
+        embed(section, at_angle(degrees))
+    return {"A": a, "B": b, "C": c, "D": d, "E": e}
+
+
+def test_exact_list_fused_worked_out_by_hand(
+    xr7: dict[str, Section], fake_embedder: FakeEmbedder
+) -> None:
+    # Exact list, ranked by the number of identifiers, then by keyword rank:
+    # B (1 identifier, keyword rank 2) place 1; C and D (1 identifier, no
+    # keyword rank) tie for places 2 and 3 and share their mean, rank 2.5.
+    # A = keyword 1 + vector 2           = 1/61 + 1/62          = 0.032522
+    # B = exact 1 + keyword 2 + vector 1 = 1/61 + 1/62 + 1/61   = 0.048916
+    # C = exact 2.5 + vector 3           = 1/62.5 + 1/63        = 0.031873
+    # D = exact 2.5                      = 1/62.5               = 0.016000
+    # E = vector 4                       = 1/64                 = 0.015625
+    result = search("XR7 Getriebeöl wechseln")
+
+    assert result.semantic_used is True
+    assert names(xr7, [hit.section_id for hit in result.hits]) == ["B", "A", "C", "D", "E"]
+    assert [hit.score for hit in result.hits] == pytest.approx(
+        [0.048916, 0.032522, 0.031873, 0.016000, 0.015625], abs=1e-6
+    )
+    assert [hit.score for hit in result.hits] == pytest.approx(
+        [rrf(1, 2, 1), rrf(1, 2), rrf(2.5, 3), rrf(2.5), rrf(4)]
+    )
+    assert [hit.match_kinds for hit in result.hits] == [
+        ALL_THREE,
+        BOTH,
+        EXACT_SEMANTIC,
+        EXACT,
+        SEMANTIC,
+    ]
+    # No score reaches 1: no hit comes first just for naming XR7.
+    assert all(hit.score < 1 for hit in result.hits)
+
+
+def test_exact_hits_still_come_first_with_ai_off(xr7: dict[str, Section]) -> None:
+    # Unchanged keyword and exact search: identifiers found + 1/(60 + keyword rank).
+    # B = 1 + 1/62, C = 1, D = 1 (C before D by ID), A = 1/61; E is no hit.
+    result = search("XR7 Getriebeöl wechseln")
+
+    assert result.semantic_used is False
+    assert names(xr7, [hit.section_id for hit in result.hits]) == ["B", "C", "D", "A"]
+    assert [hit.score for hit in result.hits] == pytest.approx([1 + rrf(2), 1, 1, rrf(1)])
+
+
+def test_exact_hits_come_first_when_the_model_service_fails(
+    xr7: dict[str, Section], fake_embedder: FakeEmbedder
+) -> None:
+    fake_embedder.error = EmbeddingUnavailableError("model service not reachable")
+
+    result = search("XR7 Getriebeöl wechseln")
+
+    assert result.semantic_used is False
+    assert names(xr7, [hit.section_id for hit in result.hits]) == ["B", "C", "D", "A"]
+    assert [hit.score for hit in result.hits] == pytest.approx([1 + rrf(2), 1, 1, rrf(1)])
+
+
+@pytest.mark.parametrize(
+    ("query", "text", "exact_score"),
+    [
+        # Only the identifier: found exactly and by keyword (rank 1).
+        ("192.168.0.5", "The card answers on 192.168.0.5 after the start.", 1 + rrf(1)),
+        ("E1234", "Fault E1234: the door is open.", 1 + rrf(1)),
+        # One more word: still a lookup; "Fehler" is not in the text, so no keyword hit.
+        ("Fehler E1234", "Fault E1234: the door is open.", 1),
+    ],
+)
+def test_queries_of_identifiers_keep_exact_hits_first(
+    version: DocumentVersion,
+    fake_embedder: FakeEmbedder,
+    query: str,
+    text: str,
+    exact_score: float,
+) -> None:
+    exact, near, other = add_sections(
+        version, text, "Close the door before the start.", "The belt runs slowly."
+    )
+    # The exact hit is the farthest by meaning; another section is the nearest.
+    embed(near, at_angle(0))
+    embed(other, at_angle(30))
+    embed(exact, at_angle(80))
+
+    result = search(query)
+
+    assert [hit.section_id for hit in result.hits][:3] == [exact.pk, near.pk, other.pk]
+    assert MatchKind.EXACT in result.hits[0].match_kinds
+    # exact: identifiers found + keyword part + vector rank 3.
+    assert result.hits[0].score == pytest.approx(exact_score + rrf(3))
+    assert result.hits[1].score == pytest.approx(rrf(1))
+    assert result.hits[0].score >= 1 > result.hits[1].score
+
+
+def test_tie_between_exact_list_and_vector_list_goes_to_the_meaning(
+    version: DocumentVersion, fake_embedder: FakeEmbedder
+) -> None:
+    # Three words beside E1234: fused. The only exact hit has exact rank 1, the
+    # nearest section vector rank 1: both 1/61. The nearer in meaning comes first.
+    exact, near = add_sections(
+        version, "Fault E1234: the door is open.", "Close the door before the start."
+    )
+    embed(near, at_angle(0))
+
+    hits = search("Was bedeutet Fehler E1234?").hits
+
+    assert [hit.section_id for hit in hits] == [near.pk, exact.pk]
+    assert [hit.score for hit in hits] == pytest.approx([rrf(1), rrf(1)])
+    assert [hit.match_kinds for hit in hits] == [SEMANTIC, EXACT]
+
+
+def test_same_content_counts_once_in_the_exact_list(
+    plant: Plant, fake_embedder: FakeEmbedder
+) -> None:
+    # The same manual on two devices: its exact hit is one place of the exact
+    # list, not two. Exact list: the shared section and the note tie for places
+    # 1 and 2 (rank 1.5 each); counted per row, it would be 2 for all three.
+    first = make_device(plant, "plc-01")
+    second = make_device(plant, "plc-02")
+    shared = sha256_of("shared manual")
+    (one,) = add_sections(make_document(first, sha256=shared), "The XR7 weighs 40 kg.")
+    (two,) = add_sections(make_document(second, sha256=shared), "The XR7 weighs 40 kg.")
+    (note,) = add_sections(make_document(first, title="Notes"), "Mount the XR7 on a wall.")
+    (near,) = add_sections(make_document(first, title="Care"), "Keep the gear oil clean.")
+    embed(near, at_angle(0))
+
+    hits = search("How heavy is the XR7?").hits
+
+    assert [hit.section_id for hit in hits] == [near.pk, one.pk, note.pk]
+    assert [hit.score for hit in hits] == pytest.approx([rrf(1), rrf(1.5), rrf(1.5)])
+    assert [location.section_id for location in hits[1].locations] == [one.pk, two.pk]
