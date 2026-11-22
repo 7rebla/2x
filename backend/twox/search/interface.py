@@ -67,6 +67,9 @@ class SearchRequest:
     special characters only; the result is then empty, not an error.
     ``keyword_only`` leaves out the vector search for this one request, also
     with the AI features on; the model service is then not asked.
+    With ``include_text`` every hit carries the whole text of its section
+    (:attr:`SearchHit.text`); order, scores, snippets and highlights stay the
+    same.
     """
 
     query: str
@@ -74,6 +77,7 @@ class SearchRequest:
     plant_ids: Sequence[int] = ()
     limit: int = DEFAULT_LIMIT
     keyword_only: bool = False
+    include_text: bool = False
 
     def __post_init__(self) -> None:
         if not 1 <= self.limit <= MAX_LIMIT:
@@ -133,6 +137,20 @@ class SearchHit:
     heading_path: list[str]
     #: At least one entry.
     locations: list[HitLocation]
+    #: Cosine distance (pgvector ``<=>``, 0 to 2, smaller is nearer) between
+    #: the query and the nearest of the sections this hit stands for that
+    #: are in the list of the vector search; ``None`` when none of them is
+    #: (a hit found by keyword or exactly only), and for every hit when the
+    #: vector search did not take part (AI features off, ``keyword_only``,
+    #: model service failed). Unlike :attr:`score` it can be compared between
+    #: queries, but only for the same embedding model (``TWOX_EMBED_MODEL``,
+    #: the model the sections were embedded with), never across models. Not
+    #: part of the public search API.
+    semantic_distance: float | None = None
+    #: The whole text of the section :attr:`section_id` with
+    #: :attr:`SearchRequest.include_text`, otherwise ``None``. Not part of the
+    #: public search API.
+    text: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
