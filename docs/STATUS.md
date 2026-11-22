@@ -65,7 +65,7 @@ Nichts davon hält die laufende Arbeit auf.
 9. ~~Siemens: Klausel gegen Text- und Data-Mining~~ – entschieden mit E-27: nur lokal, von Hand geladen.
 10. **Siemens: welche Ausgabe (Auftrag 103, Frage 6).** Aktuell ist V4.7 (12/2024, nur im Browser abrufbar); V4.6 (11/2022) passt vermutlich besser zu TIA Portal V18, das ist nicht bestätigt. Empfehlung und Arbeitsstand: beide führen, V4.6 maßgeblich, V4.7 als Verweis; beides ohne automatischen Abruf.
 11. **Eigenes Feld für Teilumwandlungen (Aufträge 048, 061; Stufe C, Datenmodell).** Heute wird eine Teilumwandlung am Textpräfix `converted with ` in `error_detail` erkannt. Scheitert danach das Einbetten, überschreibt die Fehlermeldung den Hinweis, und die Oberfläche zeigt die Umwandlung als vollständig. Optionen: (a) Feld `partial_errors` (Zahl) am Einlese-Auftrag, Migration, Anzeige darüber – Empfehlung; (b) so lassen, Lücke dokumentieren. Blockiert nichts.
-12. **Messlauf 057 – Modell, Abschnittsgröße, Docling-Grenzen (Stufe C).** Ergebnis im Kurzbericht von 057. Empfehlungen: (a) Modell `bge-m3` beibehalten (qwen3-embedding:0.6b gleich gut auf den messbaren Proben, braucht Vorsatz und Folgeauftrag); (b) Abschnittsgröße 2 000 beibehalten (1 000: 28 % mehr Abschnitte, schlechtere Ränge); (c) Docling `mem_limit: 8g` in `compose.yaml` (Spitze 6,6 GiB bei 267 Seiten); (d) 2 h je Dokument beibehalten (größtes Handbuch 283 s). Befund: Die IP-Probe `192.168.0.100` steht in der Stichwortsuche auf Rang 5 statt 1–3, weil die Adresse in weiteren Abschnitten steht. Optionen: Kriterium für 060 auf Rang 1–5 lockern, oder die Rangfolge unter exakten Treffern verbessern. Empfehlung: erst Folgeauftrag 063 abwarten und neu messen.
+12. ~~Messlauf 057~~ – entschieden mit E-60 (bge-m3, 2 000 Zeichen, Docling 8 GiB über 066, 2 h je Dokument).
 13. **Client-Adresse im Zugriffsprotokoll (Prüfung 059; Stufe C, Anmeldung/Datenschutz).** Das Zugriffsprotokoll von uvicorn enthält bei jeder Anfrage die Client-Adresse, auch bei fehlgeschlagenen Anmeldungen; die Doku sagte bisher „nie mit IP-Adresse“ (wird mit 059 berichtigt). Optionen: (a) Client-Adresse im Zugriffsprotokoll entfernen oder kürzen (z. B. letztes Oktett), wie schon die Suchtexte – Empfehlung, passt zu „Betrieb mit möglichst wenig personenbezogenen Daten“; (b) so lassen und als Betriebsinformation dokumentieren (hilft bei der Fehlersuche und gegen Anmeldeversuche).
 
 ## Offene Abnahmebedingungen M0
@@ -186,15 +186,16 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 054 | Oberfläche: Suchseite | B | 052 | erledigt |
 | 055 | Oberfläche: Einlese-Übersicht | B | 051, 053, 054 | erledigt |
 | 056 | Suchprobe: Befehl evaluate_search | B | 050 | erledigt |
-| 057 | Messlauf in der Testumgebung (Leitstelle) | C | 048, 049, 050, 056 | wartet auf a7 |
+| 057 | Messlauf in der Testumgebung (Leitstelle) | C | 048, 049, 050, 056 | erledigt |
 | 058 | Abnahmetests M2 | B | 052–055 | erledigt |
 | 059 | README und ARCHITECTURE für M2 | B | 055, 056, 058 | erledigt |
-| 060 | Abnahmelauf M2 (Leitstelle) | C | 057, 058, 059 | wartet auf a7 |
+| 060 | Abnahmelauf M2 (Leitstelle) | C | 057, 058, 059 | in Arbeit |
 | 061 | Einbettungsaufträge im Feld `ingest` | B | 048, 051 | erledigt |
 | 062 | Seiten bei Bedarf nachladen (Bündelgröße) | B | 054, 055 | erledigt |
 | 063 | Gewichtung exakter Treffer in der kombinierten Suche | B | 052 | erledigt |
 | 064 | Filter „nur neuester Auftrag je Version“ | B | 055 | erledigt |
 | 065 | Frist, wenn Docling eine Aufgabe nie startet | B | 048, 049 | erledigt |
+| 066 | Speichergrenze für Docling (E-60) | C (entschieden) | E-60 | in Arbeit |
 - 073: Feld `device_class` (plc, controller, computer, router, firewall, robot, other) in Modell, API, Admin, Protokoll und Formular; CSV mit optionaler 14. Spalte; Testfabrik: 5 SPS, 4 Controller, je 1 Rechner, Router, Roboter, Firewall. Die Geräteseite zeigt den Typ noch nur im Bearbeiten-Formular (für 074).
 - 040: Erweiterungen `vector` und `pg_trgm` per Migration `ingest.0001_extensions`. Für M6 (Betrieb ohne Superuser): `vector` ist nicht „trusted“ – ein Administrator legt die Erweiterung vor der ersten Migration an; die Rückwärtsmigration entfernt sie und braucht dann ebenfalls einen Superuser.
 - Für M3 vorgemerkt (22.11.2026): Chat-Assistent als animierte Pixelfigur ist von a7 ausgewählt (Vorlage lokal und ungetrackt unter `docs/design/bildmarke/assistent/`). Einbau als eigener M3-Auftrag nach Freigabe; erscheint nur bei eingeschalteten KI-Funktionen (E-59). Der Name der Figur kommt wie der Produktname nicht in getrackte Dateien, bis a7 beide veröffentlicht; vorher Registerprüfung.
