@@ -5,6 +5,17 @@ export type ClientOptions = {
 };
 
 /**
+ * ``enabled`` always; the other fields only with the AI features on.
+ */
+export type AiCheck = {
+    enabled: boolean;
+    ok?: boolean;
+    model?: string;
+    dimensions?: number;
+    error?: string;
+};
+
+/**
  * An area of a site. ``site`` is the id of the site.
  */
 export type Area = {
@@ -405,6 +416,7 @@ export type RoleEnum = 'manage' | 'read';
 export type Selftest = {
     database: DatabaseCheck;
     worker: WorkerCheck;
+    ai: AiCheck;
 };
 
 /**

@@ -1,14 +1,14 @@
 import { type ReactElement, type ReactNode, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { DatabaseCheck, WorkerCheck } from "../api/generated";
+import type { AiCheck, DatabaseCheck, WorkerCheck } from "../api/generated";
 import { loadSelftest, type SelftestOutcome } from "../api/selftest.ts";
 import { AnimatedHeading, LoadingText } from "../components/TextMotion.tsx";
 import { Icon } from "../icons/Icon.tsx";
 
 type PageState = { kind: "loading" } | SelftestOutcome;
 
-/** Test page: shows the database and worker checks of GET /api/v1/selftest/. */
+/** Test page: shows the database, worker and AI checks of GET /api/v1/selftest/. */
 export function SelftestPage(): ReactElement {
   const { t } = useTranslation("selftest");
   const [state, setState] = useState<PageState>({ kind: "loading" });
@@ -86,6 +86,7 @@ function SelftestBody({ state }: { state: PageState }): ReactElement {
         <div className="space-y-4">
           <DatabaseCard check={state.selftest.database} />
           <WorkerCard check={state.selftest.worker} />
+          <AiCard check={state.selftest.ai} />
         </div>
       );
   }
@@ -107,7 +108,7 @@ function ApiError({ message }: { message: string }): ReactElement {
 function DatabaseCard({ check }: { check: DatabaseCheck }): ReactElement {
   const { t } = useTranslation("selftest");
   return (
-    <Card heading={t("database.heading")} ok={check.ok} testId="database">
+    <Card heading={t("database.heading")} tone={check.ok ? "ok" : "failed"} testId="database">
       {check.ok ? (
         <Field label={t("database.serverVersion")}>
           <span data-testid="database-version">{check.server_version}</span>
@@ -122,7 +123,7 @@ function DatabaseCard({ check }: { check: DatabaseCheck }): ReactElement {
 function WorkerCard({ check }: { check: WorkerCheck }): ReactElement {
   const { t } = useTranslation("selftest");
   return (
-    <Card heading={t("worker.heading")} ok={check.ok} testId="worker">
+    <Card heading={t("worker.heading")} tone={check.ok ? "ok" : "failed"} testId="worker">
       {check.ok ? (
         <Field label={t("worker.result")}>
           <span data-testid="worker-result">{check.result}</span>
@@ -139,32 +140,76 @@ function WorkerCard({ check }: { check: WorkerCheck }): ReactElement {
   );
 }
 
+/**
+ * The AI features are optional (E-59): switched off is a neutral state, not an error,
+ * so the card shows neither error colours nor a warning sign.
+ */
+function AiCard({ check }: { check: AiCheck }): ReactElement {
+  const { t } = useTranslation("selftest");
+  if (!check.enabled) {
+    return (
+      <Card
+        heading={t("ai.heading")}
+        tone="neutral"
+        testId="ai"
+        note={<span data-testid="ai-disabled">{t("ai.disabled")}</span>}
+      />
+    );
+  }
+  const ok = check.ok === true;
+  return (
+    <Card heading={t("ai.heading")} tone={ok ? "ok" : "failed"} testId="ai">
+      <Field label={t("ai.model")}>
+        <span data-testid="ai-model">{check.model ?? ""}</span>
+      </Field>
+      {ok ? (
+        <Field label={t("ai.dimensions")}>
+          <span data-testid="ai-dimensions">{t("ai.dimensionsValue", { dimensions: check.dimensions ?? 0 })}</span>
+        </Field>
+      ) : (
+        <CheckError message={check.error ?? ""} testId="ai-error" />
+      )}
+    </Card>
+  );
+}
+
+type Tone = "ok" | "failed" | "neutral";
+
+const toneStyles: Record<Tone, { card: string; status: string }> = {
+  ok: { card: "border-success-line bg-success-soft", status: "text-success" },
+  failed: { card: "border-danger-line bg-danger-soft", status: "text-danger" },
+  neutral: { card: "border-line bg-surface-muted", status: "text-fg-muted" },
+};
+
+const toneIcons = { ok: "success", failed: "error", neutral: "info" } as const;
+
 function Card({
   heading,
-  ok,
+  tone,
   testId,
+  note,
   children,
 }: {
   heading: string;
-  ok: boolean;
+  tone: Tone;
   testId: string;
-  children: ReactNode;
+  note?: ReactNode;
+  children?: ReactNode;
 }): ReactElement {
   const { t } = useTranslation("selftest");
+  const statusText = { ok: t("statusOk"), failed: t("statusFailed"), neutral: t("statusDisabled") }[tone];
   return (
-    <article
-      data-testid={`${testId}-check`}
-      className={`rounded border p-4 ${ok ? "border-success-line bg-success-soft" : "border-danger-line bg-danger-soft"}`}
-    >
+    <article data-testid={`${testId}-check`} className={`rounded border p-4 ${toneStyles[tone].card}`}>
       <h3 className="flex items-center justify-between font-semibold">
         <span data-testid={`${testId}-heading`}>{heading}</span>
         {/* Status as icon and text, never by colour alone. */}
-        <span data-testid={`${testId}-status`} className={`inline-flex items-center gap-1.5 ${ok ? "text-success" : "text-danger"}`}>
-          <Icon name={ok ? "success" : "error"} decorative />
-          {ok ? t("statusOk") : t("statusFailed")}
+        <span data-testid={`${testId}-status`} className={`inline-flex items-center gap-1.5 ${toneStyles[tone].status}`}>
+          <Icon name={toneIcons[tone]} decorative />
+          {statusText}
         </span>
       </h3>
-      <dl className="mt-2 space-y-1">{children}</dl>
+      {note === undefined ? null : <p className="mt-2 text-fg-muted">{note}</p>}
+      {children === undefined ? null : <dl className="mt-2 space-y-1">{children}</dl>}
     </article>
   );
 }

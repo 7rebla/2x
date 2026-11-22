@@ -1,10 +1,11 @@
 {
   "heading": "Self-test",
-  "intro": "Checks the database and the background worker through the API.",
+  "intro": "Checks the database, the background worker and the optional AI features through the API.",
   "recheck": "Check again",
   "checking": "Checking…",
   "statusOk": "OK",
   "statusFailed": "Failed",
+  "statusDisabled": "Not enabled",
   "errorLabel": "Error",
   "apiUnreachable": "The API did not respond. Is the server running?",
   "apiHttpError": "The API answered with HTTP status {{status}}.",
@@ -19,5 +20,12 @@
     "result": "Result",
     "duration": "Duration",
     "durationValue": "{{duration, number}} ms"
+  },
+  "ai": {
+    "heading": "AI features",
+    "disabled": "AI features are not enabled. Everything else works without them, the keyword search included.",
+    "model": "Model",
+    "dimensions": "Dimensions",
+    "dimensionsValue": "{{dimensions, number}}"
   }
 }

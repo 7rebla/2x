@@ -1,8 +1,9 @@
-"""Self-test endpoint: database part, worker part, failures and schema.
+"""Self-test endpoint: database part, worker part, AI part, failures and schema.
 
 Plain ``pytest`` needs the database only; the worker part is replaced or made
 to fail on purpose. The success case against a running worker carries the
-marker ``worker``.
+marker ``worker``. The AI part (E-59, work order 048) talks to a stand-in of
+Ollama in the test process, never to a real model service.
 """
 
 import re
@@ -23,10 +24,13 @@ from django.core.management import call_command
 from django.db import OperationalError as DjangoOperationalError
 from django.db import connection
 from kombu.exceptions import OperationalError as KombuOperationalError
+from pytest_django.fixtures import Settings
 from redis.exceptions import ConnectionError as RedisConnectionError
 from rest_framework.test import APIClient
 
 from tests.accounts.users import make_user
+from tests.answers.fake_ollama import FakeOllama, fake_ollama
+from twox.answers.embeddings import OpenAICompatibleEmbedder
 from twox.config import selftest, taskqueue
 from twox.config.tasks import ping
 
@@ -91,14 +95,26 @@ def worker_answers_pong(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(taskqueue, "ping_worker", lambda timeout_seconds: "pong")
 
 
+@pytest.fixture(autouse=True)
+def ai_off(settings: Settings) -> None:
+    """The AI features are off unless a test switches them on (E-59).
+
+    The containers get ``TWOX_AI_ENABLED=true`` from the development
+    template; no test here may reach a real model service.
+    """
+    settings.TWOX_AI_ENABLED = False
+    settings.TWOX_LLM_BASE_URL = "http://ollama.invalid:11434/v1"
+
+
 @pytest.mark.django_db
 @pytest.mark.usefixtures("worker_answers_pong")
 def test_response_has_exactly_the_agreed_fields() -> None:
     body = get_selftest()
 
-    assert set(body) == {"database", "worker"}
+    assert set(body) == {"database", "worker", "ai"}
     assert set(body["database"]) == {"ok", "server_version", "error"}
     assert set(body["worker"]) == {"ok", "result", "duration_ms", "error"}
+    assert body["ai"] == {"enabled": False}
 
 
 @pytest.mark.django_db
@@ -471,8 +487,13 @@ def test_schema_contains_selftest_path_and_fields() -> None:
 
     components = schema["components"]["schemas"]
     selftest_schema = components["Selftest"]
-    assert set(selftest_schema["properties"]) == {"database", "worker"}
-    assert sorted(selftest_schema["required"]) == ["database", "worker"]
+    assert set(selftest_schema["properties"]) == {"database", "worker", "ai"}
+    assert sorted(selftest_schema["required"]) == ["ai", "database", "worker"]
+    ai_schema = components["AiCheck"]
+    assert set(ai_schema["properties"]) == {"enabled", "ok", "model", "dimensions", "error"}
+    # Only "enabled" is always there; the rest only with the AI features on.
+    assert ai_schema["required"] == ["enabled"]
+    assert ai_schema["properties"]["dimensions"]["type"] == "integer"
     assert set(components["DatabaseCheck"]["properties"]) == {"ok", "server_version", "error"}
     assert set(components["WorkerCheck"]["properties"]) == {
         "ok",
@@ -497,3 +518,139 @@ def test_selftest_against_running_worker() -> None:
     )
     assert worker["result"] == "pong"
     assert worker["error"] == ""
+
+
+# --- AI part (E-59, work order 048) ----------------------------------------------------
+
+
+@pytest.fixture
+def ai_on(settings: Settings) -> Iterator[FakeOllama]:
+    """AI features on, Ollama replaced by the stand-in with 1024 dimensions and bge-m3."""
+    with fake_ollama(FakeOllama(dimensions=1024)) as (base_url, state):
+        settings.TWOX_AI_ENABLED = True
+        settings.TWOX_LLM_BASE_URL = base_url
+        settings.TWOX_EMBED_MODEL = "bge-m3"
+        settings.TWOX_EMBED_DIMENSIONS = 1024
+        yield state
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_ai_part_is_neutral_and_contacts_nothing_when_off(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def no_model_service() -> object:
+        raise AssertionError("the model service was contacted with AI off")
+
+    monkeypatch.setattr(selftest, "selftest_embedder", no_model_service)
+
+    body = get_selftest()
+
+    assert body["ai"] == {"enabled": False}
+    assert body["database"]["ok"] is True
+    assert body["worker"]["ok"] is True
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_ai_part_reports_model_and_dimensions_when_on(ai_on: FakeOllama) -> None:
+    body = get_selftest()
+
+    assert body["ai"] == {
+        "enabled": True,
+        "ok": True,
+        "model": "bge-m3",
+        "dimensions": 1024,
+        "error": "",
+    }
+    # The model list, then one embedding of the fixed sentence.
+    assert [(request.method, request.path) for request in ai_on.requests] == [
+        ("GET", "/api/tags"),
+        ("POST", "/v1/embeddings"),
+    ]
+    assert ai_on.embed_requests[0].body == {
+        "model": "bge-m3",
+        "input": [selftest.AI_TEST_TEXT],
+    }
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_ai_part_reports_a_model_that_is_not_loaded(ai_on: FakeOllama) -> None:
+    ai_on.models = []
+
+    ai = get_selftest()["ai"]
+
+    assert ai == {
+        "enabled": True,
+        "ok": False,
+        "model": "bge-m3",
+        "dimensions": 1024,
+        "error": "model 'bge-m3' is not loaded in Ollama; load it with: ollama pull bge-m3",
+    }
+    assert ai_on.embed_requests == []
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_ai_part_reports_an_unreachable_model_service_without_its_address(
+    settings: Settings,
+) -> None:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as unused:
+        unused.bind(("127.0.0.1", 0))
+        port = unused.getsockname()[1]
+    settings.TWOX_AI_ENABLED = True
+    settings.TWOX_LLM_BASE_URL = f"http://127.0.0.1:{port}/v1"
+
+    started = time.monotonic()
+    ai = get_selftest()["ai"]
+    elapsed = time.monotonic() - started
+
+    assert ai["enabled"] is True
+    assert ai["ok"] is False
+    assert ai["error"] == "the model service refused the connection (is Ollama running?)"
+    assert "127.0.0.1" not in ai["error"]
+    assert str(port) not in ai["error"]
+    assert elapsed < selftest.AI_TIMEOUT_SECONDS + 1
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_ai_part_reports_wrong_dimensions(ai_on: FakeOllama, settings: Settings) -> None:
+    settings.TWOX_EMBED_DIMENSIONS = 768
+
+    ai = get_selftest()["ai"]
+
+    assert ai["ok"] is False
+    assert ai["dimensions"] == 768
+    assert ai["error"].startswith("TWOX_EMBED_DIMENSIONS is 768")
+    # The setting does not fit the column: the model is not asked at all.
+    assert ai_on.requests == []
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_ai_part_hides_unexpected_errors(
+    ai_on: FakeOllama, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def explode() -> object:
+        raise RuntimeError(f"cannot open {UNREACHABLE_BROKER}")
+
+    monkeypatch.setattr(selftest, "selftest_embedder", explode)
+
+    ai = get_selftest()["ai"]
+
+    assert (ai["ok"], ai["error"]) == (False, "AI check failed")
+    assert_no_internals(ai["error"])
+
+
+def test_ai_check_uses_a_short_time_limit(settings: Settings) -> None:
+    settings.TWOX_LLM_BASE_URL = "http://host.docker.internal:11434/v1"
+    settings.TWOX_EMBED_TIMEOUT_SECONDS = 120
+
+    embedder = selftest.selftest_embedder()
+
+    assert isinstance(embedder, OpenAICompatibleEmbedder)
+    assert vars(embedder)["_timeout"] == selftest.AI_TIMEOUT_SECONDS
+    # Worker part and AI part together stay below the limit of the web page (15 s).
+    assert selftest.WORKER_TIMEOUT_SECONDS + 2 * selftest.AI_TIMEOUT_SECONDS < 15
