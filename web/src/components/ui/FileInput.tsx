@@ -112,7 +112,7 @@ export function FileInput({
         <Icon name="document" size={20} decorative />
         {t("fileInput.choose")}
       </span>
-      <span data-testid="file-input-name" className="min-w-0 flex-1 truncate" title={file?.name}>
+      <span data-testid="file-input-name" className="min-w-40 flex-1 truncate" title={file?.name}>
         {file === null ? <span className={MUTED}>{t("fileInput.none")}</span> : file.name}
       </span>
       {disabled ? null : (
