@@ -636,8 +636,10 @@ export const searchQueryKey = (options: Options<SearchData>) => createQueryKey('
  * Hits for ``q``, best first, at most ``limit``; optionally only on some devices or plants.
  *
  * A query that is mainly identifiers (an address, an error code) gets
- * the sections that contain them first; a question ranks exact,
- * keyword and meaning matches together.
+ * the sections that contain them first, and so does every query when
+ * the search by meaning does not take part. Otherwise a question ranks
+ * keyword and meaning matches together; an identifier in it counts
+ * only through these two.
  * The same content stored for several devices is one hit with all its
  * places.
  */

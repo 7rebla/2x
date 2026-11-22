@@ -223,7 +223,7 @@ The page `/search` and `GET /api/v1/search/` search the newest ingested version 
 - **Keyword:** full-text search in German and English (word forms: "Steuerungen" finds "Steuerung") and as written. `-word` excludes a word, `"two words"` in quotes is a phrase.
 - **Exact:** identifiers in the query (IPv4 and IPv6 addresses with or without prefix, MAC addresses, part numbers and codes such as `PLC-01`, `S7-1200` or `E1234`) are searched word for word: `192.168.0.5` does not find `192.168.0.50`.
 - **Meaning** (AI features only): the query is embedded and the 50 nearest sections take part. Without the AI features the page says "Keyword search (AI features not enabled)" in a calm line; if the model service fails, the search falls back to keywords and says "Keyword search only – language model not reachable".
-- **Order:** a query that is essentially identifiers (an identifier and at most one other word) puts the sections that contain them first; a question with words is ranked by keyword and meaning together, with the exact hits as a third list. Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#search).
+- **Order:** a query that is essentially identifiers (an identifier and at most one other word) puts the sections that contain them first; a question with words is ranked by keyword and meaning together, and an identifier in it counts only through these two (E-61). Without the search by meaning, exact hits always come first. Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#search).
 - The same content on several devices is one hit with all its places. A hit from an older version is marked "Older version".
 
 To measure how well the search finds what the test questions expect, `evaluate_search` reads a probe list on standard input and prints rank, Recall@5, Recall@10 and MRR for keyword, vector and combined search (never section texts):
@@ -232,7 +232,7 @@ To measure how well the search finds what the test questions expect, `evaluate_s
 docker compose exec -T api python manage.py evaluate_search < backend/twox/search/probes/m2.json
 ```
 
-The probes refer to the manuals of the test factory (by manifest id and checksum). Where they are not uploaded the output lists them as `not ingested` and ends with `Not ingested: 7 of 7 probes`. `--json` prints the same as JSON.
+The probes refer to the manuals of the test factory (by manifest id and checksum). A place in the other language edition of the same manual counts as correct as well (E-61): the probes on the documentation of the production line expect the same pages in the German and the English edition. Where they are not uploaded the output lists them as `not ingested` and ends with `Not ingested: 7 of 7 probes`. `--json` prints the same as JSON.
 
 ### Acceptance of M2 by hand
 
@@ -240,7 +240,7 @@ In a test environment with the manuals of the test factory uploaded to their dev
 
 1. Open **Ingestion**, status filter "All": no job is "Ingesting" or "Queued", and there is no notice "Jobs are running …" above the table.
 2. For every required manual (all PDF and Office manuals of the production line and of the UR5e, without ZIP files; E-58) set the device filter: the newest row of the file shows "Ingested" with pages and sections. ZIP files (`aps-calibration-*`) stay "Skipped" with the reason; that is the intended state.
-3. Open **Search** and search for `192.168.0.100`: among the first three hits is the German documentation of the production line with page 18, 31 or 38 (test question 1), marked "Exact", the address highlighted.
+3. Open **Search** and search for `192.168.0.100`: among the first three hits is the documentation of the production line, German or English edition (E-61), with page 18, 31 or 38 (test question 1), marked "Exact", the address highlighted.
 4. Ask in your own words about the payload of the UR5e: among the first five hits is the German UR5e user manual with page 16, 101 or 102 (test question 9).
 5. Ask how the UR5e is released again after a stop by a protective device (E-33): among the first five hits is the German user manual (page 81, 84, 86 or 252) or the English software handbook (page 46) (test question 10).
 6. With the AI features off the hits have the calm line "Keyword search (AI features not enabled)" above them, without a warning icon; with the AI features on and the model service not reachable the notice "Keyword search only – language model not reachable".

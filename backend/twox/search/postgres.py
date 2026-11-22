@@ -47,7 +47,7 @@ for each list the section is in. The keyword list is ranked by ``ts_rank``
 (headings, weight A 1.0, above text, weight B 0.4), the vector list by
 distance; equal values share a rank (``DENSE_RANK``), so the same content
 stored for several devices does not push other sections down. Exact hits
-count in one of two ways (:func:`exact_hits_first`, 063):
+count in one of two ways (:func:`exact_hits_first`, 063 and 067):
 
 * **first:** the number of identifiers found exactly is added to the fused
   part, which stays below 1, so exact hits always come first. This holds
@@ -56,22 +56,21 @@ count in one of two ways (:func:`exact_hits_first`, 063):
   and whenever there is no vector list (AI features off, model service
   failed, nothing embedded): the keyword and exact search alone keep the
   order they had before 063.
-* **fused:** for any other query with a vector list, the exact hits are a
-  third list of the fusion, ranked by the number of identifiers found, then
-  by keyword rank, with the same ``RRF_K``. A question in plain words that
-  names a product (``Wie tausche ich beim XR7 das Getriebeöl?``) then no
-  longer puts every section that merely mentions the product above the
-  sections that answer it. This list has few distinct values, and in a
-  question the keyword search rarely finds anything (it needs every word),
-  so many different sections tie. Tied sections share the mean of the places
-  they take (two sections tied at the top have rank 1.5 each), counted over
-  distinct contents (E-55); with ``DENSE_RANK`` every one of them would get
-  the share of rank 1, which is the old precedence in another form. At equal
-  score the hit nearer in meaning comes first, so a section that only
-  names the product does not pass the best section by meaning on a tie.
-  A section that names the product and is also among the nearest by
-  meaning is in two lists and, as always with RRF, comes before a section
-  that is in one list only, even at rank 1 there.
+* **not counted (E-61):** for any other query with a vector list (a
+  question), exact hits add nothing of their own: the score is only
+  ``1 / (RRF_K + keyword rank) + 1 / (RRF_K + vector rank)``. An identifier
+  in a question acts only through the keyword and the vector list, like
+  any other word. A question in plain words that names a product (``Wie
+  tausche ich beim XR7 das Getriebeöl?``) then ranks the sections by
+  meaning: a section that merely names the product and is also among the
+  nearest by meaning no longer gets a second list on top and so no longer
+  passes the section that answers the question. Sections that contain an
+  identifier but are in neither list still take part, with score 0, after
+  every other hit; they keep the match kind ``exact``. At equal score the
+  hit nearer in meaning comes first. Work order 063 made the exact hits a
+  third list of the fusion here; with the manuals, a section that named the
+  product was then in two lists and stayed ahead of the best section by
+  meaning (acceptance run 060, test question 9).
 
 Phrases: the search vector joins six vectors (headings and text, three
 configurations each); joining shifts positions, so the last word of one copy
@@ -291,7 +290,7 @@ def other_words(query: str) -> list[str]:
 
 
 def exact_hits_first(query: str, identifiers: Sequence[Identifier], *, vector_list: bool) -> bool:
-    """Whether exact hits come before all other hits (``True``) or are fused (``False``).
+    """Whether exact hits come before all other hits (``True``) or add nothing (``False``).
 
     Exact hits come first when the query is essentially identifiers: at least
     one identifier and at most :data:`EXACT_FIRST_MAX_OTHER_WORDS` other
@@ -301,7 +300,9 @@ def exact_hits_first(query: str, identifiers: Sequence[Identifier], *, vector_li
     (``Fehler E1234``); a second word already makes a question, and a question
     that names a product on the side (``Wie viel trägt der UR5e?``) is
     answered by the sections that are near in meaning, not by every section
-    that names the product.
+    that names the product. For such a question (``False``) the exact hits
+    have no list of their own in the fusion (E-61): the identifier counts
+    only through the keyword and the vector list.
 
     Without a vector list (``vector_list`` false: AI features off, the model
     service failed or nothing is embedded) exact hits always come first: the
@@ -469,8 +470,11 @@ def _search_sql(
     arrays ``semantic_ids`` and ``semantic_ranks``. The excluded parts of
     the query apply to every way a section is found. ``exact_first``
     (:func:`exact_hits_first`) adds the number of identifiers found to the
-    score; otherwise the exact hits are a list of the fusion (see
-    :data:`EXACT_FIRST_MAX_OTHER_WORDS` and the module docstring).
+    score; otherwise exact hits add nothing of their own, the score is the
+    fusion of the keyword and the vector list, and at equal score the hit
+    nearer in meaning comes first (see :data:`EXACT_FIRST_MAX_OTHER_WORDS`
+    and the module docstring). Sections that contain an identifier stay
+    candidates either way, so the match kind ``exact`` is still reported.
     """
     keyword = _keyword_condition(queries)
     exclude = _exclusion_condition(queries.exclusions())
@@ -495,33 +499,13 @@ def _search_sql(
     where = " OR ".join(conditions)
     scope = _scope_sql(filter_devices=filter_devices, filter_plants=filter_plants)
     content_key = "sha256, page_start_key, page_end_key, heading_key, text_key"
-    exact_ctes = ""
-    exact_join = ""
-    # At equal score, a question prefers the hit nearer in meaning.
-    tie_break = ""
     if exact_first:
         exact_part = "r.exact_count"
+        tie_break = ""
     else:
-        exact_part = "COALESCE(1.0::float8 / (%(rrf_k)s + x.exact_rank), 0.0)"
-        exact_ctes = f"""
-exact_list AS (
-    SELECT {content_key},
-        MAX(exact_count) AS exact_count, MIN(keyword_rank) AS keyword_rank
-    FROM ranked
-    WHERE exact_count > 0
-    GROUP BY {content_key}
-),
-exact_ranked AS (
-    SELECT e.*,
-        (RANK() OVER exact_order)::float8
-        + (COUNT(*) OVER (PARTITION BY e.exact_count, e.keyword_rank) - 1)::float8 / 2
-            AS exact_rank
-    FROM exact_list e
-    WINDOW exact_order AS (ORDER BY e.exact_count DESC, e.keyword_rank ASC NULLS LAST)
-),"""
-        exact_join = "LEFT JOIN exact_ranked x ON " + " AND ".join(
-            f"x.{column} = r.{column}" for column in content_key.split(", ")
-        )
+        # A question (E-61): no list of its own for the exact hits; at equal
+        # score the hit nearer in meaning comes first.
+        exact_part = "0.0::float8"
         tie_break = "semantic_key ASC NULLS LAST, "
     return f"""
 WITH {scope},
@@ -550,14 +534,13 @@ ranked AS (
             THEN DENSE_RANK() OVER (PARTITION BY c.keyword_match ORDER BY c.rank DESC)
         END AS keyword_rank
     FROM candidates c
-),{exact_ctes}
+),
 matched AS (
     SELECT r.*,
         {exact_part}
         + COALESCE(1.0::float8 / (%(rrf_k)s + r.keyword_rank), 0.0)
         + COALESCE(1.0::float8 / (%(rrf_k)s + r.semantic_rank), 0.0) AS score
     FROM ranked r
-    {exact_join}
 ),
 grouped AS (
     SELECT
