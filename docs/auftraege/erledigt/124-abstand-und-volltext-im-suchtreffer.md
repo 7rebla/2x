@@ -1,6 +1,6 @@
 # Auftrag 124 – Abstand und Volltext im Suchtreffer
 
-Meilenstein: M3 · Freigabestufe: C · Status: zur Prüfung (D11 mit E-69 nach Empfehlung (a) entschieden; Messung in „2x“ von der Leitstelle nach dem Zusammenführen auszuführen)
+Meilenstein: M3 · Freigabestufe: C · Status: erledigt (D11 mit E-69 nach Empfehlung (a) entschieden; Messung in „2x“ von der Leitstelle nach dem Zusammenführen auszuführen)
 
 Voraussetzung: 120 (Suchgrundlinie Prüffragen) ist nach `main` zusammengeführt. Beide Aufträge ändern `backend/twox/search/evaluation.py` und `evaluate_search`. Start erst nach Freigabe von D11 durch a7 (siehe „Fragen an a7“).
 
@@ -167,6 +167,30 @@ Empfehlung: (a). Der Abstand ist das einzige brauchbare Relevanzsignal für die 
    `docker compose -p 2x --env-file <.env des Projektordners> --profile dev run --rm --no-deps backend-dev python manage.py evaluate_search --probes m3 --distance` und dasselbe mit `--json`.
 3. Nachher dieselbe Zählung wie in 1 (muss gleich sein).
 4. Eintragen: je Probe aus `m3.json` Rang und Abstand der besten Belegstelle (kombiniert), Rang und Abstand (nur Vektor), kleinster Abstand unter den ersten 10 (kombiniert), ggf. Rang des ersten Treffers ohne Abstand – alles aus der Tabelle „Cosine distances“; für `control-11` die Tabelle „Control probes: distances of the first 10 entries“ (Rang, Abstand, `section_id`, sha256-Präfix, Seiten); die Übersicht „Largest distance of a found expected place against the smallest of a control probe“ als Beobachtung („Lücke zwischen x und y“ oder „keine Lücke“). Belegstellen ohne Platz unter den ersten 50 der Vektorsuche mit „–“ und Anmerkung. Keine Texte; Seite 38 der APS-Dokumentation nicht zitieren.
+
+### Messung der Leitstelle in „2x“ (22.11.2026, nach dem Zusammenführen)
+
+`evaluate_search --probes m3 --distance`, nur lesend; vorher und nachher je 5 071 Abschnitte, 158 Versionen, 228 Einlese-Aufträge.
+
+| Probe | Rang | Abstand der Belegstelle | kleinster Abstand Top 10 |
+| --- | --- | --- | --- |
+| question-1 | 1 | 0,4346 | 0,4346 |
+| question-2 | 1 | 0,4448 | 0,4448 |
+| question-3 | – | – | 0,4445 |
+| question-3b | – | – | 0,4554 |
+| question-4 | – | – | 0,4337 |
+| question-5 | 2 | 0,3372 | 0,2898 |
+| question-6 | 4 | 0,4728 | 0,4632 |
+| question-7 | 6 (kombiniert 7) | 0,4791 | 0,4313 |
+| question-7b | – | – | 0,4417 |
+| question-8 | 9 | 0,5487 | 0,5242 |
+| question-9 | 1 | 0,3182 | 0,3182 |
+| question-10 | 1 | 0,3846 | 0,3846 |
+| question-10b | 7 | 0,4457 | 0,4141 |
+
+Kontrollprobe (Frage 11): erste zehn Treffer 0,5095 bis 0,5634.
+
+Ergebnis: Keine Lücke. Größter Abstand einer gefundenen Belegstelle 0,5487 (Frage 8, englischer Markdown-Text gegen deutsche Frage), kleinster der Kontrollprobe 0,5095 (Differenz −0,039). Ohne Frage 8 läge die Lücke bei +0,030 (0,4791 gegen 0,5095) – zu knapp für eine verlässliche feste Schwelle. Folgerung für 125/126/128: Die Schwelle vor dem Modellaufruf darf nur offensichtlich Fernes abweisen (Vorschlag: oberhalb von etwa 0,60, in 128 kalibriert); die Kontrollfrage muss das Zusammenspiel aus Prompt (Absage erlaubt) und Zitatprüfung (123) abfangen.
 
 ### Zweig und Arbeitsverzeichnis
 

@@ -83,7 +83,7 @@ In `backend/twox/config/settings.py`, direkt unter dem KI-Block (`settings.py:42
 | `TWOX_ANSWER_MAX_SOURCES` | int ≥ 1 | 8 | Höchstzahl Hauptquellen (k) |
 | `TWOX_ANSWER_CONTEXT_CHARS` | int ≥ 1 | 20000 | Zeichenbudget aller Quellentexte zusammen |
 | `TWOX_ANSWER_NEIGHBOURS` | bool | false | Nachbarabschnitte nachladen |
-| `TWOX_ANSWER_MAX_DISTANCE` | float 0 < x ≤ 2 | Wert aus Kurzbericht 124 (siehe Hinweise), sonst 0.5 | Relevanzschwelle (Kosinusabstand) |
+| `TWOX_ANSWER_MAX_DISTANCE` | float 0 < x ≤ 2 | 0.60 (Messung 124 auf 2x: Belegstellen bis 0,549, Kontrollfrage ab 0,510 – keine Lücke; die Schwelle weist nur offensichtlich Fernes ab, die Kontrollfrage fangen Prompt und Zitatprüfung ab; Feinkalibrierung in 128) | Relevanzschwelle (Kosinusabstand) |
 | `TWOX_ANSWER_TRANSLATION_DISTANCE` | float 0 < x ≤ 2 | 0.15 | Höchstabstand für „gleiche Stelle in anderer Sprache“ |
 
 Begründung Zeichenbudget: 8 Abschnitte à höchstens 2 000 Zeichen (`TWOX_SECTION_MAX_CHARS`, `settings.py:481`, E-60) sind 16 000 Zeichen; 20 000 lassen Platz für zwei Nachbarn. Bei der in D1 vorgeschlagenen Kontextlänge von 16 384 Tokens bleibt damit genug Raum für Systemprompt und Antwort. Alle Startwerte sind vorläufig und werden in 128 kalibriert.
