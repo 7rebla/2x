@@ -28,7 +28,8 @@ delay, at most ``TWOX_INGEST_MAX_RETRIES`` times per job (the counter is
 ``attempts``). The deadline ``TWOX_INGEST_TIMEOUT_SECONDS`` counts from the
 first ``started`` reported by Docling; waiting in Docling's own queue does
 not count. A task that Docling never reports as started (it stays
-``pending``) gets the same span from the start of the job (work order 065).
+``pending``) ends after ``TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS`` from the start
+of the job (work order 065).
 
 :func:`embed` (task ``twox.ingest.embed``, work order 048)
     Only with the AI features on (E-59). Computes the embeddings of the
@@ -276,7 +277,7 @@ def _deadline_passed(job: IngestJob, now: datetime) -> bool:
 
 
 def _start_deadline_passed(job: IngestJob, now: datetime) -> bool:
-    """Whether Docling has had ``TWOX_INGEST_TIMEOUT_SECONDS`` to start the task, in vain.
+    """Whether Docling has had ``TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS`` to start the task, in vain.
 
     Counts from ``started_at`` of the job: the job has no field of its own for
     the upload to Docling, and :func:`convert` uploads right after it sets
@@ -286,7 +287,7 @@ def _start_deadline_passed(job: IngestJob, now: datetime) -> bool:
     """
     if job.docling_started_at is not None or job.started_at is None:
         return False
-    limit = timedelta(seconds=settings.TWOX_INGEST_TIMEOUT_SECONDS)
+    limit = timedelta(seconds=settings.TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS)
     return now - job.started_at >= limit
 
 
@@ -626,12 +627,13 @@ def _timeout(job: IngestJob) -> StepResult:
 
 
 def _start_timeout(job: IngestJob) -> StepResult:
-    seconds: int = settings.TWOX_INGEST_TIMEOUT_SECONDS
+    seconds: int = settings.TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS
     logger.warning("ingest: job %s, Docling did not start the task within %s s", job.pk, seconds)
     return _fail(
         job,
         IngestErrorCode.TIMEOUT,
-        f"Docling did not start the conversion within {seconds} seconds after the upload",
+        f"Docling did not start the conversion within {seconds} seconds after the upload "
+        "(TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS)",
     )
 
 

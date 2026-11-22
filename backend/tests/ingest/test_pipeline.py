@@ -67,6 +67,7 @@ def ingest_settings(settings: Settings) -> None:
     settings.TWOX_INGEST_POLL_MAX_SECONDS = 60
     settings.TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS = 7200
     settings.TWOX_INGEST_TIMEOUT_SECONDS = 9000
+    settings.TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS = 86400
     settings.TWOX_SECTION_MAX_CHARS = 2000
 
 
@@ -601,7 +602,7 @@ def test_wait_in_the_docling_queue_within_the_deadline_goes_on(settings: Setting
     job = make_job(make_version())
     converter = FakeConverter(statuses=[PENDING])
     pipeline.convert(job.pk, converter=converter)
-    submitted = timezone.now() - timedelta(seconds=settings.TWOX_INGEST_TIMEOUT_SECONDS - 60)
+    submitted = timezone.now() - timedelta(seconds=settings.TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS - 60)
     IngestJob.objects.filter(pk=job.pk).update(started_at=submitted)
 
     result = pipeline.poll(job.pk, converter=converter)
@@ -611,12 +612,28 @@ def test_wait_in_the_docling_queue_within_the_deadline_goes_on(settings: Setting
     assert (job.status, job.docling_started_at) == ("running", None)
 
 
+def test_long_wait_of_a_large_batch_below_the_queue_deadline_goes_on(settings: Settings) -> None:
+    # A large batch waits in Docling's queue one document after another: ten
+    # hours are far past the ingest deadline, but below the queue deadline.
+    assert settings.TWOX_INGEST_TIMEOUT_SECONDS < 10 * 3600 < 86400
+    job = make_job(make_version())
+    converter = FakeConverter(statuses=[PENDING])
+    pipeline.convert(job.pk, converter=converter)
+    IngestJob.objects.filter(pk=job.pk).update(started_at=timezone.now() - timedelta(hours=10))
+
+    result = pipeline.poll(job.pk, converter=converter)
+
+    job.refresh_from_db()
+    assert result == StepResult(POLLING, poll_after=60)
+    assert (job.status, job.error_code, job.docling_started_at) == ("running", "", None)
+
+
 def test_task_that_docling_never_starts_fails_with_timeout(settings: Settings) -> None:
     job = make_job(make_version())
     converter = FakeConverter(statuses=[PENDING])
     pipeline.convert(job.pk, converter=converter)
     pipeline.poll(job.pk, converter=converter)
-    submitted = timezone.now() - timedelta(seconds=settings.TWOX_INGEST_TIMEOUT_SECONDS + 1)
+    submitted = timezone.now() - timedelta(seconds=settings.TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS + 1)
     IngestJob.objects.filter(pk=job.pk).update(started_at=submitted)
 
     result = pipeline.poll(job.pk, converter=converter)
@@ -625,7 +642,8 @@ def test_task_that_docling_never_starts_fails_with_timeout(settings: Settings) -
     assert result == StepResult(Outcome.FAILED)
     assert (job.status, job.error_code) == ("failed", "timeout")
     assert job.error_detail == (
-        "Docling did not start the conversion within 9000 seconds after the upload"
+        "Docling did not start the conversion within 86400 seconds after the upload"
+        " (TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS)"
     )
     assert job.docling_started_at is None
     assert job.finished_at is not None
@@ -636,7 +654,7 @@ def test_late_start_after_a_long_wait_counts_from_the_start(settings: Settings) 
     converter = FakeConverter(statuses=[PENDING, STARTED])
     pipeline.convert(job.pk, converter=converter)
     pipeline.poll(job.pk, converter=converter)
-    submitted = timezone.now() - timedelta(seconds=settings.TWOX_INGEST_TIMEOUT_SECONDS + 1)
+    submitted = timezone.now() - timedelta(seconds=settings.TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS + 1)
     IngestJob.objects.filter(pk=job.pk).update(started_at=submitted)
     before = timezone.now()
 
@@ -664,7 +682,7 @@ def test_finished_between_two_queries_without_started_is_done(settings: Settings
     pipeline.convert(job.pk, converter=converter)
     pipeline.poll(job.pk, converter=converter)
     # Even past the deadline without a start: Docling is asked first.
-    submitted = timezone.now() - timedelta(seconds=settings.TWOX_INGEST_TIMEOUT_SECONDS + 1)
+    submitted = timezone.now() - timedelta(seconds=settings.TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS + 1)
     IngestJob.objects.filter(pk=job.pk).update(started_at=submitted)
 
     result = pipeline.poll(job.pk, converter=converter)

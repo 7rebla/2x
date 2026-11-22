@@ -61,6 +61,7 @@ print(json.dumps({
     "ingest_poll_max_seconds": settings.TWOX_INGEST_POLL_MAX_SECONDS,
     "docling_document_timeout_seconds": settings.TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS,
     "ingest_timeout_seconds": settings.TWOX_INGEST_TIMEOUT_SECONDS,
+    "docling_queue_timeout_seconds": settings.TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS,
     "section_max_chars": settings.TWOX_SECTION_MAX_CHARS,
     "embed_task_max_seconds": settings.TWOX_EMBED_TASK_MAX_SECONDS,
 }))
@@ -72,6 +73,7 @@ INGEST_VARIABLES = (
     "TWOX_INGEST_POLL_MAX_SECONDS",
     "TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS",
     "TWOX_INGEST_TIMEOUT_SECONDS",
+    "TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS",
     "TWOX_SECTION_MAX_CHARS",
     "TWOX_EMBED_TASK_MAX_SECONDS",
 )
@@ -84,6 +86,7 @@ VALID_TIMING: dict[str, int] = {
     "docling_document_timeout_seconds": 7200,
     "docling_max_document_timeout_seconds": 7200,
     "ingest_timeout_seconds": 9000,
+    "docling_queue_timeout_seconds": 86400,
     "section_max_chars": 2000,
     "embed_task_max_seconds": 240,
     "task_soft_time_limit": 300,
@@ -159,6 +162,8 @@ def test_settings_import_without_running_database() -> None:
     assert values["ingest_poll_max_seconds"] == 60
     assert values["docling_document_timeout_seconds"] == 7200
     assert values["ingest_timeout_seconds"] == 9000
+    # A job whose Docling task never starts: 24 hours (work order 065).
+    assert values["docling_queue_timeout_seconds"] == 86400
     assert values["section_max_chars"] == 2000
     assert values["embed_task_max_seconds"] == 240
 
@@ -172,6 +177,7 @@ def test_ingest_settings_read_twox_variables() -> None:
             "TWOX_INGEST_POLL_MAX_SECONDS": "30",
             "TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS": "3600",
             "TWOX_INGEST_TIMEOUT_SECONDS": "4000",
+            "TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS": "4000",
             "TWOX_SECTION_MAX_CHARS": "1500",
             "TWOX_EMBED_TASK_MAX_SECONDS": "120",
         },
@@ -184,6 +190,8 @@ def test_ingest_settings_read_twox_variables() -> None:
     assert values["ingest_poll_max_seconds"] == 30
     assert values["docling_document_timeout_seconds"] == 3600
     assert values["ingest_timeout_seconds"] == 4000
+    # Equal to the ingest deadline is allowed.
+    assert values["docling_queue_timeout_seconds"] == 4000
     assert values["section_max_chars"] == 1500
     assert values["embed_task_max_seconds"] == 120
 
@@ -207,6 +215,16 @@ def test_settings_stop_when_the_ingest_deadline_is_below_the_docling_timeout() -
     ) in result.stderr
 
 
+def test_settings_stop_when_the_queue_deadline_is_below_the_ingest_deadline() -> None:
+    result = run_python(DUMP_SETTINGS, {"TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS": "8999"})
+
+    assert result.returncode != 0
+    assert (
+        "TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS (8999) must not be less than "
+        "TWOX_INGEST_TIMEOUT_SECONDS (9000)"
+    ) in result.stderr
+
+
 def test_settings_stop_when_embedding_runs_longer_than_a_task_may() -> None:
     result = run_python(DUMP_SETTINGS, {"TWOX_EMBED_TASK_MAX_SECONDS": "300"})
 
@@ -224,6 +242,7 @@ def test_settings_values_pass_the_ingest_check() -> None:
         docling_document_timeout_seconds=settings.TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS,
         docling_max_document_timeout_seconds=settings.TWOX_DOCLING_MAX_DOCUMENT_TIMEOUT_SECONDS,
         ingest_timeout_seconds=settings.TWOX_INGEST_TIMEOUT_SECONDS,
+        docling_queue_timeout_seconds=settings.TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS,
         section_max_chars=settings.TWOX_SECTION_MAX_CHARS,
         embed_task_max_seconds=settings.TWOX_EMBED_TASK_MAX_SECONDS,
         task_soft_time_limit=settings.TWOX_TASK_SOFT_TIME_LIMIT,
@@ -234,6 +253,10 @@ def test_settings_values_pass_the_ingest_check() -> None:
 
 def test_ingest_check_accepts_values_that_fit() -> None:
     settings_module.check_ingest_timing(**VALID_TIMING)
+
+
+def test_ingest_check_accepts_a_queue_deadline_equal_to_the_ingest_deadline() -> None:
+    settings_module.check_ingest_timing(**(VALID_TIMING | {"docling_queue_timeout_seconds": 9000}))
 
 
 def test_ingest_check_accepts_equal_poll_bounds() -> None:
@@ -248,6 +271,7 @@ def test_ingest_check_accepts_equal_poll_bounds() -> None:
         ("poll_max_seconds", "TWOX_INGEST_POLL_MAX_SECONDS"),
         ("docling_document_timeout_seconds", "TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS"),
         ("ingest_timeout_seconds", "TWOX_INGEST_TIMEOUT_SECONDS"),
+        ("docling_queue_timeout_seconds", "TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS"),
         ("section_max_chars", "TWOX_SECTION_MAX_CHARS"),
         ("embed_task_max_seconds", "TWOX_EMBED_TASK_MAX_SECONDS"),
         ("task_soft_time_limit", "TWOX_TASK_SOFT_TIME_LIMIT"),
@@ -275,6 +299,11 @@ def test_ingest_check_rejects_values_that_are_no_positive_whole_number(
             {"ingest_timeout_seconds": 7200},
             "TWOX_INGEST_TIMEOUT_SECONDS (7200) must be greater than "
             "TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS (7200)",
+        ),
+        (
+            {"docling_queue_timeout_seconds": 8999},
+            "TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS (8999) must not be less than "
+            "TWOX_INGEST_TIMEOUT_SECONDS (9000)",
         ),
         (
             {"poll_min_seconds": 61},

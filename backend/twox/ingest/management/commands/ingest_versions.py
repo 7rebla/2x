@@ -18,8 +18,9 @@ At least one selection is needed; several are combined:
     least once per ``TWOX_INGEST_POLL_MAX_SECONDS``, work order 048), so this
     takes jobs that are no longer queried at all, for example after a hard
     stop of the worker. A job that is still queried ends on its own: after
-    ``TWOX_INGEST_TIMEOUT_SECONDS`` from the start at Docling, or from the
-    start of the job if Docling never starts the task (work order 065).
+    ``TWOX_INGEST_TIMEOUT_SECONDS`` from the start at Docling, or after
+    ``TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS`` from the start of the job if
+    Docling never starts the task (work order 065).
     For running jobs more than that deadline remains the safe choice;
     ``--stuck 0`` takes every active job;
 ``--all``

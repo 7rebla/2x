@@ -460,9 +460,17 @@ TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS = env_positive_int(
     "TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS", TWOX_DOCLING_MAX_DOCUMENT_TIMEOUT_SECONDS
 )
 # Deadline of one conversion in the backend. It counts from the status
-# "started" at Docling, not while the document waits in Docling's queue, and
-# is longer than document_timeout, so that Docling's own error arrives first.
+# "started" at Docling, not while the document waits in Docling's queue (for
+# that, see the next value), and is longer than document_timeout, so that
+# Docling's own error arrives first.
 TWOX_INGEST_TIMEOUT_SECONDS = env_positive_int("TWOX_INGEST_TIMEOUT_SECONDS", 9000)
+# Deadline of a job whose Docling task never starts (stays pending), counted
+# from the start of the job (work order 065). Long, so that a large batch
+# waiting in Docling's queue one document after another is not cut off; at
+# least the deadline above.
+TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS = env_positive_int(
+    "TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS", 24 * 60 * 60
+)
 # Largest section in characters (twox/ingest/sections.py).
 TWOX_SECTION_MAX_CHARS = env_positive_int("TWOX_SECTION_MAX_CHARS", 2000)
 # One embedding task embeds for at most this long, then schedules itself
@@ -478,6 +486,7 @@ def check_ingest_timing(
     docling_document_timeout_seconds: int,
     docling_max_document_timeout_seconds: int,
     ingest_timeout_seconds: int,
+    docling_queue_timeout_seconds: int,
     section_max_chars: int,
     embed_task_max_seconds: int,
     task_soft_time_limit: int,
@@ -495,6 +504,7 @@ def check_ingest_timing(
         "TWOX_INGEST_POLL_MAX_SECONDS": poll_max_seconds,
         "TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS": docling_document_timeout_seconds,
         "TWOX_INGEST_TIMEOUT_SECONDS": ingest_timeout_seconds,
+        "TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS": docling_queue_timeout_seconds,
         "TWOX_SECTION_MAX_CHARS": section_max_chars,
         "TWOX_EMBED_TASK_MAX_SECONDS": embed_task_max_seconds,
         "TWOX_TASK_SOFT_TIME_LIMIT": task_soft_time_limit,
@@ -519,6 +529,12 @@ def check_ingest_timing(
             f"TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS ({docling_document_timeout_seconds}), "
             "the document_timeout sent to Docling; otherwise the backend gives up on a "
             "conversion that Docling is still allowed to finish."
+        )
+    if docling_queue_timeout_seconds < ingest_timeout_seconds:
+        raise ImproperlyConfigured(
+            f"TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS ({docling_queue_timeout_seconds}) must not be "
+            f"less than TWOX_INGEST_TIMEOUT_SECONDS ({ingest_timeout_seconds}); a job waiting "
+            "in Docling's queue would get less time than a conversion that has started."
         )
     if poll_min_seconds > poll_max_seconds:
         raise ImproperlyConfigured(
@@ -551,6 +567,7 @@ check_ingest_timing(
     docling_document_timeout_seconds=TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS,
     docling_max_document_timeout_seconds=TWOX_DOCLING_MAX_DOCUMENT_TIMEOUT_SECONDS,
     ingest_timeout_seconds=TWOX_INGEST_TIMEOUT_SECONDS,
+    docling_queue_timeout_seconds=TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS,
     section_max_chars=TWOX_SECTION_MAX_CHARS,
     embed_task_max_seconds=TWOX_EMBED_TASK_MAX_SECONDS,
     task_soft_time_limit=TWOX_TASK_SOFT_TIME_LIMIT,
