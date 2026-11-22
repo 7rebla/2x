@@ -1,16 +1,20 @@
 // One hit of the search page (work order 054): page or pages, heading path,
-// how it was found, the snippet with the found places marked, and every place
-// the text is stored at (file, version, device, plant) with links.
+// how it was found, the snippet with the found places marked, and the places
+// the text is stored at (file, version, device, plant) with links. The first
+// place is always shown; further places (the same file on more devices) are
+// behind a "+N more devices" button (work order 087), so they do not push the
+// snippet away.
 //
 // Everything from the hit (snippet, headings, titles, file names, device and
 // plant names) is data: React renders it as text, never as HTML, and it never
 // goes through the interpolation of i18next.
-import type { ReactElement } from "react";
+import { type ReactElement, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import type { MatchKindsEnum, SearchHit, SearchLocation } from "../../api/generated";
 import { devicePath, documentPath } from "../../components/files/format.ts";
+import { Button } from "../../components/ui/Button.tsx";
 import { Icon } from "../../icons/Icon.tsx";
 import { pageRange, snippetPieces } from "./snippet.ts";
 
@@ -19,13 +23,20 @@ const LINK_CLASS = "text-accent underline hover:text-accent-strong";
 /** Order of the kinds of a hit, as the API ranks them. */
 const MATCH_KIND_ORDER: readonly MatchKindsEnum[] = ["exact", "keyword", "semantic"];
 
+/**
+ * Classes of a found place in the snippet. No side padding (px-0): padding
+ * inside a word such as "IP-Addresses" would show as gaps; box-decoration-clone
+ * keeps the background on every line when a mark wraps.
+ */
+export const MARK_CLASS = "rounded-sm bg-accent-soft px-0 font-semibold text-fg box-decoration-clone";
+
 /** The snippet as text nodes, the found places in <mark>. */
 export function Snippet({ hit }: { hit: Pick<SearchHit, "snippet" | "highlights"> }): ReactElement {
   return (
     <p data-testid="search-snippet" className="leading-relaxed break-words">
       {snippetPieces(hit.snippet, hit.highlights).map((piece, index) =>
         piece.marked ? (
-          <mark key={index} className="rounded-sm bg-accent-soft px-0.5 font-semibold text-fg">
+          <mark key={index} className={MARK_CLASS}>
             {piece.text}
           </mark>
         ) : (
@@ -59,13 +70,18 @@ function MatchKinds({ kinds }: { kinds: readonly MatchKindsEnum[] }): ReactEleme
   return (
     <ul aria-label={t("matchKind.label")} className="flex flex-wrap gap-1 sm:ml-auto">
       {shown.map((kind) => (
+        // The short name stays visible; the explanation is its tooltip (on the
+        // name, so the list item gets no accessible name of its own) and is
+        // read out once, after the name.
         <li
           key={kind}
-          data-testid="search-match-kind"
-          data-kind={kind}
-          className="rounded-full border border-line-strong bg-surface-muted px-2 text-xs text-fg-muted"
+          data-testid="search-match-kind-item"
+          className="cursor-help rounded-full border border-line-strong bg-surface-muted px-2 text-xs text-fg-muted"
         >
-          {t(`matchKind.${kind}`)}
+          <span data-testid="search-match-kind" data-kind={kind} title={t(`matchKind.hint.${kind}`)}>
+            {t(`matchKind.${kind}`)}
+          </span>
+          <span className="sr-only">: {t(`matchKind.hint.${kind}`)}</span>
         </li>
       ))}
     </ul>
@@ -122,6 +138,54 @@ function LocationView({ location }: { location: SearchLocation }): ReactElement 
   );
 }
 
+function locationKey(location: SearchLocation, index: number): string {
+  return `${String(location.version.id)}-${String(location.device.id)}-${String(index)}`;
+}
+
+/**
+ * How the button names the hidden places: "devices" when every place is on a
+ * device of its own (the usual case: one file stored for several devices),
+ * else "places" (a device holds the text in more than one file or version).
+ */
+export function hiddenPlacesKind(locations: readonly SearchLocation[]): "devices" | "places" {
+  const devices = new Set(locations.map((location) => location.device.id));
+  return devices.size === locations.length ? "devices" : "places";
+}
+
+/** The places of a hit: the first one, the others behind a button that opens and closes them. */
+function Locations({ locations }: { locations: readonly SearchLocation[] }): ReactElement {
+  const { t } = useTranslation("search");
+  const [open, setOpen] = useState(false);
+  const listId = useId();
+  const hidden = locations.length - 1;
+  const shown = open ? locations : locations.slice(0, 1);
+  return (
+    <div className="border-t border-line">
+      <ul id={listId} aria-label={t("locations")} className="divide-y divide-line">
+        {shown.map((location, index) => (
+          <LocationView key={locationKey(location, index)} location={location} />
+        ))}
+      </ul>
+      {hidden > 0 ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          data-testid="search-more-locations"
+          aria-expanded={open}
+          aria-controls={listId}
+          className="-ml-2"
+          onClick={() => {
+            setOpen(!open);
+          }}
+        >
+          {open ? t("moreLocations.hide") : t(`moreLocations.${hiddenPlacesKind(locations)}`, { count: hidden })}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
 /** A hit as a card. */
 export function SearchHitView({ hit }: { hit: SearchHit }): ReactElement {
   const { t } = useTranslation("search");
@@ -143,11 +207,7 @@ export function SearchHitView({ hit }: { hit: SearchHit }): ReactElement {
         <MatchKinds kinds={hit.match_kinds} />
       </div>
       <Snippet hit={hit} />
-      <ul aria-label={t("locations")} className="divide-y divide-line border-t border-line">
-        {hit.locations.map((location, index) => (
-          <LocationView key={`${String(location.version.id)}-${String(location.device.id)}-${String(index)}`} location={location} />
-        ))}
-      </ul>
+      <Locations locations={hit.locations} />
     </li>
   );
 }

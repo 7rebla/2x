@@ -1,6 +1,8 @@
 // Search page (work order 054): form and address, the states of a search,
 // hits with pages, heading path, marked snippet, places with links, the
 // "older version" mark and the three states of the search by meaning.
+// Work order 087: the first place only, the others behind "+N more devices";
+// marks without side padding; the kinds of a hit explained.
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -33,6 +35,14 @@ function hitBySection(section: number): HTMLElement {
     throw new Error(`no hit for section ${String(section)}`);
   }
   return found;
+}
+
+/** Opens the further places of a hit with its "+N more" button. */
+function showAllPlaces(section: number): void {
+  const button = within(hitBySection(section)).getByTestId("search-more-locations");
+  expect(button.getAttribute("aria-expanded")).toBe("false");
+  fireEvent.click(button);
+  expect(button.getAttribute("aria-expanded")).toBe("true");
 }
 
 describe("form and address", () => {
@@ -309,6 +319,53 @@ describe("search by meaning", () => {
     ).toEqual(["Exakt", "Stichwort"]);
     expect(within(hitBySection(502)).getAllByTestId("search-match-kind")[1]?.textContent).toBe("Bedeutung");
   });
+
+  it("explains each kind as a tooltip and to screen readers", async () => {
+    fakeApi(reader, fakeSearchApi().handler);
+    renderApp("/search?q=inspection");
+    await hits();
+
+    const items = within(hitBySection(501)).getAllByTestId("search-match-kind-item");
+    const names = within(hitBySection(501)).getAllByTestId("search-match-kind");
+    expect(names.map((name) => name.getAttribute("title"))).toEqual([
+      "An identifier from the search, such as an IP address or a part number, appears word for word in the text.",
+      "The words of the search appear in the text, also in other forms, such as the plural.",
+    ]);
+    // The list reads "Found by", then "Exact: An identifier …".
+    expect(within(hitBySection(501)).getByRole("list", { name: "Found by" })).toBeDefined();
+    const [exact] = items as [HTMLElement];
+    expect(exact.textContent).toBe(
+      "Exact: An identifier from the search, such as an IP address or a part number, appears word for word in the text.",
+    );
+    expect(exact.querySelector(".sr-only")?.textContent).toBe(
+      ": An identifier from the search, such as an IP address or a part number, appears word for word in the text.",
+    );
+    const meaning = within(hitBySection(503)).getByTestId("search-match-kind");
+    expect(meaning.getAttribute("title")).toBe(
+      "The text matches the search in meaning, even without the same words (AI search).",
+    );
+  });
+
+  it("explains each kind in German", async () => {
+    await changeLanguage("de");
+    fakeApi(reader, fakeSearchApi().handler);
+    renderApp("/search?q=inspection");
+    await hits();
+
+    const titles = within(hitBySection(502))
+      .getAllByTestId("search-match-kind")
+      .map((item) => item.getAttribute("title"));
+    expect(titles).toEqual([
+      "Die Wörter der Suche kommen im Text vor, auch in anderer Form, etwa in der Mehrzahl.",
+      "Der Text passt inhaltlich zur Suche, auch ohne dieselben Wörter (KI-Suche).",
+    ]);
+    expect(within(hitBySection(501)).getAllByTestId("search-match-kind")[0]?.getAttribute("title")).toBe(
+      "Eine Kennung aus der Suche, etwa eine IP-Adresse oder Teilenummer, steht wörtlich im Text.",
+    );
+    expect(within(hitBySection(502)).getAllByTestId("search-match-kind-item")[1]?.textContent).toBe(
+      "Bedeutung: Der Text passt inhaltlich zur Suche, auch ohne dieselben Wörter (KI-Suche).",
+    );
+  });
 });
 
 describe("hits", () => {
@@ -392,6 +449,7 @@ describe("hits", () => {
     fakeApi(reader, fakeSearchApi().handler);
     renderApp("/search?q=inspection");
     await hits();
+    showAllPlaces(502);
 
     const places = within(hitBySection(502)).getAllByTestId("search-location");
     expect(places).toHaveLength(2);
@@ -413,6 +471,7 @@ describe("hits", () => {
     fakeApi(reader, fakeSearchApi().handler);
     renderApp("/search?q=inspection");
     await hits();
+    showAllPlaces(502);
 
     const [first, second] = within(hitBySection(502)).getAllByTestId("search-location") as [HTMLElement, HTMLElement];
     expect(within(first).getByRole("link", { name: "Test manual" }).getAttribute("href")).toBe("/documents/7");
@@ -437,6 +496,7 @@ describe("hits", () => {
     fakeApi(reader, fakeSearchApi().handler);
     renderApp("/search?q=inspection");
     await hits();
+    showAllPlaces(502);
 
     const [first, second] = within(hitBySection(502)).getAllByTestId("search-location") as [HTMLElement, HTMLElement];
     expect(first.dataset.latest).toBe("true");
@@ -458,6 +518,128 @@ describe("hits", () => {
     await hits();
 
     expect(screen.getByTestId("search-older-version").textContent).toBe("Ältere Version");
+  });
+
+  it("marks the found places without side padding, so a word is not torn apart", async () => {
+    fakeApi(
+      reader,
+      fakeSearchApi({
+        semantic: "used",
+        hits: [hit(800, { snippet: "Set the IP-Addresses first.", highlights: [{ start: 8, end: 10 }] })],
+      }).handler,
+    );
+    renderApp("/search?q=IP");
+    await hits();
+
+    const snippet = within(hitBySection(800)).getByTestId("search-snippet");
+    expect(snippet.textContent).toBe("Set the IP-Addresses first.");
+    const mark = snippet.querySelector("mark");
+    expect(mark?.textContent).toBe("IP");
+    const classes = mark?.className.split(" ") ?? [];
+    expect(classes).toContain("px-0");
+    expect(classes).toContain("box-decoration-clone");
+    expect(classes.filter((name) => /^(?:px|pl|pr|ps|pe)-/.test(name) && name !== "px-0")).toEqual([]);
+  });
+});
+
+describe("places of a hit", () => {
+  /** The places shown in a hit, by file title and device name. */
+  function shownPlaces(section: number): string[] {
+    return within(hitBySection(section))
+      .getAllByTestId("search-location")
+      .map(
+        (place) =>
+          `${within(place).getByTestId("search-location-document").textContent} @ ${within(place).getByTestId("search-location-device").textContent}`,
+      );
+  }
+
+  /** A hit with the file "Test manual" stored for `count` devices of their own. */
+  function sameFileOnDevices(sectionId: number, count: number): ReturnType<typeof hit> {
+    return hit(sectionId, {
+      locations: Array.from({ length: count }, (_unused, index) =>
+        location({ deviceId: 2000 + index, deviceKey: `test-dev-${String(index + 1)}`, deviceName: `Test device ${String(index + 1)}` }),
+      ),
+    });
+  }
+
+  it("shows the first place and puts the others behind a button that opens and closes them", async () => {
+    fakeApi(reader, fakeSearchApi().handler);
+    renderApp("/search?q=inspection");
+    await hits();
+
+    const card = hitBySection(502);
+    expect(shownPlaces(502)).toEqual(["Test manual @ Test controller"]);
+    expect(within(card).queryByText("Test drive notes")).toBeNull();
+    const button = within(card).getByTestId("search-more-locations");
+    expect(button.tagName).toBe("BUTTON");
+    expect(button.getAttribute("type")).toBe("button");
+    expect(button.textContent).toBe("+1 more device");
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    const list = within(card).getByRole("list", { name: "Stored in" });
+    expect(button.getAttribute("aria-controls")).toBe(list.id);
+
+    fireEvent.click(button);
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(button.textContent).toBe("Show fewer");
+    expect(shownPlaces(502)).toEqual(["Test manual @ Test controller", "Test drive notes @ Test drive"]);
+
+    fireEvent.click(button);
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(button.textContent).toBe("+1 more device");
+    expect(shownPlaces(502)).toEqual(["Test manual @ Test controller"]);
+  });
+
+  it("has no button when a hit is stored in one place only", async () => {
+    fakeApi(reader, fakeSearchApi().handler);
+    renderApp("/search?q=inspection");
+    await hits();
+
+    expect(shownPlaces(501)).toEqual(["Test manual @ Test controller"]);
+    expect(within(hitBySection(501)).queryByTestId("search-more-locations")).toBeNull();
+    expect(within(hitBySection(503)).queryByTestId("search-more-locations")).toBeNull();
+    expect(screen.getAllByTestId("search-more-locations")).toHaveLength(1);
+  });
+
+  it("shows one file for eleven devices as one place and ten more devices", async () => {
+    fakeApi(reader, fakeSearchApi({ semantic: "used", hits: [sameFileOnDevices(900, 11)] }).handler);
+    renderApp("/search?q=inspection");
+    await hits();
+
+    expect(shownPlaces(900)).toEqual(["Test manual @ Test device 1"]);
+    const button = within(hitBySection(900)).getByTestId("search-more-locations");
+    expect(button.textContent).toBe("+10 more devices");
+    fireEvent.click(button);
+    expect(shownPlaces(900)).toHaveLength(11);
+    expect(shownPlaces(900).at(-1)).toBe("Test manual @ Test device 11");
+  });
+
+  it("speaks of places, not devices, when a device holds the text more than once", async () => {
+    const twice = hit(901, {
+      locations: [location(), location({ versionId: 70, number: 1, filename: "test-manual-v1.pdf", isLatest: false }), location({ deviceId: 1003, deviceName: "Test drive" })],
+    });
+    fakeApi(reader, fakeSearchApi({ semantic: "used", hits: [twice] }).handler);
+    renderApp("/search?q=inspection");
+    await hits();
+
+    expect(within(hitBySection(901)).getByTestId("search-more-locations").textContent).toBe("+2 more places");
+  });
+
+  it("names the button in German", async () => {
+    await changeLanguage("de");
+    const twice = hit(902, { locations: [location(), location({ versionId: 70, number: 1, isLatest: false })] });
+    fakeApi(
+      reader,
+      fakeSearchApi({ semantic: "used", hits: [sameFileOnDevices(900, 11), sameFileOnDevices(903, 2), twice] }).handler,
+    );
+    renderApp("/search?q=Prüfung");
+    await hits();
+
+    const button = within(hitBySection(900)).getByTestId("search-more-locations");
+    expect(button.textContent).toBe("+10 weitere Geräte");
+    expect(within(hitBySection(903)).getByTestId("search-more-locations").textContent).toBe("+1 weiteres Gerät");
+    expect(within(hitBySection(902)).getByTestId("search-more-locations").textContent).toBe("+1 weitere Fundstelle");
+    fireEvent.click(button);
+    expect(button.textContent).toBe("Weniger anzeigen");
   });
 });
 

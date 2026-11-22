@@ -23,7 +23,12 @@
     "label": "Gefunden über",
     "exact": "Exakt",
     "keyword": "Stichwort",
-    "semantic": "Bedeutung"
+    "semantic": "Bedeutung",
+    "hint": {
+      "exact": "Eine Kennung aus der Suche, etwa eine IP-Adresse oder Teilenummer, steht wörtlich im Text.",
+      "keyword": "Die Wörter der Suche kommen im Text vor, auch in anderer Form, etwa in der Mehrzahl.",
+      "semantic": "Der Text passt inhaltlich zur Suche, auch ohne dieselben Wörter (KI-Suche)."
+    }
   },
   "page": {
     "one": "S. {{page}}",
@@ -31,6 +36,13 @@
   },
   "headingPath": "Abschnitt",
   "locations": "Gespeichert in",
+  "moreLocations": {
+    "devices_one": "+{{count}} weiteres Gerät",
+    "devices_other": "+{{count}} weitere Geräte",
+    "places_one": "+{{count}} weitere Fundstelle",
+    "places_other": "+{{count}} weitere Fundstellen",
+    "hide": "Weniger anzeigen"
+  },
   "version": "Version {{number}}",
   "olderVersion": "Ältere Version",
   "olderVersionHint": "Diese Datei hat eine neuere Version, die noch nicht durchsuchbar ist.",
