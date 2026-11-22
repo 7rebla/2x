@@ -14,6 +14,7 @@ import { NewVersionForm } from "../components/files/UploadForm.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { NotFound } from "../components/NotFound.tsx";
 import { useRole } from "../session.ts";
+import { AnimatedHeading, MaskedTitle } from "../components/TextMotion.tsx";
 
 /** One file with all its versions (address /documents/:documentId). */
 export function DocumentPage(): ReactElement {
@@ -38,7 +39,7 @@ function DocumentDetails({ id }: { id: number }): ReactElement {
   }
   return (
     <section className="space-y-4">
-      <h2 className="text-2xl font-semibold">{t("document.heading")}</h2>
+      <AnimatedHeading text={t("document.heading")} />
       {query.isError ? <ErrorMessage error={query.error} /> : <Loading />}
     </section>
   );
@@ -49,12 +50,12 @@ function DeviceLink({ deviceId }: { deviceId: number }): ReactElement {
   const { t } = useTranslation("files");
   const query = useQuery(devicesRetrieveOptions({ path: { id: deviceId } }));
   return (
-    <Link to={devicePath(deviceId)} className="underline">
+    <Link to={devicePath(deviceId)} className="text-accent underline hover:text-accent-strong">
       {query.data === undefined ? (
         t("document.deviceFallback", { id: deviceId })
       ) : (
         <>
-          {query.data.name} <span className="font-mono">({query.data.key})</span>
+          {query.data.name} <span className="tabular-nums slashed-zero">({query.data.key})</span>
         </>
       )}
     </Link>
@@ -69,17 +70,15 @@ function DocumentView({ document, error }: { document: DocumentDetail; error: un
 
   return (
     <section className="space-y-4">
-      <p className="text-sm text-slate-600">{t("document.heading")}</p>
-      <h2 className="text-2xl font-semibold break-words" data-testid="document-title">
-        {document.title}
-      </h2>
+      <p className="text-sm text-fg-muted">{t("document.heading")}</p>
+      <MaskedTitle text={document.title} className="text-2xl font-semibold break-words" testId="document-title" />
 
       {/* A failed reload keeps the last data on screen and says so. */}
       {error === null ? null : <ErrorMessage error={error} />}
 
       <dl
         aria-label={t("document.detailsLabel")}
-        className="grid grid-cols-1 gap-x-6 gap-y-2 rounded border border-slate-200 bg-white p-4 sm:grid-cols-[max-content_1fr]"
+        className="grid grid-cols-1 gap-x-6 gap-y-2 rounded border border-line bg-surface p-4 sm:grid-cols-[max-content_1fr]"
       >
         <Field label={t("document.device")} testId="document-device">
           <DeviceLink deviceId={document.device} />
@@ -95,7 +94,7 @@ function DocumentView({ document, error }: { document: DocumentDetail; error: un
         </Field>
       </dl>
 
-      <section className="space-y-3 rounded border border-slate-200 bg-white p-4">
+      <section className="space-y-3 rounded border border-line bg-surface p-4">
         <h3 className="font-semibold">{t("document.versions")}</h3>
         <VersionTable versions={versions} />
         {canManage ? <NewVersionForm documentId={document.id} kind={document.kind} /> : null}
@@ -116,9 +115,9 @@ function VersionTable({ versions }: { versions: readonly DocumentVersion[] }): R
   const { t } = useTranslation("files");
   return (
     <div className="overflow-x-auto">
-      <table aria-label={t("document.versionsLabel")} data-testid="document-versions" className="w-full text-left text-sm">
+      <table aria-label={t("document.versionsLabel")} data-testid="document-versions" className="w-full text-left text-sm tabular-nums">
         <thead>
-          <tr className="border-b border-slate-200 text-slate-600">
+          <tr className="border-b border-line text-fg-muted">
             <th className="py-2 pr-4 font-normal">{t("columns.version")}</th>
             <th className="py-2 pr-4 font-normal">{t("columns.date")}</th>
             <th className="py-2 pr-4 font-normal">{t("columns.size")}</th>
@@ -130,7 +129,7 @@ function VersionTable({ versions }: { versions: readonly DocumentVersion[] }): R
         </thead>
         <tbody>
           {versions.map((version) => (
-            <tr key={version.id} data-testid="document-version" data-version={version.number} className="border-b border-slate-100 align-top">
+            <tr key={version.id} data-testid="document-version" data-version={version.number} className="border-b border-line align-top">
               <td data-testid="version-number" className="py-2 pr-4">
                 {version.number}
               </td>
@@ -163,7 +162,7 @@ function VersionTable({ versions }: { versions: readonly DocumentVersion[] }): R
 function Field({ label, testId, children }: { label: string; testId: string; children: ReactNode }): ReactElement {
   return (
     <>
-      <dt className="text-slate-600">{label}</dt>
+      <dt className="text-fg-muted">{label}</dt>
       <dd data-testid={testId} className="break-words">
         {children}
       </dd>

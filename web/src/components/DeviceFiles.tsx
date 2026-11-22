@@ -28,7 +28,7 @@ export function DeviceFiles({ deviceId }: { deviceId: number }): ReactElement {
       aria-labelledby={headingId}
       data-testid="device-files"
       data-device-id={deviceId}
-      className="space-y-3 rounded border border-slate-200 bg-white p-4"
+      className="space-y-3 rounded border border-line bg-surface p-4"
     >
       <h3 id={headingId} className="font-semibold">
         {t("heading")}
@@ -50,16 +50,16 @@ function FileTable({ documents }: { documents: readonly Document[] }): ReactElem
   const { t } = useTranslation("files");
   if (documents.length === 0) {
     return (
-      <p data-testid="device-files-empty" className="text-slate-600">
+      <p data-testid="device-files-empty" className="text-fg-muted">
         {t("empty")}
       </p>
     );
   }
   return (
     <div className="overflow-x-auto">
-      <table aria-label={t("listLabel")} data-testid="device-files-table" className="w-full text-left text-sm">
+      <table aria-label={t("listLabel")} data-testid="device-files-table" className="w-full text-left text-sm tabular-nums">
         <thead>
-          <tr className="border-b border-slate-200 text-slate-600">
+          <tr className="border-b border-line text-fg-muted">
             <th className="py-2 pr-4 font-normal">{t("columns.title")}</th>
             <th className="py-2 pr-4 font-normal">{t("columns.kind")}</th>
             <th className="py-2 pr-4 font-normal">{t("columns.version")}</th>
@@ -84,9 +84,9 @@ function FileRow({ item }: { item: Document }): ReactElement {
   const { t } = useTranslation("files");
   const version = item.latest_version;
   return (
-    <tr data-testid="device-file" data-document-id={item.id} className="border-b border-slate-100 align-top">
+    <tr data-testid="device-file" data-document-id={item.id} className="border-b border-line align-top">
       <td data-testid="file-title" className="py-2 pr-4 break-words">
-        <Link to={documentPath(item.id)} className="underline">
+        <Link to={documentPath(item.id)} className="text-accent underline hover:text-accent-strong">
           {item.title}
         </Link>
       </td>
@@ -94,7 +94,7 @@ function FileRow({ item }: { item: Document }): ReactElement {
         <KindLabel kind={item.kind} />
       </td>
       {version === null ? (
-        <td colSpan={6} className="py-2 text-slate-600">
+        <td colSpan={6} className="py-2 text-fg-muted">
           {t("noVersion")}
         </td>
       ) : (

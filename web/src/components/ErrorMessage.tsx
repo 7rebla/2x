@@ -33,7 +33,7 @@ export function ErrorMessage({ error }: { error: unknown }): ReactElement {
     <div
       role="alert"
       data-testid="error-message"
-      className="space-y-1 rounded border border-red-300 bg-red-50 p-4 text-red-800"
+      className="space-y-1 rounded border border-danger-line bg-danger-soft p-4 text-danger"
     >
       <p data-testid="error-summary">{summary}</p>
       {detail === null ? null : (

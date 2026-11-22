@@ -50,7 +50,7 @@ export function DownloadLink({ versionId, number }: { versionId: number; number:
       href={downloadPath(versionId)}
       aria-label={t("download.version", { number })}
       data-testid="download-link"
-      className="underline"
+      className="text-accent underline hover:text-accent-strong"
     >
       {t("download.link")}
     </a>

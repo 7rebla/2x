@@ -40,6 +40,8 @@ import {
 } from "../api/generated/@tanstack/react-query.gen.ts";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Loading } from "../components/Loading.tsx";
+import { AnimatedHeading } from "../components/TextMotion.tsx";
+import { useDisplay } from "../theme/store.ts";
 import {
   buildMapGraph,
   graphSignature,
@@ -57,13 +59,13 @@ export function MapPage(): ReactElement {
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold">{t("nav:map")}</h2>
+        <AnimatedHeading text={t("nav:map")} />
         {/* The map does not replace the tree: the list view stays one click away. */}
-        <Link to="/" data-testid="map-list-link" className="text-slate-900 underline">
+        <Link to="/" data-testid="map-list-link" className="text-accent underline hover:text-accent-strong">
           {t("map:listLink")}
         </Link>
       </div>
-      <p className="text-slate-600">{t("map:intro")}</p>
+      <p className="text-fg-muted">{t("map:intro")}</p>
       <MapContent />
     </section>
   );
@@ -96,8 +98,8 @@ function MapContent(): ReactElement {
       {error === null ? null : <ErrorMessage error={error} />}
       {graph.nodes.length === 0 ? (
         <div data-testid="map-empty" className="space-y-2">
-          <p className="text-slate-600">{t("empty")}</p>
-          <Link to="/" className="text-slate-900 underline">
+          <p className="text-fg-muted">{t("empty")}</p>
+          <Link to="/" className="text-accent underline hover:text-accent-strong">
             {t("emptyLink")}
           </Link>
         </div>
@@ -125,12 +127,13 @@ function nodeIdOf(target: EventTarget): string | null {
   return target.getAttribute("data-id");
 }
 
+// Theme colours (index.css); React Flow sets them as inline styles, where var() works.
 const MINIMAP_COLORS: Record<MapNode["type"], string> = {
-  site: "#cbd5e1",
-  area: "#e2e8f0",
-  plant: "#f1f5f9",
-  device: "#334155",
-  network: "#38bdf8",
+  site: "var(--twox-line)",
+  area: "var(--twox-surface-muted)",
+  plant: "var(--twox-canvas)",
+  device: "var(--twox-fg-muted)",
+  network: "var(--twox-accent)",
 };
 
 function minimapColor(node: MapNode): string {
@@ -148,6 +151,8 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
   const deferredQuery = useDeferredValue(query);
   const [showNetworks, setShowNetworks] = useState(true);
   const [focusedId, setFocusedId] = useState<string | null>(null);
+  // React Flow's own colours (controls, minimap) follow the shown colour mode.
+  const { theme } = useDisplay();
 
   const deviceIdByNode = useMemo(
     () =>
@@ -243,11 +248,11 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
           selectable: false,
           style: {
             strokeDasharray: "6 4",
-            stroke: active ? "#0f172a" : "#64748b",
+            stroke: active ? "var(--twox-fg)" : "var(--twox-fg-muted)",
             strokeWidth: active ? 2.5 : 1.25,
           },
-          labelStyle: { fontSize: 11, fill: active ? "#0f172a" : "#475569" },
-          labelBgStyle: { fill: "#f8fafc" },
+          labelStyle: { fontSize: 11, fill: active ? "var(--twox-fg)" : "var(--twox-fg-muted)" },
+          labelBgStyle: { fill: "var(--twox-surface)" },
         };
       }),
     [graph, highlightedDevices, showNetworks, t],
@@ -317,7 +322,7 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
         <div className="space-y-1">
-          <label htmlFor={searchId} className="block text-sm text-slate-600">
+          <label htmlFor={searchId} className="block text-sm text-fg-muted">
             {t("search.label")}
           </label>
           <input
@@ -329,10 +334,10 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
               setQuery(event.target.value);
             }}
             data-testid="map-search"
-            className="w-72 max-w-full rounded border border-slate-300 bg-white px-3 py-2"
+            className="w-72 max-w-full rounded border border-line-strong bg-surface px-3 py-2"
           />
         </div>
-        <p role="status" data-testid="map-search-status" className="min-h-6 text-sm text-slate-600">
+        <p role="status" data-testid="map-search-status" className="min-h-6 text-sm text-fg-muted">
           {status}
         </p>
         <div className="flex items-center gap-2">
@@ -350,7 +355,7 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
           </label>
         </div>
       </div>
-      <p className="text-sm text-slate-600">{t("legend")}</p>
+      <p className="text-sm text-fg-muted">{t("legend")}</p>
       <div
         role="region"
         aria-label={t("label")}
@@ -358,7 +363,7 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
         onKeyDown={onKeyDown}
         onFocus={onFocus}
         onBlur={onBlur}
-        className="h-[70vh] min-h-[28rem] w-full overflow-hidden rounded border border-slate-200 bg-white"
+        className="twox-map h-[70vh] min-h-[28rem] w-full overflow-hidden rounded border border-line bg-surface"
       >
         <ReactFlow
           nodes={shownNodes}
@@ -373,7 +378,7 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
           edgesFocusable={false}
           edgesReconnectable={false}
           deleteKeyCode={null}
-          forceColorMode="light"
+          forceColorMode={theme}
           ariaLabelConfig={ariaLabelConfig}
         >
           <Background gap={24} />

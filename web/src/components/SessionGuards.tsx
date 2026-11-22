@@ -42,7 +42,7 @@ export function RequireRole({ role, children }: { role: Role; children: ReactNod
 export function NoPermission(): ReactElement {
   const { t } = useTranslation("auth");
   return (
-    <p role="alert" data-testid="no-permission" className="rounded border border-amber-300 bg-amber-50 p-4 text-amber-900">
+    <p role="alert" data-testid="no-permission" className="rounded border border-warning-line bg-warning-soft p-4 text-warning">
       {t("noPermission")}
     </p>
   );

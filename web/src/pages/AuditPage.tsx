@@ -2,6 +2,7 @@ import { type ReactElement, type SubmitEvent, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AuditTrail, auditObjectTypes } from "../components/AuditTrail.tsx";
+import { AnimatedHeading } from "../components/TextMotion.tsx";
 
 /** Longest user name the API accepts as a filter (Django's username field). */
 const ACTOR_MAX_LENGTH = 150;
@@ -41,8 +42,8 @@ export function AuditPage(): ReactElement {
 
   return (
     <section className="space-y-4">
-      <h2 className="text-2xl font-semibold">{t("heading")}</h2>
-      <p className="text-slate-600">{t("intro")}</p>
+      <AnimatedHeading text={t("heading")} />
+      <p className="text-fg-muted">{t("intro")}</p>
       <form data-testid="audit-filter" onSubmit={apply} className="flex flex-wrap items-end gap-3">
         <fieldset className="contents">
           <legend className="sr-only">{t("filter.legend")}</legend>
@@ -51,7 +52,7 @@ export function AuditPage(): ReactElement {
             <select
               id={objectTypeId}
               data-testid="audit-filter-object-type"
-              className="rounded border border-slate-300 px-2 py-1"
+              className="rounded border border-line-strong px-2 py-1"
               value={objectType}
               onChange={(event) => {
                 setObjectType(event.target.value);
@@ -70,7 +71,7 @@ export function AuditPage(): ReactElement {
             <input
               id={actorId}
               data-testid="audit-filter-actor"
-              className="rounded border border-slate-300 px-2 py-1"
+              className="rounded border border-line-strong px-2 py-1"
               type="text"
               value={actor}
               maxLength={ACTOR_MAX_LENGTH}
@@ -81,10 +82,10 @@ export function AuditPage(): ReactElement {
               }}
             />
           </div>
-          <button type="submit" className="rounded bg-slate-800 px-3 py-1 text-white">
+          <button type="submit" className="rounded bg-accent px-3 py-1 text-on-accent hover:bg-accent-strong">
             {t("filter.apply")}
           </button>
-          <button type="button" className="rounded border border-slate-300 px-3 py-1" onClick={reset}>
+          <button type="button" className="rounded border border-line-strong px-3 py-1" onClick={reset}>
             {t("filter.reset")}
           </button>
         </fieldset>

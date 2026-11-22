@@ -96,7 +96,7 @@ function useSaveAction(
 }
 
 const inputClass =
-  "w-full rounded border border-slate-300 bg-white px-3 py-2 aria-[invalid=true]:border-red-500";
+  "w-full rounded border border-line-strong bg-surface px-3 py-2 aria-[invalid=true]:border-danger";
 
 function FieldFrame({
   name,
@@ -113,12 +113,12 @@ function FieldFrame({
   const invalid = errors.length > 0;
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="block text-sm text-slate-600">
+      <label htmlFor={id} className="block text-sm text-fg-muted">
         {t(`fields.${name}`)}
       </label>
       {children({ id, invalid, describedBy: invalid ? errorId : undefined })}
       {invalid ? (
-        <ul id={errorId} data-testid={`field-error-${name}`} className="text-sm text-red-800">
+        <ul id={errorId} data-testid={`field-error-${name}`} className="text-sm text-danger">
           {errors.map((message) => (
             <li key={message}>{message}</li>
           ))}
@@ -132,14 +132,14 @@ function TextField({
   name,
   state,
   multiline = false,
-  monospace = false,
+  identifier = false,
 }: {
   name: FieldName;
   state: FormState;
   multiline?: boolean;
-  monospace?: boolean;
+  identifier?: boolean;
 }): ReactElement {
-  const className = monospace ? `${inputClass} font-mono` : inputClass;
+  const className = identifier ? `${inputClass} tabular-nums slashed-zero` : inputClass;
   return (
     <FieldFrame name={name} errors={state.fieldErrors[name] ?? []}>
       {({ id, invalid, describedBy }) =>
@@ -239,13 +239,13 @@ function FormShell({
       noValidate
       aria-labelledby={titleId}
       data-testid="structure-form"
-      className="space-y-3 rounded border border-slate-300 bg-white p-4"
+      className="space-y-3 rounded border border-line bg-surface p-4"
     >
       <h3 id={titleId} className="font-semibold">
         {title}
       </h3>
       {state.invalid ? (
-        <div role="alert" data-testid="form-invalid" className="rounded border border-red-300 bg-red-50 p-3 text-red-800">
+        <div role="alert" data-testid="form-invalid" className="rounded border border-danger-line bg-danger-soft p-3 text-danger">
           <p>{t("form.invalid")}</p>
           {otherErrors.length > 0 ? (
             <ul className="mt-1 list-disc pl-5 text-sm" aria-label={t("form.otherErrors")}>
@@ -262,10 +262,10 @@ function FormShell({
         {children}
       </div>
       <div className="flex gap-2">
-        <button type="submit" disabled={pending} className="rounded bg-slate-800 px-4 py-2 text-white disabled:opacity-50">
+        <button type="submit" disabled={pending} className="rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong disabled:opacity-50">
           {pending ? t("actions.saving") : t("actions.save")}
         </button>
-        <button type="button" onClick={onCancel} className="rounded border border-slate-300 px-4 py-2">
+        <button type="button" onClick={onCancel} className="rounded border border-line-strong px-4 py-2">
           {t("actions.cancel")}
         </button>
       </div>
@@ -396,7 +396,7 @@ export function PlantForm({ plant, areaId, onDone }: FormProps & { plant?: Plant
       onCancel={onDone}
     >
       <SelectField name="area" state={state} choices={areaChoices(sites.data, areas.data)} />
-      <TextField name="key" state={state} monospace />
+      <TextField name="key" state={state} identifier />
       <TextField name="name" state={state} />
       <TextField name="notes" state={state} multiline />
     </FormShell>
@@ -479,12 +479,12 @@ export function DeviceForm({
       onCancel={onDone}
     >
       <SelectField name="plant" state={state} choices={plantChoices(sites.data, areas.data, plants.data)} />
-      <TextField name="key" state={state} monospace />
+      <TextField name="key" state={state} identifier />
       <TextField name="name" state={state} />
       <TextField name="manufacturer" state={state} />
       <TextField name="model" state={state} />
-      <TextField name="software_version" state={state} />
-      <TextField name="ip_address" state={state} monospace />
+      <TextField name="software_version" state={state} identifier />
+      <TextField name="ip_address" state={state} identifier />
       <TextField name="address_source" state={state} multiline />
       <TextField name="protocols" state={state} />
       <TextField name="notes" state={state} multiline />

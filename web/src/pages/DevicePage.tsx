@@ -12,6 +12,7 @@ import { Loading } from "../components/Loading.tsx";
 import { NotFound } from "../components/NotFound.tsx";
 import { useRole } from "../session.ts";
 import { DeviceForm, type FieldName } from "./structure/forms.tsx";
+import { AnimatedHeading, MaskedTitle } from "../components/TextMotion.tsx";
 
 /** The id from the address, or null if it cannot be a device id (then the page is NotFound). */
 export function parseDeviceId(raw: string | undefined): number | null {
@@ -45,7 +46,7 @@ function DeviceDetails({ id }: { id: number }): ReactElement {
   }
   return (
     <section className="space-y-4">
-      <h2 className="text-2xl font-semibold">{t("device")}</h2>
+      <AnimatedHeading text={t("device")} />
       {query.isError ? <ErrorMessage error={query.error} /> : <Loading />}
     </section>
   );
@@ -64,8 +65,8 @@ const TEXT_FIELDS = [
   "notes",
 ] as const satisfies readonly (FieldName & keyof Device)[];
 
-/** Fields shown in a fixed-width font. */
-const MONOSPACE_FIELDS = new Set<FieldName>(["key", "ip_address"]);
+/** Identifiers, addresses and versions: tabular figures with a slashed zero (no monospace). */
+const IDENTIFIER_FIELDS = new Set<FieldName>(["key", "ip_address", "software_version"]);
 
 function DeviceView({ device, error }: { device: Device; error: unknown }): ReactElement {
   const { t, i18n } = useTranslation(["assets", "nav"]);
@@ -76,25 +77,25 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
   return (
     <section className="space-y-4">
       <nav aria-label={t("assets:device.breadcrumb")} data-testid="device-breadcrumb">
-        <ol className="flex flex-wrap gap-x-2 text-sm text-slate-600">
+        <ol className="flex flex-wrap gap-x-2 text-sm text-fg-muted">
           <Crumb>
-            <Link to="/" className="underline">
+            <Link to="/" className="text-accent underline hover:text-accent-strong">
               {t("nav:structure")}
             </Link>
           </Crumb>
           <Crumb testId="breadcrumb-site">{device.site.name}</Crumb>
           <Crumb testId="breadcrumb-area">{device.area.name}</Crumb>
           <Crumb testId="breadcrumb-plant">
-            {device.plant.name} <span className="font-mono">({device.plant.key})</span>
+            {device.plant.name} <span className="tabular-nums slashed-zero">({device.plant.key})</span>
           </Crumb>
-          <li data-testid="breadcrumb-device" aria-current="page" className="font-semibold text-slate-900">
+          <li data-testid="breadcrumb-device" aria-current="page" className="font-semibold text-fg">
             {device.name}
           </li>
         </ol>
       </nav>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold">{device.name}</h2>
+        <MaskedTitle text={device.name} testId="device-title" />
         {canManage && !editing ? (
           <button
             type="button"
@@ -102,7 +103,7 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
             onClick={() => {
               setEditing(true);
             }}
-            className="rounded bg-slate-800 px-4 py-2 text-white"
+            className="rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong"
           >
             {t("assets:actions.edit")}
           </button>
@@ -124,7 +125,7 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
 
       <dl
         aria-label={t("assets:device.fieldsLabel")}
-        className="grid grid-cols-1 gap-x-6 gap-y-2 rounded border border-slate-200 bg-white p-4 sm:grid-cols-[max-content_1fr]"
+        className="grid grid-cols-1 gap-x-6 gap-y-2 rounded border border-line bg-surface p-4 sm:grid-cols-[max-content_1fr]"
       >
         <Field label={t("assets:fields.site")} testId="device-site">
           {device.site.name}
@@ -133,7 +134,7 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
           {device.area.name}
         </Field>
         <Field label={t("assets:fields.plant")} testId="device-plant">
-          {device.plant.name} <span className="font-mono">({device.plant.key})</span>
+          {device.plant.name} <span className="tabular-nums slashed-zero">({device.plant.key})</span>
         </Field>
         {TEXT_FIELDS.map((field) => {
           const value = device[field];
@@ -142,7 +143,7 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
               key={field}
               label={t(`assets:fields.${field}`)}
               testId={`device-${field}`}
-              monospace={MONOSPACE_FIELDS.has(field)}
+              identifier={IDENTIFIER_FIELDS.has(field)}
             >
               {value === null || value === "" ? t("assets:device.notSet") : value}
             </Field>
@@ -172,19 +173,19 @@ function Crumb({ testId, children }: { testId?: string; children: ReactNode }): 
 function Field({
   label,
   testId,
-  monospace = false,
+  identifier = false,
   children,
 }: {
   label: string;
   testId: string;
-  monospace?: boolean;
+  identifier?: boolean;
   children: ReactNode;
 }): ReactElement {
   return (
     <>
-      <dt className="text-slate-600">{label}</dt>
+      <dt className="text-fg-muted">{label}</dt>
       {/* pre-wrap keeps the line breaks of notes and address sources; long words break. */}
-      <dd data-testid={testId} className={`whitespace-pre-wrap break-words ${monospace ? "font-mono" : ""}`}>
+      <dd data-testid={testId} className={`whitespace-pre-wrap break-words ${identifier ? "tabular-nums slashed-zero" : ""}`}>
         {children}
       </dd>
     </>

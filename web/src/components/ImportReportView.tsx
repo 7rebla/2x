@@ -32,7 +32,7 @@ export function ImportReportView({ report }: { report: ImportReport }): ReactEle
     <div data-testid="import-report" className="space-y-4">
       <p
         data-testid="import-summary"
-        className={errorCount > 0 ? "font-medium text-red-800" : report.saved ? "font-medium text-green-800" : ""}
+        className={errorCount > 0 ? "font-medium text-danger" : report.saved ? "font-medium text-success" : ""}
       >
         {summary}
       </p>
@@ -44,11 +44,11 @@ export function ImportReportView({ report }: { report: ImportReport }): ReactEle
           <caption className="mb-1 text-left font-medium">{t("report.countsCaption")}</caption>
           <thead>
             <tr>
-              <th scope="col" className="border border-slate-300 px-2 py-1 text-left">
+              <th scope="col" className="border border-line px-2 py-1 text-left">
                 {t("report.level")}
               </th>
               {countKinds.map((kind) => (
-                <th key={kind} scope="col" className="border border-slate-300 px-2 py-1 text-right">
+                <th key={kind} scope="col" className="border border-line px-2 py-1 text-right">
                   {t(`report.${kind}`)}
                 </th>
               ))}
@@ -57,14 +57,14 @@ export function ImportReportView({ report }: { report: ImportReport }): ReactEle
           <tbody>
             {importLevels.map((level) => (
               <tr key={level} data-testid={`import-counts-${level}`}>
-                <th scope="row" className="border border-slate-300 px-2 py-1 text-left font-normal">
+                <th scope="row" className="border border-line px-2 py-1 text-left font-normal">
                   {t(`report.${level}`)}
                 </th>
                 {countKinds.map((kind) => (
                   <td
                     key={kind}
                     data-testid={`import-count-${level}-${kind}`}
-                    className="border border-slate-300 px-2 py-1 text-right tabular-nums"
+                    className="border border-line px-2 py-1 text-right tabular-nums"
                   >
                     {report[level][kind]}
                   </td>
@@ -85,13 +85,13 @@ function ImportErrors({ errors }: { errors: readonly ImportRowError[] }): ReactE
       <caption className="mb-1 text-left font-medium">{t("errors.caption")}</caption>
       <thead>
         <tr>
-          <th scope="col" className="border border-slate-300 px-2 py-1 text-right">
+          <th scope="col" className="border border-line px-2 py-1 text-right">
             {t("errors.line")}
           </th>
-          <th scope="col" className="border border-slate-300 px-2 py-1 text-left">
+          <th scope="col" className="border border-line px-2 py-1 text-left">
             {t("errors.column")}
           </th>
-          <th scope="col" className="border border-slate-300 px-2 py-1 text-left">
+          <th scope="col" className="border border-line px-2 py-1 text-left">
             {t("errors.message")}
           </th>
         </tr>
@@ -100,15 +100,15 @@ function ImportErrors({ errors }: { errors: readonly ImportRowError[] }): ReactE
         {errors.map((error, index) => (
           // The list is replaced as a whole, never reordered: the index is a stable key.
           <tr key={index} data-testid="import-error">
-            <td data-testid="import-error-line" className="border border-slate-300 px-2 py-1 text-right tabular-nums">
+            <td data-testid="import-error-line" className="border border-line px-2 py-1 text-right tabular-nums">
               {error.line ?? t("errors.wholeFile")}
             </td>
-            <td data-testid="import-error-column" className="border border-slate-300 px-2 py-1 font-mono">
+            <td data-testid="import-error-column" className="border border-line px-2 py-1 tabular-nums slashed-zero">
               {error.column ?? t("errors.wholeRow")}
             </td>
             <td
               data-testid="import-error-message"
-              className="border border-slate-300 px-2 py-1 break-words whitespace-pre-wrap"
+              className="border border-line px-2 py-1 break-words whitespace-pre-wrap"
             >
               {error.message}
             </td>

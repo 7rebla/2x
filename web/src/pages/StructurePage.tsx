@@ -10,6 +10,7 @@ import {
   plantsListOptions,
   sitesListOptions,
 } from "../api/generated/@tanstack/react-query.gen.ts";
+import { AnimatedHeading } from "../components/TextMotion.tsx";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { useRole } from "../session.ts";
@@ -64,20 +65,20 @@ export function StructurePage(): ReactElement {
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold">{t("nav:structure")}</h2>
+        <AnimatedHeading text={t("nav:structure")} />
         {canManage ? (
           <button
             type="button"
             onClick={() => {
               setEditor({ form: "site" });
             }}
-            className="rounded bg-slate-800 px-4 py-2 text-white"
+            className="rounded bg-accent px-4 py-2 text-on-accent hover:bg-accent-strong"
           >
             {t("assets:actions.newSite")}
           </button>
         ) : null}
       </div>
-      <p className="text-slate-600">{t("assets:structure.intro")}</p>
+      <p className="text-fg-muted">{t("assets:structure.intro")}</p>
       <EditorSlot control={control} anchor="top" />
       <StructureContent control={control} />
     </section>
@@ -113,7 +114,7 @@ function StructureContent({ control }: { control: EditorControl }): ReactElement
       {/* A failed reload keeps the last data on screen and says so. */}
       {error === null ? null : <ErrorMessage error={error} />}
       <div className="space-y-1">
-        <label htmlFor={searchId} className="block text-sm text-slate-600">
+        <label htmlFor={searchId} className="block text-sm text-fg-muted">
           {t("search.label")}
         </label>
         <input
@@ -125,15 +126,15 @@ function StructureContent({ control }: { control: EditorControl }): ReactElement
             setQuery(event.target.value);
           }}
           data-testid="structure-search"
-          className="w-full max-w-md rounded border border-slate-300 bg-white px-3 py-2"
+          className="w-full max-w-md rounded border border-line-strong bg-surface px-3 py-2"
         />
       </div>
       {tree.length === 0 ? (
-        <p data-testid="structure-empty" className="text-slate-600">
+        <p data-testid="structure-empty" className="text-fg-muted">
           {t("structure.empty")}
         </p>
       ) : shown.length === 0 ? (
-        <p data-testid="structure-no-match" className="text-slate-600">
+        <p data-testid="structure-no-match" className="text-fg-muted">
           {t("structure.noMatch")}
         </p>
       ) : (
@@ -173,7 +174,7 @@ function EditorSlot({ control, anchor }: { control: EditorControl; anchor: strin
 function DeviceCount({ count }: { count: number }): ReactElement {
   const { t } = useTranslation("assets");
   return (
-    <span data-testid="device-count" className="text-sm text-slate-600">
+    <span data-testid="device-count" className="text-sm text-fg-muted">
       {t("structure.deviceCount", { count })}
     </span>
   );
@@ -185,7 +186,7 @@ function SmallButton({ label, onClick, children }: { label: string; onClick: () 
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="rounded border border-slate-300 bg-white px-2 py-0.5 text-sm hover:bg-slate-100"
+      className="rounded border border-line-strong bg-surface px-2 py-0.5 text-sm hover:bg-surface-muted"
     >
       {children}
     </button>
@@ -198,14 +199,14 @@ function Row({ children }: { children: ReactNode }): ReactElement {
 
 function KindLabel({ kind }: { kind: "site" | "area" | "plant" | "device" }): ReactElement {
   const { t } = useTranslation("assets");
-  return <span className="text-xs uppercase tracking-wide text-slate-500">{t(`kind.${kind}`)}</span>;
+  return <span className="text-xs uppercase tracking-wide text-fg-muted">{t(`kind.${kind}`)}</span>;
 }
 
 function SiteItem({ node, control }: { node: SiteNode; control: EditorControl }): ReactElement {
   const { t } = useTranslation("assets");
   const { site } = node;
   return (
-    <li data-testid="site-item" className="space-y-2 rounded border border-slate-200 bg-white p-4">
+    <li data-testid="site-item" className="space-y-2 rounded border border-line bg-surface p-4">
       <Row>
         <KindLabel kind="site" />
         <span data-testid="site-name" className="text-lg font-semibold">
@@ -235,7 +236,7 @@ function SiteItem({ node, control }: { node: SiteNode; control: EditorControl })
       </Row>
       <EditorSlot control={control} anchor={`site:${String(site.id)}`} />
       {node.areas.length > 0 ? (
-        <ul className="space-y-2 border-l border-slate-200 pl-4">
+        <ul className="space-y-2 border-l border-line pl-4">
           {node.areas.map((areaNode) => (
             <AreaItem key={areaNode.area.id} node={areaNode} control={control} />
           ))}
@@ -279,7 +280,7 @@ function AreaItem({ node, control }: { node: AreaNode; control: EditorControl })
       </Row>
       <EditorSlot control={control} anchor={`area:${String(area.id)}`} />
       {node.plants.length > 0 ? (
-        <ul className="space-y-2 border-l border-slate-200 pl-4">
+        <ul className="space-y-2 border-l border-line pl-4">
           {node.plants.map((plantNode) => (
             <PlantItem key={plantNode.plant.id} node={plantNode} control={control} />
           ))}
@@ -299,7 +300,7 @@ function PlantItem({ node, control }: { node: PlantNode; control: EditorControl 
         <span data-testid="plant-name" className="font-semibold">
           {plant.name}
         </span>
-        <span data-testid="plant-key" className="font-mono text-sm">
+        <span data-testid="plant-key" className="tabular-nums slashed-zero text-sm">
           {plant.key}
         </span>
         <DeviceCount count={node.deviceCount} />
@@ -326,7 +327,7 @@ function PlantItem({ node, control }: { node: PlantNode; control: EditorControl 
       </Row>
       <EditorSlot control={control} anchor={`plant:${String(plant.id)}`} />
       {node.devices.length > 0 ? (
-        <ul className="space-y-1 border-l border-slate-200 pl-4">
+        <ul className="space-y-1 border-l border-line pl-4">
           {node.devices.map((device) => (
             <DeviceItem key={device.id} device={device} />
           ))}
@@ -341,14 +342,14 @@ function DeviceItem({ device }: { device: Device }): ReactElement {
     <li data-testid="device-item">
       <Row>
         <KindLabel kind="device" />
-        <Link to={`/devices/${String(device.id)}`} className="text-slate-900 underline">
+        <Link to={`/devices/${String(device.id)}`} className="text-accent underline hover:text-accent-strong">
           {device.name}
         </Link>
-        <span data-testid="device-key" className="font-mono text-sm">
+        <span data-testid="device-key" className="tabular-nums slashed-zero text-sm">
           {device.key}
         </span>
         {device.ip_address === null ? null : (
-          <span data-testid="device-ip" className="font-mono text-sm text-slate-600">
+          <span data-testid="device-ip" className="tabular-nums slashed-zero text-sm text-fg-muted">
             {device.ip_address}
           </span>
         )}
