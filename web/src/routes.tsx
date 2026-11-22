@@ -31,6 +31,12 @@ const MapPage = lazy(async () => {
   return { default: module.MapPage };
 });
 
+// The search page (work order 054) is loaded when it is opened, too, so the main bundle does not grow with it.
+const SearchPage = lazy(async () => {
+  const module = await import("./pages/SearchPage.tsx");
+  return { default: module.SearchPage };
+});
+
 /** A page that needs the role of `path` in navigation.ts ("read" if it has no entry). */
 function guarded(path: string, page: ReactElement): ReactElement {
   return <RequireRole role={requiredRole(path)}>{page}</RequireRole>;
@@ -58,6 +64,15 @@ export const routes: RouteObject[] = [
                   "/map",
                   <Suspense fallback={<Loading />}>
                     <MapPage />
+                  </Suspense>,
+                ),
+              },
+              {
+                path: "search",
+                element: guarded(
+                  "/search",
+                  <Suspense fallback={<Loading />}>
+                    <SearchPage />
                   </Suspense>,
                 ),
               },

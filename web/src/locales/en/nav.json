@@ -2,6 +2,7 @@
   "label": "Main navigation",
   "structure": "Structure",
   "map": "Map",
+  "search": "Search",
   "device": "Device",
   "document": "File",
   "import": "Import",

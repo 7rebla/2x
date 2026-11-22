@@ -1,0 +1,39 @@
+{
+  "intro": "Durchsucht die eingelesenen Dateien nach einem Begriff, einer Kennung wie einer IP-Adresse oder Teilenummer oder einer Frage. „-Wort“ lässt Treffer mit diesem Wort weg, „zwei Wörter“ in Anführungszeichen sind eine Wortgruppe.",
+  "form": {
+    "label": "Dateien durchsuchen",
+    "query": "Suchen nach",
+    "queryHint": "Begriff, Kennung oder Frage",
+    "device": "Gerät",
+    "allDevices": "Alle Geräte",
+    "unknownDevice": "Gerät Nr. {{id}}",
+    "submit": "Suchen"
+  },
+  "empty": "Begriff, Kennung oder Frage eingeben und Enter drücken.",
+  "loading": "Wird gesucht…",
+  "noHits": "Keine Treffer. Andere Wörter versuchen oder in allen Geräten suchen.",
+  "hitCount_one": "{{count}} Treffer, bester zuerst",
+  "hitCount_other": "{{count}} Treffer, beste zuerst",
+  "resultsLabel": "Treffer",
+  "semantic": {
+    "unavailable": "Nur Stichwortsuche – Sprachmodell nicht erreichbar",
+    "disabled": "Stichwortsuche (KI nicht aktiviert)"
+  },
+  "matchKind": {
+    "label": "Gefunden über",
+    "exact": "Exakt",
+    "keyword": "Stichwort",
+    "semantic": "Bedeutung"
+  },
+  "page": {
+    "one": "S. {{page}}",
+    "range": "S. {{start}}–{{end}}"
+  },
+  "headingPath": "Abschnitt",
+  "locations": "Gespeichert in",
+  "version": "Version {{number}}",
+  "olderVersion": "Ältere Version",
+  "olderVersionHint": "Diese Datei hat eine neuere Version, die noch nicht durchsuchbar ist.",
+  "device": "Gerät",
+  "plant": "Anlage"
+}

@@ -10,6 +10,7 @@ so each address can be opened directly or reloaded.
 | --- | --- | --- |
 | `/` | `StructurePage.tsx` | 032 |
 | `/map` | `MapPage.tsx` (loaded lazily) | 039 |
+| `/search` | `SearchPage.tsx` (loaded lazily) | 054 |
 | `/devices/:deviceId` | `DevicePage.tsx` | 032 |
 | `/documents/:documentId` | `DocumentPage.tsx` | 036 |
 | `/import` | `ImportPage.tsx` | 035 |
@@ -150,6 +151,27 @@ if (query.isError) return <ErrorMessage error={query.error} />;
   limit, everything else `ErrorMessage`.
 - Under jsdom, Node's fetch sends a jsdom `File` without its content; `ImportPage.test.tsx` therefore checks the
   file handed to `FormData.append` and reads the other fields from the multipart body.
+
+## Search
+
+- `SearchPage.tsx` (`/search`, role `read`, entry "Search" with the icon `search`) searches the ingested files through
+  `GET /api/v1/search/` (`searchOptions` of the generated client). `routes.tsx` loads it with `lazy()`, like the map.
+- The form has one field for a term, an identifier or a question (at most 500 characters) and a choice of device
+  (`GET /api/v1/devices/`, grouped by plant; "All devices" first). Sending the form (Enter or the button) writes the
+  trimmed text and the device into the browser address, `/search?q=…&device=…` (question 1 of work order 052): a
+  search can be linked, reloaded and reached with Back. A device value that cannot be an id is ignored; a device that
+  is not in the list is named by its id. The API drops the query part from its access log (work order 052).
+- States: no search text (a hint, no request), loading, no hits, error (`ErrorMessage`), hits.
+- `semantic` of the answer: `unavailable` shows the hint "Keyword search only – language model not reachable";
+  `disabled` (AI features switched off, E-59) shows one calm line, no warning; `used` shows nothing.
+- A hit (`search/SearchHitView.tsx`) shows the page ("p. 31", "pp. 31–32"; German "S. 31", "S. 31–32"), the heading
+  path, how it was found (exact, keyword, meaning), the snippet and every place it is stored at: file (link to
+  `/documents/:id`), version with its file name, "Older version" when `is_latest` is false, device (link to
+  `/devices/:id`) and plant.
+- The snippet is plain text. `search/snippet.ts` cuts it into pieces by the `highlights` of the API, which count
+  Unicode code points: the snippet is split with `Array.from` first, so marks do not slip after an emoji or another
+  character outside the BMP. The found places are `<mark>` elements with text inside; nothing is rendered as HTML.
+- Tests fake the search API with `search/testData.ts` (test sentences only, devices of `structure/testData.ts`).
 
 ## Map
 

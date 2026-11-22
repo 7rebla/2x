@@ -18,10 +18,11 @@ import { renderApp } from "./test/renderApp.tsx";
 // Routing inside the frame for a signed-in manager (who may see every page).
 // Sign-in, redirects and roles: session.test.tsx.
 
-// The map page is loaded lazily (React Flow); importing it once here keeps the
-// first click on its entry within the usual waiting time.
+// The map and search pages are loaded lazily; importing them once here keeps the
+// first click on their entries within the usual waiting time.
 beforeAll(async () => {
   await import("./pages/MapPage.tsx");
+  await import("./pages/SearchPage.tsx");
 });
 
 afterEach(async () => {
@@ -64,6 +65,7 @@ describe("frame", () => {
     expect(within(nav).getAllByRole("link").map((link) => link.textContent)).toEqual([
       "Struktur",
       "Landkarte",
+      "Suche",
       "Import",
       "Änderungsprotokoll",
       "Selbsttest",
@@ -137,6 +139,14 @@ describe("addresses", () => {
 
     expect((await pageHeading()).textContent).toBe("Sign in");
     expect(screen.getByTestId("login-form")).toBeDefined();
+  });
+
+  it("/search shows the search page, loaded lazily", async () => {
+    fakeApi(manager);
+    renderApp("/search?q=test");
+
+    expect((await pageHeading()).textContent).toBe("Search");
+    expect(await screen.findByTestId("search-form")).toBeDefined();
   });
 
   it("/selftest shows the self-test page", async () => {
