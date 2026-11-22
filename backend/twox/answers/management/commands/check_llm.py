@@ -6,11 +6,22 @@ line that starts with ``OK:`` (exit code 0) or ``FAILED:`` (exit code 1).
 
 Nothing is sent to the service except the ``GET`` request for the model list,
 and nothing of the answer is printed except the number of models.
+
+With ``--embed`` the command instead embeds one fixed sentence through
+:mod:`twox.answers.embeddings` and reports model, vector length and duration
+(``OK:``) or the kind of error (``FAILED: <error>: <message>``). If the base
+URL does not point to this machine, a line ``WARNING:`` comes first: a model
+service in the own network is allowed (Startunterlage 5.2), but texts go there.
+
+AI features are optional (E-59). With ``TWOX_AI_ENABLED`` off the command
+contacts nothing and prints one neutral line ``DISABLED:`` (exit code 0), with
+or without ``--embed``.
 """
 
 import json
 import socket
 import sys
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -20,7 +31,17 @@ from urllib.parse import urlsplit
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 
+from twox.answers.embeddings import EmbeddingError, OpenAICompatibleEmbedder
+
 DEFAULT_TIMEOUT_SECONDS = 5.0
+# Fixed, harmless text for --embed; nothing from the manuals.
+EMBED_TEST_SENTENCE = "Check the oil level of the pump every 500 operating hours."
+# Host names that mean "this machine" (the host of the containers included).
+LOCAL_HOSTS = frozenset({"host.docker.internal", "localhost", "127.0.0.1", "::1"})
+DISABLED_LINE = (
+    "DISABLED: AI features are not enabled (TWOX_AI_ENABLED is false);"
+    " the model service was not contacted"
+)
 # More than enough for a model list; protects against an endless answer.
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 _DEFAULT_PORTS = {"http": 80, "https": 443}
@@ -143,6 +164,43 @@ def check_llm(base_url: str, timeout: float) -> CheckResult:
     return _fetch_model_count(base_url.rstrip("/") + "/models", timeout)
 
 
+def remote_host_warning(base_url: str) -> str | None:
+    """Return a ``WARNING:`` line if ``base_url`` does not point to this machine."""
+    try:
+        host = urlsplit(base_url).hostname
+    except ValueError:
+        host = None
+    # No host at all is an invalid address; the FAILED: line reports it.
+    if host is None or host.lower() in LOCAL_HOSTS:
+        return None
+    return (
+        f"WARNING: TWOX_LLM_BASE_URL points to {host!r}, not to this machine"
+        " (host.docker.internal, localhost, 127.0.0.1, ::1) - texts are sent there;"
+        " allowed only for a model service in your own network"
+    )
+
+
+def check_embed() -> CheckResult:
+    """Embed one fixed sentence with the configured model."""
+    try:
+        embedder = OpenAICompatibleEmbedder.from_settings()
+    except ValueError as error:
+        return _failed(f"invalid configuration: {error}")
+    started = time.monotonic()
+    try:
+        (vector,) = embedder.embed_documents([EMBED_TEST_SENTENCE])
+    except EmbeddingError as error:
+        return _failed(f"{type(error).__name__}: {error}")
+    elapsed = time.monotonic() - started
+    return CheckResult(
+        ok=True,
+        message=(
+            f"embedded a test sentence with {embedder.model_name} at {embedder.embeddings_url}:"
+            f" {len(vector)} dimensions in {elapsed:.2f}s"
+        ),
+    )
+
+
 def _positive_seconds(value: str) -> float:
     """Parse the value of ``--timeout``."""
     seconds = float(value)
@@ -154,7 +212,8 @@ def _positive_seconds(value: str) -> float:
 class Command(BaseCommand):
     help = (
         "Check whether the model service at TWOX_LLM_BASE_URL is reachable."
-        " Prints one line starting with OK: (exit code 0) or FAILED: (exit code 1)."
+        " Prints one line starting with OK: (exit code 0) or FAILED: (exit code 1);"
+        " DISABLED: (exit code 0) if TWOX_AI_ENABLED is off."
     )
     # The check needs neither the database nor the system checks.
     requires_system_checks = []  # noqa: RUF012
@@ -165,14 +224,35 @@ class Command(BaseCommand):
             type=_positive_seconds,
             default=DEFAULT_TIMEOUT_SECONDS,
             metavar="SECONDS",
-            help="Time limit per step in seconds (default: %(default)g).",
+            help=(
+                "Time limit per step of the reachability check in seconds"
+                " (default: %(default)g). --embed uses TWOX_EMBED_TIMEOUT_SECONDS instead."
+            ),
+        )
+        parser.add_argument(
+            "--embed",
+            action="store_true",
+            help=(
+                "Embed a fixed test sentence with TWOX_EMBED_MODEL and report model,"
+                " number of dimensions and duration."
+            ),
         )
 
     def handle(self, *args: object, **options: object) -> None:
         timeout = options["timeout"]
         if not isinstance(timeout, float):
             raise CommandError("--timeout must be a number of seconds.")
-        result = check_llm(settings.TWOX_LLM_BASE_URL, timeout)
+        if not settings.TWOX_AI_ENABLED:
+            # E-59: a neutral state, not an error; nothing is contacted.
+            self.stdout.write(DISABLED_LINE)
+            return
+        if options["embed"]:
+            warning = remote_host_warning(settings.TWOX_LLM_BASE_URL)
+            if warning is not None:
+                self.stdout.write(warning)
+            result = check_embed()
+        else:
+            result = check_llm(settings.TWOX_LLM_BASE_URL, timeout)
         self.stdout.write(result.line)
         if not result.ok:
             sys.exit(1)
