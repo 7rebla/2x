@@ -71,13 +71,31 @@ test("an address with a parameter opens directly", async ({ page }) => {
 // Header with icons (work order 071): every entry shows an icon hidden from
 // assistive technology and a readable text; the header stays on one line in
 // English and German and does not change its height when the language changes.
+// From 1280 px (xl) the texts are shown and the header is wider than the page;
+// below that only the icons, with the text as accessible name and tooltip
+// (work order 055, seven entries).
+
+const ENGLISH_ENTRIES = ["Structure", "Map", "Search", "Ingestion", "Import", "Change log", "Self-test"];
+const GERMAN_ENTRIES = ["Struktur", "Landkarte", "Suche", "Einlesen", "Import", "Änderungsprotokoll", "Selbsttest"];
+
+interface HeaderLayout {
+  readonly header: number;
+  readonly tops: number[];
+  readonly overflow: number;
+  /** Width left free in the navigation after the last entry. */
+  readonly free: number;
+  readonly labels: string[];
+  readonly titles: (string | null)[];
+  readonly labelWidths: number[];
+}
 
 /** Positions of the header and of every entry of the main navigation. */
-async function headerLayout(page: Page): Promise<{ header: number; tops: number[]; overflow: number; labels: string[] }> {
+async function headerLayout(page: Page): Promise<HeaderLayout> {
   return page.evaluate(() => {
     const header = document.querySelector("header");
     const nav = document.querySelector('[data-testid="main-navigation"]');
-    if (header === null || nav === null) {
+    const list = nav?.querySelector("ul");
+    if (header === null || nav === null || list === null || list === undefined) {
       throw new Error("no header or navigation");
     }
     const links = [...nav.querySelectorAll("a")];
@@ -85,15 +103,19 @@ async function headerLayout(page: Page): Promise<{ header: number; tops: number[
       header: Math.round(header.getBoundingClientRect().height),
       tops: links.map((link) => Math.round(link.getBoundingClientRect().top)),
       overflow: nav.scrollWidth - nav.clientWidth,
+      free: Math.floor(nav.clientWidth - list.getBoundingClientRect().width),
       labels: links.map((link) => link.textContent),
+      titles: links.map((link) => link.getAttribute("title")),
+      labelWidths: links.map((link) => Math.round(link.querySelector(".nav-label")?.getBoundingClientRect().width ?? 0)),
     };
   });
 }
 
 test("every navigation entry shows a hidden icon and a readable text", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
   const links = page.getByRole("navigation", { name: "Main navigation" }).getByRole("link");
-  await expect(links).toHaveText(["Structure", "Map", "Search", "Import", "Change log", "Self-test"]);
+  await expect(links).toHaveText(ENGLISH_ENTRIES);
   for (const link of await links.all()) {
     const icon = link.locator("svg");
     await expect(icon).toBeVisible();
@@ -102,9 +124,9 @@ test("every navigation entry shows a hidden icon and a readable text", async ({ 
   }
 });
 
-for (const viewport of [
-  { width: 1280, height: 800 },
-  { width: 1024, height: 768 },
+for (const { viewport, texts } of [
+  { viewport: { width: 1280, height: 800 }, texts: true },
+  { viewport: { width: 1024, height: 768 }, texts: false },
 ]) {
   test(`the header stays on one line in English and German at ${String(viewport.width)} px`, async ({ page }) => {
     await page.setViewportSize(viewport);
@@ -112,26 +134,53 @@ for (const viewport of [
     const navigation = page.getByRole("navigation", { name: "Main navigation" });
     await expect(navigation.getByRole("link", { name: "Self-test" })).toBeVisible();
     const english = await headerLayout(page);
-    expect(english.labels).toEqual(["Structure", "Map", "Search", "Import", "Change log", "Self-test"]);
+    expect(english.labels).toEqual(ENGLISH_ENTRIES);
+    expect(english.titles).toEqual(ENGLISH_ENTRIES);
 
     await page.getByTestId("user-menu-button").click();
     await page.getByTestId("language-switch").selectOption("de");
     await expect(page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("link", { name: "Selbsttest" })).toBeVisible();
     const german = await headerLayout(page);
-    expect(german.labels).toEqual(["Struktur", "Landkarte", "Suche", "Import", "Änderungsprotokoll", "Selbsttest"]);
+    expect(german.labels).toEqual(GERMAN_ENTRIES);
+    expect(german.titles).toEqual(GERMAN_ENTRIES);
 
     for (const layout of [english, german]) {
-      // All entries on the same line, all texts visible, nothing to scroll.
+      // All entries on the same line, nothing to scroll.
       expect(new Set(layout.tops).size, `tops ${layout.tops.join(", ")}`).toBe(1);
       expect(layout.overflow).toBeLessThanOrEqual(0);
+      expect(layout.free).toBeGreaterThanOrEqual(0);
+      if (texts) {
+        // Every text is shown.
+        for (const width of layout.labelWidths) {
+          expect(width).toBeGreaterThan(10);
+        }
+      } else {
+        // Only the icons: the texts take no room (they stay for screen readers and as tooltip).
+        for (const width of layout.labelWidths) {
+          expect(width).toBeLessThanOrEqual(1);
+        }
+      }
     }
+    test.info().annotations.push({
+      type: "free width",
+      description: `en ${String(english.free)} px, de ${String(german.free)} px at ${String(viewport.width)} px`,
+    });
     expect(german.header).toBe(english.header);
     expect(german.tops).toEqual(english.tops);
-    for (const label of await page.locator('[data-testid="main-navigation"] .nav-label').all()) {
-      await expect(label).toBeVisible();
-    }
   });
 }
+
+test("at 1024 px the icon of an entry opens its page and keeps its name", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto("/");
+  const entry = page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Ingestion" });
+  await expect(entry).toHaveAttribute("title", "Ingestion");
+  await expect(entry.locator("svg")).toBeVisible();
+  await entry.click();
+  await expect(page).toHaveURL(/\/ingest$/);
+  await expect(entry).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Ingestion");
+});
 
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 375, height: 812 } });

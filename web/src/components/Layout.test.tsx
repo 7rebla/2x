@@ -47,8 +47,8 @@ describe("navigation with icons", () => {
       const text = link.querySelector(".nav-label");
       expect(text?.textContent).toBe(label);
       expect(text?.getAttribute("data-label")).toBe(label);
-      // Below 1024 px only the icon is visible (the text stays for screen readers).
-      expect(text?.classList.contains("max-lg:sr-only")).toBe(true);
+      // Below 1280 px only the icon is visible (the text stays for screen readers, work order 055).
+      expect(text?.classList.contains("max-xl:sr-only")).toBe(true);
     });
   });
 
