@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { changeLanguage } from "../i18n.ts";
 import { fakeApi, manager, reader, roleless } from "../test/fakeApi.ts";
 import { fakeMatchMedia } from "../test/fakeMatchMedia.ts";
-import { renderApp } from "../test/renderApp.tsx";
+import { openUserMenu, renderApp } from "../test/renderApp.tsx";
 import { darkQuery, reducedMotionQuery } from "../theme/settings.ts";
 import { refreshDisplay } from "../theme/store.ts";
 
@@ -27,12 +27,18 @@ describe("settings page", () => {
   it("is open to the role read and reached from the user menu", async () => {
     fakeApi(reader);
     const { router } = renderApp("/");
-    const link = await screen.findByRole("link", { name: "Settings" });
+    await openUserMenu();
+    const menu = screen.getByTestId("user-menu");
+    expect(menu.hidden).toBe(false);
+    const link = within(menu).getByRole("link", { name: "Settings" });
     fireEvent.click(link);
     await openSettings();
     expect(router.state.location.pathname).toBe("/settings");
     expect(screen.getByRole("heading", { level: 2, name: "Settings" })).toBeDefined();
     expect(link.getAttribute("aria-current")).toBe("page");
+    // Following a link closes the menu.
+    expect(menu.hidden).toBe(true);
+    expect(screen.getByTestId("user-menu-button").getAttribute("aria-expanded")).toBe("false");
   });
 
   it("offers no settings link to an account without a role", async () => {
@@ -103,7 +109,7 @@ describe("settings page", () => {
     expect(within(group).getByRole<HTMLInputElement>("radio", { name: "Berry" }).checked).toBe(true);
   });
 
-  it("changes the language together with the switch in the header", async () => {
+  it("changes the language together with the switch in the user menu", async () => {
     fakeApi(reader);
     renderApp("/settings");
     await openSettings();

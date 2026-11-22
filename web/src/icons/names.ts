@@ -9,6 +9,7 @@
 // IDs in the comments refer to docs/design/icon-bedarfsanalyse.md, part H2.
 import {
   Activity,
+  Check,
   ChevronLeft,
   ChevronRight,
   CircleCheck,
@@ -71,6 +72,7 @@ const glyphs = {
   upload: Upload, // ACT-03
   download: Download, // ACT-04
   retry: RefreshCw, // ACT-05
+  apply: Check, // ACT-09
   filter: Funnel, // ACT-06
   resetFilter: FunnelX, // ACT-06
   search: Search, // NAV-05

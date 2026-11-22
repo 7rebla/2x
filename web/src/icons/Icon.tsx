@@ -1,5 +1,6 @@
-import type { ReactElement } from "react";
+import { createElement, type ReactElement } from "react";
 
+import type { GlyphProps } from "./glyph.tsx";
 import { glyphOf, type IconName } from "./names.ts";
 
 /** The three sizes of the interface (icon-bedarfsanalyse.md, F1): text and tables, navigation and buttons, headings and nodes. */
@@ -30,17 +31,16 @@ export type IconProps = {
  * takes the colour of the text around it in light and dark mode.
  */
 export function Icon({ name, size = 16, className, label }: IconProps): ReactElement {
-  const Glyph = glyphOf(name);
   const meaning =
     label === undefined ? ({ "aria-hidden": true } as const) : ({ role: "img", "aria-label": label } as const);
-  return (
-    <Glyph
-      size={size}
-      strokeWidth={ICON_STROKE_WIDTH}
-      focusable="false"
-      data-icon={name}
-      className={`inline-block shrink-0 align-middle${className === undefined ? "" : ` ${className}`}`}
-      {...meaning}
-    />
-  );
+  const props: GlyphProps & { readonly "data-icon": IconName } = {
+    size,
+    strokeWidth: ICON_STROKE_WIDTH,
+    focusable: "false",
+    "data-icon": name,
+    className: `inline-block shrink-0 align-middle${className === undefined ? "" : ` ${className}`}`,
+    ...meaning,
+  };
+  // The drawings are fixed module-level components (names.ts), looked up by name, not created here.
+  return createElement(glyphOf(name), props);
 }

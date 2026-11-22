@@ -233,21 +233,32 @@
   /*
    * C: navigation line. The underline grows from the left; the current entry
    * is semi-bold without getting wider, because an invisible bold copy of the
-   * label (::after, from data-label) reserves its width.
+   * label (::after of .nav-label, from data-label) reserves its width. The
+   * icon before the label stays an outline; the current entry gets a soft
+   * background instead (work order 071). Entries never wrap.
    */
   .nav-link {
     display: inline-flex;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 0.25rem 0 0.375rem;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.5rem 0.375rem;
+    border-radius: 0.25rem 0.25rem 0 0;
+    white-space: nowrap;
     color: var(--twox-fg-muted);
     background: linear-gradient(var(--twox-accent), var(--twox-accent)) left bottom / 0% 2px no-repeat;
     transition:
       background-size 260ms var(--ease-calm),
+      background-color 160ms linear,
       color 160ms linear;
   }
 
-  .nav-link::after {
+  .nav-label {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .nav-label::after {
     content: attr(data-label);
     height: 0;
     overflow: hidden;
@@ -265,6 +276,7 @@
   .nav-link[aria-current="page"] {
     color: var(--twox-fg);
     font-weight: 600;
+    background-color: var(--twox-accent-soft);
     background-size: 100% 2px;
   }
 

@@ -32,6 +32,7 @@ const pairs: readonly Pair[] = [
   ["focus", "canvas", NON_TEXT, "focus ring on the page"],
   ["focus", "surface", NON_TEXT, "focus ring on cards"],
   ["accent", "surface", NON_TEXT, "navigation line in the header"],
+  ["accent", "accent-soft", NON_TEXT, "navigation line of the current entry on its soft background"],
   ["line-strong", "canvas", NON_TEXT, "border of form controls on the page"],
   ["line-strong", "surface", NON_TEXT, "border of form controls on cards"],
   ["line-strong", "surface-muted", NON_TEXT, "border of controls on muted areas"],
