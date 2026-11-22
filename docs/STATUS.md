@@ -232,7 +232,7 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 126 | Antwortdienst und Befehl ask | B | 121, 122, 123, 125 | offen |
 | 127 | Messwerkzeug evaluate_answers | B | 120, 126 | offen |
 | 128 | Messlauf Chat-Modell | C | 126, 127 | offen |
-| 129 | Selbsttest und check_llm für Chat | B | 121 | in Arbeit |
+| 129 | Selbsttest und check_llm für Chat | B | 121 | erledigt |
 | 130 | Antwort-API mit SSE und Status | C | 126, 129 | offen |
 | 131 | Oberfläche Antwortstrom und Hook | B | 130 | offen |
 | 132 | Seite Auskunft mit Quellenanzeige | B | 131 | offen |

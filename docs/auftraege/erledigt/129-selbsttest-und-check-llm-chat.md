@@ -1,6 +1,6 @@
 # Auftrag 129 – Selbsttest und check_llm für Chat
 
-Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 
