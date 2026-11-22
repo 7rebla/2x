@@ -87,7 +87,48 @@ describe("list of files", () => {
 
     const link = within(manual).getByRole("link", { name: "Download version 2" });
     expect(link.getAttribute("href")).toBe("/api/v1/document-versions/71/download/");
-    expect(link.textContent).toBe("Download");
+    // An icon button: no visible text, the name as tooltip as well.
+    expect(link.textContent).toBe("");
+    expect(link.getAttribute("title")).toBe("Download version 2");
+    expect(link.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("keeps date, size, version and user on one line and puts user and checksum into detail lines", async () => {
+    await openDevice(reader);
+    await waitFor(() => {
+      expect(rows()).toHaveLength(2);
+    });
+    const [manual] = rows();
+    if (manual === undefined) {
+      throw new Error("row missing");
+    }
+
+    expect(within(filesArea()).getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
+      "Title",
+      "Kind",
+      "Version",
+      "Uploaded",
+      "Size",
+      "Ingestion",
+      "Download",
+    ]);
+    // The scroll box is positioned, so the texts for screen readers (absolute) stay inside it
+    // and do not widen the page on a phone.
+    expect(screen.getByTestId("device-files-table").parentElement?.className).toContain("relative");
+    // The download column is named for screen readers only.
+    expect(within(filesArea()).getByRole("columnheader", { name: "Download" }).querySelector(".sr-only")).not.toBeNull();
+    for (const name of ["file-version", "file-size"]) {
+      expect(within(manual).getByTestId(name).className).toContain("whitespace-nowrap");
+    }
+    // Date and user share the cell "Uploaded", which does not wrap.
+    const uploaded = within(manual).getByTestId("file-date").closest("td");
+    expect(uploaded?.className).toContain("whitespace-nowrap");
+    expect(uploaded === null ? null : within(uploaded).getByTestId("file-user").textContent).toBe("System");
+    expect(uploaded?.textContent).toContain("User: System");
+    // The checksum stands below the title, not in a column of its own.
+    const titleCell = within(manual).getByTestId("file-title").closest("td");
+    expect(titleCell === null ? null : within(titleCell).getByTestId("checksum")).not.toBeNull();
+    expect(within(manual).getByTestId("file-title").getAttribute("title")).toBe("Test manual");
   });
 
   it("shows the checksum shortened and in full when expanded", async () => {
@@ -103,6 +144,11 @@ describe("list of files", () => {
 
     const checksum = within(manual).getByTestId("checksum");
     expect(within(checksum).getByTestId("checksum-short").textContent).toBe(`${sha.slice(0, 12)}…`);
+    // A quiet detail with its name and the full value as tooltip, without the disclosure triangle.
+    const summary = checksum.querySelector("summary");
+    expect(summary?.textContent).toBe(`SHA-256 ${sha.slice(0, 12)}…`);
+    expect(summary?.getAttribute("title")).toBe(`Show the full checksum: ${sha}`);
+    expect(summary?.className).toContain("list-none");
     expect(checksum.hasAttribute("open")).toBe(false);
     fireEvent.click(within(checksum).getByTestId("checksum-short"));
     expect(checksum.hasAttribute("open")).toBe(true);
@@ -159,10 +205,8 @@ describe("list of files", () => {
       "Version",
       "Hochgeladen",
       "Größe",
-      "Benutzer",
-      "Prüfsumme (SHA-256)",
-      "Herunterladen",
       "Einlesen",
+      "Herunterladen",
     ]);
     const [manual] = rows();
     expect(manual === undefined ? null : cell(manual, "file-size")?.replace(/\s/gu, " ")).toBe("2,5 MB");

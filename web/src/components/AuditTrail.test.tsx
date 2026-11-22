@@ -108,7 +108,8 @@ describe("showing entries", () => {
     expect(cell(row, "audit-action").textContent).toBe("Changed");
     expect(cell(row, "audit-object-type").textContent).toBe("Device");
     expect(cell(row, "audit-object").textContent).toBe("test-device-1ID 7");
-    expect(cell(row, "audit-changes").textContent).toBe("name: old name → new name");
+    expect(cell(row, "audit-change-list").textContent).toBe("Name: old name → new name");
+    expect(cell(row, "audit-change-field").getAttribute("title")).toBe("name");
     expect(screen.getByRole("table", { name: "Changes" })).toBeDefined();
     expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
       "Time",
@@ -193,16 +194,21 @@ describe("showing entries", () => {
       throw new Error("missing rows");
     }
     expect(cell(created, "audit-actor").textContent).toBe("System (no signed-in user)");
-    const createdChanges = within(created).getAllByTestId("audit-change");
-    // Fields that are empty before and after (notes, ip_address) are left out.
-    expect(within(created).getAllByTestId("audit-change-field").map((field) => field.textContent)).toEqual([
-      "id",
-      "name",
-      "created_at",
-    ]);
-    expect(createdChanges[0]?.textContent).toBe("id: (empty) → 7");
-    expect(createdChanges[1]?.textContent).toBe("name: (empty) → test-device");
-    const time = createdChanges[2]?.querySelector("time");
+    const createdChanges = within(cell(created, "audit-change-list")).getAllByTestId("audit-change");
+    // Fields that are empty before and after (notes, ip_address) are left out;
+    // the id is a technical field and stands under "Technical details".
+    expect(
+      within(cell(created, "audit-change-list"))
+        .getAllByTestId("audit-change-field")
+        .map((field) => field.getAttribute("data-field")),
+    ).toEqual(["name", "created_at"]);
+    expect(createdChanges[0]?.textContent).toBe("Name: (empty) → test-device");
+    expect(
+      within(cell(created, "audit-technical-list"))
+        .getAllByTestId("audit-change")
+        .map((change) => change.textContent),
+    ).toEqual(["ID: (empty) → 7"]);
+    const time = createdChanges[1]?.querySelector("time");
     expect(time?.getAttribute("datetime")).toBe("2026-11-21T12:00:00.500Z");
     expect(time?.getAttribute("title")).toBe("2026-11-21 12:00:00.5");
     expect(time?.textContent).toBe(
@@ -213,12 +219,22 @@ describe("showing entries", () => {
 
     expect(cell(deleted, "audit-action").textContent).toBe("Deleted");
     expect(within(deleted).getAllByTestId("audit-change").map((change) => change.textContent)).toEqual([
-      "name: test-device → (empty)",
+      "Name: test-device → (empty)",
       "enabled: true → false",
     ]);
-    expect(cell(added, "audit-changes").textContent).toBe("groups: added manage");
-    expect(cell(removed, "audit-changes").textContent).toBe("groups: removed read, manage");
-    expect(cell(nothing, "audit-changes").textContent).toBe("No field values");
+    expect(cell(added, "audit-change-list").textContent).toBe("Groups: added manage");
+    expect(cell(removed, "audit-change-list").textContent).toBe("Groups: removed read, manage");
+    expect(cell(nothing, "audit-no-changes").textContent).toBe("No field values");
+    expect(within(nothing).queryByTestId("audit-change")).toBeNull();
+    // Nothing is lost: the raw data keeps the pairs left out above.
+    expect(JSON.parse(cell(nothing, "audit-raw").textContent)).toEqual({ notes: [null, ""] });
+    expect(JSON.parse(cell(created, "audit-raw").textContent)).toEqual({
+      id: [null, 7],
+      name: [null, "test-device"],
+      notes: [null, ""],
+      ip_address: [null, null],
+      created_at: [null, "2026-11-21 12:00:00.5"],
+    });
   });
 
   it("shows an object type or a value it does not know as it came", async () => {
@@ -241,7 +257,8 @@ describe("showing entries", () => {
     }
     expect(cell(row, "audit-object-type").textContent).toBe("other.thing");
     expect(cell(row, "audit-object").textContent).toBe("test-device-1");
-    expect(cell(row, "audit-changes").textContent).toBe('data: {"a":1} → [1,2]');
+    expect(cell(row, "audit-change-list").textContent).toBe('data: {"a":1} → [1,2]');
+    expect(cell(row, "audit-change-field").tagName).toBe("CODE");
   });
 
   it("renders names and values as text, never as HTML", async () => {
@@ -265,7 +282,8 @@ describe("showing entries", () => {
     }
     expect(cell(row, "audit-actor").textContent).toBe("<b>user</b>");
     expect(cell(row, "audit-object").textContent).toContain(markup);
-    expect(cell(row, "audit-changes").textContent).toBe(`<i>field</i>: <script>1</script> → ${markup}`);
+    expect(cell(row, "audit-change-list").textContent).toBe(`<i>field</i>: <script>1</script> → ${markup}`);
+    expect(cell(row, "audit-raw").textContent).toContain("<script>1</script>");
     expect(row.querySelector("img, b, i, script")).toBeNull();
   });
 
@@ -281,9 +299,109 @@ describe("showing entries", () => {
     expect(cell(row, "audit-timestamp").textContent).toContain("21.11.2026");
     expect(cell(row, "audit-action").textContent).toBe("Geändert");
     expect(cell(row, "audit-object-type").textContent).toBe("Gerät");
-    expect(cell(row, "audit-changes").textContent).toBe("name: (leer) → x");
+    expect(cell(row, "audit-change-list").textContent).toBe("Name: (leer) → x");
+    expect(cell(row, "audit-technical").querySelector("summary")?.textContent).toBe("Technische Angaben");
     expect(screen.getByRole("table", { name: "Änderungen" })).toBeDefined();
     expect(screen.getByTestId("audit-page-status").textContent).toBe("Seite 1 von 1");
+  });
+
+  it("folds technical fields and the raw data away under Technical details", async () => {
+    const sha = "0123456789abcdef".repeat(4);
+    const blobKey = `versions/${sha}`;
+    const changes = {
+      id: [null, 70],
+      document: [null, 7],
+      number: [null, 1],
+      blob_key: [null, blobKey],
+      sha256: [null, sha],
+      size: [null, 512],
+      original_filename: [null, "test-file.txt"],
+      uploaded_by: [null, 2],
+    };
+    auditApi(() =>
+      jsonResponse(
+        pageOf([
+          entry(1, {
+            action: "create",
+            object_type: "files.documentversion",
+            changes: changes as unknown as AuditLogEntry["changes"],
+          }),
+        ]),
+      ),
+    );
+    renderTrail();
+
+    const [row] = await rows();
+    if (row === undefined) {
+      throw new Error("no row");
+    }
+    // Translated names for what a person reads first.
+    expect(
+      within(cell(row, "audit-change-list"))
+        .getAllByTestId("audit-change")
+        .map((change) => change.textContent),
+    ).toEqual([
+      "Version number: (empty) → 1",
+      "Size in bytes: (empty) → 512",
+      "File name: (empty) → test-file.txt",
+    ]);
+    // id, storage key, checksum and the ids of other objects: folded away.
+    const technical = cell(row, "audit-technical");
+    expect(technical.tagName).toBe("DETAILS");
+    expect(technical.hasAttribute("open")).toBe(false);
+    expect(technical.querySelector("summary")?.textContent).toBe("Technical details");
+    expect(
+      within(technical)
+        .getAllByTestId("audit-change-field")
+        .map((field) => field.getAttribute("data-field")),
+    ).toEqual(["id", "document", "blob_key", "sha256", "uploaded_by"]);
+    // Hashes are cut like the checksums of the file table; the full value is the tooltip.
+    const technicalChanges = within(technical).getAllByTestId("audit-change");
+    const checksum = technicalChanges.find((change) => change.textContent.startsWith("Checksum (SHA-256): "));
+    expect(checksum?.textContent).toBe(`Checksum (SHA-256): (empty) → ${sha.slice(0, 12)}…`);
+    expect(checksum?.querySelector(`[title="${sha}"]`)).not.toBeNull();
+    const key = technicalChanges.find((change) => change.textContent.startsWith("Storage key: "));
+    expect(key?.textContent).toBe(`Storage key: (empty) → versions/${sha.slice(0, 12)}…`);
+    expect(key?.querySelector(`[title="${blobKey}"]`)).not.toBeNull();
+    expect(technicalChanges.find((change) => change.textContent.startsWith("Uploaded by (ID): "))?.textContent).toBe(
+      "Uploaded by (ID): (empty) → 2",
+    );
+    // The raw data keeps every value complete.
+    expect(JSON.parse(cell(row, "audit-raw").textContent)).toEqual(changes);
+    // One field per line.
+    expect(cell(row, "audit-raw").textContent.split("\n")).toContain(`  "sha256": [null,"${sha}"],`);
+    const summary = technical.querySelector("summary");
+    if (summary === null) {
+      throw new Error("no summary");
+    }
+    fireEvent.click(summary);
+    expect(technical.hasAttribute("open")).toBe(true);
+  });
+
+  it("shows only Technical details when an entry changed nothing but technical fields", async () => {
+    auditApi(() => jsonResponse(pageOf([entry(1, { changes: { plant: [3, 4] } })])));
+    renderTrail();
+
+    const [row] = await rows();
+    if (row === undefined) {
+      throw new Error("no row");
+    }
+    expect(within(row).queryByTestId("audit-change-list")).toBeNull();
+    expect(within(row).queryByTestId("audit-no-changes")).toBeNull();
+    expect(cell(row, "audit-technical-list").textContent).toBe("Plant (ID): 3 → 4");
+  });
+
+  it("keeps time, user, action and object type on one line", async () => {
+    auditApi(() => jsonResponse(pageOf([entry(1)])));
+    renderTrail();
+
+    const [row] = await rows();
+    if (row === undefined) {
+      throw new Error("no row");
+    }
+    for (const name of ["audit-timestamp", "audit-actor", "audit-action", "audit-object-type"]) {
+      expect(cell(row, name).className).toContain("whitespace-nowrap");
+    }
   });
 
   it("says so when there are no entries", async () => {

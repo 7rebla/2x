@@ -57,7 +57,7 @@ describe("change log page", () => {
     renderApp("/audit");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Change log" })).toBeDefined();
-    expect((await screen.findByTestId("audit-changes")).textContent).toBe("name: test-device-old → test-device");
+    expect((await screen.findByTestId("audit-change-list")).textContent).toBe("Name: test-device-old → test-device");
     expect(screen.getByTestId("audit-actor").textContent).toBe(manager.username);
     expect(lastQuery(api)).toEqual({});
   });

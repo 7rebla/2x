@@ -97,17 +97,26 @@ test("a device created and changed through the API shows up twice with the user"
   await expect(update.getByTestId("audit-object")).toContainText(`ID ${String(deviceId)}`);
   // updated_at changes as well; only the two fields set here are checked.
   const updateChanges = update.getByTestId("audit-change");
-  await expect(updateChanges.filter({ hasText: /^name: / })).toHaveText(`name: ${firstName} → ${secondName}`);
-  await expect(updateChanges.filter({ hasText: /^ip_address: / })).toHaveText(
-    `ip_address: ${testIp(10)} → ${testIp(11)}`,
+  await expect(updateChanges.filter({ hasText: /^Name: / })).toHaveText(`Name: ${firstName} → ${secondName}`);
+  await expect(updateChanges.filter({ hasText: /^IP address: / })).toHaveText(
+    `IP address: ${testIp(10)} → ${testIp(11)}`,
   );
   await expect(update.getByTestId("audit-timestamp").locator("time")).toHaveAttribute("datetime", /^\d{4}-\d{2}-\d{2}T/);
 
   await expect(creation.getByTestId("audit-action")).toHaveText("Created");
   await expect(creation.getByTestId("audit-actor")).toHaveText(username);
   await expect(creation.getByTestId("audit-object")).toContainText(`${firstName} (${deviceKey})`);
-  await expect(creation.getByTestId("audit-changes")).toContainText(`name: (empty) → ${firstName}`);
-  await expect(creation.getByTestId("audit-changes")).toContainText(`key: (empty) → ${deviceKey}`);
+  await expect(creation.getByTestId("audit-change-list")).toContainText(`Name: (empty) → ${firstName}`);
+  await expect(creation.getByTestId("audit-change-list")).toContainText(`Key: (empty) → ${deviceKey}`);
+  // Technical fields (id, plant id) and the raw data are folded away until opened.
+  const technical = creation.getByTestId("audit-technical");
+  await expect(technical.getByTestId("audit-technical-list")).toBeHidden();
+  await expect(technical.getByTestId("audit-raw")).toBeHidden();
+  await technical.getByText("Technical details").click();
+  await expect(technical.getByTestId("audit-technical-list")).toContainText(`ID: (empty) → ${String(deviceId)}`);
+  await expect(technical.getByTestId("audit-technical-list")).toContainText("Plant (ID): (empty) → ");
+  await expect(technical.getByTestId("audit-raw")).toContainText(`"key": [`);
+  await expect(technical.getByTestId("audit-raw")).toContainText(deviceKey);
 
   expect(consoleErrors, "errors in the browser console").toEqual([]);
 });

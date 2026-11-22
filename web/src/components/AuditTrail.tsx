@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { auditLogListOptions } from "../api/generated/@tanstack/react-query.gen.ts";
 import type { AuditLogEntry, AuditLogListData } from "../api/generated";
 import { ErrorMessage } from "./ErrorMessage.tsx";
+import { shortChecksum } from "./files/format.ts";
 import { Loading } from "./Loading.tsx";
 import { Button } from "./ui/Button.tsx";
 
@@ -175,22 +176,22 @@ function AuditRow({ entry }: { entry: AuditLogEntry }): ReactElement {
       <td className="p-2 whitespace-nowrap" data-testid="audit-timestamp">
         <DateTime value={entry.timestamp} />
       </td>
-      <td className="p-2" data-testid="audit-actor">
+      <td className="p-2 whitespace-nowrap" data-testid="audit-actor">
         {entry.actor ?? <span className="text-fg-muted italic">{t("noActor")}</span>}
       </td>
-      <td className="p-2" data-testid="audit-action">
+      <td className="p-2 whitespace-nowrap" data-testid="audit-action">
         {action}
       </td>
-      <td className="p-2" data-testid="audit-object-type">
+      <td className="p-2 whitespace-nowrap" data-testid="audit-object-type">
         {objectType === undefined ? entry.object_type : t(`objectType.${objectType.textKey}`)}
       </td>
-      <td className="p-2" data-testid="audit-object">
+      <td className="min-w-40 p-2 break-words" data-testid="audit-object">
         <span>{entry.object_repr}</span>
         {entry.object_id === null ? null : (
-          <span className="block text-xs text-fg-muted">{t("objectId", { id: entry.object_id })}</span>
+          <span className="block text-xs whitespace-nowrap text-fg-muted">{t("objectId", { id: entry.object_id })}</span>
         )}
       </td>
-      <td className="p-2" data-testid="audit-changes">
+      <td className="min-w-64 p-2" data-testid="audit-changes">
         <Changes changes={entry.changes} />
       </td>
     </tr>
@@ -203,26 +204,153 @@ function isKnownAction(action: string): action is "create" | "update" | "delete"
 
 type FieldChange = AuditLogEntry["changes"][string];
 
+/**
+ * The fields of the logged models (backend/twox/accounts/audit.py) that have a
+ * label of their own in audit.json ("field"). Another field shows its name as
+ * the API sends it.
+ */
+export const auditFieldNames = [
+  "id",
+  "name",
+  "key",
+  "title",
+  "kind",
+  "notes",
+  "site",
+  "area",
+  "plant",
+  "device",
+  "device_class",
+  "manufacturer",
+  "model",
+  "software_version",
+  "ip_address",
+  "address_source",
+  "protocols",
+  "document",
+  "number",
+  "original_filename",
+  "size",
+  "content_type",
+  "blob_key",
+  "sha256",
+  "uploaded_by",
+  "created_by",
+  "created_at",
+  "updated_at",
+  "username",
+  "first_name",
+  "last_name",
+  "email",
+  "is_active",
+  "is_staff",
+  "is_superuser",
+  "date_joined",
+  "groups",
+] as const;
+
+type AuditFieldName = (typeof auditFieldNames)[number];
+
+/**
+ * Technical fields (work order 079): the id, storage key and checksum of an
+ * object and the ids of the objects it points to. They are folded away under
+ * "Technical details" by default, next to the raw data of the entry.
+ */
+export const TECHNICAL_AUDIT_FIELDS: ReadonlySet<string> = new Set<AuditFieldName>([
+  "id",
+  "blob_key",
+  "sha256",
+  "site",
+  "area",
+  "plant",
+  "device",
+  "document",
+  "uploaded_by",
+  "created_by",
+]);
+
+function isAuditFieldName(field: string): field is AuditFieldName {
+  return (auditFieldNames as readonly string[]).includes(field);
+}
+
+/**
+ * The changed fields: the ones a person reads first in a list, the technical
+ * ones and the raw data of the entry (`changes` exactly as the API sent it,
+ * also the pairs left out above) folded away under "Technical details".
+ */
 function Changes({ changes }: { changes: AuditLogEntry["changes"] }): ReactElement {
   const { t } = useTranslation("audit");
+  const all = Object.entries(changes);
   // A pair that is empty on both sides is no change worth showing: on create,
   // every field that was left empty appears as [null, ""].
-  const shown = Object.entries(changes).filter(([, change]) => !isEmptyPair(change));
-  if (shown.length === 0) {
-    return <span className="text-fg-muted">{t("noFieldChanges")}</span>;
-  }
+  const shown = all.filter(([, change]) => !isEmptyPair(change));
+  const plain = shown.filter(([field]) => !TECHNICAL_AUDIT_FIELDS.has(field));
+  const technical = shown.filter(([field]) => TECHNICAL_AUDIT_FIELDS.has(field));
+
   return (
-    <ul className="space-y-1">
-      {shown.map(([field, change]) => (
+    <div className="space-y-1">
+      {plain.length > 0 ? (
+        <ChangeList entries={plain} testId="audit-change-list" />
+      ) : technical.length === 0 ? (
+        <span data-testid="audit-no-changes" className="text-fg-muted">
+          {t("noFieldChanges")}
+        </span>
+      ) : null}
+      {all.length === 0 ? null : (
+        <details data-testid="audit-technical" className="text-xs">
+          <summary className="cursor-pointer text-fg-muted">{t("technical")}</summary>
+          <div className="mt-1 space-y-2">
+            {technical.length === 0 ? null : <ChangeList entries={technical} testId="audit-technical-list" />}
+            <div>
+              <p className="text-fg-muted">{t("raw")}</p>
+              <pre
+                data-testid="audit-raw"
+                className="font-mono text-xs whitespace-pre-wrap text-fg-muted [overflow-wrap:anywhere]"
+              >
+                {rawJson(changes)}
+              </pre>
+            </div>
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+/** The changes as JSON with one field per line, values complete and compact. */
+export function rawJson(changes: AuditLogEntry["changes"]): string {
+  const lines = Object.entries(changes).map(([field, change]) => `  ${JSON.stringify(field)}: ${JSON.stringify(change)}`);
+  return lines.length === 0 ? "{}" : `{\n${lines.join(",\n")}\n}`;
+}
+
+function ChangeList({ entries, testId }: { entries: [string, FieldChange][]; testId: string }): ReactElement {
+  return (
+    <ul className="space-y-1 [overflow-wrap:anywhere]" data-testid={testId}>
+      {entries.map(([field, change]) => (
         <li key={field} data-testid="audit-change">
-          <code className="font-sans text-xs tabular-nums slashed-zero" data-testid="audit-change-field">
-            {field}
-          </code>
+          <FieldLabel field={field} />
           {": "}
           <ChangeValue change={change} />
         </li>
       ))}
     </ul>
+  );
+}
+
+/** The translated name of a known field (its API name as tooltip), else the name as it came. */
+function FieldLabel({ field }: { field: string }): ReactElement {
+  const { t } = useTranslation("audit");
+  if (isAuditFieldName(field)) {
+    return (
+      <span className="font-semibold" title={field} data-testid="audit-change-field" data-field={field}>
+        {t(`field.${field}`)}
+      </span>
+    );
+  }
+  return (
+    <code className="font-sans text-xs tabular-nums slashed-zero" data-testid="audit-change-field" data-field={field}>
+      {field}
+    </code>
   );
 }
 
@@ -275,6 +403,17 @@ function isMembershipChange(value: unknown): value is { operation: "add" | "dele
   );
 }
 
+/** A run of 32 or more hex digits: a checksum or a key made from one. */
+const HASH = /[0-9a-f]{32,}/gi;
+
+/**
+ * The text with every hash cut to its first characters like the checksums of
+ * the file table ("1a2b3c4d5e6f…"); other text stays as it is.
+ */
+export function shortenHashes(text: string): string {
+  return text.replace(HASH, (hash) => shortChecksum(hash));
+}
+
 /** Times inside `changes` are UTC without a zone, for example "2026-11-21 22:09:19.347373". */
 const UTC_WITHOUT_ZONE = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?)$/;
 
@@ -288,7 +427,8 @@ function Value({ value }: { value: unknown }): ReactNode {
     if (time !== null) {
       return <DateTime value={`${time[1] ?? ""}T${time[2] ?? ""}Z`} title={value} />;
     }
-    return value;
+    const short = shortenHashes(value);
+    return short === value ? value : <span title={value}>{short}</span>;
   }
   if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
