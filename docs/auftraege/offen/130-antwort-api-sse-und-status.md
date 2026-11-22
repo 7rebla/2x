@@ -220,3 +220,37 @@ Den Grenzwert des Throttles (`TWOX_ANSWER_RATE`, 10/min) hat die Leitstelle fest
 8. **Hinweis für 131:** hey-api-SSE versucht ohne `sseMaxRetryAttempts` unbegrenzt neu (auch bei 409/503) und verwirft den JSON-Fehlerkörper, siehe „Was wurde gebaut?“ Punkt 6.
 
 Offene Fragen an a7: keine.
+
+### Nachbesserung (nach Prüfung der Leitstelle)
+
+0. `main` (126, 127, Notizen) in den Zweig zusammengeführt. Konflikt nur in `docs/ARCHITECTURE.md`, Zeile `answers`, von Hand gelöst: Ergänzung von 127 (`evaluation.py`, `evaluate_answers`) und die von 130 (`api.py`, `urls.py`, Endpunkte, `llm_guard.py`) stehen beide drin.
+1. **Ein Modellstrom, der gerade erst geöffnet wird, wird jetzt geschlossen, sobald es ihn gibt.**
+   - Ursache: Während `stream()` noch prüft oder lädt, ist der Strom beim Modell noch nicht eingetragen. Ein einmaliges `close()` lief dann ins Leere. Aufräumen und Sperre warteten bis zum ersten Textstück.
+   - Lösung, nur in `api.py`: `_finish` ruft `close()` wiederholt auf, solange der Leseschritt läuft (`while not pending.done(): model.close(); await asyncio.wait({pending}, timeout=CLOSE_RETRY_SECONDS)`, 0,2 s).
+   - Die Zeitüberschreitung schließt das Modell einmal sofort, sendet `error` `timeout` und endet dann über `_finish`. Dort greift dieselbe Schleife.
+   - Tests mit der Attrappe `OpeningChat`:
+     - `stream()` braucht 1,5 s, bis es zurückkehrt. Ein `close()` in dieser Zeit findet keinen Strom (wie der echte Client).
+     - Der geöffnete Strom liefert nichts, bis er geschlossen wird.
+     - `test_time_limit_while_the_stream_opens_closes_it_once_it_exists`: Gesamtzeit 1 s.
+     - `test_client_going_away_while_the_stream_opens_frees_everything_soon`: ASGI, Trennung nach `sources`.
+     - Beide prüfen: Der Strom ist geschlossen, die Sperre ist frei, und alles dauert weniger als 1,5 s + 2 s.
+     - Gegenprobe: Mit nur einem `close()` schlagen beide Tests fehl, weil sie auf die 20-s-Grenze der Attrappe warten.
+2. **`docs/ARCHITECTURE.md`:**
+   - Sperrdauer: „lifetime at least 600 s, longer when `TWOX_ANSWER_TOTAL_TIMEOUT` + `TWOX_CHAT_TIMEOUT_SECONDS` + 60 asks for it“.
+   - Unter „Limits and known gaps“ neuer Unterabschnitt „Answers“ mit dem Satz zum Aufräumen während der Kontextauswahl (wartet bis zur Zeitgrenze der Einbettung).
+3. **`test_client_going_away_during_the_context_selection`:**
+   - Eine langsame Kontext-Attrappe braucht 1 s; die Trennung kommt nach `http.response.start`.
+   - Danach ist die Sperre frei. Der Generator von `answer()` ist geschlossen (`inspect.getgeneratorstate` ergibt `GEN_CLOSED`).
+   - Das Modell wurde nicht gefragt.
+4. **Prüfungen** über `twox-130` und `twox-130-web`, alle grün:
+
+   | Bereich | Ergebnis |
+   | --- | --- |
+   | ruff, ruff format, mypy | grün (224 Dateien) |
+   | `pytest` | 3398 passed, 6 deselected |
+   | `pytest -m worker` | 6 passed |
+   | `makemessages`, Schema, API-Client | ohne Diff |
+   | Migrationen, Lizenzen | „No changes detected“, „License check passed.“ |
+   | Web: lint, typecheck, test, build, licenses | grün, 962 Tests |
+   | e2e | 82 passed, 1 skipped |
+   | `down -v` beider Projekte | Exit 0 |

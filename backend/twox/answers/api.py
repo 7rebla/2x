@@ -32,8 +32,10 @@ only wait for the model and are read in any thread of the pool
 The stream ends after ``TWOX_ANSWER_TOTAL_TIMEOUT`` seconds at the latest with
 ``error`` and the code ``timeout``. When the time is up, when the client goes
 away or when the answer ends, the chat model is closed (that stops a waiting
-read at once), the generator of the service is closed (``close()``) and the
-lock of the user is released.
+read at once; while a read still runs, again every :data:`CLOSE_RETRY_SECONDS`,
+so that a stream still being opened is closed as soon as it exists), the
+generator of the service is closed (``close()``) and the lock of the user is
+released.
 
 ``GET /api/v1/answers/status/`` says beforehand whether answers are
 available: ``enabled`` (``TWOX_AI_ENABLED``), ``chat_model_configured``
@@ -105,6 +107,9 @@ THROTTLE_SCOPE: Final = "answers"
 #: the time to close), so that the lock of a crashed process ends by itself.
 ANSWER_LOCK_SECONDS: Final = 600
 ANSWER_LOCK_PREFIX: Final = "twox:answers:active:"
+
+#: Pause between two close() of the chat model while a read still runs, in seconds.
+CLOSE_RETRY_SECONDS: Final = 0.2
 
 #: How long the result of the chat model check of the status is kept, in seconds.
 STATUS_CACHE_SECONDS: Final = 30
@@ -335,7 +340,8 @@ class AnswerStream:
                 done, _ = await asyncio.wait({pending}, timeout=max(0.0, deadline - loop.time()))
                 if not done:
                     outcome = f"error code={ErrorCode.TIMEOUT.value}"
-                    # Stops a read that waits for the model at once.
+                    # Stops a read that waits for the model at once; a stream
+                    # still being opened is closed by _finish (repeated close).
                     self.model.close()
                     yield server_sent_event(ErrorEvent(code=ErrorCode.TIMEOUT), self.details)
                     return
@@ -364,9 +370,14 @@ class AnswerStream:
         try:
             self.model.close()
             if pending is not None:
-                # A read still runs in its thread; with the model closed it ends
-                # soon (at the latest after the time limit of its request).
-                await asyncio.wait({pending})
+                # A read still runs in its thread. A stream that is being
+                # opened right now (model check, loading the model) is not
+                # known to the model yet, so one close() would miss it: close
+                # again until the read ends, at the latest after the time
+                # limit of its request.
+                while not pending.done():
+                    self.model.close()
+                    await asyncio.wait({pending}, timeout=CLOSE_RETRY_SECONDS)
                 if not pending.cancelled():
                     pending.exception()
         finally:

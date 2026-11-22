@@ -9,12 +9,13 @@ application. All texts are written for these tests (an invented gripper G-12).
 """
 
 import asyncio
+import inspect
 import json
 import logging
 import threading
 import time
 import uuid
-from collections.abc import Callable, Coroutine, Iterator, Sequence
+from collections.abc import Callable, Coroutine, Generator, Iterator, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -50,10 +51,10 @@ from tests.config.test_logging import (
 from tests.search.fake_embedder import CLOSED_MODEL_SERVICE, FakeEmbedder, at_angle, embed
 from tests.search.test_keyword_search import add_sections, make_device, make_document, make_plant
 from twox.accounts.models import User
-from twox.answers import api, context
+from twox.answers import api, context, service
 from twox.answers import chat as chat_module
 from twox.answers.chat import ChatStream, ChatUnavailableError, FakeChatModel
-from twox.answers.types import NO_EVIDENCE_TEXT, SNIPPET_MAX_LENGTH, ErrorCode
+from twox.answers.types import NO_EVIDENCE_TEXT, SNIPPET_MAX_LENGTH, AnswerEvent, ErrorCode
 from twox.config import selftest
 from twox.config.asgi import application
 from twox.config.settings import env_rate
@@ -162,6 +163,46 @@ class GatedChat(FakeChatModel):
         self.gate.set()
 
 
+#: How long :class:`OpeningChat` needs to open its stream, in seconds.
+OPENING_SECONDS = 1.5
+
+
+class OpeningChat(FakeChatModel):
+    """A model whose stream takes a while to open (model check, loading).
+
+    As with the real client, a ``close()`` while ``stream()`` has not returned
+    yet finds no stream and does nothing. The opened stream sends nothing
+    until it is closed (the model takes long for the first piece).
+    """
+
+    def __init__(self) -> None:
+        super().__init__(["Der Greifer G-12 hält 5 kg [1]."])
+        self.gate = threading.Event()
+        self.opened = threading.Event()
+        self.streams: list[ChatStream] = []
+        self.closes_while_opening = 0
+
+    def stream(self, messages: Any, **kwargs: Any) -> ChatStream:  # noqa: ANN401
+        time.sleep(OPENING_SECONDS)
+        stream = super().stream(messages, **kwargs)
+        self.streams.append(stream)
+        self.opened.set()
+        return stream
+
+    def _pieces(self) -> Iterator[str]:
+        # Bounded, so that a failing test does not hang.
+        self.gate.wait(timeout=20)
+        if not self.gate.is_set():
+            yield from self.pieces
+
+    def close(self) -> None:
+        super().close()
+        if self.opened.is_set():
+            self.gate.set()
+        else:
+            self.closes_while_opening += 1
+
+
 # --- ASGI ------------------------------------------------------------------------------
 
 
@@ -214,11 +255,13 @@ def asgi_ask(
     body: object,
     *,
     disconnect_after_delta: bool = False,
+    disconnect_when: Callable[[Message], bool] | None = None,
     runner: Callable[[Callable[[], Coroutine[Any, Any, None]]], None] | None = None,
 ) -> AsgiAnswer:
     """POST ``body`` through the ASGI application, as uvicorn would.
 
-    ``disconnect_after_delta``: the client goes away after the first ``delta``.
+    ``disconnect_after_delta``: the client goes away after the first ``delta``;
+    ``disconnect_when``: after the first message sent that it accepts.
     The default runner is :func:`async_to_sync`, which runs the synchronous
     parts in this thread (one database transaction with the test); pass
     ``lambda main: asyncio.run(main())`` for threads of their own.
@@ -242,6 +285,8 @@ def asgi_ask(
         async def send(message: Message) -> None:
             sent.append(message)
             if disconnect_after_delta and b"event: delta" in message.get("body", b""):
+                gone.set()
+            if disconnect_when is not None and disconnect_when(message):
                 gone.set()
 
         await application(request_scope, receive, send)
@@ -573,6 +618,94 @@ def test_total_time_limit_ends_the_stream_with_timeout(
     assert 1 <= took < 10
     assert chat.close_count >= 1
     assert all(stream.closed for stream in chat.streams)
+    assert cache.get(lock_key(user)) is None
+
+
+@pytest.mark.django_db
+def test_time_limit_while_the_stream_opens_closes_it_once_it_exists(
+    monkeypatch: pytest.MonkeyPatch, settings: Settings
+) -> None:
+    settings.TWOX_ANSWER_TOTAL_TIMEOUT = 1
+    use_context(monkeypatch)
+    chat = install_chat(monkeypatch, OpeningChat())
+    client, user = signed_in()
+
+    started = time.monotonic()
+    events = parse_events(b"".join(ask(client, {"question": QUESTION})))
+    took = time.monotonic() - started
+
+    assert types_of(events) == ["sources", "error"]
+    assert events[-1]["code"] == "timeout"
+    # The first close() came while the stream was opening and found nothing;
+    # a later one closed the stream at once, without waiting for a piece.
+    assert chat.closes_while_opening >= 1
+    assert len(chat.streams) == 1
+    assert chat.streams[0].closed
+    assert took < OPENING_SECONDS + 2
+    assert cache.get(lock_key(user)) is None
+
+
+@pytest.mark.django_db
+def test_client_going_away_while_the_stream_opens_frees_everything_soon(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    use_context(monkeypatch)
+    chat = install_chat(monkeypatch, OpeningChat())
+    user = make_user("read")
+    assert user is not None
+
+    started = time.monotonic()
+    answer = asgi_ask(
+        user,
+        {"question": QUESTION},
+        disconnect_when=lambda message: b"event: sources" in message.get("body", b""),
+    )
+    took = time.monotonic() - started
+
+    assert types_of(parse_events(answer.body)) == ["sources"]
+    assert chat.closes_while_opening >= 1
+    assert len(chat.streams) == 1
+    assert chat.streams[0].closed
+    assert took < OPENING_SECONDS + 2
+    assert cache.get(lock_key(user)) is None
+
+
+@pytest.mark.django_db
+def test_client_going_away_during_the_context_selection(
+    monkeypatch: pytest.MonkeyPatch, chat: FakeChatModel
+) -> None:
+    stand_in = use_context(monkeypatch)
+
+    def slow_select(question: str, **kwargs: Any) -> context.ContextSelection:  # noqa: ANN401
+        time.sleep(1)
+        return stand_in(question, **kwargs)
+
+    monkeypatch.setattr(context, "select_context", slow_select)
+    real_answer = service.answer
+    generators: list[Generator[AnswerEvent]] = []
+
+    def recording_answer(question: str, **kwargs: Any) -> Generator[AnswerEvent]:  # noqa: ANN401
+        generator = real_answer(question, **kwargs)
+        generators.append(generator)
+        return generator
+
+    monkeypatch.setattr(service, "answer", recording_answer)
+    user = make_user("read")
+    assert user is not None
+
+    answer = asgi_ask(
+        user,
+        {"question": QUESTION},
+        disconnect_when=lambda message: message["type"] == "http.response.start",
+    )
+
+    assert answer.body == b""
+    assert len(stand_in.calls) == 1
+    # close() ran on the generator of the service: it is finished.
+    (generator,) = generators
+    assert inspect.getgeneratorstate(generator) == inspect.GEN_CLOSED
+    assert chat.calls == []
+    assert chat.close_count >= 1
     assert cache.get(lock_key(user)) is None
 
 
