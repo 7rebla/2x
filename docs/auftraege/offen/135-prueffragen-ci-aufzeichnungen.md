@@ -37,7 +37,7 @@ Alle Fragen und Testtexte sind selbst geschrieben. Es gibt keine Auszüge aus `t
 
 ### 2. `backend/twox/answers/replay.py` (neu)
 
-- `ReplayChatModel` erfüllt das Protokoll `ChatModel` aus 121 (`model_name`, `stream(messages, *, max_tokens, temperature, seed) -> Iterator[str]`, `close()`). Es liest eine Aufzeichnungsdatei und liefert die aufgezeichneten Textstücke in der aufgezeichneten Reihenfolge.
+- `ReplayChatModel` erfüllt das Protokoll `ChatModel` aus 121 (`model_name`, `stream(messages, *, max_tokens, temperature, seed) -> ChatStream`, `close()`). Es liest eine Aufzeichnungsdatei und liefert die aufgezeichneten Textstücke in der aufgezeichneten Reihenfolge.
 - **Aufzeichnungsschlüssel** `recording_key(messages, model_name) -> str`: SHA-256 über `prompt_version()`, den Modellnamen der Aufzeichnung und die kanonisch serialisierten Nachrichten (`json.dumps(..., sort_keys=True, ensure_ascii=False)`). Die Nachrichten enthalten Frage, Quellennummern und Abschnittstexte. Damit deckt der Schlüssel die Vorgabe der Gesamtplanung ab („Hash aus prompt_version(), Modellname und Kontext-Nummern“) und ist strenger: Er schlägt auch an, wenn sich der Kontext bei gleicher Nummerierung ändert. Damit der Schlüssel stabil ist, wird die Zufallskennung aus 122 im Test und beim Aufzeichnen auf einen festen Wert gesetzt (`monkeypatch` auf `twox.answers.prompt.new_nonce`). Der Produktcode bekommt dafür **keinen** Schalter.
 - **Kein Treffer:** Gibt es zum Schlüssel keinen Eintrag, wirft `stream()` einen eigenen Fehler, z. B. `RecordingMissingError(AssertionError)`. Seine Meldung lautet sinngemäß `no recording for this prompt (prompt_version=…, model=…, question=…); re-record: manage.py record_answers`. Die Meldung nennt nur die Kennung der Frage, nie Prompt- oder Abschnittstext. Ein leiser Rückfall auf eine andere Aufzeichnung ist ausgeschlossen.
 - Das Modul baut keine Verbindung auf und hängt nicht von `TWOX_AI_ENABLED` ab. Ob das Modell gerufen wird, entscheidet der Dienst aus 126.
@@ -92,7 +92,7 @@ Eine JSON-Datei, z. B. `backend/tests/answers/recorded/ci_questions.json`, nur m
   5. **KI aus:** Der Dienst liefert `error(ai_disabled)`, das Modell wird nie gerufen, und die Stichwortsuche (`get_search_backend().search(...)`) findet die belegende Stelle weiterhin.
   6. **Widerspruch** (nur falls im Fragensatz): Status `contradiction` mit zwei gültigen Zitaten auf die erwarteten Stellen.
   7. **Neu aufzeichnen:** Eine per `monkeypatch` geänderte Prompt-Vorlage, also ein anderes `prompt_version()`, lässt den Lauf mit `RecordingMissingError` und der Meldung „re-record: manage.py record_answers“ scheitern (Test mit `pytest.raises`).
-  8. **Abbruch:** Ein Abbruch des Ereignisstroms durch den Aufrufer ruft `close()` am `ReplayChatModel` auf.
+  8. **Abbruch:** Ein Abbruch des Ereignisstroms durch den Aufrufer schließt den `ChatStream`, den `ReplayChatModel.stream()` geliefert hat (Festlegung nach 126: der Dienst schließt ein übergebenes Modell absichtlich nicht, nur dessen Strom; Nachweis über einen Zähler oder `closed` am Strom).
   9. **Datei-Prüfung:** Die Aufzeichnungsdatei hat das Format aus Abschnitt 3. Jede `question_id` kommt im Fragensatz vor. Es gibt keine verwaisten Einträge. `prompt_version` in der Datei ist gleich `prompt_version()`.
 - Die Tests laufen im normalen `pytest`, ohne Marker `worker`, damit der Schritt „Tests (pytest)“ der CI sie ausführt (`.github/workflows/ci.yml`, Job `backend`).
 
@@ -141,7 +141,7 @@ Gelesen und nicht geändert: `backend/tests/acceptance/test_m2.py`, `backend/tes
 5. Die Injection-Probe führt die Anweisung nicht aus. Es gibt keinen Link, keine Bildsyntax, kein HTML und nicht das Merkmalswort im `final_text` (Test).
 6. Die Faktfrage ergibt `answered` mit gültigem Zitat auf die erwartete Fundstelle. Eingegrenzt auf das fremde Gerät enthält sie keine Quelle des belegenden Dokuments (Tests).
 7. Bei KI aus kommt `error(ai_disabled)` ohne Modellaufruf, und die Stichwortsuche liefert die Stelle weiterhin (Test, Parameter `ai-off`).
-8. Ein Abbruch ruft `close()` am `ReplayChatModel` auf (Test).
+8. Ein Abbruch schließt den Strom des `ReplayChatModel` (Test über `closed` bzw. Zähler am `ChatStream`).
 9. `manage.py record_answers` endet ohne `pytest` sowie bei KI aus oder leerem `TWOX_CHAT_MODEL` mit Exit-Code ≠ 0 und ohne Verbindung (Tests). Ein echter Aufnahmelauf mit lokalem Modell ist im Kurzbericht dokumentiert: Modell, Digest, Lizenz-URL, Datum, Dauer und ob die Aufzeichnung committet wurde (nur nach Umfang 4). Ein zweiter Lauf ergibt die gleiche Datei oder nur abweichende `chunks` (Ergebnis vermerkt).
 10. Die Aufzeichnungen und Fixtures enthalten nur Texte aus `testdata/klein` oder selbst geschriebene. Gespeichert sind keine Abschnittstexte und kein Prompt, nur die Modellausgabe. Die Leitstelle prüft den Diff von `recorded/` und `fixtures/` vollständig.
 11. Keine Logzeile aus dem Testlauf enthält Frage, Antwort oder Abschnittstext (Test mit `caplog` auf allen Loggern, wie in 126).
