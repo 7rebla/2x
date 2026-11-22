@@ -154,9 +154,9 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 
 | Nr. | Auftrag | Stufe | Voraussetzung | Status |
 | --- | --- | --- | --- | --- |
-| 070 | Theme, Schrift Inter, Text-Animationen, Einstellungsseite | C | – (E-50, E-52) | in Arbeit |
-| 071 | Icon-Schicht mit Lucide | C | 070 (E-51) | offen (wartet auf 070) |
-| 072 | Marke: Bildmarke im Kopf, Favicon | C | 070 (E-52) | offen (wartet auf 070) |
+| 070 | Theme, Schrift Inter, Text-Animationen, Einstellungsseite | C | – (E-50, E-52) | erledigt |
+| 071 | Icon-Schicht mit Lucide | C | 070 (E-51) | in Arbeit |
+| 072 | Marke: Bildmarke im Kopf, Favicon | C | 070 (E-52) | in Arbeit |
 | 073 | Gerätetyp als Feld, API, Admin, CSV-Spalte, Testfabrik | C | – (E-53) | erledigt |
 | 074 | Eigene Geräte-Icons in Baum, Geräteseite, Landkarte | B | 071, 073 | offen |
 
@@ -190,3 +190,4 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 - 073: Feld `device_class` (plc, controller, computer, router, firewall, robot, other) in Modell, API, Admin, Protokoll und Formular; CSV mit optionaler 14. Spalte; Testfabrik: 5 SPS, 4 Controller, je 1 Rechner, Router, Roboter, Firewall. Die Geräteseite zeigt den Typ noch nur im Bearbeiten-Formular (für 074).
 - 040: Erweiterungen `vector` und `pg_trgm` per Migration `ingest.0001_extensions`. Für M6 (Betrieb ohne Superuser): `vector` ist nicht „trusted“ – ein Administrator legt die Erweiterung vor der ersten Migration an; die Rückwärtsmigration entfernt sie und braucht dann ebenfalls einen Superuser.
 - Für M3 vorgemerkt (22.11.2026): Chat-Assistent als animierte Pixelfigur ist von a7 ausgewählt (Vorlage lokal und ungetrackt unter `docs/design/bildmarke/assistent/`). Einbau als eigener M3-Auftrag nach Freigabe; erscheint nur bei eingeschalteten KI-Funktionen (E-59). Der Name der Figur kommt wie der Produktname nicht in getrackte Dateien, bis a7 beide veröffentlicht; vorher Registerprüfung.
+- 070: Theme mit Tokens, hell/dunkel/System, fünf Akzente (Aubergine Standard; Indigo, Beere, Umbra, Graphit als Vorschlag des Bearbeiters), Kontraste per Test aus `index.css` gemessen, Inter lokal, vier Text-Animationen, Seite `/settings` (Benutzermenü). Für M6: CSP-Hash des Inline-Skripts in `web/src/theme/README.md`. Beim lokalen Bauen vorher `web/dist/` löschen (Tailwind durchsucht es sonst).
