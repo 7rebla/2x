@@ -156,7 +156,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | --- | --- | --- | --- | --- |
 | 070 | Theme, Schrift Inter, Text-Animationen, Einstellungsseite | C | – (E-50, E-52) | erledigt |
 | 071 | Icon-Schicht mit Lucide | C | 070 (E-51) | in Arbeit |
-| 072 | Marke: Bildmarke im Kopf, Favicon | C | 070 (E-52) | in Arbeit |
+| 072 | Marke: Bildmarke im Kopf, Favicon | C | 070 (E-52) | erledigt |
 | 073 | Gerätetyp als Feld, API, Admin, CSV-Spalte, Testfabrik | C | – (E-53) | erledigt |
 | 074 | Eigene Geräte-Icons in Baum, Geräteseite, Landkarte | B | 071, 073 | offen |
 
@@ -193,3 +193,4 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 - 070: Theme mit Tokens, hell/dunkel/System, fünf Akzente (Aubergine Standard; Indigo, Beere, Umbra, Graphit als Vorschlag des Bearbeiters), Kontraste per Test aus `index.css` gemessen, Inter lokal, vier Text-Animationen, Seite `/settings` (Benutzermenü). Für M6: CSP-Hash des Inline-Skripts in `web/src/theme/README.md`. Beim lokalen Bauen vorher `web/dist/` löschen (Tailwind durchsucht es sonst).
 - 041: Docling-Client (`ingest/docling.py`) mit Streaming und vier Fehlerarten, `check_docling --convert`, Fixtures aus freien Testdaten. Gemessen ~5 s je PDF-Seite auf der CPU (60 Seiten in ~5 min). Für 057: 2 000 Seiten × 5 s ≈ 2,8 h überschreiten die Grenze von 2 h je Dokument (E-55) – Grenze nach dem Messlauf neu vorschlagen. Docling liefert ein abgeholtes Ergebnis noch ~300 s lang erneut aus; RapidOCR erscheint nicht im Docling-Protokoll (Nachweis über geladene ONNX-Bibliothek).
 - 042: Modelle `IngestJob` (je Versuch eine Zeile, höchstens ein aktiver Auftrag je Version) und `Section` (Suchvektor als generierte Spalte über `heading_text` und `text`, simple/german/english; Einbettung `vector(1024)` nullbar; GIN-, Trigramm- und HNSW-Index). Für 043: leere Abschnittstexte werden abgewiesen. Für 047: Phrasensuche über die Grenzen der verketteten tsvector-Kopien prüfen.
+- 072: Bildmarke im Kopf neben „2x“ (Komponente `BrandMark`, Token `brand` getrennt vom Akzent), Favicon SVG/ICO und Touch-Icon; Backend liefert `/favicon.ico`, `/favicon.svg`, `/apple-touch-icon.png` über feste Pfade. Offen: `favicon.svg` der Vorlage wechselt im Dunkelmodus nicht die Farbe (Inline-Stil schlägt die Media-Query) – die Logo-Sitzung korrigiert die Vorlage, danach Datei neu übernehmen.
