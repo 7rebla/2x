@@ -21,6 +21,7 @@
   "column": {
     "device": "Gerät",
     "document": "Datei",
+    "version": "Version",
     "status": "Status",
     "times": "Zeitpunkte",
     "requestedBy": "Angestoßen von"

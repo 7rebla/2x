@@ -8,8 +8,10 @@ import { ErrorMessage } from "./ErrorMessage.tsx";
 import { shortChecksum } from "./files/format.ts";
 import { Loading } from "./Loading.tsx";
 import { Button } from "./ui/Button.tsx";
+import { ResponsiveTable, type TableColumn } from "./ui/ResponsiveTable.tsx";
 
-// Change log entries as a table (GET /api/v1/audit-log/, only for "manage").
+// Change log entries as a table (GET /api/v1/audit-log/, only for "manage"),
+// below 768 px as stacked cards (work order 081).
 //
 // Everything in an entry (user names, object names, field values) is data:
 // it is rendered as text by React, never as HTML, and never goes through the
@@ -40,6 +42,11 @@ export interface AuditTrailProps {
   actor?: string;
   /** Accessible name of the table; default: the "Changes" text. */
   label?: string;
+  /**
+   * Level of the card headings below 768 px: one below the heading of the
+   * section around the change log; default 2 (the page /audit has only its h1 above).
+   */
+  cardHeadingLevel?: 2 | 3 | 4;
 }
 
 /**
@@ -103,37 +110,11 @@ function AuditTrailPages(props: AuditTrailProps): ReactElement {
           {t("empty")}
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table aria-label={props.label ?? t("tableLabel")} className="w-full border-collapse text-left text-sm tabular-nums">
-            <thead>
-              <tr className="border-b border-line">
-                <th scope="col" className="p-2 font-semibold">
-                  {t("column.timestamp")}
-                </th>
-                <th scope="col" className="p-2 font-semibold">
-                  {t("column.actor")}
-                </th>
-                <th scope="col" className="p-2 font-semibold">
-                  {t("column.action")}
-                </th>
-                <th scope="col" className="p-2 font-semibold">
-                  {t("column.objectType")}
-                </th>
-                <th scope="col" className="p-2 font-semibold">
-                  {t("column.object")}
-                </th>
-                <th scope="col" className="p-2 font-semibold">
-                  {t("column.changes")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {results.map((entry) => (
-                <AuditRow key={entry.id} entry={entry} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <AuditTable
+          entries={results}
+          label={props.label ?? t("tableLabel")}
+          cardHeadingLevel={props.cardHeadingLevel ?? 2}
+        />
       )}
       <nav aria-label={t("pagination.label")} className="flex flex-wrap items-center gap-3">
         <Button
@@ -166,35 +147,98 @@ function AuditTrailPages(props: AuditTrailProps): ReactElement {
   );
 }
 
-function AuditRow({ entry }: { entry: AuditLogEntry }): ReactElement {
+/**
+ * The entries as a table from 768 px; below that every entry is a card (work
+ * order 081): the object as heading, the action below it, then time, user,
+ * object type and the changes over the full width.
+ */
+function AuditTable({
+  entries,
+  label,
+  cardHeadingLevel,
+}: {
+  entries: readonly AuditLogEntry[];
+  label: string;
+  cardHeadingLevel: 2 | 3 | 4;
+}): ReactElement {
   const { t } = useTranslation("audit");
-  const objectType = auditObjectTypes.find((type) => type.value === entry.object_type);
-  const action = isKnownAction(entry.action) ? t(`action.${entry.action}`) : entry.action;
-
+  const columns: TableColumn<AuditLogEntry>[] = [
+    {
+      key: "timestamp",
+      header: t("column.timestamp"),
+      headerClassName: "p-2 font-semibold",
+      className: "p-2 whitespace-nowrap",
+      testId: "audit-timestamp",
+      cell: (entry) => <DateTime value={entry.timestamp} />,
+    },
+    {
+      key: "actor",
+      header: t("column.actor"),
+      headerClassName: "p-2 font-semibold",
+      className: "p-2 whitespace-nowrap",
+      testId: "audit-actor",
+      cell: (entry) => entry.actor ?? <span className="text-fg-muted italic">{t("noActor")}</span>,
+    },
+    {
+      key: "action",
+      header: t("column.action"),
+      headerClassName: "p-2 font-semibold",
+      className: "p-2 whitespace-nowrap",
+      testId: "audit-action",
+      card: "status",
+      cell: (entry) => (isKnownAction(entry.action) ? t(`action.${entry.action}`) : entry.action),
+    },
+    {
+      key: "objectType",
+      header: t("column.objectType"),
+      headerClassName: "p-2 font-semibold",
+      className: "p-2 whitespace-nowrap",
+      testId: "audit-object-type",
+      cell: (entry) => {
+        const objectType = auditObjectTypes.find((type) => type.value === entry.object_type);
+        return objectType === undefined ? entry.object_type : t(`objectType.${objectType.textKey}`);
+      },
+    },
+    {
+      key: "object",
+      header: t("column.object"),
+      headerClassName: "p-2 font-semibold",
+      className: "min-w-40 p-2 break-words",
+      testId: "audit-object",
+      card: "title",
+      cell: (entry) => (
+        <>
+          <span>{entry.object_repr}</span>
+          {entry.object_id === null ? null : (
+            <span className="block text-xs font-normal whitespace-nowrap text-fg-muted">
+              {t("objectId", { id: entry.object_id })}
+            </span>
+          )}
+        </>
+      ),
+    },
+    {
+      key: "changes",
+      header: t("column.changes"),
+      headerClassName: "p-2 font-semibold",
+      className: "min-w-64 p-2",
+      testId: "audit-changes",
+      card: "wide",
+      cell: (entry) => <Changes changes={entry.changes} />,
+    },
+  ];
   return (
-    <tr data-testid="audit-entry" className="border-b border-line align-top">
-      <td className="p-2 whitespace-nowrap" data-testid="audit-timestamp">
-        <DateTime value={entry.timestamp} />
-      </td>
-      <td className="p-2 whitespace-nowrap" data-testid="audit-actor">
-        {entry.actor ?? <span className="text-fg-muted italic">{t("noActor")}</span>}
-      </td>
-      <td className="p-2 whitespace-nowrap" data-testid="audit-action">
-        {action}
-      </td>
-      <td className="p-2 whitespace-nowrap" data-testid="audit-object-type">
-        {objectType === undefined ? entry.object_type : t(`objectType.${objectType.textKey}`)}
-      </td>
-      <td className="min-w-40 p-2 break-words" data-testid="audit-object">
-        <span>{entry.object_repr}</span>
-        {entry.object_id === null ? null : (
-          <span className="block text-xs whitespace-nowrap text-fg-muted">{t("objectId", { id: entry.object_id })}</span>
-        )}
-      </td>
-      <td className="min-w-64 p-2" data-testid="audit-changes">
-        <Changes changes={entry.changes} />
-      </td>
-    </tr>
+    <ResponsiveTable
+      label={label}
+      rows={entries}
+      rowKey={(entry) => entry.id}
+      columns={columns}
+      rowAttributes={() => ({ "data-testid": "audit-entry" })}
+      cardHeadingLevel={cardHeadingLevel}
+      tableClassName="border-collapse tabular-nums"
+      headerRowClassName="border-b border-line"
+      rowClassName="border-b border-line align-top"
+    />
   );
 }
 

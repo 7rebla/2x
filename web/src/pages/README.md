@@ -182,6 +182,13 @@ if (query.isError) return <ErrorMessage error={query.error} />;
   the full name as tooltip; the text content stays the full name. The building blocks are in
   `../components/files/parts.tsx`. A scroll box around a table with screen-reader texts is `relative`, so those
   absolute texts do not widen the page on a phone.
+- Narrow screens (work order 081, E-65 (2)): below 768 px the four data tables (files of a device, versions of a file,
+  ingest jobs, change log) are stacked cards, a list with one heading per card, through `ResponsiveTable`
+  (`../components/ui/README.md`, "Data tables and cards"). A file card: the title as heading (`h3`), the download
+  button next to it, the ingest state below, then kind, version, upload time with user and size as pairs, the checksum
+  at the end ("No version" in place of the pairs from version on). A version card: "Version N" as heading (`h3`),
+  download, ingest state with message and button, then upload time with user, size and file name, the checksum at the
+  end. Nothing scrolls sideways at 375 px (`../../e2e/tables-narrow.spec.ts`).
 - Ingestion state (work order 053): the building blocks are in `../components/files/IngestStatus.tsx` and are meant to
   be reused (055). `IngestStatusBadge` shows the newest job of a version (field `ingest`): queued, ingesting (with the
   step), ingested (pages and sections), error, skipped, or not ingested; `compact` leaves out step and counts (device
@@ -212,6 +219,9 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 
 - `../components/AuditTrail.tsx` shows the entries of `/api/v1/audit-log/` on `/audit` and on the file page. Time,
   user, action and object type never wrap.
+- Below 768 px every entry is a card (work order 081): the object with its id as heading (`h2` on `/audit`; the file
+  page passes `cardHeadingLevel={3}` below its section heading), the action below it, then time, user and object type
+  as pairs and the changes over the full width of the card, with "Technical details" folded away as in the table.
 - Changes (work order 079): known field names are translated (`field` in `audit.json`, the API name as tooltip;
   `auditFieldNames` lists them, taken from the logged models in `backend/twox/accounts/audit.py`); an unknown field
   shows its name as it came. Technical fields (`TECHNICAL_AUDIT_FIELDS`: id, storage key, checksum and the ids of other
@@ -289,6 +299,8 @@ if (query.isError) return <ErrorMessage error={query.error} />;
   unfold (`IngestError`), the times (created, finished) and, for `manage` only, who started the job ("System" for
   none; the API sends `null` to `read`, E-57). All three building blocks come from
   `../components/files/IngestStatus.tsx` (work order 053); `error_detail` and every name are rendered as text.
+- Below 768 px every job is a card (work order 081, `ResponsiveTable`): the file (link) as heading (`h2`), status,
+  message and button below it, then device, version with file name, times and (managers) "Started by" as pairs.
 - "Ingest again" (`IngestRetryButton`) stands on every row of a manager whose job is not queued or running and is the
   newest job of its version. A row with `is_latest` false (only with older attempts shown) says "Older attempt" and
   has no button, wherever the newer job is listed; the API decides, not the order of the page.

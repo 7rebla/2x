@@ -8,6 +8,8 @@ import type { AuditLogEntry, PaginatedAuditLogEntryList } from "../api/generated
 import { createQueryClient } from "../api/queryClient.ts";
 import { changeLanguage } from "../i18n.ts";
 import { type FakeApi, fakeApi, jsonResponse, manager } from "../test/fakeApi.ts";
+import { fakeMatchMedia } from "../test/fakeMatchMedia.ts";
+import { WIDE_TABLE_QUERY } from "./ui/ResponsiveTable.tsx";
 import { AUDIT_PAGE_SIZE, AuditTrail, type AuditTrailProps } from "./AuditTrail.tsx";
 
 const AUDIT_LOG = "/api/v1/audit-log/";
@@ -545,5 +547,76 @@ describe("errors", () => {
 
     expect((await screen.findByTestId("error-summary")).textContent).toBe("The API answered with HTTP status 404.");
     expect(screen.getByTestId("error-detail").textContent).toBe("Invalid page.");
+  });
+});
+
+describe("narrow screens (work order 081)", () => {
+  it("lists the entries as cards below 768 px: object as heading, action, then time, user, object type and changes", async () => {
+    fakeMatchMedia({ [WIDE_TABLE_QUERY]: false });
+    auditApi(() =>
+      jsonResponse(pageOf([entry(2, { changes: { name: ["old name", "new name"], id: [null, 7] } }), entry(1)])),
+    );
+    renderTrail();
+    const [first] = await rows();
+    if (first === undefined) {
+      throw new Error("card missing");
+    }
+
+    expect(screen.queryByRole("table")).toBeNull();
+    const list = screen.getByRole("list", { name: "Changes" });
+    // Two cards; the changed fields inside them are lists of their own.
+    expect(Array.from(list.children).map((item) => item.tagName)).toEqual(["LI", "LI"]);
+    // On /audit the page heading (h1) is the only heading above the list.
+    expect(within(list).getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
+      "test-device-2ID 7",
+      "test-device-1ID 7",
+    ]);
+    expect(first.tagName).toBe("LI");
+    expect(cell(first, "audit-action").textContent).toBe("Action: Changed");
+    expect(Array.from(first.querySelectorAll("dt")).map((term) => term.textContent)).toEqual([
+      "Time",
+      "User",
+      "Object type",
+      "Changes",
+    ]);
+    expect(cell(first, "audit-timestamp").querySelector("time")?.getAttribute("dateTime")).toBe("2026-11-21T12:00:00.123Z");
+    expect(cell(first, "audit-actor").textContent).toBe("test-manager");
+    expect(cell(first, "audit-object-type").textContent).toBe("Device");
+    // The changes take the full width of the card; technical details and raw data stay folded away.
+    const changes = cell(first, "audit-changes");
+    expect(changes.parentElement?.className).toContain("col-span-2");
+    expect(within(changes).getAllByTestId("audit-change-field").map((field) => field.textContent)).toEqual(["Name", "ID"]);
+    expect(within(changes).getByTestId("audit-technical").hasAttribute("open")).toBe(false);
+    expect(within(changes).getByTestId("audit-raw").textContent).toContain('"id": [null,7]');
+  });
+
+  it("uses the heading level the caller asks for", async () => {
+    fakeMatchMedia({ [WIDE_TABLE_QUERY]: false });
+    auditApi(() => jsonResponse(pageOf([entry(1)])));
+    renderTrail({ cardHeadingLevel: 3, label: "Test history" });
+    await rows();
+
+    const list = screen.getByRole("list", { name: "Test history" });
+    expect(within(list).getAllByRole("heading", { level: 3 })).toHaveLength(1);
+    expect(within(list).queryByRole("heading", { level: 2 })).toBeNull();
+  });
+
+  it("names the pairs in German", async () => {
+    fakeMatchMedia({ [WIDE_TABLE_QUERY]: false });
+    await changeLanguage("de");
+    auditApi(() => jsonResponse(pageOf([entry(1)])));
+    renderTrail();
+    const [first] = await rows();
+    if (first === undefined) {
+      throw new Error("card missing");
+    }
+
+    expect(screen.getByRole("list", { name: "Änderungen" })).toBeDefined();
+    expect(Array.from(first.querySelectorAll("dt")).map((term) => term.textContent)).toEqual([
+      "Zeitpunkt",
+      "Benutzer",
+      "Objektart",
+      "Änderungen",
+    ]);
   });
 });

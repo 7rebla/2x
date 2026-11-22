@@ -21,6 +21,7 @@
   "column": {
     "device": "Device",
     "document": "File",
+    "version": "Version",
     "status": "Status",
     "times": "Times",
     "requestedBy": "Started by"

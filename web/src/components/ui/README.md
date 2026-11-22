@@ -7,6 +7,7 @@ Work order 077. Every button, one-line text field, drop-down choice and text are
 | `Button.tsx` | `Button` |
 | `fields.tsx` | `Input`, `Select`, `Textarea` |
 | `FileInput.tsx` | `FileInput` (work order 088) |
+| `ResponsiveTable.tsx` | `ResponsiveTable`, `useWideTable`, `WIDE_TABLE_QUERY` (work order 081) |
 | `classes.ts` | the classes behind them (`buttonClasses`, `fieldClasses`, `textareaClasses`, `fileButtonClasses`, `fileDropClasses`), `CONTROL_HEIGHT_PX`, `joinClasses` |
 
 ## Sizes
@@ -88,10 +89,36 @@ const [file, setFile] = useState<File | null>(null);
 - **Controlled:** the caller keeps the file (`file`, `onFileChange`); `onFileChange(null)` when the choice is cleared. A dropped file is put into the input as well, so the form data holds it; where that is not possible (jsdom) only the callback has it.
 - **A primary button waits for the file:** disabled while `file` is null, with the hint `common:fileInput.chooseFirst` ("Choose a file first.") next to it, tied by `aria-describedby`. Texts live in `locales/*/common.json` under `fileInput`.
 
+## Data tables and cards
+
+Decision E-65 (2): below 768 px a data table becomes a list of stacked cards. `ResponsiveTable` takes the rows and a description of the columns once and renders either a `<table>` (from 768 px, Tailwind `md`) or a `<ul>` of cards, never both, so a screen reader meets a table with column headings or a list with one heading per card. It follows the window width (`matchMedia("(min-width: 48rem)")`); without media queries (jsdom) it is a table.
+
+```tsx
+import { ResponsiveTable, type TableColumn } from "../components/ui/ResponsiveTable.tsx";
+
+const columns: TableColumn<Document>[] = [
+  { key: "title", header: t("columns.title"), card: "title", cell: (item) => <TitleWithChecksum item={item} />,
+    cardCell: (item) => <Title item={item} /> },
+  { key: "kind", header: t("columns.kind"), testId: "file-kind", cell: (item) => <KindLabel kind={item.kind} /> },
+  { key: "ingest", header: t("columns.ingest"), card: "status", cell: (item) => <IngestStatusBadge … /> },
+  { key: "download", header: t("columns.download"), headerHidden: true, card: "action", cell: … },
+  { key: "checksum", header: t("columns.checksum"), table: false, card: "detail", cell: … },
+];
+
+<ResponsiveTable label={t("listLabel")} testId="device-files-table" rows={documents} rowKey={(item) => item.id}
+  columns={columns} rowAttributes={(item) => ({ "data-testid": "device-file" })} cardHeadingLevel={3} />
+```
+
+- **Table:** every column with `table` not `false` is a `<th scope="col">` with its `header` (`headerHidden`: for screen readers only) and a `<td>` per row. Classes of headings, cells, rows and the table come from the caller (`headerClassName`, `className`, `rowClassName`, `tableClassName`), so each table keeps its look from work order 079. The table sits in a positioned scroll box (`relative overflow-x-auto`).
+- **Card:** a list item with border `line` on `surface`, padding 12 px. `card` places each column: `title` is the heading (level `cardHeadingLevel`, one below the heading of the section around it), `action` stands next to it on the right (the download icon button), `status` below it with its column name for screen readers only, `field` and `wide` are label/value pairs of a description list (`wide` over the full width, for long content such as the changes of a log entry), `detail` follows without a label (the checksum names itself), `none` leaves the column out. `cardCell` replaces the cell content on a card (a title without the detail line the table shows below it).
+- **Names and test ids:** the list has the same accessible name and `data-testid` as the table; a row's attributes (`rowAttributes`) go to the `<tr>` or the `<li>`, and a column's `testId` to its `<td>` or to its value on the card, so tests and queries find the same things in both forms.
+- **A note for a row:** `rowNote` replaces the columns from `from` on with one text ("No version"): one cell with `colspan` in the table, a paragraph on the card.
+- No animation; the switch at 768 px happens at once.
+
 ## Contrast
 
 `../../theme/contrast.test.ts` measures every pair the building blocks use, in both modes and with every accent: text on `accent` and `accent-strong` (primary), `fg` on `surface` and `surface-muted` (secondary, ghost, fields), `danger` on `danger-soft` and `danger-line` (danger, hovered), the borders `line-strong` and `danger` on the page and on cards (3:1). Disabled controls are exempt from the contrast rules (WCAG 1.4.3).
 
 ## Tests
 
-`Button.test.tsx` (variants, sizes, icon, disabled, loading, ref and attributes), `fields.test.tsx` (sizes, error state, types, disabled, heights shared with the buttons), `FileInput.test.tsx` (hidden but labelled and focusable input, visible button, chosen name, drop, disabled, error state, German) and `sourceControls.test.ts` (no native button, select or text area outside this folder, native inputs only for check boxes and radio buttons, files only through `FileInput`, no copies of the old button classes).
+`Button.test.tsx` (variants, sizes, icon, disabled, loading, ref and attributes), `fields.test.tsx` (sizes, error state, types, disabled, heights shared with the buttons), `FileInput.test.tsx` (hidden but labelled and focusable input, visible button, chosen name, drop, disabled, error state, German), `ResponsiveTable.test.tsx` (table without media queries and from 768 px, cards below, heading levels, places on the card, row note, switching with the window width) and `sourceControls.test.ts` (no native button, select or text area outside this folder, native inputs only for check boxes and radio buttons, files only through `FileInput`, no copies of the old button classes).
