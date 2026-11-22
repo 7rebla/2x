@@ -69,7 +69,7 @@ async function uploadAndOpen(page: Page, deviceId: number, name: string, mimeTyp
   await expect(form.getByTestId("upload-success")).toHaveText("Uploaded as version 1.");
   await files.getByTestId("device-file").getByRole("link", { name: title }).click();
   await expect(page).toHaveURL(/\/documents\/\d+$/);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText(title);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
 }
 
 function versionIngest(page: Page): Locator {

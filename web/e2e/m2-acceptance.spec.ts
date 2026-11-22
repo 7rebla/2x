@@ -256,7 +256,7 @@ test("M2 acceptance, CI part: uploaded files with their ingest state, the ingest
   await test.step("search without hits", async () => {
     await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Search" }).click();
     await expect(page).toHaveURL(/\/search$/);
-    await expect(page.getByRole("heading", { level: 2 })).toHaveText("Search");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Search");
     const word = `zzq${run.replace(/[^a-z0-9]/g, "")}`;
     const answer = await searchFor(page, word);
     expect(answer.hits).toEqual([]);

@@ -35,7 +35,7 @@ test.describe("settings", () => {
     await page.getByTestId("user-menu-button").click();
     await page.getByTestId("settings-link").click();
     await expect(page).toHaveURL(/\/settings$/);
-    await expect(page.getByRole("heading", { level: 2, name: "Settings" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
 
     const html = page.locator("html");
     await expect(html).toHaveAttribute("data-theme", "light");
@@ -81,7 +81,7 @@ test.describe("settings", () => {
   test("shares the language with the switch in the user menu", async ({ page }) => {
     await page.goto("/settings");
     await page.getByRole("combobox", { name: "Language of the interface" }).selectOption("de");
-    await expect(page.getByRole("heading", { level: 2, name: "Einstellungen" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Einstellungen" })).toBeVisible();
     await expect(page.getByTestId("language-switch")).toHaveValue("de");
     await expect(page.locator("html")).toHaveAttribute("lang", "de");
     await page.getByTestId("user-menu-button").click();
@@ -91,14 +91,14 @@ test.describe("settings", () => {
 
   test("reduces motion on request: no animation classes, nothing running", async ({ page }) => {
     await page.goto("/settings");
-    await expect(page.locator("h2 .tx-word").first()).toBeAttached();
+    await expect(page.locator("h1 .tx-word").first()).toBeAttached();
     await page.getByRole("checkbox", { name: "Reduce motion" }).check();
     await expect(page.locator("html")).toHaveAttribute("data-motion", "reduce");
     await expect(page.locator("[class*='tx-']")).toHaveCount(0);
     expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
 
     await page.reload();
-    await expect(page.getByRole("heading", { level: 2, name: "Settings" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
     await expect(page.locator("[class*='tx-']")).toHaveCount(0);
   });
 
@@ -109,7 +109,7 @@ test.describe("settings", () => {
     });
     await page.goto("/settings");
     const origin = new URL(page.url()).origin;
-    await expect(page.getByRole("heading", { level: 2, name: "Settings" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
     const font = await page.evaluate(async () => {
       await document.fonts.ready;
       const style = getComputedStyle(document.body);
@@ -162,7 +162,7 @@ test.describe("reduced motion of the system", () => {
 
   test("shows no animation when the system asks for reduced motion", async ({ page }) => {
     await page.goto("/settings");
-    await expect(page.getByRole("heading", { level: 2, name: "Settings" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("data-motion", "reduce");
     await expect(page.locator("[class*='tx-']")).toHaveCount(0);
     await expect(page.getByTestId("settings-system-motion")).toBeVisible();

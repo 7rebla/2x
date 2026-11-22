@@ -73,7 +73,7 @@ test("/selftest without a session leads to /login and back after signing in", as
   await page.goto("/selftest");
 
   await expect(page).toHaveURL(/\/login\?next=%2Fselftest$/);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Sign in");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sign in");
   await expect(page.getByRole("navigation")).toHaveCount(0);
 
   await signInThroughThePage(page, username, password);

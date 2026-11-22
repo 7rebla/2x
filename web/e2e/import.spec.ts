@@ -93,7 +93,7 @@ test("a manager checks a CSV file in a dry run, applies it and finds the devices
   const { rows, site, plant, devices } = twoDevices();
 
   await page.goto("/import");
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Import");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Import");
   await expect(page.getByTestId("import-columns")).toHaveText(COLUMNS.join(","));
   await chooseCsv(page, csv(rows));
   await page.getByRole("button", { name: "Start dry run" }).click();

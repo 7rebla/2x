@@ -102,7 +102,7 @@ test("the navigation leads to the ingest overview, which lists the open jobs by 
 
   await expect(page).toHaveURL(/\/ingest$/);
   await expect(entry).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Ingestion");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ingestion");
   const answer = await list;
   expect(answer.status()).toBe(200);
   expect(new URL(answer.url()).searchParams.getAll("status")).toEqual(["failed", "running", "queued"]);
@@ -156,7 +156,7 @@ test("an uploaded plain-text file appears under All as skipped, with its device 
   // The link leads to the page of the file.
   await row.getByTestId("ingest-job-document-link").click();
   await expect(page).toHaveURL(/\/documents\/\d+$/);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText(title);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
 
   // Back returns to the same view.
   await page.goBack();

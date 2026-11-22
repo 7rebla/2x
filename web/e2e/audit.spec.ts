@@ -79,7 +79,7 @@ test("a device created and changed through the API shows up twice with the user"
   expect(changed.status, JSON.stringify(changed.body)).toBe(200);
 
   await page.goto("/audit");
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Change log");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Change log");
   await page.getByLabel("Object type").selectOption("assets.device");
   await page.getByLabel("User").fill(username);
   await page.getByRole("button", { name: "Apply filter" }).click();

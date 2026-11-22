@@ -78,7 +78,7 @@ async function sha256(text: string): Promise<string> {
 
 async function dryRun(page: Page): Promise<void> {
   await page.goto("/import");
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Import");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Import");
   await page.getByLabel("CSV file", { exact: true }).setInputFiles(DEVICE_LIST);
   await page.getByRole("button", { name: "Start dry run" }).click();
   await expect(page.getByTestId("import-summary")).toHaveText(
@@ -116,7 +116,7 @@ function item(page: Page, kind: "site" | "area" | "plant", name: string): Locato
 /** Opens /audit with a filter by object type and user. */
 async function auditFor(page: Page, objectType: string, username: string): Promise<void> {
   await page.goto("/audit");
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Change log");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Change log");
   await page.getByLabel("Object type").selectOption(objectType);
   await page.getByLabel("User").fill(username);
   await page.getByRole("button", { name: "Apply filter" }).click();
@@ -228,7 +228,7 @@ test("M1 acceptance: device list of the test factory, a file with two versions, 
       .getByRole("link")
       .click();
     await expect(page).toHaveURL(/\/devices\/\d+$/);
-    await expect(page.getByRole("heading", { level: 2 })).toHaveText("SPS Wareneingang und -ausgang");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("SPS Wareneingang und -ausgang");
     await expect(page.getByTestId("device-key")).toHaveText("dps-plc");
 
     const newFile = page.getByTestId("device-files").getByRole("form", { name: "Upload a new file" });

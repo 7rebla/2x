@@ -28,7 +28,7 @@ test("a click in the navigation leads from / to the self-test page", async ({ pa
   const response = await page.goto("/");
   expect(response?.status()).toBe(200);
   const navigation = page.getByRole("navigation", { name: "Main navigation" });
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Structure");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Structure");
   await expect(navigation.getByRole("link", { name: "Structure" })).toHaveAttribute("aria-current", "page");
 
   await navigation.getByRole("link", { name: "Self-test" }).click();
@@ -41,7 +41,7 @@ test("a click in the navigation leads from / to the self-test page", async ({ pa
   // Back in the browser history returns to the start page.
   await page.goBack();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Structure");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Structure");
 
   expect(consoleErrors, "errors in the browser console").toEqual([]);
 });
@@ -59,7 +59,7 @@ test("an address with a parameter opens directly", async ({ page }) => {
 
   expect((await fileRequest).status()).toBe(404);
   await expect(page.getByTestId("not-found")).toBeVisible();
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Page not found");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Page not found");
   await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
 
   expect(
@@ -179,7 +179,7 @@ test("at 1024 px the icon of an entry opens its page and keeps its name", async 
   await entry.click();
   await expect(page).toHaveURL(/\/ingest$/);
   await expect(entry).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Ingestion");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ingestion");
 });
 
 test.describe("on a phone", () => {
@@ -219,12 +219,12 @@ test("an unknown address shows NotFound inside the frame", async ({ page }) => {
   expect(response?.status()).toBe(200);
 
   await expect(page.getByTestId("not-found")).toBeVisible();
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Page not found");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Page not found");
   await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
 
   await page.getByRole("link", { name: "Go to the structure" }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Structure");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Structure");
 
   expect(consoleErrors, "errors in the browser console").toEqual([]);
 });
