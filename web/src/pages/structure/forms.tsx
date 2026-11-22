@@ -267,9 +267,9 @@ function FormShell({
       data-testid="structure-form"
       className="space-y-3 rounded border border-line bg-surface p-4"
     >
-      <h3 id={titleId} className="font-semibold">
+      <h2 id={titleId} className="font-semibold">
         {title}
-      </h3>
+      </h2>
       {state.invalid ? (
         <div role="alert" data-testid="form-invalid" className="rounded border border-danger-line bg-danger-soft p-3 text-danger">
           <p>

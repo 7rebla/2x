@@ -78,7 +78,7 @@ test("the map shows a device and its network, finds it and opens its page", asyn
   // Through the navigation to the map.
   await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Map" }).click();
   await expect(page).toHaveURL(/\/map$/);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Map");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Map");
   const canvas = page.getByRole("region", { name: "Map of sites, areas, plants, devices and networks" });
   await expect(canvas).toBeVisible();
   await expect(page.getByTestId("map-list-link")).toHaveAttribute("href", "/");
@@ -130,7 +130,7 @@ test("the map shows a device and its network, finds it and opens its page", asyn
   await expect(deviceNode).toBeInViewport();
   await deviceNode.click();
   await expect(page).toHaveURL(new RegExp(`/devices/${String(device.id)}$`));
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText(deviceName);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(deviceName);
 
   // Back on the map, Enter on the focused device opens the page as well.
   await page.goBack();

@@ -11,6 +11,7 @@ import {
   sitesListOptions,
 } from "../api/generated/@tanstack/react-query.gen.ts";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
+import { usePageTitle } from "../hooks/usePageTitle.ts";
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { Button } from "../components/ui/Button.tsx";
@@ -104,6 +105,7 @@ function useDisclosure(needle: string): Disclosure {
 /** Structure of sites, areas, plants and devices (address /). */
 export function StructurePage(): ReactElement {
   const { t } = useTranslation(["nav", "assets"]);
+  usePageTitle(t("nav:structure"));
   const { canManage } = useRole();
   const [editor, setEditor] = useState<Editor | null>(null);
   const control: EditorControl = {

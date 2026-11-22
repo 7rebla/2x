@@ -38,6 +38,7 @@ import {
 import { DateTime } from "../components/files/parts.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
+import { usePageTitle } from "../hooks/usePageTitle.ts";
 import { Button } from "../components/ui/Button.tsx";
 import { Select } from "../components/ui/fields.tsx";
 import { Icon } from "../icons/Icon.tsx";
@@ -405,6 +406,7 @@ function IngestJobRow({ job, canManage }: { job: IngestJob; canManage: boolean }
 /** The ingest overview (role "read"; the button to ingest again only for "manage"). */
 export function IngestPage(): ReactElement {
   const { t } = useTranslation(["nav", "ingest"]);
+  usePageTitle(t("nav:ingest"));
   const [params, setParams] = useSearchParams();
   const address = readIngestAddress(params);
   // A new filter (a choice, Back, a link) starts again on page 1.

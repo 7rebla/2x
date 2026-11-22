@@ -17,6 +17,7 @@ import { useRole } from "../session.ts";
 import { deviceClassIcon, PLANT_ICON } from "./structure/deviceClass.ts";
 import { DeviceForm, type FieldName } from "./structure/forms.tsx";
 import { AnimatedHeading, MaskedTitle } from "../components/TextMotion.tsx";
+import { usePageTitle } from "../hooks/usePageTitle.ts";
 
 /** The id from the address, or null if it cannot be a device id (then the page is NotFound). */
 export function parseDeviceId(raw: string | undefined): number | null {
@@ -41,6 +42,8 @@ export function DevicePage(): ReactElement {
 function DeviceDetails({ id }: { id: number }): ReactElement {
   const { t } = useTranslation("nav");
   const query = useQuery(devicesRetrieveOptions({ path: { id } }));
+  // The browser title names the device once it is loaded; an unknown device leaves it to NotFound.
+  usePageTitle(query.data?.name ?? (query.error instanceof ApiError && query.error.status === 404 ? null : t("device")));
 
   if (query.data !== undefined) {
     return <DeviceView device={query.data} error={query.error} />;

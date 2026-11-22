@@ -41,6 +41,7 @@ import {
 import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { Loading } from "../components/Loading.tsx";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
+import { usePageTitle } from "../hooks/usePageTitle.ts";
 import { Button } from "../components/ui/Button.tsx";
 import { Input } from "../components/ui/fields.tsx";
 import { Icon } from "../icons/Icon.tsx";
@@ -59,6 +60,7 @@ import { nodeTypes } from "./map/nodes.tsx";
 /** Map of sites, areas, plants, devices and their networks. */
 export function MapPage(): ReactElement {
   const { t } = useTranslation(["nav", "map"]);
+  usePageTitle(t("nav:map"));
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">

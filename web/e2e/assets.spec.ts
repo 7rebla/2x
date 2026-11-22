@@ -50,7 +50,7 @@ test("a manager creates a site, area, plant and device and edits the device", as
   const ip = someTestIp();
 
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Structure");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Structure");
 
   await page.getByRole("button", { name: "New site" }).click();
   const siteForm = page.getByRole("form", { name: "New site" });
@@ -100,7 +100,7 @@ test("a manager creates a site, area, plant and device and edits the device", as
   // The device page: all fields, the chain as breadcrumb, the files area.
   await page.getByRole("link", { name: deviceName }).click();
   await expect(page).toHaveURL(/\/devices\/\d+$/);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText(deviceName);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(deviceName);
   const breadcrumb = page.getByRole("navigation", { name: "Location of the device" });
   await expect(breadcrumb.getByRole("listitem")).toHaveText([
     "Structure",

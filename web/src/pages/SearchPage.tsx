@@ -17,6 +17,7 @@ import { ErrorMessage } from "../components/ErrorMessage.tsx";
 import { parseId } from "../components/files/format.ts";
 import { Loading } from "../components/Loading.tsx";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
+import { usePageTitle } from "../hooks/usePageTitle.ts";
 import { Button } from "../components/ui/Button.tsx";
 import { Input, Select } from "../components/ui/fields.tsx";
 import { Icon } from "../icons/Icon.tsx";
@@ -231,6 +232,7 @@ function SearchResults({ address }: { address: SearchAddress }): ReactElement {
 /** Search in the ingested documents (role "read"). */
 export function SearchPage(): ReactElement {
   const { t } = useTranslation(["nav", "search"]);
+  usePageTitle(t("nav:search"));
   const [params, setParams] = useSearchParams();
   const address = readSearchAddress(params);
   // A new address (a search, Back, a link) starts the form again with its values.

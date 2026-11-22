@@ -14,6 +14,7 @@ import { FileInput } from "../components/ui/FileInput.tsx";
 import { deviceClasses } from "./structure/deviceClass.ts";
 import { reloadAfterSave, save } from "./structure/save.ts";
 import { AnimatedHeading } from "../components/TextMotion.tsx";
+import { usePageTitle } from "../hooks/usePageTitle.ts";
 
 /** The 13 columns of the device list, in the order the first line must name them (E-44). */
 export const deviceListColumns = [
@@ -59,6 +60,7 @@ type Step = "check" | "save";
  */
 export function ImportPage(): ReactElement {
   const { t } = useTranslation(["nav", "import", "common"]);
+  usePageTitle(t("nav:import"));
   const queryClient = useQueryClient();
   const importDevices = useMutation(devicesImportMutation());
   const [file, setFile] = useState<File | null>(null);
@@ -113,7 +115,7 @@ export function ImportPage(): ReactElement {
       <p className="text-fg-muted">{t("import:intro")}</p>
 
       <section data-testid="import-format" className="space-y-2 rounded border border-line p-4 text-sm">
-        <h3 className="font-semibold">{t("import:format.heading")}</h3>
+        <h2 className="font-semibold">{t("import:format.heading")}</h2>
         <p>{t("import:format.header")}</p>
         <code data-testid="import-columns" className="block font-sans tabular-nums slashed-zero break-words">
           {deviceListColumns.join(",")}
@@ -174,9 +176,9 @@ export function ImportPage(): ReactElement {
 
       {outcome === null ? null : (
         <section aria-labelledby={`${fileInputId}-result`} className="space-y-4">
-          <h3 id={`${fileInputId}-result`} className="text-lg font-semibold">
+          <h2 id={`${fileInputId}-result`} className="text-lg font-semibold">
             {t("import:report.heading")}
-          </h3>
+          </h2>
           <OutcomeView outcome={outcome} />
           {report === null ? null : <NextStep report={report} />}
           {canApply ? (

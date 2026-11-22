@@ -73,7 +73,7 @@ describe("list of files", () => {
     if (manual === undefined || notes === undefined) {
       throw new Error("rows missing");
     }
-    expect(within(filesArea()).getByRole("heading", { level: 3 }).textContent).toBe("Files");
+    expect(within(filesArea()).getByRole("heading", { level: 2 }).textContent).toBe("Files");
     expect(within(manual).getByRole("link", { name: "Test manual" }).getAttribute("href")).toBe("/documents/7");
     expect(cell(manual, "file-kind")).toBe("Document");
     expect(cell(manual, "file-version")).toBe("2");
@@ -152,7 +152,7 @@ describe("list of files", () => {
       expect(rows()).toHaveLength(2);
     });
 
-    expect(within(filesArea()).getByRole("heading", { level: 3 }).textContent).toBe("Dateien");
+    expect(within(filesArea()).getByRole("heading", { level: 2 }).textContent).toBe("Dateien");
     expect(within(filesArea()).getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
       "Titel",
       "Art",

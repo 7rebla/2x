@@ -2,11 +2,13 @@ import type { ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
+import { usePageTitle } from "../hooks/usePageTitle.ts";
 import { AnimatedHeading } from "./TextMotion.tsx";
 
 /** Page for an address the user interface does not know. */
 export function NotFound(): ReactElement {
   const { t } = useTranslation("common");
+  usePageTitle(t("notFound.heading"));
   return (
     <section data-testid="not-found" className="space-y-4">
       <AnimatedHeading text={t("notFound.heading")} />

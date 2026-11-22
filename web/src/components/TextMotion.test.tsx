@@ -38,12 +38,23 @@ function animationClasses(element: Element): string[] {
 describe("text animations", () => {
   it("splits a heading into words (pattern A) and keeps its text and name", () => {
     render(<AnimatedHeading text="Standorte, Bereiche und Geräte" />);
-    const heading = screen.getByRole("heading", { level: 2, name: "Standorte, Bereiche und Geräte" });
+    const heading = screen.getByRole("heading", { level: 1, name: "Standorte, Bereiche und Geräte" });
     expect(heading.textContent).toBe("Standorte, Bereiche und Geräte");
     expect(heading.classList.contains("tx-clear")).toBe(true);
     const words = heading.querySelectorAll<HTMLElement>(".tx-word");
     expect([...words].map((word) => word.textContent)).toEqual(["Standorte,", "Bereiche", "und", "Geräte"]);
     expect([...words].map((word) => word.style.getPropertyValue("--tx-index"))).toEqual(["0", "1", "2", "3"]);
+  });
+
+  it("writes page headings and titles as h1 unless a level is given (work order 078)", () => {
+    render(
+      <>
+        <AnimatedHeading text="Change log" />
+        <MaskedTitle text="test-device" />
+      </>,
+    );
+    expect(screen.getByRole("heading", { level: 1, name: "Change log" }).tagName).toBe("H1");
+    expect(screen.getByRole("heading", { level: 1, name: "test-device" }).tagName).toBe("H1");
   });
 
   it("masks a title line (pattern B)", () => {
@@ -115,7 +126,7 @@ describe("heading fade (pattern A, E-65)", () => {
 
     // Next page in the same session: the heading stands there at once.
     const { container } = render(<AnimatedHeading text="Änderungsprotokoll" />);
-    expect(container.innerHTML).toBe('<h2 class="text-2xl font-semibold">Änderungsprotokoll</h2>');
+    expect(container.innerHTML).toBe('<h1 class="text-2xl font-semibold">Änderungsprotokoll</h1>');
   });
 
   it("shows a changed text at once instead of fading in again", () => {

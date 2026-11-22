@@ -46,7 +46,7 @@ describe("sign-in form", () => {
     fakeApi(null);
     renderApp("/login");
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Sign in" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Sign in" })).toBeDefined();
     expect(screen.getByLabelText("Username").getAttribute("autocomplete")).toBe("username");
     expect(screen.getByLabelText("Password").getAttribute("type")).toBe("password");
     expect(screen.queryByRole("navigation")).toBeNull();
@@ -118,7 +118,7 @@ describe("after signing in", () => {
     await fillAndSubmit();
 
     expect((await screen.findByTestId("user-name")).textContent).toBe(manager.username);
-    expect(await screen.findByRole("heading", { level: 2, name: "Self-test" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Self-test" })).toBeDefined();
     expect(router.state.location.pathname).toBe("/selftest");
     expect(router.state.location.search).toBe("?x=1");
     const [login] = api.requestsTo(LOGIN);
@@ -133,7 +133,7 @@ describe("after signing in", () => {
 
       await fillAndSubmit();
 
-      expect(await screen.findByRole("heading", { level: 2, name: "Structure" })).toBeDefined();
+      expect(await screen.findByRole("heading", { level: 1, name: "Structure" })).toBeDefined();
       expect(router.state.location.pathname).toBe("/");
       expect(openServerPage).not.toHaveBeenCalled();
     },
@@ -154,7 +154,7 @@ describe("after signing in", () => {
     fakeApi(manager);
     const { router } = renderApp("/login?next=%2Faudit");
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Change log" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Change log" })).toBeDefined();
     expect(router.state.location.pathname).toBe("/audit");
   });
 });

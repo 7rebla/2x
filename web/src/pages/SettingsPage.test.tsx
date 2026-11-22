@@ -34,7 +34,7 @@ describe("settings page", () => {
     fireEvent.click(link);
     await openSettings();
     expect(router.state.location.pathname).toBe("/settings");
-    expect(screen.getByRole("heading", { level: 2, name: "Settings" })).toBeDefined();
+    expect(screen.getByRole("heading", { level: 1, name: "Settings" })).toBeDefined();
     expect(link.getAttribute("aria-current")).toBe("page");
     // Following a link closes the menu.
     expect(menu.hidden).toBe(true);
@@ -116,14 +116,14 @@ describe("settings page", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "Language of the interface" }), {
       target: { value: "de" },
     });
-    expect(await screen.findByRole("heading", { level: 2, name: "Einstellungen" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Einstellungen" })).toBeDefined();
     expect(screen.getByTestId<HTMLSelectElement>("language-switch").value).toBe("de");
     expect(window.localStorage.getItem("twox.language")).toBe("de");
     expect(screen.getByRole("radio", { name: "Wie im System" })).toBeDefined();
     expect(screen.getByRole("radio", { name: "Aubergine (Standard)" })).toBeDefined();
 
     fireEvent.change(screen.getByTestId("language-switch"), { target: { value: "en" } });
-    expect(await screen.findByRole("heading", { level: 2, name: "Settings" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Settings" })).toBeDefined();
     expect(screen.getByTestId<HTMLSelectElement>("settings-language-select").value).toBe("en");
   });
 
@@ -139,7 +139,7 @@ describe("settings page", () => {
     expect(root.dataset.motion).toBe("reduce");
     expect(window.localStorage.getItem("twox.reduceMotion")).toBe("true");
     expect(document.querySelectorAll("[class*='tx-']")).toHaveLength(0);
-    expect(screen.getByRole("heading", { level: 2, name: "Settings" }).textContent).toBe("Settings");
+    expect(screen.getByRole("heading", { level: 1, name: "Settings" }).textContent).toBe("Settings");
   });
 
   it("says when the system already reduces motion", async () => {

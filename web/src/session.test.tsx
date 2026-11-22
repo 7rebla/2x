@@ -40,7 +40,7 @@ describe("without a session", () => {
       fakeApi(null);
       const { router } = renderApp(`${path}?tab=2`);
 
-      expect(await screen.findByRole("heading", { level: 2, name: "Sign in" })).toBeDefined();
+      expect(await screen.findByRole("heading", { level: 1, name: "Sign in" })).toBeDefined();
       expect(router.state.location.pathname).toBe("/login");
       expect(new URLSearchParams(router.state.location.search).get("next")).toBe(`${path}?tab=2`);
     },
@@ -378,7 +378,7 @@ describe("addresses after signing in", () => {
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "test-only-password" } });
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Structure" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Structure" })).toBeDefined();
     expect(router.state.location.pathname).toBe("/");
   });
 

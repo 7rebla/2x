@@ -79,7 +79,7 @@ test("upload a file and a second version, download version 1, same content again
 
   // Device page: no files yet, then version 1 through the form.
   await page.goto(`/devices/${String(deviceId)}`);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText(deviceName);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(deviceName);
   const files = page.getByTestId("device-files");
   await expect(files.getByTestId("device-files-empty")).toBeVisible();
 
@@ -108,7 +108,7 @@ test("upload a file and a second version, download version 1, same content again
   // File page: version 2 with changed content.
   await row.getByRole("link", { name: title }).click();
   await expect(page).toHaveURL(/\/documents\/\d+$/);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText(title);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
   await expect(page.getByTestId("document-device").getByRole("link")).toContainText(deviceName);
 
   const newVersion = page.getByRole("form", { name: "Upload a new version" });
@@ -151,7 +151,7 @@ test("upload a file and a second version, download version 1, same content again
 
   // The address of the file opens directly; the change log names the upload.
   await page.reload();
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText(title);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
   await expect(page.getByTestId("document-version")).toHaveCount(2);
   await expect(
     page.getByTestId("document-history").getByTestId("audit-entry").filter({ hasText: "Created" }),

@@ -26,7 +26,7 @@ test("switching to German translates the page and sets <html lang>", async ({ pa
 
   await expect(page.getByTestId("database-heading")).toHaveText("Datenbank");
   await expect(page.getByTestId("worker-heading")).toHaveText("Hintergrunddienst");
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Selbsttest");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Selbsttest");
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
 
   // The choice is remembered across a reload.

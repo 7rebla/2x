@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { AiCheck, DatabaseCheck, WorkerCheck } from "../api/generated";
 import { loadSelftest, type SelftestOutcome } from "../api/selftest.ts";
 import { AnimatedHeading, LoadingText } from "../components/TextMotion.tsx";
+import { usePageTitle } from "../hooks/usePageTitle.ts";
 import { Button } from "../components/ui/Button.tsx";
 import { Icon } from "../icons/Icon.tsx";
 
@@ -12,6 +13,7 @@ type PageState = { kind: "loading" } | SelftestOutcome;
 /** Test page: shows the database, worker and AI checks of GET /api/v1/selftest/. */
 export function SelftestPage(): ReactElement {
   const { t } = useTranslation("selftest");
+  usePageTitle(t("heading"));
   const [state, setState] = useState<PageState>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
 
@@ -195,14 +197,14 @@ function Card({
   const statusText = { ok: t("statusOk"), failed: t("statusFailed"), neutral: t("statusDisabled") }[tone];
   return (
     <article data-testid={`${testId}-check`} className={`rounded border p-4 ${toneStyles[tone].card}`}>
-      <h3 className="flex items-center justify-between font-semibold">
+      <h2 className="flex items-center justify-between font-semibold">
         <span data-testid={`${testId}-heading`}>{heading}</span>
         {/* Status as icon and text, never by colour alone. */}
         <span data-testid={`${testId}-status`} className={`inline-flex items-center gap-1.5 ${toneStyles[tone].status}`}>
           <Icon name={toneIcons[tone]} decorative />
           {statusText}
         </span>
-      </h3>
+      </h2>
       {note === undefined ? null : <p className="mt-2 text-fg-muted">{note}</p>}
       {children === undefined ? null : <dl className="mt-2 space-y-1">{children}</dl>}
     </article>

@@ -38,7 +38,7 @@ function mainNavigation(): HTMLElement {
 }
 
 async function pageHeading(): Promise<HTMLElement> {
-  return screen.findByRole("heading", { level: 2 });
+  return screen.findByRole("heading", { level: 1 });
 }
 
 describe("frame", () => {
@@ -46,7 +46,7 @@ describe("frame", () => {
     fakeApi(manager);
     renderApp("/");
 
-    expect(screen.getByRole("heading", { level: 1, name: "2x" })).toBeDefined();
+    expect(within(screen.getByRole("banner")).getByRole("link", { name: "2x" })).toBeDefined();
     expect((await screen.findByTestId("user-name")).textContent).toBe(manager.username);
     const links = within(mainNavigation()).getAllByRole("link");
     expect(links.map((link) => link.textContent)).toEqual(navigation.map((entry) => enNav[entry.textKey]));
@@ -96,7 +96,7 @@ describe("navigation", () => {
 
       fireEvent.click(within(mainNavigation()).getByRole("link", { name: text }));
 
-      expect((await screen.findByRole("heading", { level: 2, name: text })).textContent).toBe(text);
+      expect((await screen.findByRole("heading", { level: 1, name: text })).textContent).toBe(text);
       expect(router.state.location.pathname).toBe(path);
       expect(within(mainNavigation()).getByRole("link", { name: text }).getAttribute("aria-current")).toBe(
         "page",
@@ -108,11 +108,11 @@ describe("navigation", () => {
   it("the name in the header leads back to the structure page", async () => {
     fakeApi(manager);
     const { router } = renderApp("/audit");
-    await screen.findByRole("heading", { level: 2, name: "Change log" });
+    await screen.findByRole("heading", { level: 1, name: "Change log" });
 
     fireEvent.click(screen.getByRole("link", { name: "2x" }));
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Structure" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Structure" })).toBeDefined();
     expect(router.state.location.pathname).toBe("/");
   });
 });
@@ -170,12 +170,12 @@ describe("addresses", () => {
   it("passes the address parameters to the device and file pages", async () => {
     fakeApi(manager, fakeStructureApi().handler);
     renderApp("/devices/1001");
-    expect(await screen.findByRole("heading", { level: 2, name: "Test panel" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Test panel" })).toBeDefined();
     cleanup();
 
     fakeApi(manager, fakeFilesApi(fakeStructureApi().handler).handler);
     renderApp("/documents/7");
-    expect(await screen.findByRole("heading", { level: 2, name: "Test manual" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Test manual" })).toBeDefined();
   });
 
   it.each(["/no-such-page", "/devices", "/devices/plc-1", "/documents/1/extra", "/selftest/x"])(
@@ -196,7 +196,7 @@ describe("addresses", () => {
 
     fireEvent.click(await screen.findByRole("link", { name: "Go to the structure" }));
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Structure" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Structure" })).toBeDefined();
     expect(router.state.location.pathname).toBe("/");
   });
 
@@ -205,7 +205,7 @@ describe("addresses", () => {
     fakeApi(manager);
     renderApp("/no-such-page");
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Seite nicht gefunden" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Seite nicht gefunden" })).toBeDefined();
   });
 });
 

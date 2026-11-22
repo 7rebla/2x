@@ -107,7 +107,7 @@ describe("map page", () => {
     renderApp("/map");
     const canvas = await openMap();
 
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Map");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Map");
     expect(screen.getByRole("region", { name: "Map of sites, areas, plants, devices and networks" })).toBe(canvas);
     // Groups with name (and key), devices with name, key, address and model.
     const plants = within(canvas).getAllByTestId("map-plant");
@@ -170,7 +170,7 @@ describe("map page", () => {
 
     fireEvent.click(within(deviceNode(/^Device Test panel/)).getByTestId("map-device"));
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Test panel" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Test panel" })).toBeDefined();
     expect(router.state.location.pathname).toBe("/devices/1001");
   });
 
@@ -186,7 +186,7 @@ describe("map page", () => {
     });
     fireEvent.keyDown(node, { key: "Enter" });
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Test drive" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Test drive" })).toBeDefined();
     expect(router.state.location.pathname).toBe("/devices/1003");
   });
 
@@ -276,7 +276,7 @@ describe("map page", () => {
     expect(screen.queryByTestId("map-canvas")).toBeNull();
 
     fireEvent.click(within(hint).getByRole("link", { name: "Go to the structure" }));
-    expect(await screen.findByRole("heading", { level: 2, name: "Structure" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Structure" })).toBeDefined();
     expect(router.state.location.pathname).toBe("/");
   });
 
@@ -295,7 +295,7 @@ describe("map page", () => {
     renderApp("/map");
     await openMap();
 
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Landkarte");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Landkarte");
     expect(screen.getByLabelText("Auf der Karte suchen")).toBeDefined();
     expect(screen.getByLabelText("Netze anzeigen")).toBeDefined();
     expect(screen.getByRole("button", { name: "Ansicht einpassen" })).toBeDefined();

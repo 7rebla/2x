@@ -50,11 +50,12 @@ afterEach(async () => {
 });
 
 describe("self-test page at /selftest", () => {
-  it("renders the heading", () => {
+  it("renders the name in the header and the page heading", async () => {
     stubApi(() => Promise.resolve(jsonResponse(healthy)));
     renderApp("/selftest");
 
-    expect(screen.getByRole("heading", { level: 1, name: "2x" })).toBeDefined();
+    expect(screen.getByRole("link", { name: "2x" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Self-test" })).toBeDefined();
   });
 
   it("shows that it is checking while the API has not answered", async () => {
@@ -178,7 +179,7 @@ describe("language switch", () => {
 
     fireEvent.change(screen.getByTestId("language-switch"), { target: { value: "de" } });
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Selbsttest" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Selbsttest" })).toBeDefined();
     expect(document.documentElement.lang).toBe("de");
     expect(screen.getByTestId("database-heading").textContent).toBe("Datenbank");
     expect(screen.getByTestId("worker-heading").textContent).toBe("Hintergrunddienst");
@@ -194,7 +195,7 @@ describe("language switch", () => {
 
     fireEvent.change(screen.getByTestId("language-switch"), { target: { value: "en" } });
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Self-test" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Self-test" })).toBeDefined();
     expect(document.documentElement.lang).toBe("en");
     expect(window.localStorage.getItem("twox.language")).toBe("en");
   });
@@ -217,7 +218,7 @@ describe("language switch", () => {
     fireEvent.change(screen.getByTestId("language-switch"), { target: { value: "fr" } });
 
     expect(document.documentElement.lang).toBe("en");
-    expect(screen.getByRole("heading", { level: 2, name: "Self-test" })).toBeDefined();
+    expect(screen.getByRole("heading", { level: 1, name: "Self-test" })).toBeDefined();
     expect(window.localStorage.getItem("twox.language")).toBeNull();
   });
 });

@@ -6,6 +6,7 @@ import { type ChangeEvent, type ReactElement, useId } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AnimatedHeading } from "../components/TextMotion.tsx";
+import { usePageTitle } from "../hooks/usePageTitle.ts";
 import { Select } from "../components/ui/fields.tsx";
 import { changeLanguage, currentLanguage, isLanguage, supportedLanguages } from "../i18n.ts";
 import { type Accent, accents, defaultSettings, themeModes } from "../theme/settings.ts";
@@ -16,6 +17,7 @@ const legendClass = "px-1 font-semibold";
 
 export function SettingsPage(): ReactElement {
   const { t } = useTranslation(["settings", "nav"]);
+  usePageTitle(t("nav:settings"));
   return (
     <section data-testid="settings-page" className="max-w-2xl space-y-6">
       <AnimatedHeading text={t("nav:settings")} />

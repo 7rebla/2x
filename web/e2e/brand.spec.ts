@@ -19,8 +19,8 @@ test.describe("brand", () => {
     await page.goto("/");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 
-    const heading = page.getByRole("heading", { level: 1, name: "2x" });
-    const link = heading.getByRole("link", { name: "2x" });
+    // The name is a link in the header, not a heading (work order 078).
+    const link = page.getByRole("banner").getByRole("link", { name: "2x" });
     await expect(link).toHaveAttribute("href", "/");
     const mark = link.getByTestId("brand-mark");
     await expect(mark).toHaveAttribute("aria-hidden", "true");
@@ -40,7 +40,7 @@ test.describe("brand", () => {
     await page.goto("/");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
-    const link = page.getByRole("heading", { level: 1 }).getByRole("link", { name: "2x" });
+    const link = page.getByRole("banner").getByRole("link", { name: "2x" });
     await expect(link.getByTestId("brand-mark").locator("svg")).toBeVisible();
     expect(await markColour(page)).toBe(BRAND_DARK);
   });
@@ -55,7 +55,8 @@ test.describe("brand", () => {
   test("links favicon and touch icon in the page head", async ({ page }) => {
     await page.goto("/");
     const head = page.locator("head");
-    await expect(page).toHaveTitle("2x");
+    // The page names itself first (work order 078); the name of the application stays at the end.
+    await expect(page).toHaveTitle("Structure – 2x");
     for (const [selector, contentType] of [
       ['link[rel="icon"][type="image/svg+xml"]', "image/svg+xml"],
       ['link[rel="icon"][sizes="16x16 32x32 48x48"]', "image/x-icon"],

@@ -84,7 +84,7 @@ test("the navigation leads to the search page, which waits for a search text", a
   await navigation.getByRole("link", { name: "Search" }).click();
 
   await expect(page).toHaveURL(/\/search$/);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText("Search");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Search");
   await expect(navigation.getByRole("link", { name: "Search" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("search", { name: "Search the files" })).toBeVisible();
   await expect(page.getByTestId("search-empty")).toBeVisible();
@@ -224,7 +224,7 @@ test("hits show page, heading path, marked snippet, device and links", async ({ 
   // The device link opens the page of the real test device.
   await first.getByRole("link", { name: device.name }).click();
   await expect(page).toHaveURL(new RegExp(`/devices/${String(device.id)}$`));
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText(device.name);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(device.name);
 
   // Back returns to the same search with its device.
   await page.goBack();

@@ -51,7 +51,7 @@ describe("form and address", () => {
     fakeApi(reader, api.handler);
     renderApp("/search");
 
-    expect((await screen.findByRole("heading", { level: 2 })).textContent).toBe("Search");
+    expect((await screen.findByRole("heading", { level: 1 })).textContent).toBe("Search");
     expect(screen.getByRole("search", { name: "Search the files" })).toBeDefined();
     expect(screen.getByTestId("search-empty").textContent).toBe(
       "Enter a term, an identifier or a question and press Enter.",
@@ -213,7 +213,7 @@ describe("states", () => {
     expect((await screen.findByTestId("search-no-hits")).textContent).toBe(
       "Keine Treffer. Andere Wörter versuchen oder in allen Geräten suchen.",
     );
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Suche");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Suche");
   });
 
   it("shows an error of the API with its status and text", async () => {
@@ -657,7 +657,7 @@ describe("navigation entry", () => {
 
     fireEvent.click(link);
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Search" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "Search" })).toBeDefined();
     expect(router.state.location.pathname).toBe("/search");
     expect(within(navigation).getByRole("link", { name: "Search" }).getAttribute("aria-current")).toBe("page");
     expect(screen.queryByTestId("no-permission")).toBeNull();
