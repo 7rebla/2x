@@ -167,6 +167,30 @@ def test_type_designation_with_separate_digits_is_one_value(
         ("Die G-14-Baugröße passt [1].", "Greifer G-12.", "no_evidence"),
         ("Die 24-V-Versorgung ist vorgesehen [1].", "Versorgung 24 V DC.", "answered"),
         ("Die 48-V-Versorgung ist vorgesehen [1].", "Versorgung 24 V DC.", "no_evidence"),
+        # Upper-case parts are part of the designation.
+        ("Das Modul 1756-ENBT ist vorgesehen [1].", "Modul 1756-EN2T.", "no_evidence"),
+        ("Das Modul 1756-EN2T ist vorgesehen [1].", "Modul 1756-EN2T.", "answered"),
+        # Only digits would remain: the whole token is checked.
+        ("Die S7 1500-Steuerung ist vorgesehen [1].", "Modul S7-1200.", "no_evidence"),
+        # Leading word parts in any script.
+        ("Das Schütz-K3 schaltet [1].", "Das Relais -K7 schaltet.", "no_evidence"),
+        ("Das Schütz-K7 schaltet [1].", "Das Relais -K7 schaltet.", "answered"),
+        # A trailing hyphen ("G-12- und G-14-Ausführung") is dropped.
+        ("Die G-12- und G-14-Ausführung passen [1].", "Greifer G-12.", "no_evidence"),
+        ("Die G-12- und G-14-Ausführung passen [1].", "Greifer G-12 und G-14.", "answered"),
+        # Markdown emphasis does not hide a value.
+        ("Die Adresse ist **192.168.0.99** [1].", "Adresse 192.168.0.100.", "no_evidence"),
+        ("Die Adresse ist **192.168.0.100** [1].", "Adresse 192.168.0.100.", "answered"),
+        ("Vorgesehen ist `S7-1500` [1].", "Modul S7-1200.", "no_evidence"),
+        ("Vorgesehen ist _S7-1500_ [1].", "Modul S7-1200.", "no_evidence"),
+        ("Die Architektur x86_64 [1].", "Architektur x86_64.", "answered"),
+        # Port spellings.
+        ("Die Steuerung nutzt Port: 503 [1].", "Steuerung, Port 502.", "no_evidence"),
+        ("Die Steuerung nutzt Port-Nr. 503 [1].", "Steuerung, Port 502.", "no_evidence"),
+        ("Die Steuerung nutzt Portnummer 503 [1].", "Steuerung, Port 502.", "no_evidence"),
+        ("Die Steuerung nutzt Port Nr. 503 [1].", "Steuerung, Port 502.", "no_evidence"),
+        ("Die Steuerung nutzt Port-Nr. 502 [1].", "Steuerung, Port 502.", "answered"),
+        ("Die Steuerung nutzt Portnummer 502 [1].", "Steuerung, Port: 502.", "answered"),
     ],
 )
 def test_signs_and_compound_words(answer: str, source: str, status: str) -> None:
@@ -505,6 +529,22 @@ def test_supported_sentences_stay_verbatim() -> None:
             "Der Greifer ist geprueft (s. Abb. 3) [1]. Weiter geht es.",
             ["Der Greifer ist geprueft (s. Abb. 3) [1].", "Weiter geht es."],
         ),
+        (
+            "Der Greifer faehrt mit 250 mm/s. [1] Der Greifer wiegt 5 kg [9].",
+            ["Der Greifer faehrt mit 250 mm/s. [1]", "Der Greifer wiegt 5 kg [9]."],
+        ),
+        (
+            "Die Schnittstelle schafft 100 Mbit/s. [1] Nächster Satz [2].",
+            ["Die Schnittstelle schafft 100 Mbit/s. [1]", "Nächster Satz [2]."],
+        ),
+        (
+            "Die Zykluszeit betraegt 10s. Der Greifer schliesst.",
+            ["Die Zykluszeit betraegt 10s.", "Der Greifer schliesst."],
+        ),
+        (
+            "Die Versorgung betraegt 24 V. [1]. Weiter geht es.",
+            ["Die Versorgung betraegt 24 V. [1].", "Weiter geht es."],
+        ),
     ],
 )
 def test_sentence_splitting(text: str, expected: list[str]) -> None:
@@ -623,6 +663,11 @@ SPACE_SOURCES: dict[int, str] = {1: "Der Greifer G-12 wiegt 5 kg und antwortet a
         # _PORT_WORD: "Port" followed by a long run of spaces.
         (lambda n: "Der Greifer G-12 antwortet auf Port" + " " * n + "x [1].", None),
         (lambda n: "Der Greifer G-12 antwortet auf Port" + " " * n + "502 [1].", None),
+        (lambda n: "Der Greifer G-12 antwortet auf Port" + ":-" * (n // 2) + "x [1].", None),
+        # Markdown underscores inside a long run and long compound tokens.
+        (lambda n: "Der Greifer G-12 ist a" + "_" * n + "b [1].", None),
+        (lambda n: "Der Greifer G-12" + "-Teil" * (n // 5) + " wiegt 5 kg [1].", None),
+        (lambda n: "Der Greifer " + "Teil-" * (n // 5) + "G-12 wiegt 5 kg [1].", None),
         # _CITATION_RUN: a supported sentence with an invalid number and long
         # runs of spaces, with and without a bracket after them.
         (

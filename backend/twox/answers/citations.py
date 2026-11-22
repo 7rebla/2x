@@ -17,12 +17,15 @@ Sentences
     is no sentence end after the abbreviations in :data:`ABBREVIATIONS`
     (``z. B.``, ``S. 34``, ``Nr.`` ...; ``S.``, ``Nr.``, ``No.``, ``Abb.``,
     ``Tab.``, ``Kap.`` and ``Fig.`` only as written, so ``10 s.`` ends a
-    sentence, the others in any case; lower-case ``s.`` (siehe) too, except
-    right after a number, where it is the unit second), inside numbers, IP addresses and
-    versions (``1.5``, ``192.168.0.5``, ``V2.3.1``: the full stop is not
+    sentence, the others in any case; lower-case ``s.`` (siehe) only after
+    white space or ``(`` that does not follow a digit, so ``10 s.``,
+    ``10s.`` and ``250 mm/s.`` end a sentence), inside numbers, IP addresses
+    and versions (``1.5``, ``192.168.0.5``, ``V2.3.1``: the full stop is not
     followed by white space), nor after an ordinal number (``3.``) followed by
     a digit or a lower-case letter. Source numbers right after the
-    punctuation (``... 24 V. [2]``) belong to the sentence before. Sentences
+    punctuation (``... 24 V. [2]``) belong to the sentence before. If a
+    further full stop follows them (``... 24 V. [1]. Weiter``), the sentence
+    ends at that full stop and the numbers still belong to it. Sentences
     with neither letters nor digits besides source numbers are skipped.
 
 Source numbers
@@ -39,17 +42,26 @@ Check values
     ``:502`` after an IPv4 address); versions (``V18``, ``v2.3.1``,
     ``Version 4.1``, ``Firmware 5.12``), compared without the ``v`` so that
     ``Version 18`` and ``V18`` match; type designations and other tokens of
-    letters and digits (``S7-1200``, ``1512SP``, ``UR5e``, ``1.5``). Addresses
+    letters and digits (``S7-1200``, ``1512SP``, ``UR5e``, ``1.5``). Ports
+    are recognised after ``Port``, ``Ports``, ``Port:``, ``Port-Nr.``,
+    ``Port Nr.`` and ``Portnummer``. Addresses
     and type designations come from :func:`twox.search.identifiers.find_identifiers`,
     called for each white-space token on its own, so that no value is skipped:
     there is no limit of ten, and a leading ``-`` (``-K7``) is removed before
-    the token is classified. A token that is exactly a type designation
+    the token is classified. Markdown emphasis (asterisks, backticks, and
+    underscores at the edge of a word) counts as white space, so ``**10.0.0.9**`` is
+    checked. A token that is exactly a type designation
     (nothing cut off, no punctuation after it) directly followed by a token
     of digits only is one value (``S7 1500`` gives ``s71500``), unless the
     digits start a number with a unit; ``S7-1200, 2 Module``, ``Seite 34``
-    and ``Port 502`` are not joined. Before a token is classified, trailing
-    ``-`` parts that are words of at least four letters in any script are
-    cut off (``S7-1200-Steuerung`` and ``S7-1200-Gerät`` check ``S7-1200``);
+    and ``Port 502`` are not joined. Before a token is classified, ``-``
+    parts at its end or start that are words (at least four letters in any
+    script, at least one of them lower case) are cut off:
+    ``S7-1200-Steuerung`` and ``S7-1200-Gerät`` check ``S7-1200``,
+    ``Schütz-K3`` checks ``K3``; upper-case parts stay (``1756-ENBT``). If
+    only digits would remain, the whole token is checked
+    (``1500-Steuerung``). A trailing hyphen (``G-12-`` in ``G-12- und
+    G-14-Ausführung``) is dropped;
     a number and unit may be joined by ``-`` (``24-V-Versorgung`` checks
     ``24 V``). A minus sign belongs to the number (``-20 °C``).
     Source numbers are no check values. The units are: V, mV, kV, A, mA,
@@ -111,6 +123,21 @@ Overall verdict
     cite at least two different valid numbers. ``answered``
     otherwise; a refusal sentence next to supported sentences (a partial
     answer) stays in the text.
+
+Limits
+    The check is a guard against invented values, not a proof of meaning.
+    Callers (the answer service and the measurement) must not rely on it for:
+
+    * words: variant or product names without digits (``Basic``,
+      ``Comfort``, ``Edelstahl``), negations and statements are not checked;
+    * plain numbers without a unit (``3 Finger``, ``Seite 34``), unless
+      they belong to a type designation, version, port or address;
+    * ports written without the word ``Port`` (``TCP 502``) or after an
+      address other than IPv4;
+    * units outside :data:`UNITS`, and the relation between a value and what
+      it describes (a correct ``24 V`` in the wrong context passes);
+    * different spellings of one address (``fe80::1`` and ``fe80:0::1``);
+    * which source states a value when several are cited: one is enough.
 """
 
 import re
@@ -192,8 +219,9 @@ def _abbreviation_pattern(abbreviation: str) -> str:
 _ABBREVIATION: Final = re.compile(
     r"(?<!\w)(?:"
     + "|".join(_abbreviation_pattern(a) for a in ABBREVIATIONS)
-    # Lower-case "s." (siehe), but not right after a number: "10 s." is seconds.
-    + r"|(?<!\d\s)s\."
+    # Lower-case "s." (siehe) only after white space or "(" that does not
+    # follow a digit: "10 s.", "10s." and "mm/s." are units.
+    + r"|(?<![^\s(])(?<!\d\s)s\."
     + r")"
 )
 #: A minus sign: ``-`` before a digit that does not join it to a word or number.
@@ -201,6 +229,11 @@ _MINUS: Final = re.compile(r"(?<![\w.,])-(?=\d)")
 #: Stands for a minus sign in normalised text, so that removing ``-`` keeps it.
 _MINUS_MARK: Final = chr(0x2212)
 _TOKEN: Final = re.compile(r"\S+")
+#: Markdown emphasis counts as white space: asterisks and backticks always,
+#: underscores at the edge of a word (``x86_64`` keeps its underscore). Each
+#: run of underscores is tried once, where it starts.
+_MARKDOWN: Final = str.maketrans({"*": " ", "`": " "})
+_EDGE_UNDERSCORE: Final = re.compile(r"(?<!\w)_++|(?<!_)_++(?!\w)")
 _DIGITS_TOKEN: Final = re.compile(r"\d+[.,;:!?)\]]*")
 #: Leading characters removed from a token before it is classified.
 _TOKEN_LEAD: Final = "\"'([{<"
@@ -217,7 +250,11 @@ _UNIT_VALUE: Final = re.compile(
     + r")(?![\w%°])"
 )
 _PORT_WORD: Final = re.compile(
-    r"(?<!\w)ports?[ \t]*+(?:(?:nr|no)\.[ \t]*+)?(\d{1,5})(?!\d)", re.IGNORECASE
+    # "Port 502", "Ports 502", "Port: 502", "Port-Nr. 502", "Portnummer 502".
+    # Each repetition of the separator group consumes at least one character
+    # and is possessive, so the scan stays linear.
+    r"(?<!\w)port(?:s|nummer|nr\.?)?(?:[ \t:-]|nr\.?|no\.?)*+(\d{1,5})(?!\d)",
+    re.IGNORECASE,
 )
 _IPV4_PORT: Final = re.compile(r"(?<![\w.])(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})(?!\d)")
 _VERSION_WORD: Final = re.compile(
@@ -446,6 +483,7 @@ def _extract_citations(sentence: str) -> list[int]:
 def _check_values(sentence: str) -> list[_Value]:
     """The check values of ``sentence`` (source numbers already removed), without duplicates."""
     text = unicodedata.normalize("NFKC", sentence).translate(_DASHES).translate(_QUOTES)
+    text = _EDGE_UNDERSCORE.sub(lambda run: " " * len(run.group()), text.translate(_MARKDOWN))
     found: dict[str, _Value] = {}
 
     def add(display: str, **flags: bool) -> None:
@@ -506,22 +544,38 @@ def _check_values(sentence: str) -> list[_Value]:
     return list(found.values())
 
 
-def _trim_compound(token: str) -> str:
-    """``token`` without trailing ``-`` parts that are words (``S7-1200-Gerät``).
+def _is_word_part(part: str) -> bool:
+    """Whether ``part`` is a word joined by ``-``: four letters or more, some lower case."""
+    return len(part) >= 4 and part.isalpha() and any(char.islower() for char in part)
 
-    A trailing part of at least four letters (any script, :meth:`str.isalpha`)
-    is a word joined to the identifier, not part of it; shorter letter parts
-    (``G-12-A``) stay. Punctuation at the end of the token is kept.
+
+def _trim_compound(token: str) -> str:
+    """``token`` without ``-`` parts at its ends that are words.
+
+    ``S7-1200-Gerät`` gives ``S7-1200``, ``Schütz-K3`` gives ``K3``;
+    upper-case parts (``1756-ENBT``) and short parts (``G-12-A``) stay. If
+    only digits would remain (``1500-Steuerung``), the token is kept whole.
+    Punctuation at the end is kept, a trailing hyphen (``G-12-``) dropped.
     """
     end = len(token)
     while end > 0 and not token[end - 1].isalnum():
         end -= 1
-    tail = token[end:]
+    tail = token[end:].replace("-", "")
+    whole_end = end
+    start = 0
     while True:
-        cut = token.rfind("-", 0, end)
-        if cut <= 0 or end - cut - 1 < 4 or not token[cut + 1 : end].isalpha():
-            return token[:end] + tail
+        cut = token.rfind("-", start, end)
+        if cut <= start or not _is_word_part(token[cut + 1 : end]):
+            break
         end = cut
+    while True:
+        cut = token.find("-", start, end)
+        if cut <= start or not _is_word_part(token[start:cut]):
+            break
+        start = cut + 1
+    if token[start:end].isdigit():
+        return token[:whole_end] + tail
+    return token[start:end] + tail
 
 
 def _strip_invalid(sentence: str, valid: Mapping[int, str]) -> str:
