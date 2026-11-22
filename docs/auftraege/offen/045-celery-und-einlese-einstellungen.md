@@ -73,6 +73,8 @@ Voraussetzung: 044 ist nach `main` zusammengeführt (dieselben Dateien `settings
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
+
 1. **Worker-Prozesse (Vormerkung aus 008).**
    - (a) ein Worker-Dienst für alle drei Warteschlangen, `--concurrency 4`, Prefetch 1;
    - (b) eigener Dienst `worker-ingest` (nur `ingest`) neben `worker` (`embed`, `default`);

@@ -74,6 +74,8 @@ Voraussetzung: 052, 053, 054 und 055 sind nach `main` zusammengeführt.
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
+
 Keine. (Welche Handbücher Pflicht sind, entscheidet Frage 1 in 060; der Test liest die Liste aus einer Variablen.)
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)

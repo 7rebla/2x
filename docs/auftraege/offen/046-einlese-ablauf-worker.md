@@ -91,6 +91,8 @@ Voraussetzung: 042, 043 und 045 sind nach `main` zusammengeführt (041 und 044 s
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
+
 Keine. (Grundlage sind die Entscheidungen zu 041 bis 045.)
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)

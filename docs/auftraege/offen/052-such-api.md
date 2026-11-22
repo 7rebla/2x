@@ -71,6 +71,8 @@ Voraussetzung: 050 und 051 sind nach `main` zusammengeführt (051 wegen `urls.py
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
+
 1. **Wie bleiben Suchtexte aus den Protokollen?** (uvicorn schreibt standardmäßig Pfad und Abfrageteil ins Zugriffsprotokoll; der `api`-Dienst startet ohne `--no-access-log`.)
    - (a) Suche per `POST` mit Text im Körper; die Suchseite hält den Text nicht in der Adresse (keine verlinkbaren Ergebnisse);
    - (b) `GET` mit `?q=`; ein Logfilter entfernt bei allen Pfaden den Abfrageteil aus dem Zugriffsprotokoll;

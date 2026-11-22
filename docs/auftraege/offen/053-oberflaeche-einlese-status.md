@@ -67,6 +67,8 @@ Voraussetzung: 051 ist nach `main` zusammengeführt (Feld `ingest` und Endpunkte
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
+
 Keine.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)

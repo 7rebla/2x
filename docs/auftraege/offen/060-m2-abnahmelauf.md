@@ -51,6 +51,8 @@ Voraussetzung: 057, 058 und 059 sind nach `main` zusammengeführt bzw. abgeschlo
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
+
 1. **Welche Handbücher müssen für die Abnahme „eingelesen“ sein?** (ROADMAP: „Handbücher der Fertigungslinie und des Roboters“.)
    - (a) alle PDF- und Office-Handbücher, die in der Testumgebung Geräten der Fertigungslinie und dem UR5e zugeordnet sind (ZIP-Archive ausgenommen, sie sind sichtbar übersprungen);
    - (b) nur die sieben APS-Unterlagen je DE und EN sowie UR5e-Benutzerhandbuch (de) und Software-Handbuch (en); Service-Handbuch und Script-Verzeichnis nur mit sichtbarem Endzustand. Das engt das Abnahmekriterium ein (Änderung am Umfang eines Meilensteins).

@@ -104,6 +104,8 @@ Voraussetzung: M2-Liste von a7 freigegeben. Sonst keine.
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
+
 1. **Grenzen des Docling-Dienstes einstellen?**
    - (a) Vorgaben von docling-serve lassen: keine Grenze für Dateigröße und Seitenzahl, zwei lokale Worker.
    - (b) Dateigröße wie der Upload (`DOCLING_SERVE_MAX_FILE_SIZE` = 200 000 000 Byte), höchstens 2 000 Seiten, ein lokaler Worker (Docling läuft auf der CPU, große Handbücher brauchen viel Speicher), höchstes Zeitlimit je Dokument 2 Stunden.

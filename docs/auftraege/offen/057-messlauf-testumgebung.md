@@ -56,6 +56,8 @@ Voraussetzung: 048, 049, 050 und 056 sind nach `main` zusammengeführt. Frage 1 
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
+
 1. **Wo laufen die echten Einlese- und Suchläufe mit den Herstellerhandbüchern?**
    - (a) Ein Auftragsbearbeiter liest sie in einem eigenen Compose-Projekt neu ein, `testfactory/extern/` schreibgeschützt eingebunden (stundenlanges doppeltes Einlesen).
    - (b) Die Leitstelle nutzt die Testumgebung im Hauptordner, in der die Handbücher schon den Geräten zugeordnet sind: neu bauen mit `main`, Einlesen anstoßen, messen. Für den Abnahmelauf (060) legt sie dort auch das Testkonto `e2e-manager` mit dem öffentlichen Entwicklungskennwort an.

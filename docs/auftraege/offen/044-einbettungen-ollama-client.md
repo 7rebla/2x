@@ -73,6 +73,8 @@ Voraussetzung: 040 und 041 sind nach `main` zusammengeführt (dieselben Dateien 
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
+
 1. **Einbettungsmodell (Modell mit Lizenz).**
    - (a) bge-m3 (567M, MIT laut Model Card https://huggingface.co/BAAI/bge-m3, 1 024 Dimensionen, 8 192 Token, über 100 Sprachen; Ollama `bge-m3`, 1,2 GB).
    - (b) qwen3-embedding:0.6b (Apache-2.0 laut https://huggingface.co/Qwen/Qwen3-Embedding-0.6B, bis 1 024 Dimensionen, 32K Token, Anfragen brauchen eine Anweisung; Ollama etwa 0,64 GB).

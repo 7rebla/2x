@@ -80,6 +80,8 @@ Voraussetzung: 042 ist nach `main` zusammengeführt. Frage 1 hier und Frage 4 in
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
+
 1. **Welche Version eines Dokuments wird durchsucht?**
    - (a) die neueste Version, die Abschnitte hat; ist eine neuere noch nicht (oder nicht erfolgreich) eingelesen, wird der Treffer als „ältere Version“ gekennzeichnet;
    - (b) nur die neueste Version; hat sie (noch) keine Abschnitte, ist das Dokument nicht auffindbar;

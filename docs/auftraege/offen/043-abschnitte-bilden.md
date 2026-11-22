@@ -73,6 +73,8 @@ Voraussetzung: 041 ist nach `main` zusammengeführt (Testdaten und Befund zum JS
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
+
 1. **Abschnitte selbst bilden oder den Chunker von Docling nutzen?** (Architektur: Darauf bauen Datenmodell und Suche.)
    - (a) selbst aus dem DoclingDocument-JSON bilden;
    - (b) Endpunkt `/v1/chunk/hybrid/file/async` von docling-serve.

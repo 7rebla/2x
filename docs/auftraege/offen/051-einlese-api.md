@@ -69,6 +69,8 @@ Voraussetzung: 049 ist nach `main` zusammengeführt. Fragen 1 und 2 sind entschi
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
+
 1. **Wer sieht, wer ein Einlesen angestoßen hat (`requested_by`)?** (E-43: das Änderungsprotokoll lesen nur Verwalter.)
    - (a) nur `manage`; `read` bekommt `null`;
    - (b) alle Rollen, als ausdrückliche Abweichung von E-43.

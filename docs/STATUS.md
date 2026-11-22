@@ -160,14 +160,14 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 073 | Gerätetyp als Feld, API, Admin, CSV-Spalte, Testfabrik | C | – (E-53) | in Arbeit |
 | 074 | Eigene Geräte-Icons in Baum, Geräteseite, Landkarte | B | 071, 073 | offen |
 
-## M2 – Einlesen und Suche (entworfen 22.11.2026)
+## M2 – Einlesen und Suche (freigegeben 22.11.2026, E-54)
 
 21 Aufträge 040–060 unter `docs/auftraege/offen/` (Startreihenfolge nach Abhängigkeiten, höchstens fünf gleichzeitig). 21 Fragen an a7 mit Optionen und Empfehlung: `docs/auftraege/M2-FRAGEN.md`. 057 und 060 sind Läufe der Leitstelle in der Testumgebung (dort liegen die Handbücher). Kein M2-Auftrag startet vor der Antwort (Stufe C: Datenmodell, neue Abhängigkeit pgvector, Modellwahl).
 
 | Nr. | Auftrag | Stufe | Hängt ab von | Status |
 | --- | --- | --- | --- | --- |
-| 040 | Datenbank: Erweiterungen vector und pg_trgm, Paket pgvector | C | – | offen |
-| 041 | Docling-Anbindung: Client, Probelauf, Testdaten | C | – | offen |
+| 040 | Datenbank: Erweiterungen vector und pg_trgm, Paket pgvector | C | – | in Arbeit |
+| 041 | Docling-Anbindung: Client, Probelauf, Testdaten | C | – | in Arbeit |
 | 042 | Datenmodell: Einlese-Auftrag und Abschnitt | C | 040 | offen |
 | 043 | Abschnitte aus dem Docling-Ergebnis bilden | C | 041 | offen |
 | 044 | Einbettungen über Ollama: Client und Prüfung | C | 040, 041 | offen |

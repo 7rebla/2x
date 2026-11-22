@@ -1,6 +1,8 @@
 # Fragen an a7 zu M2
 
-Stand: 22.11.2026 · gesammelt aus den Aufträgen 040–060 · Empfehlung jeweils als erste Option, sofern nicht anders genannt
+Stand: 22.11.2026 · gesammelt aus den Aufträgen 040–060
+
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58). · Empfehlung jeweils als erste Option, sofern nicht anders genannt
 
 | Nr. | Auftrag | Frage | Optionen | Empfehlung | Blockiert Start |
 | --- | --- | --- | --- | --- | --- |

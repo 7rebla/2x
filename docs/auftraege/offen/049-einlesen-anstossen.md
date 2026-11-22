@@ -80,6 +80,8 @@ Voraussetzung: 046 ist nach `main` zusammengeführt. Fragen 1 und 2 sind entschi
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
+
 1. **Welche Formate werden in M2 eingelesen?** (Restrisiko Leitplanke 5: eine als Dokument hochgeladene Konfiguration würde sonst indexiert.)
    - (a) alles, was Docling annimmt;
    - (b) feste Liste nach Startunterlage 4 („PDF, Office, Markdown, Bilder mit Text“): PDF, DOCX, XLSX, PPTX, Markdown, PNG, JPEG, TIFF, BMP, WEBP, je mit Prüfung des Inhalts; alles andere (Klartext, JSON, XML, YAML, `.conf`, `.rst`, HTML, ZIP) sichtbar übersprungen bis M5;

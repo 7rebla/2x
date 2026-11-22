@@ -87,6 +87,8 @@ Voraussetzung: 040 ist nach `main` zusammengeführt. Fragen 1 bis 4 (hier) und F
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
+
 1. **Grundform von Einlese-Auftrag und Abschnitt** (Startunterlage 5.7), in vier Punkten:
    1. Je Versuch eine Zeile (b) statt einer überschriebenen Zeile je Version (a). Empfehlung (b): Verlauf ohne Löschen sichtbar.
    2. Fehler als feste Fehlerart plus kurzer technischer Text (b) statt freiem übersetztem Text (a). Empfehlung (b): Die Oberfläche übersetzt die Fehlerart; `django.po` wächst nicht mit jeder Meldung.

@@ -67,6 +67,8 @@ Voraussetzung: M2-Liste von a7 freigegeben; Frage 1 (pgvector) entschieden.
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).
+
 1. **Neue Abhängigkeit pgvector 0.5.1 (MIT) zulassen?**
    - (a) pgvector-python einbinden.
    - (b) Vektortyp ohne Paket über eigene Feldklassen und rohes SQL.
