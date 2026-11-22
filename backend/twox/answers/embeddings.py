@@ -31,15 +31,25 @@ check uses that list and never ``/api/show``.
 Errors come as subclasses of :class:`EmbeddingError` with short English messages
 that name neither addresses nor texts; the original exception stays attached
 (``__cause__``) for the server log.
+
+Search queries (052) go through :func:`get_query_embedder`: it has its own,
+short time limit (``TWOX_SEARCH_EMBED_TIMEOUT_SECONDS``), so a hanging model
+service delays a search only briefly, and there is one per process, so the
+model list is not asked for on every search. The check by name runs before
+every request; the check against the model list is repeated after
+:data:`QUERY_MODEL_CHECK_SECONDS`, so a model replaced in Ollama is noticed
+without a restart.
 """
 
 import json
 import logging
 import math
+import threading
 import urllib.error
 import urllib.request
 from collections.abc import Sequence
 from http.client import HTTPException
+from time import monotonic
 from typing import Final, Protocol
 from urllib.parse import urlsplit
 
@@ -57,6 +67,8 @@ MAX_ANSWER_BYTES: Final = 64 * 1024 * 1024
 _CLOUD_TAG: Final = "cloud"
 _CLOUD_TAG_SUFFIX: Final = "-cloud"
 _OLLAMA_API_SUFFIX: Final = "/v1"
+#: How long the query embedder trusts its check against the model list, in seconds.
+QUERY_MODEL_CHECK_SECONDS: Final = 300.0
 
 
 class EmbeddingError(Exception):
@@ -149,7 +161,10 @@ class OpenAICompatibleEmbedder:
         batch_size: int,
         query_prefix: str,
         timeout: float,
+        model_check_seconds: float | None = None,
     ) -> None:
+        """``model_check_seconds``: repeat the check against the model list after
+        this many seconds; ``None`` checks once per embedder."""
         parts = urlsplit(base_url)
         if parts.scheme not in {"http", "https"} or not parts.hostname:
             raise ValueError("base_url must look like http://host:port/v1")
@@ -159,13 +174,17 @@ class OpenAICompatibleEmbedder:
             raise ValueError("dimensions and batch_size must be greater than zero")
         if not 0 < timeout < math.inf:
             raise ValueError("timeout must be a positive number of seconds")
+        if model_check_seconds is not None and not 0 < model_check_seconds < math.inf:
+            raise ValueError("model_check_seconds must be a positive number of seconds")
         self._base_url = base_url.rstrip("/")
         self._model = model
         self._dimensions = dimensions
         self._batch_size = batch_size
         self._query_prefix = query_prefix
         self._timeout = timeout
-        self._model_checked = False
+        self._model_check_seconds = model_check_seconds
+        #: ``monotonic()`` of the last successful check against the model list.
+        self._model_checked_at: float | None = None
         # No proxy on purpose: texts go to the configured address and nowhere else.
         self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
@@ -188,6 +207,11 @@ class OpenAICompatibleEmbedder:
     @property
     def dimensions(self) -> int:
         return self._dimensions
+
+    @property
+    def timeout(self) -> float:
+        """Socket time limit of one request, in seconds."""
+        return self._timeout
 
     @property
     def embeddings_url(self) -> str:
@@ -215,13 +239,21 @@ class OpenAICompatibleEmbedder:
         return vector
 
     def _ensure_local_model(self) -> None:
-        """Refuse cloud models; once per embedder (see the module docstring)."""
-        if self._model_checked:
-            return
+        """Refuse cloud models (see the module docstring).
+
+        The name is checked every time; the model list once per embedder, or
+        again after ``model_check_seconds``.
+        """
         if is_cloud_model_name(self._model):
             raise EmbeddingRemoteModelError(
                 f"model {self._model!r} is an Ollama cloud model; only local models are allowed"
             )
+        checked_at = self._model_checked_at
+        if checked_at is not None and (
+            self._model_check_seconds is None
+            or monotonic() - checked_at < self._model_check_seconds
+        ):
+            return
         status, body = self._request("GET", _ollama_root(self._base_url) + TAGS_PATH, None)
         if status == 200:
             self._check_model_list(body)
@@ -229,7 +261,7 @@ class OpenAICompatibleEmbedder:
             # Not Ollama (another OpenAI-compatible server in the own network,
             # Startunterlage 5.2): there is no model list to check against.
             logger.info("No Ollama model list (HTTP %s); checked the model name only", status)
-        self._model_checked = True
+        self._model_checked_at = monotonic()
 
     def _check_model_list(self, body: bytes) -> None:
         try:
@@ -351,3 +383,46 @@ def get_embedder() -> Embedder:
     """
     _check_ai_enabled()
     return OpenAICompatibleEmbedder.from_settings()
+
+
+_query_embedder: tuple[tuple[object, ...], OpenAICompatibleEmbedder] | None = None
+_query_embedder_lock = threading.Lock()
+
+
+def get_query_embedder() -> Embedder:
+    """Return the embedder for search queries; tests replace this function with a stand-in.
+
+    Time limit ``TWOX_SEARCH_EMBED_TIMEOUT_SECONDS``; the same instance for
+    every search of this process while the settings stay the same, so its
+    check against the model list is reused (see the module docstring).
+    Raises :class:`EmbeddingDisabledError` when AI features are off (E-59).
+    """
+    global _query_embedder
+    _check_ai_enabled()
+    config: tuple[object, ...] = (
+        settings.TWOX_LLM_BASE_URL,
+        settings.TWOX_EMBED_MODEL,
+        settings.TWOX_EMBED_DIMENSIONS,
+        settings.TWOX_EMBED_QUERY_PREFIX,
+        float(settings.TWOX_SEARCH_EMBED_TIMEOUT_SECONDS),
+    )
+    with _query_embedder_lock:
+        if _query_embedder is None or _query_embedder[0] != config:
+            embedder = OpenAICompatibleEmbedder(
+                base_url=settings.TWOX_LLM_BASE_URL,
+                model=settings.TWOX_EMBED_MODEL,
+                dimensions=settings.TWOX_EMBED_DIMENSIONS,
+                batch_size=1,
+                query_prefix=settings.TWOX_EMBED_QUERY_PREFIX,
+                timeout=float(settings.TWOX_SEARCH_EMBED_TIMEOUT_SECONDS),
+                model_check_seconds=QUERY_MODEL_CHECK_SECONDS,
+            )
+            _query_embedder = (config, embedder)
+        return _query_embedder[1]
+
+
+def forget_query_embedder() -> None:
+    """Drop the query embedder of this process; the next search builds a new one (tests)."""
+    global _query_embedder
+    with _query_embedder_lock:
+        _query_embedder = None

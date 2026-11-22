@@ -30,6 +30,7 @@ from twox.search.interface import (
     SearchHit,
     SearchRequest,
     SearchResult,
+    SemanticState,
     get_search_backend,
 )
 from twox.search.postgres import (
@@ -38,6 +39,7 @@ from twox.search.postgres import (
     PostgresSearchBackend,
     make_snippet,
     marked_spans,
+    negated_parts,
 )
 
 pytestmark = pytest.mark.django_db
@@ -63,7 +65,10 @@ def sha256_of(label: str) -> str:
 
 
 def add_version(
-    document: Document, number: int | None = None, sha256: str | None = None
+    document: Document,
+    number: int | None = None,
+    sha256: str | None = None,
+    filename: str = "manual.pdf",
 ) -> DocumentVersion:
     """A new version of ``document``; its bytes are not needed for the search."""
     if number is None:
@@ -76,7 +81,7 @@ def add_version(
         sha256=sha256,
         size=10,
         content_type="application/pdf",
-        original_filename="manual.pdf",
+        original_filename=filename,
     )
 
 
@@ -452,6 +457,7 @@ def test_location_names_document_version_device_and_plant(
             document_title="Operating manual",
             version_id=version.pk,
             version_number=1,
+            version_filename="manual.pdf",
             is_latest_version=True,
             device_id=device.pk,
             device_key="plc-01",
@@ -485,6 +491,28 @@ def test_same_file_on_two_devices_is_one_hit(plant: Plant) -> None:
     }
     assert [location.device_key for location in filtered.locations] == ["plc-02"]
     assert filtered.section_id == two.sections.get().pk
+
+
+def test_location_names_the_file_name_of_its_version(plant: Plant) -> None:
+    # The same file uploaded under two names: each location keeps its own.
+    first = make_device(plant, "plc-01")
+    second = make_device(plant, "plc-02")
+    shared = sha256_of("shared manual")
+    one = make_document(first, sha256=shared)
+    two = add_version(
+        Document.objects.create(device=second, title="Manual B"),
+        sha256=shared,
+        filename="Handbuch Ventil (v2).pdf",
+    )
+    add_sections(one, "The upsilon valve opens.")
+    add_sections(two, "The upsilon valve opens.")
+
+    (hit,) = search("upsilon").hits
+
+    assert [(loc.version_id, loc.version_filename) for loc in hit.locations] == [
+        (one.pk, "manual.pdf"),
+        (two.pk, "Handbuch Ventil (v2).pdf"),
+    ]
 
 
 def test_same_file_but_other_page_or_text_stays_apart(plant: Plant) -> None:
@@ -748,6 +776,135 @@ def test_search_needs_three_queries(
     # Parse the query, search, find the highlights: independent of the hits.
     with django_assert_num_queries(3):
         assert len(search("chi belt").hits) == 10
+
+
+@pytest.mark.parametrize("ai_enabled", [False, True])
+def test_semantic_state_without_the_vector_search(
+    monkeypatch: pytest.MonkeyPatch,
+    settings: Settings,
+    version: DocumentVersion,
+    ai_enabled: bool,
+) -> None:
+    # Off (E-59) and "keyword only" both say "disabled", a normal state;
+    # the model is not asked in either case.
+    embedder = install(monkeypatch, settings, FakeEmbedder())
+    settings.TWOX_AI_ENABLED = ai_enabled
+    (section,) = add_sections(version, "The rho pump runs.")
+
+    keyword_only = get_search_backend().search(SearchRequest(query="rho", keyword_only=True))
+
+    assert [hit.section_id for hit in keyword_only.hits] == [section.pk]
+    assert keyword_only.semantic is SemanticState.DISABLED
+    assert keyword_only.semantic_used is False
+    assert embedder.calls == []
+    assert search("rho").semantic is (SemanticState.USED if ai_enabled else SemanticState.DISABLED)
+    assert embedder.calls == (["rho"] if ai_enabled else [])
+
+
+@pytest.mark.parametrize("ai_enabled", [False, True])
+def test_query_without_words_says_whether_the_vector_search_would_run(
+    monkeypatch: pytest.MonkeyPatch,
+    settings: Settings,
+    ai_enabled: bool,
+) -> None:
+    embedder = install(monkeypatch, settings, FakeEmbedder())
+    settings.TWOX_AI_ENABLED = ai_enabled
+    expected = SemanticState.USED if ai_enabled else SemanticState.DISABLED
+
+    assert search("   ").semantic is expected
+    assert search("?!").semantic is expected
+    assert embedder.calls == []
+
+
+# --- Exclusions ----------------------------------------------------------------
+
+
+def test_exclusion_holds_for_exact_hits(version: DocumentVersion) -> None:
+    pump, valve = add_sections(
+        version,
+        "The pump at 192.168.0.5 runs.",
+        "The valve at 192.168.0.5 opens.",
+    )
+
+    result = search("192.168.0.5 -pump")
+
+    assert [hit.section_id for hit in result.hits] == [valve.pk]
+    assert result.hits[0].match_kinds == [MatchKind.EXACT, MatchKind.KEYWORD]
+    # Without the exclusion both are found.
+    assert {hit.section_id for hit in search("192.168.0.5").hits} == {pump.pk, valve.pk}
+
+
+def test_exclusion_holds_for_identifier_without_word_match(version: DocumentVersion) -> None:
+    # PLC-01 is found exactly in both texts; the exclusion still holds.
+    add_sections(version, "Station PLC-01 has a pump.", "Station PLC-01 has a valve.")
+
+    assert found_texts(search("PLC-01 -pump")) == {"Station PLC-01 has a valve."}
+
+
+def test_exclusion_finds_word_forms(version: DocumentVersion) -> None:
+    add_sections(version, "Code E1234 means the pumps stopped.", "Code E1234 means low oil.")
+
+    # "pump" excludes "pumps" (English word forms), also for an exact hit.
+    assert found_texts(search("E1234 -pump")) == {"Code E1234 means low oil."}
+
+
+def test_excluded_phrase(version: DocumentVersion) -> None:
+    add_sections(
+        version,
+        "Code E1234: check the pump room.",
+        "Code E1234: the room next to the pump.",
+    )
+
+    assert found_texts(search('E1234 -"pump room"')) == {"Code E1234: the room next to the pump."}
+
+
+def test_double_negation_excludes_nothing(version: DocumentVersion) -> None:
+    add_sections(version, "Code E1234: the pump.", "Code E1234: the valve.")
+
+    # websearch_to_tsquery reads "--pump" as "not not pump": nothing is
+    # excluded, and the exact hit on E1234 finds both.
+    assert found_texts(search("E1234 --pump")) == {
+        "Code E1234: the pump.",
+        "Code E1234: the valve.",
+    }
+
+
+@pytest.mark.parametrize(
+    ("tsquery", "parts"),
+    [
+        ("'pump'", []),
+        ("'192.168.0.5' & !'pump'", ["'pump'"]),
+        ("'oil' & !( 'pump' <-> 'valv' ) & !'gear'", ["( 'pump' <-> 'valv' )", "'gear'"]),
+        ("'oil' | !'pump'", ["'pump'"]),
+        ("!!'pump' & 'oil'", []),
+        ("!!!'pump'", ["'pump'"]),
+        ("'x' & !( 'a' <-> ( 'b' & !'c' ) )", ["( 'a' <-> ( 'b' & ! 'c' ) )"]),
+        ("!'it''s' & 'a':*", ["'it''s'"]),
+        ("'plc' <-> '-01' & !'x'", ["'x'"]),
+    ],
+)
+def test_negated_parts_of_a_tsquery(tsquery: str, parts: list[str]) -> None:
+    assert negated_parts(tsquery) == parts
+
+
+def test_negated_parts_refuses_unexpected_text() -> None:
+    with pytest.raises(ValueError, match="unexpected"):
+        negated_parts("'a' & ?")
+    with pytest.raises(ValueError, match="parentheses"):
+        negated_parts("!( 'a'")
+
+
+def test_negated_parts_from_postgresql() -> None:
+    queries = {
+        '192.168.0.5 -pump -"pump room"': ["'pump'", "( 'pump' <-> 'room' )"],
+        "pump --valve": [],
+        "-(a b)": ["'a'"],
+    }
+    with connection.cursor() as cursor:
+        for query, parts in queries.items():
+            cursor.execute("SELECT websearch_to_tsquery('simple', %s)::text", [query])
+            (text,) = cursor.fetchone() or ("",)
+            assert negated_parts(text) == parts, query
 
 
 def test_connection_is_usable_after_a_search(version: DocumentVersion) -> None:

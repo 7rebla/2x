@@ -408,6 +408,9 @@ TWOX_EMBED_QUERY_PREFIX = os.environ.get("TWOX_EMBED_QUERY_PREFIX", "")
 # Socket time limit of one request in seconds; the first request after a
 # start of Ollama also loads the model.
 TWOX_EMBED_TIMEOUT_SECONDS = env_positive_int("TWOX_EMBED_TIMEOUT_SECONDS", 120)
+# The same for embedding a search query (052): short, so a hanging model
+# service holds a search up only briefly before it falls back to keywords.
+TWOX_SEARCH_EMBED_TIMEOUT_SECONDS = env_positive_int("TWOX_SEARCH_EMBED_TIMEOUT_SECONDS", 20)
 
 CELERY_TASK_QUEUES = task_queues(ai_enabled=TWOX_AI_ENABLED)
 

@@ -8,7 +8,12 @@ be replaced by OpenSearch or Qdrant without touching its callers.
 A hit is one piece of text. When the same content is stored for several
 devices (same checksum, page and text, E-55), it is one hit with all its
 locations. Without the AI features (E-59) the search is a keyword search
-only, and :attr:`SearchResult.semantic_used` is ``False``.
+only, and :attr:`SearchResult.semantic` is :attr:`SemanticState.DISABLED`, a
+normal state; when the model service fails, the search falls back to the
+keyword search and says :attr:`SemanticState.UNAVAILABLE`.
+
+Exclusions (``-word``, ``-"two words"``) hold for every hit, however it was
+found: exactly, by keyword or by meaning.
 
 Permissions: in M2, whoever has the role ``read`` may search everything
 (E-40); the API checks the role. Permissions per device are not part of M2;
@@ -39,6 +44,20 @@ class MatchKind(StrEnum):
     SEMANTIC = "semantic"
 
 
+class SemanticState(StrEnum):
+    """Whether the vector search (search by meaning) took part in a search."""
+
+    #: It took part. Also when the query had nothing to search for and the
+    #: model was not needed.
+    USED = "used"
+    #: It was not asked for: the AI features are off (E-59, a normal state,
+    #: not an error), or the request asked for the keyword search only.
+    DISABLED = "disabled"
+    #: The AI features are on, but the model service failed (not reachable,
+    #: too slow, model refused); the hits come from the keyword search only.
+    UNAVAILABLE = "unavailable"
+
+
 @dataclass(frozen=True, slots=True)
 class SearchRequest:
     """What to search for and where.
@@ -46,12 +65,15 @@ class SearchRequest:
     Empty ``device_ids`` or ``plant_ids`` mean "no filter"; when both are
     given, a location must match both. ``query`` may be empty or consist of
     special characters only; the result is then empty, not an error.
+    ``keyword_only`` leaves out the vector search for this one request, also
+    with the AI features on; the model service is then not asked.
     """
 
     query: str
     device_ids: Sequence[int] = ()
     plant_ids: Sequence[int] = ()
     limit: int = DEFAULT_LIMIT
+    keyword_only: bool = False
 
     def __post_init__(self) -> None:
         if not 1 <= self.limit <= MAX_LIMIT:
@@ -69,6 +91,8 @@ class HitLocation:
     document_title: str
     version_id: int
     version_number: int
+    #: File name of the version as it was uploaded.
+    version_filename: str
     #: ``False`` when the document has a newer version that has no sections
     #: yet (not ingested yet, or ingesting it failed).
     is_latest_version: bool
@@ -115,8 +139,14 @@ class SearchResult:
     """The hits of a search, best first."""
 
     hits: list[SearchHit] = field(default_factory=list)
-    #: Whether the vector search took part (never without AI features, E-59).
-    semantic_used: bool = False
+    #: Whether the vector search took part, and why not (never without AI
+    #: features, E-59).
+    semantic: SemanticState = SemanticState.DISABLED
+
+    @property
+    def semantic_used(self) -> bool:
+        """Whether the vector search took part."""
+        return self.semantic is SemanticState.USED
 
 
 class SearchBackend(Protocol):

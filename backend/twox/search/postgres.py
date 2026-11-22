@@ -18,8 +18,9 @@ How a section matches, in any of these ways:
   occurs word for word in the text, checked with a case-insensitive regular
   expression; the trigram index on the text speeds this up.
 * **semantic** (AI features only, E-59): the query is embedded through the
-  model interface (:func:`twox.answers.embeddings.get_embedder`, with
-  ``TWOX_EMBED_QUERY_PREFIX``); the :data:`VECTOR_CANDIDATES` sections nearest
+  model interface (:func:`twox.answers.embeddings.get_query_embedder`, with
+  ``TWOX_EMBED_QUERY_PREFIX`` and the short time limit
+  ``TWOX_SEARCH_EMBED_TIMEOUT_SECONDS``); the :data:`VECTOR_CANDIDATES` sections nearest
   by cosine distance (``<=>``, the operator of pgvector's ``CosineDistance``)
   take part. Only sections embedded with the current model count; sections
   without an embedding or with another model are found by keyword only.
@@ -27,11 +28,19 @@ How a section matches, in any of these ways:
   and ``hnsw.ef_search =`` :data:`HNSW_EF_SEARCH`, set locally for the
   transaction of the vector query, so a filter does not leave the list short.
 
-With AI features off, the model service is never asked and the search is
-keyword and exact only. When the model service fails (not reachable, model
-refused or a cloud model), the search falls back to keyword and exact only
-and says so with ``semantic_used = False``; the server log gets the kind of
-error, never the query.
+Exclusions (``-word``, ``-"two words"``): ``websearch_to_tsquery`` turns
+them into negated parts of the ``tsquery`` (``!'word'``). These parts are
+taken from the parsed query (:func:`negated_parts`) and checked on every
+candidate, so a section with an excluded word is found neither exactly, nor
+by keyword, nor by meaning; the vector search leaves such sections out
+before it takes the nearest ones.
+
+With AI features off (or a request for the keyword search only), the model
+service is never asked and the search is keyword and exact only
+(``semantic = disabled``). When the model service fails (not reachable, too
+slow, model refused or a cloud model), the search falls back to keyword and
+exact only and says so with ``semantic = unavailable``; the server log gets
+the kind of error, never the query.
 
 Score (Reciprocal Rank Fusion, Cormack et al. 2009): the number of
 identifiers found exactly, plus ``1 / (RRF_K + rank)`` for each list the
@@ -90,6 +99,7 @@ from twox.search.interface import (
     SearchHit,
     SearchRequest,
     SearchResult,
+    SemanticState,
 )
 
 #: Longest snippet, without the "…" at its ends.
@@ -152,6 +162,81 @@ class _Queries:
         """Whether a query uses the phrase operator ``<->`` (positions matter)."""
         return any("<" in query for query in self.per_config.values())
 
+    def exclusions(self) -> _Queries:
+        """The excluded parts (``-word``), per configuration, joined with OR."""
+        per_config = {}
+        for config, query in self.per_config.items():
+            parts = negated_parts(query)
+            if parts:
+                per_config[config] = " | ".join(parts)
+        return _Queries(per_config=per_config)
+
+
+#: Tokens of the text form of a ``tsquery``: a quoted lexeme (``''`` inside
+#: is a quote) with optional weights or prefix mark, a phrase operator, one
+#: of ``& | ! ( )``, or white space.
+_TSQUERY_TOKEN = re.compile(r"'(?:[^']|'')*'(?::[*A-Da-d]+)?|<->|<\d+>|[&|!()]|\s+")
+
+
+def _tsquery_tokens(text: str) -> list[str]:
+    """``text`` (a ``tsquery`` as PostgreSQL prints it) split into tokens, without white space."""
+    tokens: list[str] = []
+    position = 0
+    while position < len(text):
+        match = _TSQUERY_TOKEN.match(text, position)
+        if match is None:
+            raise ValueError(f"unexpected tsquery text at position {position}")
+        if not match.group().isspace():
+            tokens.append(match.group())
+        position = match.end()
+    return tokens
+
+
+def _operand_end(tokens: Sequence[str], start: int) -> int:
+    """Index after the operand that begins at ``tokens[start]``: a lexeme or a group."""
+    if start >= len(tokens):
+        raise ValueError("tsquery operator without operand")
+    if tokens[start] == "!":
+        return _operand_end(tokens, start + 1)
+    if tokens[start] != "(":
+        return start + 1
+    depth = 0
+    for index in range(start, len(tokens)):
+        if tokens[index] == "(":
+            depth += 1
+        elif tokens[index] == ")":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    raise ValueError("unbalanced parentheses in tsquery text")
+
+
+def negated_parts(tsquery_text: str) -> list[str]:
+    """The operands of ``!`` in ``tsquery_text``, each as ``tsquery`` text.
+
+    ``websearch_to_tsquery`` turns ``-word`` into ``!'word'`` and ``-"two
+    words"`` into ``!( 'two' <-> 'word' )``. A double negation (``!!'word'``,
+    from ``--word``) excludes nothing, and negations inside an excluded part
+    are not looked at.
+    """
+    tokens = _tsquery_tokens(tsquery_text)
+    parts: list[str] = []
+    index = 0
+    while index < len(tokens):
+        if tokens[index] != "!":
+            index += 1
+            continue
+        bangs = 0
+        while index < len(tokens) and tokens[index] == "!":
+            bangs += 1
+            index += 1
+        if bangs % 2 == 0:
+            continue
+        end = _operand_end(tokens, index)
+        parts.append(" ".join(tokens[index:end]))
+        index = end
+    return parts
+
 
 def _configs() -> tuple[str, ...]:
     """The text search configurations; plain names, so they may go into SQL."""
@@ -175,11 +260,18 @@ def _parse_queries(cursor: CursorWrapper, query: str) -> _Queries:
     )
 
 
-def _keyword_condition(queries: _Queries) -> str:
-    """SQL for "the section matches the full-text search", or ``FALSE``."""
+#: Parameter prefix of the excluded parts (:meth:`_Queries.exclusions`).
+_EXCLUDE = "exclude_"
+
+
+def _keyword_condition(queries: _Queries, prefix: str = "") -> str:
+    """SQL for "the section matches the full-text search", or ``FALSE``.
+
+    The parameters are ``{prefix}tsquery`` and ``{prefix}query_<config>``.
+    """
     if not queries.per_config:
         return "FALSE"
-    condition = "s.search_vector @@ %(tsquery)s::tsquery"
+    condition = f"s.search_vector @@ %({prefix}tsquery)s::tsquery"
     if queries.has_phrase:
         # The gap lexeme (a space never appears in a parsed lexeme) moves the
         # text one position away from the headings and is deleted again, so a
@@ -188,11 +280,30 @@ def _keyword_condition(queries: _Queries) -> str:
             f"(to_tsvector('{config}', s.heading_text) || ts_delete("
             f"'''{_GAP_LEXEME}'':1'::tsvector || to_tsvector('{config}', s.text),"
             f" '{_GAP_LEXEME}'::text))"
-            f" @@ %(query_{config})s::tsquery"
+            f" @@ %({prefix}query_{config})s::tsquery"
             for config in queries.per_config
         )
         condition = f"({condition} AND ({recheck}))"
     return condition
+
+
+def _exclusion_condition(exclusions: _Queries) -> str:
+    """SQL for "the section has none of the excluded parts", or ``TRUE``.
+
+    An excluded part counts in any of the configurations, like a word of the
+    keyword search; for an excluded phrase only within headings or text.
+    """
+    if not exclusions.per_config:
+        return "TRUE"
+    return f"NOT ({_keyword_condition(exclusions, _EXCLUDE)})"
+
+
+def _query_params(queries: _Queries, prefix: str = "") -> dict[str, str]:
+    """The parameters of :func:`_keyword_condition`."""
+    params = {f"{prefix}tsquery": queries.combined}
+    for config, query in queries.per_config.items():
+        params[f"{prefix}query_{config}"] = query
+    return params
 
 
 def _scope_sql(*, filter_devices: bool, filter_plants: bool) -> str:
@@ -234,18 +345,23 @@ def _scope_params(request: SearchRequest) -> dict[str, Any]:
     }
 
 
-def vector_sql(*, filter_devices: bool, filter_plants: bool) -> str:
+def vector_sql(
+    *, filter_devices: bool, filter_plants: bool, exclusions: _Queries | None = None
+) -> str:
     """The vector search: the nearest sections and their rank by distance.
 
     Parameters: those of the scope, ``embedding`` (pgvector text form),
-    ``model`` and ``vector_limit``. The inner query is the form the HNSW
-    index serves (``ORDER BY embedding <=> query LIMIT n``); with
-    ``relaxed_order`` its rows may come slightly out of order, so the
-    materialised result is sorted again (pgvector README). ``distance + 0``
-    keeps PostgreSQL 17 and later from taking the order of the CTE as given
-    and skipping that sort.
+    ``model`` and ``vector_limit``, and those of ``exclusions``
+    (:func:`_query_params` with the prefix ``exclude_``): sections with an
+    excluded part do not take part, so the list stays full. The inner query
+    is the form the HNSW index serves (``ORDER BY embedding <=> query LIMIT
+    n``); with ``relaxed_order`` its rows may come slightly out of order, so
+    the materialised result is sorted again (pgvector README). ``distance +
+    0`` keeps PostgreSQL 17 and later from taking the order of the CTE as
+    given and skipping that sort.
     """
     scope = _scope_sql(filter_devices=filter_devices, filter_plants=filter_plants)
+    exclude = _exclusion_condition(exclusions or _Queries(per_config={}))
     return f"""
 WITH {scope},
 nearest AS MATERIALIZED (
@@ -254,6 +370,7 @@ nearest AS MATERIALIZED (
     WHERE s.embedding_model = %(model)s
         AND s.embedding IS NOT NULL
         AND s.document_version_id IN (SELECT version_id FROM searchable)
+        AND {exclude}
     ORDER BY s.embedding <=> %(embedding)s::vector
     LIMIT %(vector_limit)s
 )
@@ -274,9 +391,11 @@ def _search_sql(
     """The search query; user input goes in only as named parameters.
 
     With ``semantic``, the sections of the vector search come in as the
-    arrays ``semantic_ids`` and ``semantic_ranks``.
+    arrays ``semantic_ids`` and ``semantic_ranks``. The excluded parts of
+    the query apply to every way a section is found.
     """
     keyword = _keyword_condition(queries)
+    exclude = _exclusion_condition(queries.exclusions())
     exact = [f"(s.text ~* %(pattern_{index})s)" for index in range(identifier_count)]
     exact_count = " + ".join(f"{condition}::int" for condition in exact) or "0"
     rank = (
@@ -316,7 +435,7 @@ candidates AS (
     FROM ingest_section s
     JOIN searchable sv ON sv.version_id = s.document_version_id
     {semantic_join}
-    WHERE {where}
+    WHERE ({where}) AND {exclude}
 ),
 ranked AS (
     SELECT c.*,
@@ -345,7 +464,7 @@ SELECT
     g.representative_id, g.score,
     rs.text, rs.heading_path, rs.page_start, rs.page_end,
     m.section_id, m.exact_count > 0, m.keyword_match, m.semantic_rank IS NOT NULL,
-    m.is_latest, v.id, v.number, d.id, d.title,
+    m.is_latest, v.id, v.number, v.original_filename, d.id, d.title,
     dev.id, dev.key, dev.name, p.id, p.key, p.name
 FROM grouped g
 JOIN matched m
@@ -371,14 +490,13 @@ def _search_params(
 ) -> dict[str, Any]:
     params: dict[str, Any] = {
         **_scope_params(request),
-        "tsquery": queries.combined,
+        **_query_params(queries),
+        **_query_params(queries.exclusions(), _EXCLUDE),
         "limit": request.limit,
         "rrf_k": RRF_K,
         "semantic_ids": [section_id for section_id, _ in semantic],
         "semantic_ranks": [rank for _, rank in semantic],
     }
-    for config, query in queries.per_config.items():
-        params[f"query_{config}"] = query
     for index, identifier in enumerate(identifiers):
         params[f"pattern_{index}"] = postgres_pattern(identifier)
     return params
@@ -394,12 +512,13 @@ def embed_query(query: str) -> tuple[str, list[float]] | None:
 
     ``None`` when AI features are off (the model service is not asked) or
     when the model service fails; a failure is logged with its kind and
-    message, which name neither the query nor an address (044).
+    message, which name neither the query nor an address (044). The query
+    embedder has the short time limit ``TWOX_SEARCH_EMBED_TIMEOUT_SECONDS``.
     """
     if not settings.TWOX_AI_ENABLED:
         return None
     try:
-        embedder = embeddings.get_embedder()
+        embedder = embeddings.get_query_embedder()
         vector = embedder.embed_query(query)
     except embeddings.EmbeddingDisabledError:
         return None
@@ -423,17 +542,30 @@ def embed_query(query: str) -> tuple[str, list[float]] | None:
 
 
 def nearest_sections(
-    cursor: CursorWrapper, request: SearchRequest, model: str, vector: Sequence[float]
+    cursor: CursorWrapper,
+    request: SearchRequest,
+    model: str,
+    vector: Sequence[float],
+    exclusions: _Queries | None = None,
 ) -> list[tuple[int, int]]:
     """``(section ID, rank)`` of the sections nearest to ``vector``, nearest first.
+
+    Sections with one of the ``exclusions`` (the excluded parts of the query)
+    do not take part.
 
     Runs in a transaction of its own; the HNSW settings are local to it and
     end with it. Inside an outer transaction (a savepoint) they last until the
     outer transaction ends; they only change how HNSW index scans run.
     """
-    sql = vector_sql(filter_devices=bool(request.device_ids), filter_plants=bool(request.plant_ids))
+    exclusions = exclusions or _Queries(per_config={})
+    sql = vector_sql(
+        filter_devices=bool(request.device_ids),
+        filter_plants=bool(request.plant_ids),
+        exclusions=exclusions,
+    )
     params = {
         **_scope_params(request),
+        **_query_params(exclusions, _EXCLUDE),
         "embedding": vector_literal(vector),
         "model": model,
         "vector_limit": VECTOR_CANDIDATES,
@@ -497,6 +629,7 @@ def _collect_hits(rows: Iterable[Sequence[Any]]) -> list[_HitDraft]:
             is_latest,
             version_id,
             version_number,
+            version_filename,
             document_id,
             document_title,
             device_id,
@@ -536,6 +669,7 @@ def _collect_hits(rows: Iterable[Sequence[Any]]) -> list[_HitDraft]:
                 document_title=document_title,
                 version_id=version_id,
                 version_number=version_number,
+                version_filename=version_filename,
                 is_latest_version=is_latest,
                 device_id=device_id,
                 device_key=device_key,
@@ -681,24 +815,30 @@ class PostgresSearchBackend:
 
     def search(self, request: SearchRequest) -> SearchResult:
         """The hits for ``request``, best first, at most ``request.limit``."""
+        wanted = not request.keyword_only and bool(settings.TWOX_AI_ENABLED)
+        # The state while the model is not needed (nothing to search for).
+        idle = SemanticState.USED if wanted else SemanticState.DISABLED
         # PostgreSQL text cannot hold NUL; it carries no meaning in a query.
         query = request.query.replace("\x00", " ").strip()
         if not query:
-            return SearchResult()
+            return SearchResult(semantic=idle)
         identifiers = find_identifiers(query)
         with connection.cursor() as cursor:
             queries = _parse_queries(cursor, query)
         # A query without a word or identifier (only stop words or special
         # characters) finds nothing, also without asking the model.
         if not queries.per_config and not identifiers:
-            return SearchResult()
+            return SearchResult(semantic=idle)
         # Outside a cursor: the model may take a while to answer.
-        embedded = embed_query(query)
+        embedded = embed_query(query) if wanted else None
+        state = SemanticState.DISABLED
+        if wanted:
+            state = SemanticState.UNAVAILABLE if embedded is None else SemanticState.USED
         with connection.cursor() as cursor:
             semantic: list[tuple[int, int]] = []
             if embedded is not None:
                 model, vector = embedded
-                semantic = nearest_sections(cursor, request, model, vector)
+                semantic = nearest_sections(cursor, request, model, vector, queries.exclusions())
             sql = _search_sql(
                 queries,
                 len(identifiers),
@@ -730,4 +870,4 @@ class PostgresSearchBackend:
                     locations=draft.locations,
                 )
             )
-        return SearchResult(hits=hits, semantic_used=embedded is not None)
+        return SearchResult(hits=hits, semantic=state)

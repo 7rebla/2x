@@ -7,14 +7,17 @@ texts are written for these tests; none comes from a manufacturer's manual.
 
 import logging
 import re
-from collections.abc import Sequence
+import socket
+import time
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 
 import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from pytest_django.fixtures import Settings
 
-from tests.answers.fake_ollama import FakeOllama, fake_ollama, vector_for
+from tests.answers.fake_ollama import LOCAL_MODEL, FakeOllama, fake_ollama, vector_for
 from tests.search.fake_embedder import (
     FAKE_MODEL,
     FakeEmbedder,
@@ -43,12 +46,14 @@ from twox.answers.embeddings import (
 from twox.assets.models import Device, Plant
 from twox.files.models import DocumentKind, DocumentVersion
 from twox.ingest.models import EMBEDDING_DIMENSIONS
-from twox.search.interface import MAX_LIMIT, MatchKind, SearchRequest
+from twox.search.interface import MAX_LIMIT, MatchKind, SearchRequest, SemanticState
 from twox.search.postgres import (
     HNSW_EF_SEARCH,
     HNSW_ITERATIVE_SCAN,
     VECTOR_CANDIDATES,
+    _Queries,
     _scope_params,
+    nearest_sections,
     vector_literal,
     vector_sql,
 )
@@ -217,6 +222,153 @@ def test_vector_of_wrong_length_gives_keyword_hits_only(
     assert "returned 3 values" in caplog.text
 
 
+def test_semantic_state_tells_failure_from_switched_off(
+    settings: Settings, version: DocumentVersion, fake_embedder: FakeEmbedder
+) -> None:
+    (section,) = add_sections(version, "The gearbox runs.")
+
+    assert search("gearbox").semantic is SemanticState.USED
+    fake_embedder.error = EmbeddingUnavailableError("no answer from the model service within 20s")
+    failed = search("gearbox")
+    settings.TWOX_AI_ENABLED = False
+    switched_off = search("gearbox")
+
+    assert failed.semantic is SemanticState.UNAVAILABLE
+    assert switched_off.semantic is SemanticState.DISABLED
+    for result in (failed, switched_off):
+        assert result.semantic_used is False
+        assert [hit.section_id for hit in result.hits] == [section.pk]
+    # Off: the model was not asked again.
+    assert fake_embedder.calls == ["gearbox", "gearbox"]
+
+
+# --- The query embedder: short time limit, model list once per process -----------
+
+
+def test_query_embedder_has_the_search_time_limit(settings: Settings) -> None:
+    settings.TWOX_AI_ENABLED = True
+    settings.TWOX_EMBED_TIMEOUT_SECONDS = 120
+    settings.TWOX_SEARCH_EMBED_TIMEOUT_SECONDS = 7
+
+    embedder = embeddings.get_query_embedder()
+
+    assert isinstance(embedder, embeddings.OpenAICompatibleEmbedder)
+    assert embedder.timeout == 7.0
+    assert embedder.model_name == settings.TWOX_EMBED_MODEL
+    # One per process while the settings stay the same.
+    assert embeddings.get_query_embedder() is embedder
+    settings.TWOX_SEARCH_EMBED_TIMEOUT_SECONDS = 9
+    assert embeddings.get_query_embedder() is not embedder
+    # The embedder of the ingestion keeps its own, longer limit.
+    ingest = embeddings.get_embedder()
+    assert isinstance(ingest, embeddings.OpenAICompatibleEmbedder)
+    assert ingest.timeout == 120.0
+
+
+def test_query_embedder_refuses_when_ai_is_off(settings: Settings) -> None:
+    with pytest.raises(embeddings.EmbeddingDisabledError):
+        embeddings.get_query_embedder()
+
+
+def _real_client_settings(settings: Settings, base_url: str) -> None:
+    settings.TWOX_AI_ENABLED = True
+    settings.TWOX_EMBED_DIMENSIONS = EMBEDDING_DIMENSIONS
+    settings.TWOX_EMBED_MODEL = "bge-m3"
+    settings.TWOX_EMBED_QUERY_PREFIX = ""
+    settings.TWOX_LLM_BASE_URL = base_url
+
+
+def test_model_list_is_asked_once_for_several_searches(
+    settings: Settings, version: DocumentVersion
+) -> None:
+    add_sections(version, "The gearbox runs.")
+
+    with fake_ollama(FakeOllama(dimensions=EMBEDDING_DIMENSIONS)) as (base_url, stand_in):
+        _real_client_settings(settings, base_url)
+        states = [search(query).semantic for query in ("gearbox", "oil", "belt")]
+
+    assert states == [SemanticState.USED] * 3
+    assert [request.path for request in stand_in.requests] == [
+        "/api/tags",
+        "/v1/embeddings",
+        "/v1/embeddings",
+        "/v1/embeddings",
+    ]
+
+
+def test_model_list_is_asked_again_after_the_check_time(
+    monkeypatch: pytest.MonkeyPatch, settings: Settings, version: DocumentVersion
+) -> None:
+    add_sections(version, "The gearbox runs.")
+    now = [1000.0]
+    monkeypatch.setattr(embeddings, "monotonic", lambda: now[0])
+
+    with fake_ollama(FakeOllama(dimensions=EMBEDDING_DIMENSIONS)) as (base_url, stand_in):
+        _real_client_settings(settings, base_url)
+        search("gearbox")
+        now[0] += embeddings.QUERY_MODEL_CHECK_SECONDS - 1
+        search("gearbox")
+        now[0] += 2
+        # Meanwhile the model became a cloud model: the next check refuses it.
+        stand_in.models = [{"name": "bge-m3:latest", "remote_host": "https://ollama.com:443"}]
+        result = search("gearbox")
+
+    assert [request.path for request in stand_in.requests] == [
+        "/api/tags",
+        "/v1/embeddings",
+        "/v1/embeddings",
+        "/api/tags",
+    ]
+    assert result.semantic is SemanticState.UNAVAILABLE
+
+
+def test_failed_model_list_check_is_not_kept(settings: Settings, version: DocumentVersion) -> None:
+    add_sections(version, "The gearbox runs.")
+
+    with fake_ollama(FakeOllama(dimensions=EMBEDDING_DIMENSIONS, models=[])) as (
+        base_url,
+        stand_in,
+    ):
+        _real_client_settings(settings, base_url)
+        first = search("gearbox")
+        stand_in.models = [dict(LOCAL_MODEL)]
+        second = search("gearbox")
+
+    assert (first.semantic, second.semantic) == (SemanticState.UNAVAILABLE, SemanticState.USED)
+    assert [request.path for request in stand_in.requests] == [
+        "/api/tags",
+        "/api/tags",
+        "/v1/embeddings",
+    ]
+
+
+@contextmanager
+def silent_model_service() -> Iterator[str]:
+    """A port that accepts connections but never answers; yields its base URL."""
+    with socket.create_server(("127.0.0.1", 0)) as server:
+        yield f"http://127.0.0.1:{server.getsockname()[1]}/v1"
+
+
+def test_hanging_model_service_holds_a_search_up_only_briefly(
+    settings: Settings, version: DocumentVersion, caplog: pytest.LogCaptureFixture
+) -> None:
+    (section,) = add_sections(version, "The gearbox runs.")
+    caplog.set_level(logging.WARNING, logger="twox.search.postgres")
+
+    with silent_model_service() as base_url:
+        _real_client_settings(settings, base_url)
+        settings.TWOX_EMBED_TIMEOUT_SECONDS = 120
+        settings.TWOX_SEARCH_EMBED_TIMEOUT_SECONDS = 1
+        started = time.monotonic()
+        result = search("gearbox")
+        seconds = time.monotonic() - started
+
+    assert result.semantic is SemanticState.UNAVAILABLE
+    assert [hit.section_id for hit in result.hits] == [section.pk]
+    assert seconds < 10
+    assert "within 1s" in caplog.text
+
+
 # --- AI features off (E-59) -----------------------------------------------------
 
 
@@ -227,6 +379,7 @@ def test_ai_off_never_asks_the_model(
         raise AssertionError("the search asked for an embedder with AI features off")
 
     monkeypatch.setattr(embeddings, "get_embedder", refuse)
+    monkeypatch.setattr(embeddings, "get_query_embedder", refuse)
     answer, keyword = add_sections(version, ANSWER, "The pump runs.")
     embed(answer, at_angle(0))
     caplog.set_level(logging.DEBUG, logger="twox.search.postgres")
@@ -284,6 +437,52 @@ def test_filters_work_in_the_vector_list(plant: Plant, fake_embedder: FakeEmbedd
     assert keys(device_ids=[third.pk, first.pk]) == ["plc-01", "plc-03"]
     assert keys(plant_ids=[other_plant.pk]) == ["plc-03"]
     assert keys(plant_ids=[plant.pk], device_ids=[third.pk]) == []
+
+
+def test_exclusion_holds_for_vector_hits(
+    version: DocumentVersion, fake_embedder: FakeEmbedder
+) -> None:
+    answer, other = add_sections(version, ANSWER, "Top up the grease of the bearing.")
+    embed(answer, at_angle(10))
+    embed(other, at_angle(30))
+
+    # The answer is nearest, but it holds the excluded word ("hours" -> "hour").
+    result = search(f"{QUESTION} -hour")
+
+    assert result.semantic is SemanticState.USED
+    assert [hit.section_id for hit in result.hits] == [other.pk]
+    assert result.hits[0].match_kinds == [MatchKind.SEMANTIC]
+    assert section_ids(QUESTION) == [answer.pk, other.pk]
+
+
+def test_excluded_sections_do_not_shorten_the_vector_list(
+    version: DocumentVersion, fake_embedder: FakeEmbedder
+) -> None:
+    excluded = add_sections(version, *(f"Spare belt number {index}." for index in range(10)))
+    kept = add_sections(version, *(f"Spare part number {index}." for index in range(60)))
+    for index, section in enumerate(excluded):
+        embed(section, at_angle(0.5 + index / 100))
+    for index, section in enumerate(kept):
+        embed(section, at_angle(1 + index))
+
+    hits = search("which spare is nearest -belt", limit=MAX_LIMIT).hits
+
+    assert [hit.section_id for hit in hits] == [s.pk for s in kept[:VECTOR_CANDIDATES]]
+
+
+def test_vector_query_leaves_out_excluded_sections_itself(version: DocumentVersion) -> None:
+    answer, other = add_sections(version, ANSWER, "Top up the grease.")
+    embed(answer, at_angle(10))
+    embed(other, at_angle(30))
+    request = SearchRequest(query="x -gearbox")
+    exclusions = _Queries(per_config={"simple": "'gearbox'"})
+
+    with connection.cursor() as cursor:
+        nearest = nearest_sections(cursor, request, FAKE_MODEL, unit(0), exclusions)
+        everything = nearest_sections(cursor, request, FAKE_MODEL, unit(0))
+
+    assert nearest == [(other.pk, 1)]
+    assert everything == [(answer.pk, 1), (other.pk, 2)]
 
 
 def test_configuration_documents_are_not_in_the_vector_list(

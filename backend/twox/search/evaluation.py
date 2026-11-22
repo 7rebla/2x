@@ -8,8 +8,9 @@ list holds references only, never text from a document
 
 Each probe is measured three ways, through the search interface:
 
-* **keyword:** the search with the AI features switched off for this one
-  request (E-59), i.e. full-text and exact search with their own ranking;
+* **keyword:** the search without the vector search for this one request
+  (``SearchRequest.keyword_only``), i.e. full-text and exact search with
+  their own ranking; the model is not asked;
 * **vector:** the nearest sections only (:func:`~twox.search.postgres.embed_query`
   and :func:`~twox.search.postgres.nearest_sections`), with the AI features on;
 * **combined:** the search as users get it (:func:`~twox.search.interface.get_search_backend`).
@@ -40,13 +41,12 @@ import json
 import re
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from enum import StrEnum
 from typing import Any
 
 from django.conf import settings
 from django.db import connection
-from django.test.utils import override_settings
 
 from twox.files.models import DocumentKind, DocumentVersion
 from twox.ingest.models import Section
@@ -440,8 +440,7 @@ class _Runner:
     def keyword(self, request: SearchRequest, expected: Sequence[ExpectedPlace]) -> KindResult:
         started = self.clock()
         # This one request without the vector search; the model is not asked.
-        with override_settings(TWOX_AI_ENABLED=False):
-            result = self.backend.search(request)
+        result = self.backend.search(replace(request, keyword_only=True))
         return judge(SearchKind.KEYWORD, hit_entries(result), expected, self.clock() - started)
 
     def vector(self, request: SearchRequest, expected: Sequence[ExpectedPlace]) -> KindResult:

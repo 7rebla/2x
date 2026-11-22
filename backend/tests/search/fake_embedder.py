@@ -79,9 +79,14 @@ class FakeEmbedder:
 def install(
     monkeypatch: pytest.MonkeyPatch, settings: Settings, embedder: FakeEmbedder
 ) -> FakeEmbedder:
-    """Switch AI features on; :func:`~twox.answers.embeddings.get_embedder` returns ``embedder``."""
+    """Switch AI features on; the embedders of the model interface are ``embedder``.
+
+    Both :func:`~twox.answers.embeddings.get_query_embedder` (the search) and
+    :func:`~twox.answers.embeddings.get_embedder` return it.
+    """
     settings.TWOX_AI_ENABLED = True
     monkeypatch.setattr(embeddings, "get_embedder", lambda: embedder)
+    monkeypatch.setattr(embeddings, "get_query_embedder", lambda: embedder)
     return embedder
 
 
