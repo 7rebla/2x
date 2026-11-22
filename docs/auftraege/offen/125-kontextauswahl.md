@@ -211,7 +211,7 @@ Keine, die den Auftrag aufhält.
 
 ### Abweichungen und Hinweise
 
-1. **Schlüssel der Dubletten:** `(sha256, ordinal)` statt `sha256` + Seitenbereich. Mehrere Abschnitte derselben Seite einer Datei hätten denselben Seitenbereich und würden sonst fälschlich zusammengelegt. Hinweis: Die Suche bündelt identische Inhalte (gleiche Prüfsumme, Seiten, Überschrift, Text) schon selbst (E-55); die Dubletten aus 120 stammen vermutlich aus der reinen Vektorliste der Auswertung. Das Zusammenlegen hier ist deshalb vor allem Absicherung; der Test mit getrennten Treffern prüft es direkt.
+1. **Schlüssel der Dubletten:** `(sha256, ordinal, text)` statt `sha256` + Seitenbereich (nach der Nachbesserung an den Schlüssel der Suche angeglichen). Mehrere Abschnitte derselben Seite einer Datei hätten denselben Seitenbereich und würden sonst fälschlich zusammengelegt; eine Kopie, die mit anderen Einstellungen in Abschnitte zerlegt wurde, hat beim gleichen `ordinal` einen anderen Text und bleibt eigene Quelle. Hinweis: Die Suche bündelt identische Inhalte (gleiche Prüfsumme, Seiten, Überschrift, Text) schon selbst (E-55); die Dubletten aus 120 stammen vermutlich aus der reinen Vektorliste der Auswertung. Das Zusammenlegen hier ist deshalb vor allem Absicherung; der Test mit getrennten Treffern prüft es direkt.
 2. **Schwelle als Sperre:** Wie im Auftrag (Schritt 5/6) entscheidet die Schwelle nur, ob überhaupt Kontext entsteht; danach werden auch Treffer oberhalb der Schwelle in Rangfolge aufgenommen. Falls 128 das ändern will (nur relevante Treffer aufnehmen), ist es eine Zeile in `select_context`.
 3. **Sprachfassungen gegen aufgenommene Quellen:** Ein Kandidat entfällt nur, wenn seine andere Sprachfassung schon aufgenommen ist. Wurde die besser platzierte Fassung wegen des Budgets übersprungen, darf die kürzere andere Fassung nachrücken.
 4. **Nachbarn nach den Hauptquellen:** Hauptquellen haben Vorrang im Budget; Nachbarn bekommen nur, was übrig bleibt (in der Reihenfolge der Hauptquellen).
@@ -222,3 +222,10 @@ Keine, die den Auftrag aufhält.
 9. Lokal bleiben die Images `twox-125-*`; die ignorierte `.env` hat `TWOX_API_PORT=18125`.
 
 Offene Fragen an a7: keine.
+
+### Nachbesserung (nach Prüfung der Leitstelle)
+
+1. `main` (mit 123 und 129) in den Zweig zusammengeführt, ohne Konflikt.
+2. Dubletten-Schlüssel in `_merge_copies` an den der Suche angeglichen: `(sha256, ordinal, text)` statt `(sha256, ordinal)`; der Text liegt am Kandidaten schon vor, keine weitere Abfrage. Docstring und Abweichung 1 angepasst.
+3. Neuer Test `test_same_checksum_and_ordinal_with_another_text_stay_two_sources`: zwei Treffer mit gleicher Prüfsumme und gleichem `ordinal`, aber verschiedenem Text, bleiben zwei Quellen. Drei echte Kopien bleiben eine Quelle (die beiden bestehenden Dubletten-Tests, unverändert grün).
+4. Prüfungen über `twox-125` wie in `ci.yml`: `ruff check`, `ruff format --check` (214 Dateien), `mypy` (213 Dateien) grün; `pytest` 3139 passed / 6 deselected; `pytest -m worker` 6 passed; `makemigrations --check` „No changes detected“; Lizenzprüfung bestanden; `makemessages` und `spectacular` ohne Diff; `down -v` Exit 0.

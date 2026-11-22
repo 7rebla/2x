@@ -23,8 +23,9 @@ The steps, in this order:
    once it is passed, the hits are taken in the order of the search.
 6. Selection, in the order of the search:
 
-   - copies of the same file (same ``sha256``, same ``ordinal``) at several
-     devices are one source with the locations of all copies;
+   - copies of the same file (same ``sha256``, ``ordinal`` and text, the key
+     of the search as well) at several devices are one source with the
+     locations of all copies;
    - the same place in another language (E-61) is left out: a hit from
      another document of the same device whose stored embedding is at most
      ``TWOX_ANSWER_TRANSLATION_DISTANCE`` from a source taken before;
@@ -288,12 +289,14 @@ def _stored_sections(section_ids: Sequence[int]) -> dict[int, _StoredSection]:
 def _merge_copies(candidates: Sequence[_Candidate]) -> list[_Candidate]:
     """One candidate per content: copies of a file at several devices become one.
 
-    Same checksum and same ordinal means the same section of the same file.
-    The best placed copy stays; the locations of the others are added to it.
+    Same checksum, same ordinal and same text means the same section of the
+    same file (the text differs when a copy was cut into sections with other
+    settings). The best placed copy stays; the locations of the others are
+    added to it.
     """
-    merged: dict[tuple[str, int], _Candidate] = {}
+    merged: dict[tuple[str, int, str], _Candidate] = {}
     for candidate in candidates:
-        content = (candidate.sha256, candidate.ordinal)
+        content = (candidate.sha256, candidate.ordinal, candidate.text)
         first = merged.get(content)
         if first is None:
             merged[content] = candidate

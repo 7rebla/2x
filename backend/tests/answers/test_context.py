@@ -249,6 +249,27 @@ def test_copies_found_as_separate_hits_are_merged_before_counting(
     assert request.query == QUESTION
 
 
+def test_same_checksum_and_ordinal_with_another_text_stay_two_sources(
+    plant: Plant, fake_embedder: FakeEmbedder, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The same file cut into sections with other settings: same ordinal, other text.
+    sha256 = sha256_of("a file cut twice")
+    (first,) = add_sections(
+        make_document(make_device(plant, "cut-a"), sha256=sha256), "Grease the axle."
+    )
+    (second,) = add_sections(
+        make_document(make_device(plant, "cut-b"), sha256=sha256), "Grease the axle weekly."
+    )
+    assert first.ordinal == second.ordinal
+    hits = [hit_of(first, 0.2), hit_of(second, 0.21)]
+    use_backend(monkeypatch, StandInBackend(SearchResult(hits, SemanticState.USED)))
+
+    selection = select_context(QUESTION)
+
+    assert section_ids(selection) == [first.pk, second.pk]
+    assert_numbered(selection)
+
+
 # --- Language editions (E-61) ------------------------------------------------------
 
 
