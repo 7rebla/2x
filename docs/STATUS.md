@@ -169,13 +169,13 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 077 | UI-Bausteine Knopf, Feld, Auswahl (UI-Analyse Prio 1) | B | 070, 071 | erledigt |
 | 078 | Barrierefreiheit: Sprunglink, Seitentitel, Überschriften, Fokus | B | 077 | erledigt |
 | 079 | Tabellen am Desktop lesbar | B | 077 | erledigt |
-| 080 | Einheitliches Seitenraster (E-65) | C (entschieden) | 077 | in Arbeit |
+| 080 | Einheitliches Seitenraster (E-65) | C (entschieden) | 077 | erledigt |
 | 081 | Tabellen auf schmalen Bildschirmen als Karten (E-65) | C (entschieden) | 079 | in Arbeit |
-| 082 | Navigation unter 1280 px (E-65) | C (entschieden) | 080 | offen |
+| 082 | Navigation unter 1280 px (E-65) | C (entschieden) | 080 | in Arbeit |
 | 083 | Strukturbaum entrümpeln (E-65) | C (entschieden) | 077 | erledigt |
 | 084 | Schriftgröße der Metadaten (E-65) | C (entschieden) | 077, 079, 083 | offen |
 | 085 | Überschriften-Animation zurücknehmen (E-65) | C (entschieden) | 076 | erledigt |
-| 086 | Anmeldeseite als zentrierte Karte (E-65) | C (entschieden) | 077, 080 | offen |
+| 086 | Anmeldeseite als zentrierte Karte (E-65) | C (entschieden) | 077, 080 | in Arbeit |
 | 087 | Suchtreffer kompakter | B | 077 | erledigt |
 | 088 | Einheitliche Dateiauswahl | B | 077 | erledigt |
 | 089 | Ergebniszahl als Live-Region, Brotkrumen Dateiseite | B | 077, 079, 083 | offen |
@@ -183,7 +183,8 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 091 | Seite „keine Berechtigung“ mit Titel und h1 | B | 078 | erledigt |
 
 - 078/079/083/085/087/088 zusammengeführt am 22.11.2026. Lücke aus 078: Die Seite „keine Berechtigung“ (RequireRole) hat weder Seitentitel noch h1 – Auftrag 091.
-- Reihenfolge: 080 und 081 laufen (091 erledigt); danach 089 (dieselben Dateien wie 081), 082 und 086 (auf 080), zuletzt 084 (berührt fast alle Seiten).
+- Reihenfolge: 080 und 091 erledigt; 081, 082 und 086 laufen; danach 089 (dieselben Dateien wie 081), zuletzt 084 (berührt fast alle Seiten).
+- 080: Hinweise aus der Prüfung – der Warnkasten der Seite „keine Berechtigung“ (091) ist jetzt auf Lesebreite begrenzt (gewollt gelassen). Gesehen vom Bearbeiter: Übersichtskarte (MiniMap) bei vielen Knoten fast leer und bei 375 px groß; Einpassen großer Strukturen zeigt die Mitte – Kandidaten für einen späteren Auftrag.
 
 ## M2 – Einlesen und Suche (freigegeben 22.11.2026, E-54; abgenommen 22.11.2026, E-67)
 

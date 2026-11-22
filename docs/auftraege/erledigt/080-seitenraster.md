@@ -1,6 +1,6 @@
 # Auftrag 080 – Einheitliches Seitenraster
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: C (entschieden mit E-65) · Status: zur Prüfung
+Meilenstein: Gestaltung (D1) · Freigabestufe: C (entschieden mit E-65) · Status: erledigt
 
 Voraussetzung: 077 ist auf `main`; nicht gleichzeitig mit 078.
 
