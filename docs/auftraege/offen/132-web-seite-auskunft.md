@@ -1,6 +1,6 @@
 # Auftrag 132 – Seite Auskunft mit Quellenanzeige
 
-Meilenstein: M3 · Freigabestufe: B · Status: offen
+Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
 
 Voraussetzung: 131 (Antwortstrom und Hook) ist auf `main`; damit auch 130 (API mit SSE und Status-Endpunkt), 126 und 122 (Ereignisvertrag).
 
@@ -133,7 +133,45 @@ Keine, die den Auftrag aufhalten. Umgesetzt wird die Vorgabe aus D14:
 - **Zugänglichkeitsprüfung mit axe** (entschieden in 137 Frage 2, betrifft auch 132 und 134): (a) ohne axe mit Rollen, Namen, `role="status"`/`role="alert"`, `aria-busy` und Tastatur oder (b) `@axe-core/playwright` als neue Entwicklungsabhängigkeit in eigenem Stufe-C-Auftrag mit Lizenzeintrag (MPL-2.0). Vorgabe für 132: (a); der Auftrag bleibt Stufe B und fügt keine Abhängigkeit hinzu. Die Frage gehört in die Entscheidungsliste für a7 (im Gesamtplan bisher nicht unter D1–D17).
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Was wurde gebaut?**
+
+- **Bausteine (Umfang 6):** `PageLabel`, `LocationView`, `Locations`, `hiddenPlacesKind`, `Snippet`, `MARK_CLASS` liegen in `web/src/components/sources/` (`index.ts` exportiert sie, dazu `pageRange`/`snippetPieces`). `snippet.ts` und `snippet.test.ts` sind per `git mv` verschoben, Inhalt unverändert (gleiche Tiefe, daher auch keine geänderten Importpfade). `PageLabel` nimmt `pages: Pick<SearchHit, "page_start" | "page_end">`. `SearchHitView.tsx` importiert nur noch von dort; `data-testid` und Schlüssel im Namespace `search` unverändert. Fundorte: Die Quellen werden mit `toSearchLocation()` aus 131 auf `SearchLocation` abgebildet, daher braucht `Locations` keinen strukturellen Typ und kein `as`.
+- **Seite `/ask`** (`AnswerPage.tsx`, Route in `routes.tsx` über `lazyPage()`, `guarded("/ask", …)`, ohne Navigationseintrag → Rolle `read`). Teile unter `pages/answer/`:
+  - `AnswerForm.tsx`: Textarea „Frage“ mit Zähler „21 von 500 Zeichen“ (getrimmt, nach Codepunkten wie der Server); über 500 Hinweis, `aria-invalid`, Knopf gesperrt. „Fragen“ (primary, während des Stroms `loading` mit „Wird beantwortet…“) und „Abbrechen“ (secondary). Strg/Cmd+Enter sendet, Enter allein nicht. `?q=` füllt nur das Feld. Für 133: `AnswerScope`, `NO_SCOPE` und `answerRequest(question, scope)` bauen den ganzen Request im Formular; 133 ersetzt nur `const scope = NO_SCOPE` durch eine Auswahl.
+  - `answerText.ts`: `answerPieces()` zerlegt `[2]`, `[2, 3]`, `[2; 3]` (Muster der Zitatprüfung in `citations.py`) in Stücke `text`/`citation`; zusammengesetzt ergibt sich der Text unverändert.
+  - `answerView.ts`: `availabilityOf()` (pending/available/off/unavailable; 409 `ai_disabled` und 503 `chat_not_configured` aus dem Strom zählen vor dem bis zu 15 s alten Status; ist der Status nicht lesbar, bleibt das Formular frei und der Server entscheidet), `statusKeyOf()`, `isEvidence()`, `citedSources()`, `citationTargets()`.
+  - `AnswerCard.tsx`: `article` „Antwort“, beim Strom `aria-busy="true"`, kein `aria-live`, keine Animation, Nummern als Text. Nach `done` Links nur für Nummern in `cited` ∩ Quellen ∩ Beleg; Name „Quelle 2: <Titel>, Seite 14“ / „Seiten 3–4“ / bei Markdown „…, Einrichtung › Netzwerk“ (Titel und Überschriften werden außerhalb von i18next angehängt). Klick fokussiert die Quellenkarte (`tabIndex={-1}`), ohne die Adresse zu ändern. Hinweis „Nicht belegte Aussagen wurden entfernt.“ bei `removed_sentences` > 0. Text nur als React-Text in einem `div` mit `whitespace-pre-line`.
+  - `SourceList.tsx`: `ol` „Quellen“, Karte mit `id="source-n"`, Nummer, `PageLabel`, Überschriftenpfad, `Snippet` (leere `highlights`), `Locations`. Quelle ohne Seite und Überschriftenpfad: kein Link, Vermerk „Fundstelle ohne Seitenangabe“. Bei `contradiction` tragen die zitierten Belege einen 2-px-Rahmen in `warning` und das Abzeichen „Widersprüchliche Stelle“ mit Icon.
+  - `AnswerStates.tsx`: ruhiger Hinweis bei KI aus/nicht verfügbar (Ton neutral, `surface-muted`, Icon `info`, Link „Zur Suche“), `NoEvidence` (Icon `noEvidence`, Katalogsatz, Link `/search?q=<Frage>`), `ContradictionNotice` (Icon `contradiction`, Warnfläche wie der Suchhinweis „unavailable“), `AnswerError` (`ErrorMessage` für ApiError; feste Texte mit „Code: …“ für `error`-Ereignisse, `interrupted`, 409 `answer_in_progress`, 429; das `detail` eines `error`-Ereignisses wird nicht gezeigt).
+  - Statuszeile `role="status"`: „Suche Quellen…“, „Antwort wird erstellt…“, „Fertig“, „Abgebrochen“; bei Fehler leer (die Meldung hat `role="alert"`).
+  - Abbruch: Der bisherige Text bleibt als Karte mit „Vorläufig, noch nicht geprüft“ und „Abgebrochen – dieser Text wurde nicht geprüft.“, ohne Links. Bei Fehlern wird der Teiltext nicht gezeigt.
+- **Nicht zitierte Quellen erscheinen gar nicht.** Begründung: Sie stützen keine Aussage der Antwort; eingeklappt unter „Weitere geprüfte Abschnitte“ würden sie wie Belege wirken, obwohl sie nur dem Modell vorlagen (Leitplanke 3). Wer mehr sehen will, hat die Suche.
+- **Ausschnitt:** `snippet` aus 122/131 ist laut Schema schon „Start of the section, at most 300 characters“ mit „…“ (`make_snippet()` in `backend/twox/answers/types.py`). Die Seite zeigt ihn unverändert, kürzt also nicht selbst.
+- **Namespace `answers`** (de/en, registriert in `i18n.ts`, `i18next.d.ts`, `locales/README.md`); de im „Sie“-Ton wie die übrigen Kataloge. Fester Satz de „Dazu finde ich nichts in den Unterlagen.“ (wie `NO_EVIDENCE_TEXT` des Servers), en „I can't find anything on this in the documents.“; bei `no_evidence` immer der Katalogtext.
+- **Icons:** `noEvidence` = Lucide `SearchX` (STA-11), `contradiction` = Lucide `Scale` (STA-12), beide ohne Sprechblase/Funkeln; `icons/README.md` nachgezogen. `FileX` gibt es in Lucide 1.77 nicht.
+- **Doku:** `pages/README.md` (Adressentabelle, Abschnitt „Ask“, Verweise im Abschnitt „Search“).
+
+**Wie wurde getestet?** (Compose-Projekte `twox-132-web` und `twox-132`, `TWOX_API_PORT=18132`, `.env` neu aus `.env.example` ohne Chat-Modell)
+
+- 0: `docker version`, `docker compose version` Exit 0.
+- 1–6 (`AnswerPage.test.tsx`, 20 Tests, fetch-Stub mit `fakeEventStream()`): Streaming (Text wächst, `aria-busy`, kein `aria-live`, keine Links, „Abbrechen“, Statuszeile), Abbrechen; answered mit Links „Source 1: Test manual, page 14“/„Source 2: …, pages 3–4“ und de „Quelle 1: …, Seite 14“, Liste `ol` „Sources“/„Quellen“ ohne nicht zitierte Quelle, Fokus auf Karte nach Klick; `[9]` kein Link; no_evidence mit Katalogsatz trotz anderem Servertext, ohne Liste, Link `/search?q=…`; contradiction mit beiden Karten markiert (Text „Contradicting place“); KI aus/kein Modell/nicht verfügbar und 409 `ai_disabled` als Hinweis mit gesperrtem Formular und Suchlink, kein `role="alert"`; Fehler (`timeout`, abgerissener Strom, 400) mit `role="alert"`; `<img onerror>`, `<a href>` und eine URL im Strom und in `final_text` ergeben kein `img` und nur den Zitat-Anker; Quelle ohne Seite/Pfad ohne Link, Markdown-Quelle mit Link; `?q=` füllt das Feld, kein POST; Strg+Enter sendet, Enter nicht; Body nur `{question}`, keine Query in der URL; 500/501 Zeichen. Dazu `answerText.test.ts` (6), `answerView.test.ts` (8), `components/sources/sources.test.tsx` (5).
+- 7: `SearchPage.test.tsx`, `snippet.test.ts` (nur verschoben), `search.spec.ts`, `m2-acceptance.spec.ts` ohne Änderung grün.
+- 8: `i18n.test.ts` und `icons.test.tsx` grün.
+- 9: Web-Job: `lint`, `typecheck`, `test` (54 Dateien, 1081 Tests), `build`, `licenses`, `api:generate` – alle Exit 0; `web/openapi`, `web/src/api`, `package.json`, `package-lock.json` ohne Unterschied.
+- 10: Backend nicht angefasst (`git diff main...HEAD` ohne `backend/`); den Backend-Job habe ich nicht eigens laufen lassen. Die e2e-Umgebung (migrate, api, worker) startete gesund.
+- 11: e2e wie in `ci.yml` (Konto per `create_account`): 85 passed, 1 skipped, darunter `answer-page.spec.ts` in en und de (Überschrift, Titel, Formular und Feld mit Namen, `?q=` im Feld, Hinweis „nicht verfügbar“, Feld und Knopf `disabled`, kein `alert`, `role="status"`, Tastatur: Link erreichbar, gesperrte Steuerelemente übersprungen, Enter führt zur Suche, keine Konsolenfehler) und 375 px ohne Überbreite.
+- 12: Sichtprüfung im eingebauten Browser unter `twox132.localhost:18132`, angemeldet mit dem e2e-Testkonto. Gesperrter Zustand (echter Status-Endpunkt, kein Modell): ruhiger grauer Kasten mit Info-Icon und Link, Feld vorbelegt aus `?q=` und gesperrt. Danach `fetch` im Tab für Status und Strom mit erfundenen Testdaten abgefangen: Streaming (Spinner im Knopf, „Abbrechen“, „Antwort wird erstellt…“, Karte „Vorläufig, noch nicht geprüft“), answered (Links unterstrichen in Akzent, `[9]` Text, Hinweis „entfernt“, Quellenkarten, Sprung per Klick), contradiction (gelber Hinweis, beide Karten gelb umrandet mit Abzeichen), no_evidence (Lupe mit Kreuz, Satz fett, Suchlink). 375 px hell, 768 px dunkel, 1280 px hell, dunkel bei Standardbreite; keine Überbreite. Englisch im Browser nicht angesehen (der Sprachwechsel hätte den abgefangenen Strom verworfen); en ist durch Vitest und e2e abgedeckt.
+- 13: `git diff --stat main...HEAD` (30 Dateien) zeigt nur Pfade aus „Betroffene Bereiche“ plus die zwei unten genannten Testdateien.
+- 14: `down -v` beider Projekte Exit 0.
+
+**Zweig und Arbeitsverzeichnis:** `worktree-agent-a37c12d3f7caff129`, `.claude/worktrees/agent-a37c12d3f7caff129`.
+
+**Abweichungen und Hinweise**
+
+- Zwei Dateien außerhalb der „Betroffenen Bereiche“ minimal geändert, weil ihre Tests sonst rot wären: `web/src/i18n.test.ts` (Anzahl der Namespaces 12 → 13) und `web/src/routes.test.tsx` („ask“ in der Liste der nachgeladenen Seiten).
+- `web/e2e/m2-acceptance.spec.ts:481` nennt in einem Kommentar noch den alten Pfad `web/src/pages/search/snippet.ts`; nicht geändert (Kriterium 7: dort nur Importpfade). Kann beim Zusammenführen nachgezogen werden.
+- Widerspruch: Der Server liefert nicht, welche zwei Quellen sich widersprechen. Markiert werden alle zitierten Belege; nach `citations.py` gibt es `contradiction` nur mit mindestens zwei zitierten Nummern, im Normalfall also genau die beiden.
+- Zitat-Link ändert die Adresse nicht (kein `#source-n` in der Historie); Ziel und `href` sind trotzdem der Anker. Der Fokusrahmen der Karte erscheint nach Mausklick nicht (`:focus-visible`), nach Tastatur ja.
+- Solange der Status lädt, ist nur der Knopf gesperrt; gibt es ihn nicht (Netzfehler), entscheidet der Server.
+- Keine neue Abhängigkeit, kein axe.

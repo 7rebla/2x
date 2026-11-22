@@ -2,11 +2,12 @@
 //
 // The catalogs live in src/locales/<language>/<namespace>.json and are bundled
 // with the build; nothing is loaded over the network. This file registers every
-// namespace of milestone M1 (and "map" of work order 039, "settings" of 070, "search" of 054, "ingest" of 055) once. Later pages only
+// namespace of milestone M1 (and "map" of work order 039, "settings" of 070, "search" of 054, "ingest" of 055, "answers" of 132) once. Later pages only
 // fill their own JSON files; neither this file nor src/i18next.d.ts changes for that.
 import i18next, { type i18n as I18n } from "i18next";
 import { initReactI18next } from "react-i18next";
 
+import deAnswers from "./locales/de/answers.json";
 import deAssets from "./locales/de/assets.json";
 import deAudit from "./locales/de/audit.json";
 import deAuth from "./locales/de/auth.json";
@@ -19,6 +20,7 @@ import deNav from "./locales/de/nav.json";
 import deSearch from "./locales/de/search.json";
 import deSelftest from "./locales/de/selftest.json";
 import deSettings from "./locales/de/settings.json";
+import enAnswers from "./locales/en/answers.json";
 import enAssets from "./locales/en/assets.json";
 import enAudit from "./locales/en/audit.json";
 import enAuth from "./locales/en/auth.json";
@@ -51,6 +53,7 @@ export const namespaces = [
   "settings",
   "search",
   "ingest",
+  "answers",
 ] as const;
 export type Namespace = (typeof namespaces)[number];
 
@@ -71,6 +74,7 @@ export const resources = {
     settings: enSettings,
     search: enSearch,
     ingest: enIngest,
+    answers: enAnswers,
   },
   de: {
     common: deCommon,
@@ -85,6 +89,7 @@ export const resources = {
     settings: deSettings,
     search: deSearch,
     ingest: deIngest,
+    answers: deAnswers,
   },
 } as const satisfies Record<Language, Record<Namespace, object>>;
 

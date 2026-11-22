@@ -32,7 +32,7 @@ Buttons take their icon by name (`<Button type="button" icon="upload">`, `../com
 | Objects | `site`, `area`, `plant` (own), `device` (own, generic), `network`, `document`, `version` |
 | Device classes (own) | `devicePlc`, `deviceController`, `deviceComputer`, `deviceRouter`, `deviceRobot`, `deviceFirewall` |
 | Actions | `create`, `edit`, `upload`, `download`, `retry`, `apply`, `filter`, `resetFilter`, `search`, `fitView`, `previous`, `next`, `disclosure` (work order 083), `signOut` |
-| Status | `success`, `error`, `warning`, `loading`, `noPermission`, `info`, `queued`, `skipped`, `notIngested` (the last three for ingest jobs, work order 053) |
+| Status | `success`, `error`, `warning`, `loading`, `noPermission`, `info`, `queued`, `skipped`, `notIngested` (the last three for ingest jobs, work order 053), `noEvidence` (STA-11, Lucide `SearchX`) and `contradiction` (STA-12, Lucide `Scale`) for the end states of an answer (work order 132; no speech bubble, sparkle or star, B6) |
 
 The navigation entries name their icon in `../navigation.ts` (`icon`).
 

@@ -19,6 +19,7 @@ so each address can be opened directly or reloaded.
 | `/login` | `LoginPage.tsx` | main bundle | 030 |
 | `/selftest` | `SelftestPage.tsx` | on demand (`lazyPage()`) | (done, M0) |
 | `/settings` | `SettingsPage.tsx` (from the user menu, role `read`) | on demand (`lazyPage()`) | 070 |
+| `/ask` | `AnswerPage.tsx` (no navigation entry before work order 134, role `read`) | on demand (`lazyPage()`) | 132 |
 | anything else | `../components/NotFound.tsx` | main bundle | – |
 
 A work order that builds a page replaces only its file here (and fills its own catalog, see `../locales/README.md`).
@@ -305,7 +306,7 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 - States: no search text (a hint, no request), loading, no hits, error (`ErrorMessage`), hits.
 - `semantic` of the answer: `unavailable` shows the hint "Keyword search only – language model not reachable";
   `disabled` (AI features switched off, E-59) shows one calm line, no warning; `used` shows nothing.
-- A hit (`search/SearchHitView.tsx`) shows the page ("p. 31", "pp. 31–32"; German "S. 31", "S. 31–32"), the heading
+- A hit (`search/SearchHitView.tsx`, with the building blocks of `../components/sources/`, shared with the answer page) shows the page ("p. 31", "pp. 31–32"; German "S. 31", "S. 31–32"), the heading
   path, how it was found (exact, keyword, meaning), the snippet and the places it is stored at: file (link to
   `/documents/:id`), version with its file name, "Older version" when `is_latest` is false, device (link to
   `/devices/:id`) and plant.
@@ -316,12 +317,53 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 - Each kind (exact, keyword, meaning) explains itself: the short name stays visible, the explanation is the
   `title` of the badge and follows the name as `sr-only` text ("Exact: An identifier from the search …"), in German
   and English (`matchKind.hint.*` in `locales/*/search.json`).
-- The snippet is plain text. `search/snippet.ts` cuts it into pieces by the `highlights` of the API, which count
+- The snippet is plain text. `../components/sources/snippet.ts` cuts it into pieces by the `highlights` of the API, which count
   Unicode code points: the snippet is split with `Array.from` first, so marks do not slip after an emoji or another
   character outside the BMP. The found places are `<mark>` elements with text inside; nothing is rendered as HTML.
   A mark has no side padding (`px-0`, `box-decoration-clone`, `MARK_CLASS`), so a mark inside a word such as
   "IP-Addresses" leaves no gaps.
 - Tests fake the search API with `search/testData.ts` (test sentences only, devices of `structure/testData.ts`).
+
+## Ask
+
+- `AnswerPage.tsx` (`/ask`, role `read`, work order 132) asks a question about the ingested documents through
+  `answer/useAnswerStream.ts` (work order 131) and shows the answer with its sources. It has no navigation entry yet
+  (work order 134); `routes.tsx` loads it on demand with `lazyPage()`. Texts are in the namespace `answers`; the
+  sources reuse the keys of `search` for page, version and places.
+- Form (`answer/AnswerForm.tsx`): a text area "Question" (at most 500 characters after trimming, counted by code point
+  like the server; above that a hint, `aria-invalid` and the button disabled), "Ask" and, while an answer streams,
+  "Cancel". The button sends, Ctrl+Enter (Cmd+Enter) as well; Enter alone starts a new line. `?q=` only fills the
+  field, nothing is ever sent on its own (D14 (i)); the question goes into the body of the POST, never into the
+  address, and nothing is stored (D7). The form builds the whole request (`answerRequest()` with an `AnswerScope`),
+  so the limit to devices and plants (work order 133) is added there.
+- Availability (`answer/answerView.ts`, `availabilityOf()`): `GET /api/v1/answers/status/` with `enabled=false`,
+  or a 409 `ai_disabled` of the stream, shows a calm hint "AI features switched off" with a link to the search;
+  `chat_model_configured=false`, `available=false` or a 503 `chat_not_configured` shows "Answers are not available
+  at the moment". In both cases field and button are disabled (D10 (a), E-59). If the status cannot be read, the
+  form stays usable and the server decides.
+- Status region: one `role="status"` line with the changes of state only ("Searching for sources…", "Writing the
+  answer…", "Done", "Cancelled"), never every piece of text. No focus changes on a change of state.
+- The answer (`answer/AnswerCard.tsx`) is an `article` named "Answer". While it streams it has `aria-busy="true"`,
+  no `aria-live` and no typing animation, and its numbers are plain text. After `done` the checked text replaces the
+  pieces (D9). The text is rendered as text only (no HTML, no Markdown, no links of its own, never through i18next).
+  `answer/answerText.ts` cuts it into text and source numbers (`[2]`, `[2, 3]`, `[2; 3]`, as the citation check of the
+  server reads them). A number becomes a link to `#source-n` only if `cited` of `done` holds it and the source is
+  evidence; its name is "Source 2: <title>, page 14" ("pages 3–4"; a Markdown source names its headings instead of
+  the page). A click focuses the source card (`tabIndex={-1}`) without changing the address. `removed_sentences` above
+  0 adds the line "Statements without evidence were removed." (D8 (c)), without the removed text.
+- Sources (`answer/SourceList.tsx`): an `ol` named "Sources" with the sources the answer cites, in the order of their
+  numbers; sources that were given to the model but not cited are left out (they back no statement). A card shows
+  number, page or pages, heading path, the snippet of the server (already cut to 300 characters) and the places
+  (`../components/sources/`, `toSearchLocation()` of `answer/events.ts`). A source without page and without heading
+  path is no evidence: no link, and in the list the mark "Place without a page".
+- End states, each with icon and text: no evidence (icon `noEvidence`, the fixed sentence of the catalog in the
+  shown language whatever the server sent, no sources, a link to the search with the question, which enters the
+  address only on that click); contradiction (icon `contradiction`, a hint, and every cited source marked with a
+  border in `warning` and the text "Contradicting place": the server reports a contradiction only with at least two
+  cited sources); errors with `role="alert"` (`ErrorMessage` for API errors, a fixed text per code for an `error`
+  event and for a stream that broke off; the `detail` of an `error` event is not shown).
+- Tests: `AnswerPage.test.tsx` drives the stream with `fakeEventStream()` of `../test/fakeApi.ts` and the events of
+  `answer/testData.ts`; `../../e2e/answer-page.spec.ts` checks the page without a chat model in German and English.
 
 ## Ingest overview
 

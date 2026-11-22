@@ -1,0 +1,63 @@
+{
+  "title": "Ask",
+  "intro": "Ask a question about the ingested documents. The answer names its sources; without evidence in the documents there is no answer.",
+  "form": {
+    "label": "Ask a question",
+    "question": "Question",
+    "hint": "Ctrl+Enter sends the question; Enter starts a new line.",
+    "length": "{{length}} of {{max}} characters",
+    "tooLong": "At most {{max}} characters – please shorten the question.",
+    "submit": "Ask",
+    "submitting": "Answering…",
+    "cancel": "Cancel"
+  },
+  "state": {
+    "searching": "Searching for sources…",
+    "writing": "Writing the answer…",
+    "done": "Done",
+    "cancelled": "Cancelled"
+  },
+  "unavailable": {
+    "off": "The AI features are switched off, so there are no answers. The search still finds the places in the documents.",
+    "notAvailable": "Answers are not available at the moment. The search still finds the places in the documents.",
+    "toSearch": "Go to the search"
+  },
+  "answer": {
+    "label": "Answer",
+    "provisional": "Provisional, not checked yet",
+    "checked": "Answer with checked sources",
+    "contradiction": "Answer with contradicting sources",
+    "cancelled": "Cancelled – this text was not checked.",
+    "removed": "Statements without evidence were removed."
+  },
+  "noEvidence": {
+    "text": "I can't find anything on this in the documents.",
+    "search": "Search the documents for this question"
+  },
+  "contradiction": {
+    "text": "The documents contradict each other. Compare the marked places.",
+    "place": "Contradicting place"
+  },
+  "sources": {
+    "label": "Sources",
+    "source": "Source {{n}}",
+    "withoutPage": "Place without a page"
+  },
+  "citation": {
+    "page": "page {{page}}",
+    "pages": "pages {{start}}–{{end}}"
+  },
+  "error": {
+    "interrupted": "The connection broke off before the answer was complete. Please ask again.",
+    "inProgress": "Another answer of yours is still running. Please wait until it is complete.",
+    "tooMany": "Too many questions in a short time. Please wait a moment and ask again.",
+    "code": "Code: {{code}}",
+    "stream": {
+      "model_unavailable": "The language model cannot be reached.",
+      "model_rejected": "The language model refused the request.",
+      "timeout": "The answer took too long.",
+      "search_failed": "The search for sources failed.",
+      "internal": "The answer failed because of an internal error."
+    }
+  }
+}

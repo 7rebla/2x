@@ -32,6 +32,7 @@ const pages = {
   audit: lazyPage(async () => (await import("./pages/AuditPage.tsx")).AuditPage),
   selftest: lazyPage(async () => (await import("./pages/SelftestPage.tsx")).SelftestPage),
   settings: lazyPage(async () => (await import("./pages/SettingsPage.tsx")).SettingsPage),
+  ask: lazyPage(async () => (await import("./pages/AnswerPage.tsx")).AnswerPage),
 };
 
 /** Loads the code of every page that is loaded on demand (tests, so the first render needs no extra wait). */
@@ -70,6 +71,8 @@ export const routes: RouteObject[] = [
               { path: "selftest", element: guarded("/selftest", pages.selftest.element) },
               // Reached from the user menu (work order 070); no entry in navigation.ts, so role "read".
               { path: "settings", element: guarded("/settings", pages.settings.element) },
+              // Answers (work order 132); the navigation entry follows with work order 134, until then role "read".
+              { path: "ask", element: guarded("/ask", pages.ask.element) },
               { path: "*", element: <NotFound /> },
             ],
           },

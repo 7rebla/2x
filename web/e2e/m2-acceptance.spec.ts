@@ -478,7 +478,7 @@ function pageText(hit: SearchHit): string {
   if (hit.page_start === null) {
     return "";
   }
-  // As the search page writes it (pageRange in web/src/pages/search/snippet.ts).
+  // As the search page writes it (pageRange in web/src/components/sources/snippet.ts).
   return hit.page_end === null || hit.page_end <= hit.page_start
     ? `p. ${String(hit.page_start)}`
     : `pp. ${String(hit.page_start)}–${String(hit.page_end)}`;
