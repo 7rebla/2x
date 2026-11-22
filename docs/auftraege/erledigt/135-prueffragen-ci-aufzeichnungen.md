@@ -1,6 +1,6 @@
 # Auftrag 135 – Prüffragen in der CI mit Aufzeichnungen
 
-Meilenstein: M3 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: C · Status: erledigt
 
 Voraussetzungen: 121 (Chat-Schnittstelle, `FakeChatModel`), 122 (Typen, `build_messages`, `new_nonce`, `prompt_version`), 123 (Zitatprüfung), 125 (Kontextauswahl), 126 (Antwortdienst), 127 (Urteilsregeln von `evaluate_answers`). Start erst, wenn diese Aufträge auf `main` zusammengeführt sind und a7 D6 und D16 entschieden hat. Weil 135 die Urteilsfunktionen aus 127 nutzt und beide denselben Abschnitt „What CI does not run“ in `docs/ARCHITECTURE.md` ändern, startet 135 erst in Welle 5, nach dem Zusammenführen von 127, und nicht parallel dazu. Die Leitstelle berichtigt dazu die Gesamtplanung (Welle 4) und den Hinweis zu parallelen Aufträgen in 130.
 

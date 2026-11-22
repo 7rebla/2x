@@ -238,7 +238,7 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 132 | Seite Auskunft mit Quellenanzeige | B | 131 | offen |
 | 133 | Eingrenzen auf Gerät und Anlage | B | 132 | offen |
 | 134 | Navigation Auskunft | C | 132 | offen |
-| 135 | Prüffragen in der CI mit Aufzeichnungen | C | 126, 127 | in Arbeit |
+| 135 | Prüffragen in der CI mit Aufzeichnungen | C | 126, 127 | erledigt |
 | 136 | Beleg für Prüffrage 8 | C | 120 | erledigt |
 | 137 | Abnahmetests M3 und Browserfluss | B | 127, 130, 133, 134 | offen |
 | 138 | Abnahmelauf M3 | C | 128, 135, 136, 137 | offen |
