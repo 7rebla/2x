@@ -1,20 +1,27 @@
 """The management command ``embed_sections`` (work order 048).
 
+The last tests check the field ``ingest`` of the files API (051) after an
+embedding job, with the AI features on and off (work order 061).
+
 The task ``twox.ingest.embed`` is recorded instead of sent; no test reaches a
 broker or a model service (``isolated_services``).
 """
 
 from io import StringIO
 from pathlib import Path
+from typing import Any
 
 import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from pytest_django.fixtures import DjangoCaptureOnCommitCallbacks, Settings
+from rest_framework.test import APIClient
 
 from tests.accounts.users import TEST_PASSWORD, make_user
+from tests.files.helpers import client_for
 from tests.ingest.fake_converter import (
     FAKE_MODEL,
+    FakeEmbedder,
     add_sections,
     install_embedder,
     isolated_services,
@@ -22,9 +29,12 @@ from tests.ingest.fake_converter import (
     vector_for,
 )
 from twox.accounts.models import User
+from twox.answers.embeddings import EmbeddingUnavailableError
 from twox.files.models import DocumentVersion
+from twox.files.storage import key_for_sha256
 from twox.ingest import pipeline, tasks
-from twox.ingest.models import IngestJob, IngestStatus, IngestStep, Section
+from twox.ingest.docling import ConversionErrorItem
+from twox.ingest.models import IngestErrorCode, IngestJob, IngestStatus, IngestStep, Section
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("isolated_services")]
 
@@ -322,3 +332,270 @@ def test_all_computes_again_for_two_versions_of_the_same_content(
     assert len(vectors) == 6
     assert vector_for(999) not in vectors
     assert {job.status for job in embed_jobs()} == {IngestStatus.DONE}
+
+
+# --- the field ingest of the files API after an embedding job (work order 061) ---
+
+#: A partial-conversion note exactly as the ingest flow writes it (046).
+PARTIAL_NOTE = pipeline._partial_detail(
+    (ConversionErrorItem(component_type="model", module_name="ocr", error_message="x", page_no=3),)
+)
+
+#: Fields of ``ingest`` in which an embedding job shows its conversion as before.
+CONVERSION_FIELDS = ("partly_converted", "page_count", "section_count", "error_detail")
+
+
+@pytest.fixture(params=[True, False], ids=["ai_on", "ai_off"])
+def embedder(
+    request: pytest.FixtureRequest,
+    settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_services: Path,
+) -> FakeEmbedder | None:
+    """The embedding stand-in with the AI features on; ``None`` with them off (E-59)."""
+    if request.param:
+        return install_embedder(monkeypatch, settings)
+    return None
+
+
+def converted(
+    version: DocumentVersion, *, pages: int | None, detail: str = "", sections: int = 3
+) -> IngestJob:
+    """A finished conversion of ``version`` with a stored answer, as the ingest flow leaves it.
+
+    With ``sections=0`` the version keeps the sections it has.
+    """
+    if sections:
+        job = add_sections(version, sections)
+    else:
+        job = IngestJob.objects.create(
+            document_version=version, status=IngestStatus.DONE, step=IngestStep.SECTIONS
+        )
+    IngestJob.objects.filter(pk=job.pk).update(
+        page_count=pages,
+        error_detail=detail,
+        section_count=Section.objects.filter(document_version=version).count(),
+        result_blob_key=key_for_sha256(version.sha256),
+    )
+    return job
+
+
+def ingest_state(client: APIClient, version: DocumentVersion) -> dict[str, Any]:
+    """The field ``ingest`` of the newest version in the document detail (051)."""
+    response = client.get(f"/api/v1/documents/{version.document_id}/")
+    assert response.status_code == 200
+    state: dict[str, Any] = response.json()["latest_version"]["ingest"]
+    return state
+
+
+def embed_with_command(
+    client: APIClient,
+    version: DocumentVersion,
+    manager: User,
+    sent: SentEmbeds,
+    capture: DjangoCaptureOnCommitCallbacks,
+    *,
+    ai: bool,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Run ``embed_sections --commit``, then the task as the worker would.
+
+    Returns the field ``ingest`` after the command and after the worker.
+    """
+    with capture(execute=True):
+        output = run("--user", manager.username, "--commit")
+    queued = ingest_state(client, version)
+    if not ai:
+        assert output.startswith("DISABLED:")
+        assert sent == []
+        return queued, ingest_state(client, version)
+    [job_id] = sent
+    for _ in range(20):
+        if pipeline.embed(job_id).embed_after is None:
+            break
+    else:
+        pytest.fail("the embedding job never ended")
+    return queued, ingest_state(client, version)
+
+
+def same_conversion(state: dict[str, Any], before: dict[str, Any]) -> bool:
+    return all(state[name] == before[name] for name in CONVERSION_FIELDS)
+
+
+def test_embedding_after_a_partial_conversion_keeps_the_note_and_the_pages(
+    embedder: FakeEmbedder | None,
+    manager: User,
+    sent: SentEmbeds,
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+) -> None:
+    version = make_version(b"partly converted")
+    conversion = converted(version, pages=60, detail=PARTIAL_NOTE)
+    client = client_for("read")
+    before = ingest_state(client, version)
+    assert (before["id"], before["status"]) == (conversion.pk, "done")
+    assert (before["partly_converted"], before["page_count"]) == (True, 60)
+
+    queued, done = embed_with_command(
+        client, version, manager, sent, django_capture_on_commit_callbacks, ai=embedder is not None
+    )
+
+    if embedder is None:
+        # E-59: no embedding job; nothing changes.
+        assert queued == done == before
+        return
+    [job] = embed_jobs()
+    assert (job.page_count, job.error_detail) == (60, PARTIAL_NOTE)
+    assert (queued["id"], queued["status"], queued["step"]) == (job.pk, "queued", "embed")
+    assert (queued["page_count"], queued["error_detail"]) == (60, PARTIAL_NOTE)
+    assert (done["id"], done["status"], done["step"]) == (job.pk, "done", "embed")
+    assert same_conversion(done, before)
+    assert done["partly_converted"] is True
+    assert len(embedder.texts) == 3
+
+
+def test_embedding_after_a_complete_conversion_shows_no_note(
+    embedder: FakeEmbedder | None,
+    manager: User,
+    sent: SentEmbeds,
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+) -> None:
+    version = make_version(b"converted twice")
+    # An older partial conversion, a newer complete one: the newer one counts.
+    converted(version, pages=59, detail=PARTIAL_NOTE)
+    converted(version, pages=60, sections=0)
+    # Neither a failed conversion nor a skipped job is a finished conversion.
+    IngestJob.objects.create(
+        document_version=version,
+        status=IngestStatus.FAILED,
+        step=IngestStep.CONVERT,
+        error_code=IngestErrorCode.DOCLING_UNAVAILABLE,
+        error_detail="docling-serve refused the connection",
+        page_count=7,
+    )
+    client = client_for("read")
+    before = ingest_state(client, version)
+
+    queued, done = embed_with_command(
+        client, version, manager, sent, django_capture_on_commit_callbacks, ai=embedder is not None
+    )
+
+    if embedder is None:
+        assert queued == done == before
+        assert before["status"] == "failed"
+        return
+    [job] = embed_jobs()
+    assert (job.page_count, job.error_detail) == (60, "")
+    assert (done["id"], done["status"], done["error_code"]) == (job.pk, "done", "")
+    assert (done["page_count"], done["section_count"]) == (60, 3)
+    assert (done["error_detail"], done["partly_converted"]) == ("", False)
+
+
+def test_embedding_after_a_conversion_whose_embedding_failed_takes_its_pages(
+    embedder: FakeEmbedder | None,
+    manager: User,
+    sent: SentEmbeds,
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+) -> None:
+    # The common case for embed_sections: the conversion worked, the
+    # embedding failed. The job keeps answer and pages (pipeline._fail); its
+    # detail is the embedding error. An older finished conversion must not win.
+    version = make_version(b"embedding failed")
+    converted(version, pages=59, detail=PARTIAL_NOTE)
+    failed = converted(version, pages=60, sections=0)
+    IngestJob.objects.filter(pk=failed.pk).update(
+        status=IngestStatus.FAILED,
+        step=IngestStep.EMBED,
+        error_code=IngestErrorCode.EMBEDDING_UNAVAILABLE,
+        error_detail="no answer from the model service (gave up after 5 retries)",
+    )
+    client = client_for("read")
+    before = ingest_state(client, version)
+    assert (before["id"], before["status"], before["page_count"]) == (failed.pk, "failed", 60)
+
+    queued, done = embed_with_command(
+        client, version, manager, sent, django_capture_on_commit_callbacks, ai=embedder is not None
+    )
+
+    if embedder is None:
+        assert queued == done == before
+        return
+    [job_id] = sent
+    job = IngestJob.objects.get(pk=job_id)
+    # Pages of the newer conversion; neither the embedding error nor the
+    # note of the older conversion is taken over.
+    assert (job.page_count, job.error_detail) == (60, "")
+    assert (queued["status"], queued["page_count"], queued["error_code"]) == ("queued", 60, "")
+    assert (done["id"], done["status"], done["step"]) == (job.pk, "done", "embed")
+    assert (done["page_count"], done["section_count"]) == (60, 3)
+    assert (done["error_detail"], done["partly_converted"]) == ("", False)
+
+
+def test_embedding_after_a_failed_embedding_keeps_the_partial_note(
+    embedder: FakeEmbedder | None,
+    manager: User,
+    sent: SentEmbeds,
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+) -> None:
+    # An embedding job of embed_sections that failed has no stored answer of
+    # its own: the conversion before it still counts, with its note.
+    version = make_version(b"partly converted, embedding failed once")
+    converted(version, pages=60, detail=PARTIAL_NOTE)
+    IngestJob.objects.create(
+        document_version=version,
+        status=IngestStatus.FAILED,
+        step=IngestStep.EMBED,
+        error_code=IngestErrorCode.EMBEDDING_UNAVAILABLE,
+        error_detail="no answer from the model service (gave up after 5 retries)",
+        page_count=60,
+        section_count=3,
+    )
+    client = client_for("read")
+    before = ingest_state(client, version)
+
+    queued, done = embed_with_command(
+        client, version, manager, sent, django_capture_on_commit_callbacks, ai=embedder is not None
+    )
+
+    if embedder is None:
+        assert queued == done == before
+        return
+    [job_id] = sent
+    job = IngestJob.objects.get(pk=job_id)
+    assert (job.page_count, job.error_detail) == (60, PARTIAL_NOTE)
+    assert (done["id"], done["status"]) == (job.pk, "done")
+    assert (done["partly_converted"], done["page_count"]) == (True, 60)
+
+
+def test_failed_embedding_shows_as_failed_embedding_with_its_sections(
+    embedder: FakeEmbedder | None,
+    manager: User,
+    sent: SentEmbeds,
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+) -> None:
+    version = make_version(b"model service down")
+    converted(version, pages=60, detail=PARTIAL_NOTE)
+    if embedder is not None:
+        # Unreachable every time: the job fails once the retries are used up.
+        embedder.errors = [EmbeddingUnavailableError("no answer from the model service")] * 20
+    client = client_for("read")
+    before = ingest_state(client, version)
+
+    queued, done = embed_with_command(
+        client, version, manager, sent, django_capture_on_commit_callbacks, ai=embedder is not None
+    )
+
+    if embedder is None:
+        assert queued == done == before
+        assert Section.objects.filter(document_version=version).count() == 3
+        return
+    [job] = embed_jobs()
+    assert done["id"] == job.pk
+    # Not a failed ingest: the step and the code name the embedding.
+    assert (done["status"], done["step"]) == ("failed", "embed")
+    assert done["error_code"] == "embedding_unavailable"
+    assert "gave up after" in done["error_detail"]
+    assert done["partly_converted"] is False
+    # The sections are there; the keyword search keeps working (E-59).
+    assert (done["section_count"], done["page_count"]) == (3, 60)
+    assert Section.objects.filter(document_version=version).count() == 3
+    assert not Section.objects.filter(embedding__isnull=False).exists()
+    assert embedder.texts == []
