@@ -1,6 +1,6 @@
 # Auftrag 126 – Antwortdienst und Befehl `ask`
 
-Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 
