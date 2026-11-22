@@ -208,8 +208,10 @@ describe("buildMapGraph", () => {
       key: "test-plc-1",
       ip: "192.0.2.10",
       model: "Test model",
+      deviceClass: "plc",
       network: "192.0.2.0/24",
     });
+    expect(nodeById(graph, "device:1003").data).toMatchObject({ deviceClass: "other" });
     expect(nodeById(graph, "network:192.0.2.0/24").data).toEqual({
       kind: "network",
       cidr: "192.0.2.0/24",

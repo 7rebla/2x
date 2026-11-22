@@ -122,12 +122,12 @@ describe("map page", () => {
     ]);
     const controller = deviceNode(/^Device Test controller \(test-plc-1\)/);
     expect(controller.getAttribute("aria-label")).toBe(
-      "Device Test controller (test-plc-1), 192.0.2.10 in network 192.0.2.0/24, opens the device page",
+      "Device Test controller (test-plc-1), PLC, 192.0.2.10 in network 192.0.2.0/24, opens the device page",
     );
     expect(within(controller).getByTestId("map-device").textContent).toBe(
       "Test controllertest-plc-1192.0.2.10Test model",
     );
-    expect(deviceNode(/^Device Test remote I\/O \(test-io-1\), opens/)).toBeDefined();
+    expect(deviceNode(/^Device Test remote I\/O \(test-io-1\), Other, opens/)).toBeDefined();
     expect(within(canvas).getAllByTestId("map-device")).toHaveLength(4);
     const network = within(canvas).getByTestId("map-network");
     expect(network.textContent).toBe("Network192.0.2.0/24");
@@ -135,8 +135,15 @@ describe("map page", () => {
     // Every node shows the decorative icon of its kind (work order 071).
     expect(plants[0]?.querySelector("svg[aria-hidden='true']")?.getAttribute("data-icon")).toBe("plant");
     expect(within(canvas).getAllByTestId("map-site")[0]?.querySelector("svg")?.getAttribute("data-icon")).toBe("site");
-    expect(within(controller).getByTestId("map-device").querySelector("svg")?.getAttribute("data-icon")).toBe("device");
     expect(network.querySelector("svg")?.getAttribute("data-icon")).toBe("network");
+    // Devices show the icon of their class, the class written out as tooltip (work order 074).
+    const plcClass = within(controller).getByTestId("map-device-class");
+    expect(plcClass.getAttribute("title")).toBe("PLC");
+    expect(plcClass.querySelector("svg[aria-hidden='true']")?.getAttribute("data-icon")).toBe("devicePlc");
+    expect(within(controller).getByTestId("map-device").getAttribute("data-device-class")).toBe("plc");
+    const other = within(deviceNode(/^Device Test remote I\/O/)).getByTestId("map-device-class");
+    expect(other.getAttribute("title")).toBe("Other");
+    expect(other.querySelector("svg")?.getAttribute("data-icon")).toBe("device");
     // Controls and overview with their own names; the list view stays reachable.
     // "Fit view" is the button above the map, with its icon (the one of React Flow is off).
     expect(screen.getByRole("button", { name: "Fit view" }).querySelector("svg")?.getAttribute("data-icon")).toBe("fitView");
@@ -292,7 +299,8 @@ describe("map page", () => {
     expect(screen.getByLabelText("Auf der Karte suchen")).toBeDefined();
     expect(screen.getByLabelText("Netze anzeigen")).toBeDefined();
     expect(screen.getByRole("button", { name: "Ansicht einpassen" })).toBeDefined();
-    expect(deviceNode(/^Gerät Test drive \(test-drive-1\), 192\.0\.2\.20 im Netz 192\.0\.2\.0\/24/)).toBeDefined();
+    expect(deviceNode(/^Gerät Test drive \(test-drive-1\), Sonstiges, 192\.0\.2\.20 im Netz 192\.0\.2\.0\/24/)).toBeDefined();
+    expect(within(deviceNode(/^Gerät Test controller/)).getByTestId("map-device-class").getAttribute("title")).toBe("SPS");
     expect(screen.getByTestId("map-network").textContent).toBe("Netz192.0.2.0/24");
     expect(screen.getByTestId("map-list-link").textContent).toBe("Struktur als Liste ansehen");
   });

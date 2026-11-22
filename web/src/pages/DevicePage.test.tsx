@@ -62,6 +62,7 @@ describe("device page", () => {
     expect(field("plant")).toBe("Test plant one (test-plant-1)");
     expect(field("key")).toBe("test-plc-1");
     expect(field("name")).toBe("Test controller");
+    expect(field("device_class")).toBe("PLC");
     expect(field("manufacturer")).toBe("Test maker");
     expect(field("model")).toBe("Test model");
     expect(field("software_version")).toBe("1.0.0");
@@ -78,6 +79,7 @@ describe("device page", () => {
       "Plant",
       "Key",
       "Name",
+      "Device class",
       "Manufacturer",
       "Model",
       "Software version",
@@ -92,6 +94,28 @@ describe("device page", () => {
     const files = screen.getByTestId("device-files");
     expect(within(files).getByRole("heading", { level: 3 }).textContent).toBe("Files");
     expect(files.getAttribute("data-device-id")).toBe("1000");
+  });
+
+  it("shows the icon of the device class in the heading and the breadcrumb, the class as text", async () => {
+    fakeApi(reader, fakeStructureApi().handler);
+    renderApp("/devices/1000");
+    await deviceHeading("Test controller");
+
+    const iconOf = (element: HTMLElement): string | null | undefined =>
+      element.querySelector("svg[aria-hidden='true']")?.getAttribute("data-icon");
+    expect(iconOf(screen.getByTestId("device-heading"))).toBe("devicePlc");
+    expect(iconOf(screen.getByTestId("breadcrumb-device"))).toBe("devicePlc");
+    expect(iconOf(screen.getByTestId("breadcrumb-plant"))).toBe("plant");
+    expect(field("device_class")).toBe("PLC");
+    cleanup();
+
+    // Class "other": the generic device icon, the class still written out.
+    fakeApi(reader, fakeStructureApi().handler);
+    renderApp("/devices/1002");
+    await deviceHeading("Test remote I/O");
+    expect(iconOf(screen.getByTestId("device-heading"))).toBe("device");
+    expect(iconOf(screen.getByTestId("breadcrumb-device"))).toBe("device");
+    expect(field("device_class")).toBe("Other");
   });
 
   it("shows long free texts in full and with their line breaks", async () => {
@@ -128,9 +152,10 @@ describe("device page", () => {
     renderApp("/devices/1000");
     await deviceHeading("Test controller");
 
-    for (const label of ["Standort", "Bereich", "Anlage", "Kennung", "Softwarestand", "IP-Adresse", "Notizen"]) {
+    for (const label of ["Standort", "Bereich", "Anlage", "Kennung", "Gerätetyp", "Softwarestand", "IP-Adresse", "Notizen"]) {
       expect(screen.getAllByRole("term").map((term) => term.textContent)).toContain(label);
     }
+    expect(field("device_class")).toBe("SPS");
     expect(screen.getByRole("navigation", { name: "Ort des Geräts" })).toBeDefined();
     expect(within(screen.getByTestId("device-files")).getByRole("heading").textContent).toBe("Dateien");
   });

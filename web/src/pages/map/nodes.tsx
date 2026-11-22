@@ -1,12 +1,14 @@
 // Node components of the map. One uniform shape per kind, each with the icon
-// of its kind (work order 071); devices show the generic device icon until
-// work order 074 adds one per device class. Every text from the data is
-// rendered as text; the icons are decorative, the kind is also written out.
+// of its kind (work order 071); devices show the icon of their class (work
+// order 074). Every text from the data is rendered as text; the icons are
+// decorative, the kind is also written out and the device class is named in
+// the tooltip and in the label of the node.
 import { Handle, type NodeProps, type NodeTypes, Position } from "@xyflow/react";
 import type { ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Icon } from "../../icons/Icon.tsx";
+import { deviceClassIcon } from "../structure/deviceClass.ts";
 import type { DeviceNode, GroupKind, GroupNode, NetworkNode } from "./graph.ts";
 
 const GROUP_STYLE: Record<GroupKind, string> = {
@@ -49,18 +51,24 @@ function GroupNodeView({ data }: NodeProps<GroupNode>): ReactElement {
 }
 
 function DeviceNodeView({ data, selected }: NodeProps<DeviceNode>): ReactElement {
+  const { t } = useTranslation("assets");
   const active = selected || data.highlighted === true;
+  const className = t(`deviceClass.${data.deviceClass}`);
   return (
     <div
       data-testid="map-device"
       data-match={data.match === true ? "true" : undefined}
       data-highlighted={active ? "true" : undefined}
+      data-device-class={data.deviceClass}
       className={`flex h-full w-full cursor-pointer flex-col justify-center rounded-md border bg-surface px-3 py-2 shadow-sm ${
         active ? "border-fg border-2" : "border-line-strong"
       } ${matchRing(data.match)}`}
     >
       <div className="flex min-w-0 items-center gap-1.5 font-semibold text-fg">
-        <Icon name="device" className="text-fg-muted" decorative />
+        {/* The class as tooltip; the node's label (MapPage) names it for assistive technology. */}
+        <span title={className} data-testid="map-device-class" className="inline-flex shrink-0">
+          <Icon name={deviceClassIcon(data.deviceClass)} className="text-fg-muted" decorative />
+        </span>
         <span className="truncate" title={data.name}>
           {data.name}
         </span>

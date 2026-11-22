@@ -143,7 +143,7 @@ function minimapColor(node: MapNode): string {
 }
 
 function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
-  const { t } = useTranslation("map");
+  const { t } = useTranslation(["map", "assets"]);
   const navigate = useNavigate();
   const searchId = useId();
   const networksId = useId();
@@ -202,13 +202,20 @@ function MapCanvas({ graph }: { graph: MapGraph }): ReactElement {
         switch (node.type) {
           case "device": {
             const { data } = node;
+            const deviceClass = t(`assets:deviceClass.${data.deviceClass}`);
             return {
               ...node,
               ariaRole: "link",
               ariaLabel:
                 data.ip === null || data.network === null
-                  ? t("aria.device", { name: data.name, key: data.key })
-                  : t("aria.deviceWithIp", { name: data.name, key: data.key, ip: data.ip, network: data.network }),
+                  ? t("aria.device", { name: data.name, key: data.key, deviceClass })
+                  : t("aria.deviceWithIp", {
+                      name: data.name,
+                      key: data.key,
+                      deviceClass,
+                      ip: data.ip,
+                      network: data.network,
+                    }),
               // A device node acts as a link; React Flow's "node" description would hide that.
               domAttributes: { "aria-roledescription": undefined },
               data: { ...data, match, highlighted: highlightedDevices.has(data.deviceId) },

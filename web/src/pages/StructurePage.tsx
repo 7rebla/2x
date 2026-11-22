@@ -3,7 +3,7 @@ import { type ReactElement, type ReactNode, useDeferredValue, useId, useMemo, us
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import type { Area, Device, Plant, Site } from "../api/generated";
+import type { Area, Device, DeviceClassEnum, Plant, Site } from "../api/generated";
 import {
   areasListOptions,
   devicesListOptions,
@@ -16,6 +16,7 @@ import { Loading } from "../components/Loading.tsx";
 import { Icon } from "../icons/Icon.tsx";
 import type { IconName } from "../icons/names.ts";
 import { useRole } from "../session.ts";
+import { deviceClassIcon } from "./structure/deviceClass.ts";
 import { AreaForm, DeviceForm, PlantForm, SiteForm } from "./structure/forms.tsx";
 import { type AreaNode, buildTree, filterTree, type PlantNode, type SiteNode } from "./structure/tree.ts";
 
@@ -212,13 +213,26 @@ function Row({ children }: { children: ReactNode }): ReactElement {
   return <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">{children}</div>;
 }
 
-function KindLabel({ kind }: { kind: "site" | "area" | "plant" | "device" }): ReactElement {
+const KIND_LABEL_CLASS = "inline-flex items-center gap-1 self-center text-xs uppercase tracking-wide text-fg-muted";
+
+function KindLabel({ kind }: { kind: "site" | "area" | "plant" }): ReactElement {
   const { t } = useTranslation("assets");
   // The kind's icon (16 px) before its name; the icon name equals the kind.
   return (
-    <span className="inline-flex items-center gap-1 self-center text-xs uppercase tracking-wide text-fg-muted">
+    <span className={KIND_LABEL_CLASS}>
       <Icon name={kind} decorative />
       {t(`kind.${kind}`)}
+    </span>
+  );
+}
+
+/** A device row names its class (E-53) instead of the kind, with the icon of the class (work order 074). */
+function DeviceClassLabel({ deviceClass }: { deviceClass: DeviceClassEnum }): ReactElement {
+  const { t } = useTranslation("assets");
+  return (
+    <span data-testid="device-class" className={KIND_LABEL_CLASS}>
+      <Icon name={deviceClassIcon(deviceClass)} decorative />
+      {t(`deviceClass.${deviceClass}`)}
     </span>
   );
 }
@@ -368,7 +382,7 @@ function DeviceItem({ device }: { device: Device }): ReactElement {
   return (
     <li data-testid="device-item">
       <Row>
-        <KindLabel kind="device" />
+        <DeviceClassLabel deviceClass={device.device_class} />
         <Link to={`/devices/${String(device.id)}`} className="text-accent underline hover:text-accent-strong">
           {device.name}
         </Link>

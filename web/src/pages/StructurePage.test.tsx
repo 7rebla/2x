@@ -66,6 +66,31 @@ describe("structure tree", () => {
     ]);
   });
 
+  it("shows each device with the icon and the name of its class, each plant with the plant icon", async () => {
+    fakeApi(reader, fakeStructureApi().handler);
+    renderApp("/");
+    await openTree();
+
+    const iconOf = (element: Element | undefined): string | null | undefined =>
+      element?.querySelector("svg[aria-hidden='true']")?.getAttribute("data-icon");
+    const deviceRow = (name: string): HTMLElement => {
+      const row = screen
+        .getAllByTestId("device-item")
+        .find((element) => within(element).queryByRole("link", { name }) !== null);
+      if (row === undefined) {
+        throw new Error(`no device row ${name}`);
+      }
+      return row;
+    };
+    const plc = within(deviceRow("Test controller")).getByTestId("device-class");
+    expect(plc.textContent).toBe("PLC");
+    expect(iconOf(plc)).toBe("devicePlc");
+    const other = within(deviceRow("Test panel")).getByTestId("device-class");
+    expect(other.textContent).toBe("Other");
+    expect(iconOf(other)).toBe("device");
+    expect(iconOf(itemNamed("plant-item", "Test plant one"))).toBe("plant");
+  });
+
   it("shows the texts in German", async () => {
     await changeLanguage("de");
     fakeApi(reader, fakeStructureApi().handler);
@@ -77,6 +102,7 @@ describe("structure tree", () => {
     expect(countOf(itemNamed("area-item", "Test area A2"))).toBe("1 Gerät");
     expect(screen.getByLabelText("Suche")).toBeDefined();
     expect(screen.getAllByText("Standort")).toHaveLength(2);
+    expect(screen.getAllByTestId("device-class").map((element) => element.textContent)).toContain("SPS");
   });
 
   it("says so when there is no site yet", async () => {
