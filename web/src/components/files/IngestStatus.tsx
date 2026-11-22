@@ -170,11 +170,18 @@ export function IngestError({ job }: { job: IngestJobSummary | null }): ReactEle
 }
 
 /**
+ * What the retry button needs of a version: its id, its number and its newest
+ * known job. A DocumentVersion of the file API fits; the ingest overview (055)
+ * builds it from a row of GET /api/v1/ingest-jobs/.
+ */
+export type IngestRetryTarget = Pick<DocumentVersion, "id" | "number" | "ingest">;
+
+/**
  * Starts ingesting the version again (role "manage" only; the caller decides
  * who sees it). Hidden while a job is queued or running. A 409 (a job became
  * active meanwhile) and a 400 (configuration) are shown as messages.
  */
-export function IngestRetryButton({ version }: { version: DocumentVersion }): ReactElement {
+export function IngestRetryButton({ version }: { version: IngestRetryTarget }): ReactElement {
   const { t } = useTranslation("files");
   const queryClient = useQueryClient();
   const mutation = useMutation({
