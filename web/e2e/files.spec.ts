@@ -85,7 +85,14 @@ test("upload a file and a second version, download version 1, same content again
 
   const newFile = files.getByRole("form", { name: "Upload a new file" });
   await expect(newFile.getByTestId("upload-configuration-hint")).toBeVisible();
+  // The file chooser (work order 088): the button waits for a file and says so.
+  await expect(newFile.getByText("Choose file…")).toBeVisible();
+  await expect(newFile.getByTestId("file-input-name")).toHaveText("No file chosen");
+  await expect(newFile.getByRole("button", { name: "Upload" })).toBeDisabled();
+  await expect(newFile.getByTestId("upload-choose-first")).toHaveText("Choose a file first.");
   await newFile.getByLabel("File").setInputFiles(textUpload(fileName, firstContent));
+  await expect(newFile.getByTestId("file-input-name")).toHaveText(fileName);
+  await expect(newFile.getByTestId("upload-choose-first")).toHaveCount(0);
   await newFile.getByLabel("Title").fill(title);
   await newFile.getByRole("button", { name: "Upload" }).click();
   await expect(newFile.getByTestId("upload-success")).toHaveText("Uploaded as version 1.");
@@ -105,9 +112,12 @@ test("upload a file and a second version, download version 1, same content again
   await expect(page.getByTestId("document-device").getByRole("link")).toContainText(deviceName);
 
   const newVersion = page.getByRole("form", { name: "Upload a new version" });
+  await expect(newVersion.getByRole("button", { name: "Upload" })).toBeDisabled();
   await newVersion.getByLabel("File").setInputFiles(textUpload(fileName, secondContent));
   await newVersion.getByRole("button", { name: "Upload" }).click();
   await expect(newVersion.getByTestId("upload-success")).toHaveText("Uploaded as version 2.");
+  // After the upload the chooser is empty again.
+  await expect(newVersion.getByTestId("file-input-name")).toHaveText("No file chosen");
 
   const versions = page.getByTestId("document-version");
   await expect(versions.getByTestId("version-number")).toHaveText(["2", "1"]);

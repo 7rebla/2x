@@ -95,7 +95,12 @@ test("a manager checks a CSV file in a dry run, applies it and finds the devices
   await page.goto("/import");
   await expect(page.getByRole("heading", { level: 2 })).toHaveText("Import");
   await expect(page.getByTestId("import-columns")).toHaveText(COLUMNS.join(","));
+  // The file chooser (work order 088): the dry run waits for a file and says so.
+  await expect(page.getByRole("button", { name: "Start dry run" })).toBeDisabled();
+  await expect(page.getByTestId("import-choose-first")).toHaveText("Choose a file first.");
   await chooseCsv(page, csv(rows));
+  await expect(page.getByTestId("file-input-name")).toHaveText("devices.csv");
+  await expect(page.getByTestId("import-choose-first")).toHaveCount(0);
   await page.getByRole("button", { name: "Start dry run" }).click();
 
   // The dry run: two new devices, one new site, area and plant, nothing saved.
@@ -233,6 +238,35 @@ test("an unknown device class is an error at its line and column", async ({ page
   await page.goto("/");
   await page.getByLabel("Search", { exact: true }).fill(site);
   await expect(nothingFound(page)).toBeVisible();
+
+  expect(consoleErrors, "errors in the browser console").toEqual([]);
+});
+
+test("a CSV file dropped on the file chooser goes into the dry run", async ({ page }) => {
+  const consoleErrors = collectConsoleErrors(page);
+  const { rows } = twoDevices();
+
+  await page.goto("/import");
+  const zone = page.getByLabel("CSV file", { exact: true }).locator("..");
+  // A drop as the browser sends it: a DataTransfer holding one file.
+  const dataTransfer = await page.evaluateHandle(
+    (content) => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([content], "dropped.csv", { type: "text/csv" }));
+      return transfer;
+    },
+    csv(rows),
+  );
+  await zone.dispatchEvent("dragover", { dataTransfer });
+  await expect(zone).toHaveAttribute("data-dragging", "true");
+  await zone.dispatchEvent("drop", { dataTransfer });
+
+  await expect(page.getByTestId("file-input-name")).toHaveText("dropped.csv");
+  await expect(zone).not.toHaveAttribute("data-dragging");
+  await page.getByRole("button", { name: "Start dry run" }).click();
+  await expect(page.getByTestId("import-count-devices-created")).toHaveText("2");
+  // Only the dry run; nothing is applied.
+  await expect(page.getByRole("button", { name: "Apply" })).toBeVisible();
 
   expect(consoleErrors, "errors in the browser console").toEqual([]);
 });
