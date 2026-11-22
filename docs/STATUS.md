@@ -171,9 +171,9 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 079 | Tabellen am Desktop lesbar | B | 077 | erledigt |
 | 080 | Einheitliches Seitenraster (E-65) | C (entschieden) | 077 | erledigt |
 | 081 | Tabellen auf schmalen Bildschirmen als Karten (E-65) | C (entschieden) | 079 | erledigt |
-| 082 | Navigation unter 1280 px (E-65) | C (entschieden) | 080 | in Arbeit |
+| 082 | Navigation unter 1280 px (E-65) | C (entschieden) | 080 | erledigt |
 | 083 | Strukturbaum entrümpeln (E-65) | C (entschieden) | 077 | erledigt |
-| 084 | Schriftgröße der Metadaten (E-65) | C (entschieden) | 077, 079, 083 | offen |
+| 084 | Schriftgröße der Metadaten (E-65) | C (entschieden) | 077, 079, 083 | in Arbeit |
 | 085 | Überschriften-Animation zurücknehmen (E-65) | C (entschieden) | 076 | erledigt |
 | 086 | Anmeldeseite als zentrierte Karte (E-65) | C (entschieden) | 077, 080 | erledigt |
 | 087 | Suchtreffer kompakter | B | 077 | erledigt |
@@ -184,12 +184,13 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 092 | Wackeligen e2e-Test des Strukturbaums stabilisieren | B | 083 | erledigt |
 
 - 078/079/083/085/087/088 zusammengeführt am 22.11.2026. Lücke aus 078: Die Seite „keine Berechtigung“ (RequireRole) hat weder Seitentitel noch h1 – Auftrag 091.
-- Reihenfolge: 080, 081, 086, 089, 091 und 092 erledigt; 082 in Nachbesserung; zuletzt 084 (berührt fast alle Seiten).
+- Reihenfolge: alle außer 084 erledigt; 084 (berührt fast alle Seiten) läuft.
 - 080: Hinweise aus der Prüfung – der Warnkasten der Seite „keine Berechtigung“ (091) ist jetzt auf Lesebreite begrenzt (gewollt gelassen). Gesehen vom Bearbeiter: Übersichtskarte (MiniMap) bei vielen Knoten fast leer und bei 375 px groß; Einpassen großer Strukturen zeigt die Mitte – Kandidaten für einen späteren Auftrag.
 - 081: Kartenansicht unter 768 px (E-65). Zwischen 768 und etwa 900 px scrollen Protokoll, Einlesen und Dateien noch im eigenen Kasten (Seite scrollt nicht); Grenze ließe sich mit `WIDE_TABLE_QUERY` auf 1024 px setzen – a7 gefragt, bis dahin 768 px.
 - 086: Name über der Karte steht still und ist für Screenreader verborgen (nur der Kopf tippt, E-64); `BrandMark` hat dafür `link={false}`.
 - 089: Ergebniszahl als höfliche Statusregion über Protokoll und Einlesen (ersetzt die Gesamtzahl unter der Liste), Brotkrumen auf der Dateiseite (Baustein auch auf der Geräteseite, Struktur-Icon jetzt Teil des Links), „Nur teilweise umgewandelt“ auch bei gescheiterten und Einbett-Aufträgen (Nachtrag 068).
 - 092: Ursache des wackeligen Spaltentests war ein Umbruch des zufälligen Testgerätenamens bei 1024 px (14 px = Versatz bei zweizeiligem Namen; 16 von 20 000 Namen). Testnamen kürzer, Messung im gesetzten Zustand und in einem Schritt; Grenzen unverändert.
+- 082: 768–1279 px Icon mit Kurztext (13 px, E-65 Punkt 5), unter 768 px Menüknopf; Menü schließt auch beim Verlassen per Tab. de-Kurztexte „Karte“ und „Protokoll“ sind nur Wortteile des vollen Namens (Breite), siehe pages/README.
 
 ## M2 – Einlesen und Suche (freigegeben 22.11.2026, E-54; abgenommen 22.11.2026, E-67)
 

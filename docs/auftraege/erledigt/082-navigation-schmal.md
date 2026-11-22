@@ -1,6 +1,6 @@
 # Auftrag 082 – Navigation unter 1280 px
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: C (entschieden mit E-65) · Status: zur Prüfung
+Meilenstein: Gestaltung (D1) · Freigabestufe: C (entschieden mit E-65) · Status: erledigt
 
 Voraussetzung: 080 ist auf `main`.
 
