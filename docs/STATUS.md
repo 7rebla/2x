@@ -183,9 +183,10 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 091 | Seite „keine Berechtigung“ mit Titel und h1 | B | 078 | erledigt |
 | 092 | Wackeligen e2e-Test des Strukturbaums stabilisieren | B | 083 | erledigt |
 | 093 | Landkarten-e2e-Test unabhängig von Altdaten | B | 080 | erledigt |
+| 094 | Beschriftung der Netzlinien auf der Landkarte nach E-65 | B | 084 | in Arbeit |
 
 - 078/079/083/085/087/088 zusammengeführt am 22.11.2026. Lücke aus 078: Die Seite „keine Berechtigung“ (RequireRole) hat weder Seitentitel noch h1 – Auftrag 091.
-- Reihenfolge: 078–092 erledigt; 093 läuft; danach Folgeauftrag Netzlinien-Beschriftung (s. 084).
+- Reihenfolge: 078–093 erledigt; 094 (Netzlinien-Beschriftung) läuft.
 - 080: Hinweise aus der Prüfung – der Warnkasten der Seite „keine Berechtigung“ (091) ist jetzt auf Lesebreite begrenzt (gewollt gelassen). Gesehen vom Bearbeiter: Übersichtskarte (MiniMap) bei vielen Knoten fast leer und bei 375 px groß; Einpassen großer Strukturen zeigt die Mitte – Kandidaten für einen späteren Auftrag.
 - 081: Kartenansicht unter 768 px (E-65). Zwischen 768 und etwa 900 px scrollen Protokoll, Einlesen und Dateien noch im eigenen Kasten (Seite scrollt nicht); Grenze ließe sich mit `WIDE_TABLE_QUERY` auf 1024 px setzen – a7 gefragt, bis dahin 768 px.
 - 086: Name über der Karte steht still und ist für Screenreader verborgen (nur der Kopf tippt, E-64); `BrandMark` hat dafür `link={false}`.
