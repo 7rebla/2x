@@ -128,7 +128,7 @@ Keine.
 2. **Abschnitte, die eine Kennung nur wörtlich enthalten** (in keiner der beiden Listen), bleiben bei Fragen in der Trefferliste, mit Wert 0 am Ende. Grund: `match_kinds` soll `exact` weiter zeigen, und kein Treffer soll verschwinden. Bei genug Vektortreffern (50) fallen sie praktisch unter die Grenze `limit`.
 3. **Seitenabgleich mit dem Docling-Image:** Das `backend-dev`-Image hat keine PDF-Bibliothek. Ich habe die PDF-Bibliothek des Docling-Images benutzt, das in `compose.yaml` steht (ohne Netz, nur lesend eingebunden). Beim ersten Aufruf fehlte die Angabe der Version, deshalb hat Docker das Image einmal als `:latest` geladen; dieses zusätzliche Image habe ich sofort wieder entfernt. Das festgelegte Image ist unverändert.
 4. Lokal bleiben die Images `twox-067-*`; die ignorierte `.env` hat `TWOX_API_PORT=18067`.
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+### Nachmessung der Leitstelle (22.11.2026)
+
+Testumgebung „2x“ mit allen Handbüchern, bge-m3, 2 000 Zeichen; `evaluate_search` mit Probe und `postgres.py` dieses Zweigs. Kombinierter Rang der ersten richtigen Fundstelle (vorher nach 063 → jetzt): ip-ccu 4 → 2 (en S. 38); ip-drill-plc 11 → 10; question-1 4 → 1; question-3 – → –; question-7 – → 7; question-9 12 → 1; question-10 3 → 1. Kombiniert: Recall@5 0,429 → 0,571, Recall@10 0,429 → 0,857, MRR 0,144 → 0,535.
