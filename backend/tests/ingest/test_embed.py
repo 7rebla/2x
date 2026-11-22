@@ -15,10 +15,12 @@ from django.core.management import call_command
 from django.core.management.base import SystemCheckError
 from pytest_django.fixtures import Settings
 
+from tests.conftest import IngestMessages
 from tests.ingest.fake_converter import (
     FAKE_MODEL,
     FakeConverter,
     FakeEmbedder,
+    NoDocling,
     add_sections,
     install_embedder,
     isolated_services,
@@ -36,7 +38,7 @@ from twox.answers.embeddings import (
     EmbeddingUnavailableError,
 )
 from twox.files.models import DocumentVersion
-from twox.ingest import checks, pipeline
+from twox.ingest import checks, pipeline, tasks
 from twox.ingest.models import EMBEDDING_DIMENSIONS, IngestJob, IngestStatus, IngestStep, Section
 from twox.ingest.pipeline import Outcome, StepResult
 
@@ -612,14 +614,51 @@ def test_stray_poll_or_convert_does_not_touch_a_job_in_the_step_embed(
     )
     queued = make_embed_job(make_version(b"other", device="hbw-plc"))
 
-    assert pipeline.poll(job.pk, converter=FakeConverter()) == StepResult(Outcome.IGNORED)
-    assert pipeline.convert(queued.pk, converter=FakeConverter()) == StepResult(Outcome.IGNORED)
+    # Review of 048: if the message embed was lost, such a message schedules
+    # embed again instead of being dropped (embed only does what is missing).
+    again = StepResult(Outcome.EMBEDDING, embed_after=0)
+    assert pipeline.poll(job.pk, converter=NoDocling()) == again
+    assert pipeline.convert(job.pk, converter=NoDocling()) == again
+    assert pipeline.convert(queued.pk, converter=NoDocling()) == again
 
     job.refresh_from_db()
     queued.refresh_from_db()
     assert (job.status, job.step) == (IngestStatus.RUNNING, IngestStep.EMBED)
     assert (queued.status, queued.step) == (IngestStatus.QUEUED, IngestStep.EMBED)
     assert embedded_ordinals(version) == [0]
+    assert Section.objects.filter(document_version=version).count() == job.section_count
+
+
+def test_stray_message_for_a_job_in_the_step_embed_ends_it_when_ai_is_off(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # E-59: without AI there is no task embed to schedule.
+    install_embedder(monkeypatch, settings)
+    job = make_job(make_version())
+    run_job(job, FakeConverter())
+    settings.TWOX_AI_ENABLED = False
+
+    assert pipeline.poll(job.pk, converter=NoDocling()) == StepResult(Outcome.DONE)
+
+    job.refresh_from_db()
+    assert (job.status, job.step, job.error_code) == (IngestStatus.DONE, IngestStep.EMBED, "")
+
+
+def test_lost_embed_message_is_recovered_by_a_poll_task(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch, ingest_messages: IngestMessages
+) -> None:
+    embedder = install_embedder(monkeypatch, settings)
+    version = make_version()
+    job = make_job(version)
+    run_job(job, FakeConverter())  # the result asks for embed; nobody sends it
+
+    assert tasks.poll(job.pk) == "embedding"
+    assert ingest_messages.sent == [("twox.ingest.embed", (job.pk,))]
+    assert tasks.embed(job.pk) == "done"
+
+    job.refresh_from_db()
+    assert job.status == IngestStatus.DONE
+    assert len(embedder.texts) == job.section_count
 
 
 def test_a_second_message_for_a_done_job_changes_nothing(

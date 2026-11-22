@@ -111,7 +111,8 @@ def send_convert(job_id: int) -> bool:
     except Exception:
         logger.warning(
             "ingest: job %s could not be sent to the task queue and stays queued; "
-            "send it again with: manage.py ingest_versions --stuck <minutes> --user <name> --commit",
+            "send it again with: manage.py ingest_versions --stuck <minutes> --user <name>"
+            " --commit",
             job_id,
             exc_info=True,
         )

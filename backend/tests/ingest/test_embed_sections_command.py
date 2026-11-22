@@ -12,7 +12,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from pytest_django.fixtures import DjangoCaptureOnCommitCallbacks, Settings
 
-from tests.accounts.users import make_user
+from tests.accounts.users import TEST_PASSWORD, make_user
 from tests.ingest.fake_converter import (
     FAKE_MODEL,
     add_sections,
@@ -32,11 +32,27 @@ pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("isolated_services"
 __all__ = ["isolated_services"]
 
 
+class SentEmbeds(list[int]):
+    """Job IDs of the messages ``embed``, with their send options; ``error`` fails each send."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.options: list[dict[str, object]] = []
+        self.error: Exception | None = None
+
+
 @pytest.fixture
-def sent(monkeypatch: pytest.MonkeyPatch) -> list[int]:
-    """Job IDs given to ``embed.delay``, recorded instead of sent."""
-    record: list[int] = []
-    monkeypatch.setattr(tasks.embed, "delay", record.append)
+def sent(monkeypatch: pytest.MonkeyPatch) -> SentEmbeds:
+    """Messages ``embed``, recorded instead of sent to the broker."""
+    record = SentEmbeds()
+
+    def apply_async(args: tuple[int, ...], **options: object) -> None:
+        if record.error is not None:
+            raise record.error
+        record.append(args[0])
+        record.options.append(options)
+
+    monkeypatch.setattr(tasks.embed, "apply_async", apply_async)
     return record
 
 
@@ -91,7 +107,7 @@ def embed_jobs() -> list[IngestJob]:
 
 @pytest.mark.usefixtures("ai_on")
 def test_dry_run_counts_and_changes_nothing(
-    versions: dict[str, DocumentVersion], manager: User, sent: list[int]
+    versions: dict[str, DocumentVersion], manager: User, sent: SentEmbeds
 ) -> None:
     before = list(Section.objects.order_by("pk").values_list("pk", "embedding_model"))
 
@@ -110,7 +126,7 @@ def test_dry_run_counts_and_changes_nothing(
 def test_missing_creates_one_job_per_version_and_sends_embed_after_the_commit(
     versions: dict[str, DocumentVersion],
     manager: User,
-    sent: list[int],
+    sent: SentEmbeds,
     django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
 ) -> None:
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
@@ -127,8 +143,11 @@ def test_missing_creates_one_job_per_version_and_sends_embed_after_the_commit(
         == (IngestStatus.QUEUED, IngestStep.EMBED, manager, 3)
         for job in jobs
     )
-    assert len(callbacks) == 3
+    # One transaction, one callback after its commit that sends all messages.
+    assert len(callbacks) == 1
     assert sent == [job.pk for job in jobs]
+    # As send_convert of 049: no task result is kept.
+    assert all(options["ignore_result"] is True for options in sent.options)
     assert "versions: 3 jobs created, 0 skipped (queued or running job)" in output
     assert "sections: 8 to embed, 0 skipped" in output
     # --missing keeps the embeddings that exist.
@@ -139,7 +158,7 @@ def test_missing_creates_one_job_per_version_and_sends_embed_after_the_commit(
 def test_versions_with_a_running_job_are_skipped_and_counted(
     versions: dict[str, DocumentVersion],
     manager: User,
-    sent: list[int],
+    sent: SentEmbeds,
     django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
 ) -> None:
     IngestJob.objects.create(document_version=versions["missing"], status=IngestStatus.RUNNING)
@@ -158,7 +177,7 @@ def test_versions_with_a_running_job_are_skipped_and_counted(
 def test_all_takes_every_version_and_clears_its_embeddings(
     versions: dict[str, DocumentVersion],
     manager: User,
-    sent: list[int],
+    sent: SentEmbeds,
     django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
 ) -> None:
     with django_capture_on_commit_callbacks(execute=True):
@@ -172,7 +191,7 @@ def test_all_takes_every_version_and_clears_its_embeddings(
 
 @pytest.mark.usefixtures("ai_on")
 def test_all_as_dry_run_keeps_the_embeddings(
-    versions: dict[str, DocumentVersion], manager: User, sent: list[int]
+    versions: dict[str, DocumentVersion], manager: User, sent: SentEmbeds
 ) -> None:
     output = run("--user", manager.username, "--all")
 
@@ -184,7 +203,7 @@ def test_all_as_dry_run_keeps_the_embeddings(
 def test_created_jobs_are_embedded_by_the_task(
     versions: dict[str, DocumentVersion],
     manager: User,
-    sent: list[int],
+    sent: SentEmbeds,
     settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
     django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
@@ -206,7 +225,7 @@ def test_created_jobs_are_embedded_by_the_task(
 @pytest.mark.usefixtures("ai_on")
 @pytest.mark.parametrize("kind", ["read", "no_role"])
 def test_account_without_manage_is_refused(
-    versions: dict[str, DocumentVersion], sent: list[int], kind: str
+    versions: dict[str, DocumentVersion], sent: SentEmbeds, kind: str
 ) -> None:
     user = make_user(kind)
     assert user is not None
@@ -219,7 +238,7 @@ def test_account_without_manage_is_refused(
 
 
 @pytest.mark.usefixtures("ai_on")
-def test_unknown_or_inactive_account_is_refused(manager: User, sent: list[int]) -> None:
+def test_unknown_or_inactive_account_is_refused(manager: User, sent: SentEmbeds) -> None:
     with pytest.raises(CommandError, match="no active account 'nobody'"):
         run("--user", "nobody", "--commit")
     manager.is_active = False
@@ -237,7 +256,7 @@ def test_user_is_required_and_missing_and_all_exclude_each_other(manager: User) 
 
 
 def test_ai_off_creates_nothing_and_says_so(
-    versions: dict[str, DocumentVersion], manager: User, sent: list[int], settings: Settings
+    versions: dict[str, DocumentVersion], manager: User, sent: SentEmbeds, settings: Settings
 ) -> None:
     # E-59: no embedding task without AI; a neutral message, exit code 0.
     settings.TWOX_AI_ENABLED = False
@@ -249,3 +268,57 @@ def test_ai_off_creates_nothing_and_says_so(
     )
     assert embed_jobs() == []
     assert sent == []
+
+
+@pytest.mark.usefixtures("ai_on")
+def test_a_message_that_cannot_be_sent_leaves_its_job_queued_with_a_warning(
+    versions: dict[str, DocumentVersion],
+    manager: User,
+    sent: SentEmbeds,
+    caplog: pytest.LogCaptureFixture,
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+) -> None:
+    sent.error = ConnectionError("broker down")
+
+    with (
+        caplog.at_level("WARNING", logger="twox.ingest.management.commands.embed_sections"),
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        run("--user", manager.username, "--commit")
+
+    assert sent == []
+    assert {job.status for job in embed_jobs()} == {IngestStatus.QUEUED}
+    assert len(embed_jobs()) == 3
+    assert caplog.text.count("could not be sent to the task queue and stays queued") == 3
+    assert "ingest_versions --stuck" in caplog.text
+
+
+@pytest.mark.django_db(transaction=True)
+def test_all_computes_again_for_two_versions_of_the_same_content(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Review of 048: with the embeddings cleared version by version and each
+    # message sent at once, the first job took over the old vectors of the
+    # other version (same content, same model) and nothing was computed.
+    first = make_version(b"same manual", device="dps-plc")
+    second = make_version(b"same manual", device="hbw-plc", filename="copy.pdf")
+    for version in (first, second):
+        add_sections(version, 3)
+        embed_all(version, FAKE_MODEL)
+    Section.objects.update(embedding=vector_for(999))
+    # A superuser has the role manage without the groups of the data
+    # migration, which an earlier test with transaction=True may have flushed.
+    admin = User.objects.create_superuser(username="admin-048", password=TEST_PASSWORD)
+    embedder = install_embedder(monkeypatch, settings)
+    # A fast worker: every message is worked off as soon as it is sent.
+    monkeypatch.setattr(tasks.embed, "apply_async", lambda args, **options: pipeline.embed(args[0]))
+
+    output = run("--user", admin.username, "--all", "--commit")
+
+    assert "versions: 2 jobs created" in output
+    # The model was asked for the first version; the second took that over.
+    assert len(embedder.texts) == 3
+    vectors = [list(map(float, section.embedding)) for section in Section.objects.all()]
+    assert len(vectors) == 6
+    assert vector_for(999) not in vectors
+    assert {job.status for job in embed_jobs()} == {IngestStatus.DONE}

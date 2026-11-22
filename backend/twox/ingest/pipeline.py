@@ -445,6 +445,8 @@ def convert(
     job = _load_job(job_id)
     if job is None:
         return StepResult(Outcome.MISSING)
+    if job.step == IngestStep.EMBED and job.status in ACTIVE_STATUSES:
+        return _resume_embedding(job)
     now = timezone.now()
     # A queued job in the step embed (embed_sections) belongs to embed only.
     claimed = (
@@ -477,11 +479,10 @@ def poll(
     job = _load_job(job_id)
     if job is None:
         return StepResult(Outcome.MISSING)
-    if job.status != IngestStatus.RUNNING or job.step == IngestStep.EMBED:
-        # In the step embed the sections exist; a stray message must not replace them.
-        logger.info(
-            "ingest: job %s is %s in step %r; no status query", job.pk, job.status, job.step
-        )
+    if job.step == IngestStep.EMBED and job.status in ACTIVE_STATUSES:
+        return _resume_embedding(job)
+    if job.status != IngestStatus.RUNNING:
+        logger.info("ingest: job %s is %s; no status query", job.pk, job.status)
         return StepResult(Outcome.IGNORED)
     blobs = storage or get_blob_storage()
     return _guarded(job, lambda: _poll(job, blobs, converter))
@@ -794,10 +795,26 @@ def _retry_embedding(job: IngestJob, error: EmbeddingUnavailableError) -> StepRe
     return StepResult(Outcome.EMBEDDING, embed_after=retry_delay(attempt))
 
 
+def _resume_embedding(job: IngestJob) -> StepResult:
+    """A ``convert`` or ``poll`` message for a job in the step ``embed``: hand it to embed again.
+
+    The sections exist; such a message must not build them again. If the
+    message ``embed`` was lost (for example the broker was down when it was
+    sent), the job would hang; so the task schedules ``embed`` once more.
+    ``embed`` only works on sections that still need it, so a duplicate does
+    no harm. Without the AI features (E-59) there is no task ``embed``: the
+    job ends ``done`` here.
+    """
+    if not settings.TWOX_AI_ENABLED:
+        return _end_embedding(job, skipped=True)
+    logger.info("ingest: job %s is in the step embed; scheduling embed again", job.pk)
+    return StepResult(Outcome.EMBEDDING, embed_after=0)
+
+
 def _end_embedding(job: IngestJob, *, skipped: bool = False) -> StepResult:
     """End the job as ``done``; ``skipped``: AI features off (E-59), nothing was embedded."""
     now = timezone.now()
-    finished = IngestJob.objects.filter(pk=job.pk, status=IngestStatus.RUNNING).update(
+    finished = IngestJob.objects.filter(pk=job.pk, status__in=ACTIVE_STATUSES).update(
         status=IngestStatus.DONE, finished_at=now, updated_at=now
     )
     if not finished:

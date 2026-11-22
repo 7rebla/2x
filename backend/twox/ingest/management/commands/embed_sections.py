@@ -12,14 +12,16 @@ that all of them are computed again. ``--user`` names the account recorded as
 ``manage``.
 
 Without ``--commit`` the command only counts and saves nothing. With it, it
-creates one ingest job per version (step ``embed``) and sends the task
-``twox.ingest.embed`` after the commit. A version that already has a queued or
-running job is skipped and counted.
+creates one ingest job per version (step ``embed``) in one transaction and
+sends the task ``twox.ingest.embed`` after its commit (``ignore_result``; a
+message that cannot be sent leaves its job queued, with a warning). A
+version that already has a queued or running job is skipped and counted.
 
 The AI features are optional (E-59): with them off, the command says so
 (``DISABLED:``, exit code 0) and creates nothing.
 """
 
+import logging
 from dataclasses import dataclass
 
 from django.conf import settings
@@ -33,6 +35,9 @@ from twox.files.models import DocumentVersion
 from twox.ingest import tasks
 from twox.ingest.models import ACTIVE_STATUSES, IngestJob, IngestStatus, IngestStep, Section
 from twox.ingest.pipeline import needs_embedding
+from twox.ingest.services import SEND_RETRY_POLICY
+
+logger = logging.getLogger(__name__)
 
 DISABLED_MESSAGE = (
     "DISABLED: AI features are not enabled (TWOX_AI_ENABLED is false); nothing was embedded"
@@ -114,14 +119,27 @@ class Command(BaseCommand):
         model: str = settings.TWOX_EMBED_MODEL
         sections = selected_sections(everything=everything, model=model)
         counts = Counts()
+        planned: list[tuple[DocumentVersion, int]] = []
         for version in selected_versions(sections):
             total = sections.filter(document_version=version).count()
-            if is_busy(version) or (commit and not self._create_job(version, user, everything)):
+            if is_busy(version):
                 counts.versions_skipped += 1
                 counts.sections_skipped += total
             else:
+                planned.append((version, total))
+
+        unsent: list[int] = []
+        if commit:
+            created = self._create_jobs(planned, user, everything, unsent)
+        else:
+            created = {version.pk for version, _total in planned}
+        for version, total in planned:
+            if version.pk in created:
                 counts.versions_created += 1
                 counts.sections_created += total
+            else:
+                counts.versions_skipped += 1
+                counts.sections_skipped += total
 
         mode = "all sections" if everything else f"sections without an embedding of {model!r}"
         self.stdout.write(f"selection: {mode}")
@@ -133,29 +151,81 @@ class Command(BaseCommand):
         self.stdout.write(
             f"sections: {counts.sections_created} to embed, {counts.sections_skipped} skipped"
         )
+        if unsent:
+            self.stdout.write(
+                f"WARNING: {len(unsent)} job(s) could not be sent to the task queue and stay"
+                " queued; start them again with: manage.py ingest_versions --stuck <minutes>"
+                " --user <name> --commit"
+            )
         if commit:
             self.stdout.write("Saved; the worker embeds the sections.")
         else:
             self.stdout.write("Dry run: nothing was saved. Add --commit to create the jobs.")
 
-    def _create_job(self, version: DocumentVersion, user: User, everything: bool) -> bool:
-        """Create the job of ``version`` and send embed after the commit; ``False`` if busy."""
-        try:
-            with transaction.atomic():
-                job = IngestJob.objects.create(
-                    document_version=version,
-                    status=IngestStatus.QUEUED,
-                    step=IngestStep.EMBED,
-                    requested_by=user,
-                    section_count=Section.objects.filter(document_version=version).count(),
+    def _create_jobs(
+        self,
+        planned: list[tuple[DocumentVersion, int]],
+        user: User,
+        everything: bool,
+        unsent: list[int],
+    ) -> set[int]:
+        """Create the jobs in one transaction and send embed after its commit.
+
+        With ``--all`` the embeddings of every version that gets a job are
+        cleared in the same transaction, before any message is sent. Otherwise
+        the first job could take over the old vectors of a version with the
+        same content that is not cleared yet (see ``_copy_embeddings`` in the
+        pipeline), and nothing would be computed again. Returns the IDs of the
+        versions that got a job; ``unsent`` collects the jobs whose message
+        could not be sent (after the commit).
+        """
+        job_ids: list[int] = []
+        created: set[int] = set()
+        with transaction.atomic():
+            for version, _total in planned:
+                try:
+                    with transaction.atomic():
+                        job = IngestJob.objects.create(
+                            document_version=version,
+                            status=IngestStatus.QUEUED,
+                            step=IngestStep.EMBED,
+                            requested_by=user,
+                            section_count=Section.objects.filter(document_version=version).count(),
+                        )
+                except IntegrityError:
+                    # Another job became active since the selection (one per version).
+                    continue
+                job_ids.append(job.pk)
+                created.add(version.pk)
+            if everything and created:
+                Section.objects.filter(document_version_id__in=created).update(
+                    embedding=None, embedding_model=""
                 )
-                if everything:
-                    Section.objects.filter(document_version=version).update(
-                        embedding=None, embedding_model=""
-                    )
-                job_id = job.pk
-                transaction.on_commit(lambda: tasks.embed.delay(job_id))
-        except IntegrityError:
-            # Another job became active since the selection (one per version).
-            return False
-        return True
+            transaction.on_commit(lambda: unsent.extend(send_all(job_ids)))
+        return created
+
+
+def send_embed(job_id: int) -> bool:
+    """Send ``twox.ingest.embed`` for the job; ``False`` (and a warning) if that fails.
+
+    As ``send_convert`` of work order 049: the job row holds the outcome, so
+    no task result is kept (``ignore_result``).
+    """
+    try:
+        tasks.embed.apply_async(
+            (job_id,), ignore_result=True, retry=True, retry_policy=SEND_RETRY_POLICY
+        )
+    except Exception:
+        logger.warning(
+            "ingest: job %s could not be sent to the task queue and stays queued; start it"
+            " again with: manage.py ingest_versions --stuck <minutes> --user <name> --commit",
+            job_id,
+            exc_info=True,
+        )
+        return False
+    return True
+
+
+def send_all(job_ids: list[int]) -> list[int]:
+    """Send embed for every job; return the IDs whose message could not be sent."""
+    return [job_id for job_id in job_ids if not send_embed(job_id)]
