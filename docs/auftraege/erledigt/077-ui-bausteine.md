@@ -1,6 +1,6 @@
 # Auftrag 077 – UI-Bausteine Knopf, Feld, Auswahl
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 070 und 071 sind auf `main`.
 

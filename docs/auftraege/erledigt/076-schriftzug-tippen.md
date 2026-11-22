@@ -1,6 +1,6 @@
 # Auftrag 076 – Schriftzug in der Kopfzeile tippt sich
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: C (entschieden mit E-64) · Status: zur Prüfung
+Meilenstein: Gestaltung (D1) · Freigabestufe: C (entschieden mit E-64) · Status: erledigt
 
 Voraussetzung: E-64; 070 und 072 sind auf `main`.
 

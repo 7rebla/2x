@@ -1,6 +1,6 @@
 # Auftrag 090 – Abnahmetest M2 auf das ROADMAP-Kriterium zurückführen
 
-Meilenstein: M2 · Freigabestufe: C (entschieden mit E-67) · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: C (entschieden mit E-67) · Status: erledigt
 
 Voraussetzung: E-67; 058 und 067 sind auf `main`.
 
@@ -45,4 +45,4 @@ Keine.
 - **Zweig und Arbeitsverzeichnis:** `worktree-agent-afdbbd679a813b012`, `.claude/worktrees/agent-afdbbd679a813b012`
 - **Abweichungen:** keine. Die Rang-Annotation gilt auch für die Pflicht-Proben (zusätzliche Ausgabe, keine Änderung der Bedingung).
 
-Status: zur Prüfung
+Status: erledigt

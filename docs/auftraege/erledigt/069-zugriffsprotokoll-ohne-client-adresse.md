@@ -1,6 +1,6 @@
 # Auftrag 069 – Zugriffsprotokoll ohne Client-Adresse
 
-Meilenstein: M2 · Freigabestufe: C (entschieden mit E-62) · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: C (entschieden mit E-62) · Status: erledigt
 
 Voraussetzung: E-62; 052 und 059 sind auf `main`.
 

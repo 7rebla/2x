@@ -165,8 +165,8 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 072 | Marke: Bildmarke im Kopf, Favicon | C | 070 (E-52) | erledigt |
 | 073 | Gerätetyp als Feld, API, Admin, CSV-Spalte, Testfabrik | C | – (E-53) | erledigt |
 | 074 | Eigene Geräte-Icons in Baum, Geräteseite, Landkarte | B | 071, 073 | erledigt |
-| 076 | Schriftzug in der Kopfzeile tippt sich (E-64) | C (entschieden) | 070, 072 | in Arbeit |
-| 077 | UI-Bausteine Knopf, Feld, Auswahl (UI-Analyse Prio 1) | B | 070, 071 | in Arbeit |
+| 076 | Schriftzug in der Kopfzeile tippt sich (E-64) | C (entschieden) | 070, 072 | erledigt |
+| 077 | UI-Bausteine Knopf, Feld, Auswahl (UI-Analyse Prio 1) | B | 070, 071 | erledigt |
 | 078 | Barrierefreiheit: Sprunglink, Seitentitel, Überschriften, Fokus | B | 077 | in Arbeit |
 | 079 | Tabellen am Desktop lesbar | B | 077 | in Arbeit |
 | 080 | Einheitliches Seitenraster (E-65) | C (entschieden) | 077 | offen |
@@ -179,7 +179,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 087 | Suchtreffer kompakter | B | 077 | in Arbeit |
 | 088 | Einheitliche Dateiauswahl | B | 077 | in Arbeit |
 | 089 | Ergebniszahl als Live-Region, Brotkrumen Dateiseite | B | 077, 079, 083 | offen |
-| 090 | Abnahmetest M2 auf das ROADMAP-Kriterium (E-67) | C (entschieden) | 058, 067 | in Arbeit |
+| 090 | Abnahmetest M2 auf das ROADMAP-Kriterium (E-67) | C (entschieden) | 058, 067 | erledigt |
 
 ## M2 – Einlesen und Suche (freigegeben 22.11.2026, E-54; abgenommen 22.11.2026, E-67)
 
@@ -216,7 +216,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 066 | Speichergrenze für Docling (E-60) | C (entschieden) | E-60 | erledigt |
 | 067 | Sprachfassungen in der Abnahme, keine exakte Liste bei Fragen (E-61) | C (entschieden) | E-61 | erledigt |
 | 068 | Eigenes Feld für Teilumwandlungen (E-62) | C (entschieden) | E-62 | in Arbeit |
-| 069 | Zugriffsprotokoll ohne Client-Adresse (E-62) | C (entschieden) | E-62 | in Arbeit |
+| 069 | Zugriffsprotokoll ohne Client-Adresse (E-62) | C (entschieden) | E-62 | erledigt |
 | 075 | Swap-Grenze für Docling (E-62) | C (entschieden) | E-62 | erledigt |
 - 073: Feld `device_class` (plc, controller, computer, router, firewall, robot, other) in Modell, API, Admin, Protokoll und Formular; CSV mit optionaler 14. Spalte; Testfabrik: 5 SPS, 4 Controller, je 1 Rechner, Router, Roboter, Firewall. Die Geräteseite zeigt den Typ noch nur im Bearbeiten-Formular (für 074).
 - 040: Erweiterungen `vector` und `pg_trgm` per Migration `ingest.0001_extensions`. Für M6 (Betrieb ohne Superuser): `vector` ist nicht „trusted“ – ein Administrator legt die Erweiterung vor der ersten Migration an; die Rückwärtsmigration entfernt sie und braucht dann ebenfalls einen Superuser.
@@ -250,4 +250,9 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 - 066: Docling mit `mem_limit: ${TWOX_DOCLING_MEM_LIMIT:-8g}` (E-60). Versuch mit 1 GiB: Container wird bei Speichermangel beendet und von Docker neu gestartet, der Auftrag endet nach fünf Versuchen mit `docling_unavailable`; der Grund (Speicher) steht nicht im Auftrag, nur in `docker events`. Wartende Aufgaben in Docling gehen dabei verloren. Swap-Frage an a7 (Punkt 15).
 - 067: Beide Sprachfassungen der APS-Dokumentation zählen in Probe und Abnahmetest; bei Fragen in Satzform keine eigene Liste für exakte Treffer mehr (E-61). Nachmessung mit den Handbüchern: question-9 12 → 1, ip-ccu 4 → 2, kombiniert Recall@5 0,571, Recall@10 0,857, MRR 0,535. Bekannt: `test_m2` (ai-on) wackelt gelegentlich, wenn Such- und Abnahmetests zusammen laufen (HNSW mit gleich weit entfernten Testvektoren).
 - 075: Docling `memswap_limit` gleich `mem_limit` (E-62): die 8-GiB-Grenze schließt Swap ein; `docker inspect` zeigt Memory = MemorySwap.
+- 069: Zugriffsprotokoll ohne Client-Adresse (Filter `DropClientAddress`, Format ohne `client_addr`); weitere Stellen geprüft, keine protokolliert Adressen (E-62 b).
+- 076: Schriftzug tippt sich einmal je Sitzung (Anmeldeseite und erstes Öffnen nach der Anmeldung), Muster E in `TextMotion.tsx`, Name nur einmal im DOM; Rückfall auf Codepunkte ohne `Intl.Segmenter` (Leitstelle). Randfall: nach Abmelden und Neuladen kann der Name kurz stehen und dann tippen.
+- 077: UI-Bausteine `Button`, `Input`, `Select`, `Textarea` unter `web/src/components/ui/` (md 36 px, sm 28 px), alle Seiten umgestellt, Quelltextprüfung `sourceControls.test.ts`.
+- 090: Lokaler Abnahmetest M2 prüft das ROADMAP-Kriterium (IP, Prüffrage 9); Prüffrage 10 nur noch als Rang gemeldet (E-67).
+- Hinweis Prüfumgebung: Der Landkarten-Browsertest kann scheitern, wenn sich in einer Umgebung viele Testgeräte aus früheren Läufen angesammelt haben (Einpassen auf viele Treffer); in frischer Umgebung grün. Kandidat für einen Test-Folgeauftrag.
 - 074: Acht eigene Icons (Anlage, Gerät, sechs Gerätetypen) unter `web/src/icons/industrial/`, Zuordnung nur in `deviceClass.ts` (Rückfall: generisches Gerät). Typ als Text im Baum, als Feld „Gerätetyp“ auf der Geräteseite, als Tooltip auf der Karte. Notwendig mitgeändert: `graph.ts`, `MapPage.tsx`, `map.json`. Nicht von Hand bei 16 px gesichtet.
