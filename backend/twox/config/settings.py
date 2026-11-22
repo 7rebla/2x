@@ -259,6 +259,8 @@ SPECTACULAR_SETTINGS = {
     # A distinct name for the actions of the change log (generated: ActionEnum).
     "ENUM_NAME_OVERRIDES": {
         "AuditActionEnum": "twox.accounts.serializers.AUDIT_ACTION_CHOICES",
+        # The states of an ingest job (another "status" than the health check's).
+        "IngestStatusEnum": "twox.ingest.models.IngestStatus",
     },
 }
 

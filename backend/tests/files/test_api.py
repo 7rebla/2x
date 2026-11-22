@@ -8,8 +8,14 @@ import pytest
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
+from django.db import connection
 from django.http import HttpResponseBase, StreamingHttpResponse
-from pytest_django.fixtures import DjangoAssertNumQueries, Settings
+from django.test.utils import CaptureQueriesContext
+from pytest_django.fixtures import (
+    DjangoAssertNumQueries,
+    DjangoCaptureOnCommitCallbacks,
+    Settings,
+)
 from rest_framework.test import APIClient
 
 from tests.accounts.users import make_user
@@ -23,8 +29,12 @@ from tests.files.helpers import (
 )
 from twox.assets.models import Device
 from twox.files.models import Document, DocumentKind, DocumentVersion
+from twox.files.serializers import PARTIAL_DETAIL_PREFIX
 from twox.files.services import add_version, create_document
 from twox.files.uploads import MULTIPART_OVERHEAD_BYTES
+from twox.ingest import pipeline
+from twox.ingest.docling import ConversionErrorItem
+from twox.ingest.models import IngestErrorCode, IngestJob, IngestStatus, IngestStep
 
 if TYPE_CHECKING:
     # Exists in the type stubs only; annotations are not evaluated at runtime.
@@ -161,6 +171,163 @@ def test_list_needs_a_fixed_number_of_queries(
 
     assert response.status_code == 200
     assert len(response.json()) == 5
+
+
+# --- ingest state of the versions (work order 051) ---------------------------
+
+INGEST_FIELDS = {
+    "id",
+    "status",
+    "step",
+    "error_code",
+    "error_detail",
+    "partly_converted",
+    "section_count",
+    "page_count",
+    "created_at",
+    "finished_at",
+}
+
+
+def two_versions(client: APIClient, device: Device) -> tuple[int, list[DocumentVersion]]:
+    """A document with two versions, uploaded through the API."""
+    document_id = upload(client, device, b"edition 1").json()["document"]["id"]
+    client.post(versions_url(document_id), {"file": a_file(b"edition 2")}, format="multipart")
+    return document_id, list(DocumentVersion.objects.order_by("number"))
+
+
+def test_version_without_ingest_job_has_ingest_null(media_root: Path) -> None:
+    client = client_for("manage")
+    created = upload(client, make_device(), b"edition 1").json()
+
+    detail = client.get(document_url(created["document"]["id"])).json()
+
+    assert created["version"]["ingest"] is None
+    assert detail["versions"][0]["ingest"] is None
+    assert detail["latest_version"]["ingest"] is None
+
+
+def test_detail_shows_the_newest_job_of_every_version(media_root: Path) -> None:
+    client = client_for("read")
+    document_id, (first, second) = two_versions(client_for("manage"), make_device())
+    IngestJob.objects.create(
+        document_version=first,
+        status=IngestStatus.FAILED,
+        step=IngestStep.CONVERT,
+        error_code=IngestErrorCode.TIMEOUT,
+        error_detail="time limit exceeded after 9000 s",
+    )
+    newest_of_first = IngestJob.objects.create(
+        document_version=first, status=IngestStatus.DONE, section_count=4, page_count=2
+    )
+    newest_of_second = IngestJob.objects.create(document_version=second)
+
+    body = client.get(document_url(document_id)).json()
+
+    old, new = body["versions"]
+    assert set(old["ingest"]) == INGEST_FIELDS
+    assert old["ingest"]["id"] == newest_of_first.pk
+    assert old["ingest"]["status"] == "done"
+    assert (old["ingest"]["section_count"], old["ingest"]["page_count"]) == (4, 2)
+    assert new["ingest"]["id"] == newest_of_second.pk
+    assert new["ingest"]["status"] == "queued"
+    assert body["latest_version"]["ingest"] == new["ingest"]
+
+
+def test_device_list_shows_the_job_of_the_newest_version(media_root: Path) -> None:
+    device = make_device()
+    _, (first, second) = two_versions(client_for("manage"), device)
+    IngestJob.objects.create(document_version=first, status=IngestStatus.DONE)
+    failed = IngestJob.objects.create(
+        document_version=second,
+        status=IngestStatus.FAILED,
+        step=IngestStep.CONVERT,
+        error_code=IngestErrorCode.DOCLING_UNAVAILABLE,
+        error_detail="docling-serve refused the connection",
+    )
+
+    [item] = client_for("read").get(documents_url(device)).json()
+
+    ingest = item["latest_version"]["ingest"]
+    assert ingest["id"] == failed.pk
+    assert ingest["status"] == "failed"
+    assert ingest["step"] == "convert"
+    assert ingest["error_code"] == "docling_unavailable"
+    # The cleaned detail is for every role (E-57).
+    assert ingest["error_detail"] == "docling-serve refused the connection"
+    assert ingest["partly_converted"] is False
+
+
+def test_partial_conversion_is_marked(media_root: Path) -> None:
+    created = upload(client_for("manage"), make_device(), b"edition 1").json()
+    version = DocumentVersion.objects.get(pk=created["version"]["id"])
+    # The note exactly as the ingest flow writes it after partial_success (046).
+    note = pipeline._partial_detail(
+        (
+            ConversionErrorItem(
+                component_type="model", module_name="ocr", error_message="x", page_no=3
+            ),
+        )
+    )
+    IngestJob.objects.create(document_version=version, status=IngestStatus.DONE, error_detail=note)
+
+    ingest = (
+        client_for("read")
+        .get(document_url(created["document"]["id"]))
+        .json()["latest_version"]["ingest"]
+    )
+
+    assert note.startswith(PARTIAL_DETAIL_PREFIX)
+    assert ingest["status"] == "done"
+    assert ingest["partly_converted"] is True
+    assert ingest["error_detail"] == note
+
+
+def test_job_after_upload_shows_in_the_detail(
+    media_root: Path, django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks
+) -> None:
+    client = client_for("manage")
+
+    with django_capture_on_commit_callbacks(execute=True):
+        created = upload(client, make_device(), b"%PDF-1.7 manual\n").json()
+
+    detail = client.get(document_url(created["document"]["id"])).json()
+    assert detail["latest_version"]["ingest"]["status"] == "queued"
+    assert detail["latest_version"]["ingest"]["id"] == IngestJob.objects.get().pk
+
+
+def ingest_queries(queries: CaptureQueriesContext) -> list[str]:
+    return [
+        query["sql"] for query in queries.captured_queries if "ingest_ingestjob" in query["sql"]
+    ]
+
+
+@pytest.mark.parametrize("url_of", ["list", "detail"])
+def test_ingest_state_costs_one_query(media_root: Path, url_of: str) -> None:
+    device = make_device()
+    client = client_for("read")
+
+    def count(document_id: int) -> tuple[int, list[str]]:
+        url = documents_url(device) if url_of == "list" else document_url(document_id)
+        with CaptureQueriesContext(connection) as queries:
+            assert client.get(url).status_code == 200
+        return len(queries), ingest_queries(queries)
+
+    first = create_document(device, a_file(b"doc 0"), "Doc 0", DocumentKind.DOCUMENT, None)
+    IngestJob.objects.create(document_version=first.version, status=IngestStatus.DONE)
+    few, few_ingest = count(first.document.pk)
+    for number in range(1, 6):
+        result = create_document(
+            device, a_file(f"doc {number}".encode()), f"Doc {number}", DocumentKind.DOCUMENT, None
+        )
+        newer = add_version(result.document, a_file(f"doc {number} v2".encode()), None)
+        for version in (result.version, newer.version, newer.version):
+            IngestJob.objects.create(document_version=version, status=IngestStatus.FAILED)
+        add_version(first.document, a_file(f"doc 0 v{number + 1}".encode()), None)
+    many, many_ingest = count(first.document.pk)
+
+    assert many == few
+    assert len(few_ingest) == len(many_ingest) == 1
 
 
 # --- duplicates -------------------------------------------------------------
