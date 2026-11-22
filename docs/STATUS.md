@@ -233,8 +233,8 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 127 | Messwerkzeug evaluate_answers | B | 120, 126 | erledigt |
 | 128 | Messlauf Chat-Modell | C | 126, 127 | in Arbeit |
 | 129 | Selbsttest und check_llm für Chat | B | 121 | erledigt |
-| 130 | Antwort-API mit SSE und Status | C | 126, 129 | in Arbeit |
-| 131 | Oberfläche Antwortstrom und Hook | B | 130 | offen |
+| 130 | Antwort-API mit SSE und Status | C | 126, 129 | erledigt |
+| 131 | Oberfläche Antwortstrom und Hook | B | 130 | in Arbeit |
 | 132 | Seite Auskunft mit Quellenanzeige | B | 131 | offen |
 | 133 | Eingrenzen auf Gerät und Anlage | B | 132 | offen |
 | 134 | Navigation Auskunft | C | 132 | offen |

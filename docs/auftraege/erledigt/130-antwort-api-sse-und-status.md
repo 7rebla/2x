@@ -1,6 +1,6 @@
 # Auftrag 130 – Antwort-API mit SSE und Status
 
-Meilenstein: M3 · Freigabestufe: C · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: C · Status: erledigt
 
 Voraussetzung: 126 (Antwortdienst `answer()` und Befehl `ask`) und 129 (Modellprüfung für Selbsttest und `check_llm --chat`) sind auf `main`; damit auch 121 (`get_chat_model()`, `TWOX_CHAT_*`), 122 (`types.py`, Ereignisvertrag) und 123/125. Start erst nach Entscheidung von D7 und D14 durch a7 (siehe unten).
 
