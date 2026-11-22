@@ -31,6 +31,7 @@
   },
   "document": {
     "heading": "File",
+    "breadcrumb": "Location of the file",
     "detailsLabel": "Details of the file",
     "device": "Device",
     "deviceFallback": "Device {{id}}",
