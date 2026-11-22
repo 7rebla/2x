@@ -182,7 +182,8 @@ if (query.isError) return <ErrorMessage error={query.error} />;
     "New plant" and "New device" unfold their area or plant.
 - `DevicePage.tsx` (`/devices/:deviceId`) shows every field of one device, the chain as breadcrumb and
   `../components/DeviceFiles.tsx` (the files of the device, see "Files").
-  An id that cannot be a device id, or a 404 of the API, shows `NotFound`.
+  An id that cannot be a device id, or a 404 of the API, shows `NotFound`. Next to the heading stands the link "Ask
+  about this device" to `/ask?device=<id>` (work order 133, see "Ask"), before "Edit".
 - Breadcrumb (work order 089): `../components/Breadcrumb.tsx` draws the trail of the device page and of the file page.
   `Breadcrumb` is a named `<nav>` ("Location of the device", "Location of the file") with an ordered list; every
   level has the icon of its kind (decorative) and its name as text, levels are separated by "›" from the style sheet,
@@ -334,8 +335,27 @@ if (query.isError) return <ErrorMessage error={query.error} />;
   like the server; above that a hint, `aria-invalid` and the button disabled), "Ask" and, while an answer streams,
   "Cancel". The button sends, Ctrl+Enter (Cmd+Enter) as well; Enter alone starts a new line. `?q=` only fills the
   field, nothing is ever sent on its own (D14 (i)); the question goes into the body of the POST, never into the
-  address, and nothing is stored (D7). The form builds the whole request (`answerRequest()` with an `AnswerScope`),
-  so the limit to devices and plants (work order 133) is added there.
+  address, and nothing is stored (D7). The form builds the whole request (`answerRequest()` with an `AnswerScope`).
+- Limit (work order 133, D14 (c), E-69): below the question two labelled choices, "Device" (`GET /api/v1/devices/`,
+  "All devices" first, then grouped by plant with `../components/devicesByPlant.ts`, shown as "Name (key)") and
+  "Plant" (`GET /api/v1/plants/`, "All plants" first, sorted by name). The limit stands in the address,
+  `/ask?device=<id>` or `/ask?plant=<id>` (the E-54 pattern of the search; read and written by the pure functions of
+  `answer/scope.ts`), so it can be linked, reloaded and reached with Back; `?q=` stays untouched. A change of a
+  choice replaces the address (`replace: true`) and sends nothing, and the focus stays where it is. Device and plant
+  exclude each other: choosing one resets the other, and with both in the address the device wins. The search API
+  joins filters with AND, so at most one is sent, as a list with one id (`device: [id]` or `plant: [id]` in the POST
+  body); "all" sends neither field. A value that cannot be an id (`abc`, `0`) counts as "all"; an id that the list
+  lacks stays as its own entry "Unknown device (id)" / "Unknown plant (id)". The choices stay usable while the AI is
+  off or an answer streams; a change applies to the next question. The page does not filter sources itself (E-55).
+- Chip (`answer/ScopeChip.tsx`): with a limit, a box above the form says "Limited to: device Name (key)" or "Limited
+  to: plant Name" (the unknown text for an id the list lacks, "No. id" while the list loads) with the button "Remove
+  limit" (icon `resetFilter`). It removes `device` and `plant` from the address and resets the choices; a running
+  answer goes on. The chip is not a live region.
+- Device page: next to the heading a link styled as a secondary button, "Ask about this device" (accessible name
+  "Ask a question about device <name>", icon `search`), to `/ask?device=<id>`, for the roles `read` and `manage`. It
+  only opens the page with the limit; it stays while the AI is off (the answer page explains that state).
+- Test ids for the browser tests: `answer-device`, `answer-plant`, `answer-scope`, `answer-scope-name`,
+  `answer-scope-reset`, `device-ask`.
 - Availability (`answer/answerView.ts`, `availabilityOf()`): `GET /api/v1/answers/status/` with `enabled=false`,
   or a 409 `ai_disabled` of the stream, shows a calm hint "AI features switched off" with a link to the search;
   `chat_model_configured=false`, `available=false` or a 503 `chat_not_configured` shows "Answers are not available
