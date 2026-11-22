@@ -1,6 +1,6 @@
 # Auftrag 131 – Oberfläche: Antwortstrom und Hook
 
-Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 130 (Antwort-API mit SSE und Status) ist auf `main`; `web/openapi/schema.yml` und `web/src/api/generated/**` enthalten damit `POST /api/v1/answers/` (Antwort `text/event-stream`) und `GET /api/v1/answers/status/`. Den Ereignisvertrag (Typen `sources`, `delta`, `done`, `error`, Statuswerte, Fehlercodes) legt 122 fest; er steht in `docs/ARCHITECTURE.md`, Abschnitt `answers`.
 
