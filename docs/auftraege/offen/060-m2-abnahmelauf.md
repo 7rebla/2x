@@ -40,6 +40,8 @@ Alle Befehle laufen in Git Bash im Hauptordner auf `main`, Compose-Projekt der T
 
 ## Vorgaben und Hinweise
 
+- **Nachtrag der Leitstelle (E-59, KI optional):** Einbettungen, Vektorsuche und alles, was ein Modell braucht, sind eine aktivierbare Zusatzfunktion. Schalter `TWOX_AI_ENABLED` (Einstellung in `settings.py`, Standard `False`; `.env.example` mit Kommentar). Bei „aus“: kein Aufruf von Ollama, keine Einbettungs-Aufgaben, Einlesen endet nach den Abschnitten erfolgreich, die Suche arbeitet nur mit der Stichwortsuche, Selbsttest und Oberfläche zeigen „KI nicht aktiviert“ als neutralen Zustand (kein Fehler, kein Warnsymbol). Jede KI-abhängige Stelle braucht einen Test für beide Zustände; die CI läuft mit „aus“ und mit „an“ plus Attrappe.
+
 Voraussetzung: 057, 058 und 059 sind nach `main` zusammengeführt bzw. abgeschlossen; a7 hat Frage 2 in 057 (Modell und Abschnittsgröße) entschieden, ein etwaiger Folgeauftrag dazu ist auf `main`. Fragen 1 und 2 hier sind entschieden.
 
 - Welle 12. Ausgeführt von der Leitstelle (Frage 1 in 057).

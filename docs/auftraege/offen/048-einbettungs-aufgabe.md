@@ -61,6 +61,8 @@ Alle Befehle laufen in Git Bash im Wurzelverzeichnis des Arbeitsverzeichnisses, 
 
 ## Vorgaben und Hinweise
 
+- **Nachtrag der Leitstelle (E-59, KI optional):** Einbettungen, Vektorsuche und alles, was ein Modell braucht, sind eine aktivierbare Zusatzfunktion. Schalter `TWOX_AI_ENABLED` (Einstellung in `settings.py`, Standard `False`; `.env.example` mit Kommentar). Bei „aus“: kein Aufruf von Ollama, keine Einbettungs-Aufgaben, Einlesen endet nach den Abschnitten erfolgreich, die Suche arbeitet nur mit der Stichwortsuche, Selbsttest und Oberfläche zeigen „KI nicht aktiviert“ als neutralen Zustand (kein Fehler, kein Warnsymbol). Jede KI-abhängige Stelle braucht einen Test für beide Zustände; die CI läuft mit „aus“ und mit „an“ plus Attrappe.
+
 Voraussetzung: 046 ist nach `main` zusammengeführt.
 
 - Welle 5, parallel zu 049 und 056 (andere Dateien).

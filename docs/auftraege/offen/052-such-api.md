@@ -59,6 +59,8 @@ Alle Befehle laufen in Git Bash im Wurzelverzeichnis des Arbeitsverzeichnisses, 
 
 ## Vorgaben und Hinweise
 
+- **Nachtrag der Leitstelle (E-59, KI optional):** Einbettungen, Vektorsuche und alles, was ein Modell braucht, sind eine aktivierbare Zusatzfunktion. Schalter `TWOX_AI_ENABLED` (Einstellung in `settings.py`, Standard `False`; `.env.example` mit Kommentar). Bei „aus“: kein Aufruf von Ollama, keine Einbettungs-Aufgaben, Einlesen endet nach den Abschnitten erfolgreich, die Suche arbeitet nur mit der Stichwortsuche, Selbsttest und Oberfläche zeigen „KI nicht aktiviert“ als neutralen Zustand (kein Fehler, kein Warnsymbol). Jede KI-abhängige Stelle braucht einen Test für beide Zustände; die CI läuft mit „aus“ und mit „an“ plus Attrappe.
+
 Voraussetzung: 050 und 051 sind nach `main` zusammengeführt (051 wegen `urls.py`, Schema, Client, `django.po`, `expected_paths/__init__.py`). Frage 1 ist entschieden.
 
 - Welle 7, parallel zu 053 (053 ändert weder Backend noch Client).
