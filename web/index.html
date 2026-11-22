@@ -4,6 +4,38 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>2x</title>
+    <script>
+      // Display settings before the first paint (src/theme/README.md); same rules as src/theme/settings.ts.
+      (function () {
+        var root = document.documentElement;
+        function read(key) {
+          try {
+            return window.localStorage.getItem(key);
+          } catch (error) {
+            return null;
+          }
+        }
+        function matches(query) {
+          try {
+            return typeof window.matchMedia === "function" && window.matchMedia(query).matches;
+          } catch (error) {
+            return false;
+          }
+        }
+        var mode = read("twox.theme");
+        var accent = read("twox.accent");
+        if (mode !== "light" && mode !== "dark") {
+          mode = matches("(prefers-color-scheme: dark)") ? "dark" : "light";
+        }
+        if (["aubergine", "indigo", "berry", "umber", "graphite"].indexOf(accent) < 0) {
+          accent = "aubergine";
+        }
+        var reduce = read("twox.reduceMotion") === "true" || matches("(prefers-reduced-motion: reduce)");
+        root.setAttribute("data-theme", mode);
+        root.setAttribute("data-accent", accent);
+        root.setAttribute("data-motion", reduce ? "reduce" : "full");
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

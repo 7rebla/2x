@@ -1,1 +1,383 @@
 @import "tailwindcss";
+
+/*
+ * Theme of the user interface (work order 070, src/theme/README.md).
+ *
+ * Components use only the colour names below (bg-canvas, text-fg,
+ * border-line, bg-accent ...), never Tailwind's palette (slate, red ...).
+ * index.html sets data-theme, data-accent and data-motion on <html> before the
+ * first paint; src/theme/store.ts keeps them up to date. theme/contrast.test.ts
+ * reads this file and measures every colour pair, so keep each value as
+ * #rrggbb on a line of its own and the token blocks outside of @layer/@media.
+ */
+
+/* Inter 4.1 (SIL OFL 1.1, assets/fonts/inter/LICENSE.txt), shipped unchanged (E-50). */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./assets/fonts/inter/InterVariable.woff2") format("woff2");
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+    "Noto Color Emoji";
+  /* Stylistic set 2 tells I, l and 1 apart. */
+  --font-sans--font-feature-settings: "ss02";
+  --ease-calm: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Colour names for Tailwind (bg-*, text-*, border-*, ring-*, outline-*). */
+@theme inline {
+  --color-canvas: var(--twox-canvas);
+  --color-surface: var(--twox-surface);
+  --color-surface-muted: var(--twox-surface-muted);
+  --color-fg: var(--twox-fg);
+  --color-fg-muted: var(--twox-fg-muted);
+  --color-line: var(--twox-line);
+  --color-line-strong: var(--twox-line-strong);
+  --color-accent: var(--twox-accent);
+  --color-accent-strong: var(--twox-accent-strong);
+  --color-accent-soft: var(--twox-accent-soft);
+  --color-on-accent: var(--twox-on-accent);
+  --color-focus: var(--twox-accent);
+  --color-success: var(--twox-success);
+  --color-success-soft: var(--twox-success-soft);
+  --color-success-line: var(--twox-success-line);
+  --color-warning: var(--twox-warning);
+  --color-warning-soft: var(--twox-warning-soft);
+  --color-warning-line: var(--twox-warning-line);
+  --color-danger: var(--twox-danger);
+  --color-danger-soft: var(--twox-danger-soft);
+  --color-danger-line: var(--twox-danger-line);
+  --color-info: var(--twox-info);
+  --color-info-soft: var(--twox-info-soft);
+  --color-info-line: var(--twox-info-line);
+}
+
+/* Neutral colours and status colours (independent of the accent). */
+:root {
+  color-scheme: light;
+  --twox-canvas: #f8f6f9;
+  --twox-surface: #ffffff;
+  --twox-surface-muted: #f1edf2;
+  --twox-fg: #1e1a22;
+  --twox-fg-muted: #5f5866;
+  --twox-line: #e2dce4;
+  --twox-line-strong: #8c8392;
+  --twox-success: #1e6b3a;
+  --twox-success-soft: #edf7f0;
+  --twox-success-line: #b5dcc2;
+  --twox-warning: #7a4a00;
+  --twox-warning-soft: #fcf5e6;
+  --twox-warning-line: #ebd3a0;
+  --twox-danger: #9b1c13;
+  --twox-danger-soft: #fdf1f0;
+  --twox-danger-line: #f2c4bf;
+  --twox-info: #24508f;
+  --twox-info-soft: #eef3fb;
+  --twox-info-line: #bdd0ee;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --twox-canvas: #19171d;
+  --twox-surface: #25212a;
+  --twox-surface-muted: #2e2934;
+  --twox-fg: #ece8ef;
+  --twox-fg-muted: #a9a1b0;
+  --twox-line: #3a3441;
+  --twox-line-strong: #7a7182;
+  --twox-success: #8ad7a4;
+  --twox-success-soft: #1c2b21;
+  --twox-success-line: #2f5a3d;
+  --twox-warning: #f0c470;
+  --twox-warning-soft: #2e2617;
+  --twox-warning-line: #6a5426;
+  --twox-danger: #ffb4ac;
+  --twox-danger-soft: #33201f;
+  --twox-danger-line: #6b302b;
+  --twox-info: #a9c7f5;
+  --twox-info-soft: #1d2532;
+  --twox-info-line: #34496b;
+}
+
+/*
+ * Accent colours, light mode. Each block applies to the page (data-accent on
+ * <html>) and to a preview tile of the settings page (data-accent-preview).
+ */
+:root,
+[data-accent-preview="aubergine"] {
+  --twox-accent: #765477;
+  --twox-accent-strong: #49334f;
+  --twox-accent-soft: #efe7f0;
+  --twox-on-accent: #ffffff;
+}
+
+:root[data-accent="indigo"],
+[data-accent-preview="indigo"] {
+  --twox-accent: #4f5590;
+  --twox-accent-strong: #33385f;
+  --twox-accent-soft: #e8e9f4;
+  --twox-on-accent: #ffffff;
+}
+
+:root[data-accent="berry"],
+[data-accent-preview="berry"] {
+  --twox-accent: #8c3d5e;
+  --twox-accent-strong: #5e2640;
+  --twox-accent-soft: #f6e7ed;
+  --twox-on-accent: #ffffff;
+}
+
+:root[data-accent="umber"],
+[data-accent-preview="umber"] {
+  --twox-accent: #7a5236;
+  --twox-accent-strong: #523722;
+  --twox-accent-soft: #f3eae2;
+  --twox-on-accent: #ffffff;
+}
+
+:root[data-accent="graphite"],
+[data-accent-preview="graphite"] {
+  --twox-accent: #52565e;
+  --twox-accent-strong: #33363c;
+  --twox-accent-soft: #e9eaec;
+  --twox-on-accent: #ffffff;
+}
+
+/* Accent colours, dark mode: lighter accents, dark text on them. */
+:root[data-theme="dark"],
+[data-theme="dark"] [data-accent-preview="aubergine"] {
+  --twox-accent: #b496b8;
+  --twox-accent-strong: #d9c6db;
+  --twox-accent-soft: #3a2f3e;
+  --twox-on-accent: #19171d;
+}
+
+:root[data-theme="dark"][data-accent="indigo"],
+[data-theme="dark"] [data-accent-preview="indigo"] {
+  --twox-accent: #a6abdf;
+  --twox-accent-strong: #cdd0ef;
+  --twox-accent-soft: #2c2e44;
+  --twox-on-accent: #19171d;
+}
+
+:root[data-theme="dark"][data-accent="berry"],
+[data-theme="dark"] [data-accent-preview="berry"] {
+  --twox-accent: #e09bb7;
+  --twox-accent-strong: #f0c8d8;
+  --twox-accent-soft: #3e2531;
+  --twox-on-accent: #19171d;
+}
+
+:root[data-theme="dark"][data-accent="umber"],
+[data-theme="dark"] [data-accent-preview="umber"] {
+  --twox-accent: #d2a684;
+  --twox-accent-strong: #e8cdb8;
+  --twox-accent-soft: #3a2e25;
+  --twox-on-accent: #19171d;
+}
+
+:root[data-theme="dark"][data-accent="graphite"],
+[data-theme="dark"] [data-accent-preview="graphite"] {
+  --twox-accent: #b9bdc5;
+  --twox-accent-strong: #dcdfe4;
+  --twox-accent-soft: #33353a;
+  --twox-on-accent: #19171d;
+}
+
+@layer base {
+  /* Page colours before React renders, so that a dark page never flashes white. */
+  html {
+    background-color: var(--twox-canvas);
+    color: var(--twox-fg);
+  }
+
+  /* A visible focus ring in every mode (at least 3:1, see theme/contrast.test.ts). */
+  :focus-visible {
+    outline: 2px solid var(--twox-accent);
+    outline-offset: 2px;
+  }
+}
+
+/*
+ * Text animations (E-52), pure CSS. Only opacity, transform, filter,
+ * background-position and background-size move, so no box changes size and
+ * nothing jumps. components/TextMotion.tsx renders the classes, but not while
+ * reduced motion is on.
+ */
+@layer components {
+  /* A: headings clear up word by word. */
+  .tx-clear .tx-word {
+    display: inline-block;
+    animation: tx-clear 640ms var(--ease-calm) both;
+    animation-delay: calc(var(--tx-index, 0) * 55ms);
+  }
+
+  /* B: a line rises behind a fixed edge; the wrapper keeps its height. */
+  .tx-mask .tx-line {
+    display: block;
+    overflow: clip;
+    padding-bottom: 0.12em;
+    margin-bottom: -0.12em;
+  }
+
+  .tx-mask .tx-line > span {
+    display: block;
+    animation: tx-mask 760ms var(--ease-calm) both;
+    animation-delay: calc(var(--tx-index, 0) * 90ms);
+  }
+
+  /*
+   * C: navigation line. The underline grows from the left; the current entry
+   * is semi-bold without getting wider, because an invisible bold copy of the
+   * label (::after, from data-label) reserves its width.
+   */
+  .nav-link {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.25rem 0 0.375rem;
+    color: var(--twox-fg-muted);
+    background: linear-gradient(var(--twox-accent), var(--twox-accent)) left bottom / 0% 2px no-repeat;
+    transition:
+      background-size 260ms var(--ease-calm),
+      color 160ms linear;
+  }
+
+  .nav-link::after {
+    content: attr(data-label);
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+    user-select: none;
+    font-weight: 600;
+  }
+
+  .nav-link:hover {
+    color: var(--twox-fg);
+    background-size: 100% 2px;
+  }
+
+  .nav-link[aria-current="page"] {
+    color: var(--twox-fg);
+    font-weight: 600;
+    background-size: 100% 2px;
+  }
+
+  /* D: a band of light runs through a loading text; the ellipsis pulses. */
+  .tx-sheen {
+    background: linear-gradient(
+        100deg,
+        var(--twox-fg-muted) 0 38%,
+        var(--twox-fg) 50%,
+        var(--twox-fg-muted) 62% 100%
+      )
+      0 0 / 260% 100%;
+    background-clip: text;
+    color: transparent;
+    animation: tx-sheen 1.8s linear infinite;
+  }
+
+  .tx-dots {
+    color: var(--twox-fg-muted);
+    animation: tx-dot 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes tx-clear {
+  from {
+    opacity: 0;
+    transform: translateY(0.3em);
+    filter: blur(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes tx-mask {
+  from {
+    transform: translateY(110%);
+  }
+
+  to {
+    transform: none;
+  }
+}
+
+@keyframes tx-sheen {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: 0 0;
+  }
+}
+
+@keyframes tx-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+
+  40% {
+    opacity: 1;
+  }
+}
+
+/* Reduced motion (operating system or settings page): no animation, no transition. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .tx-sheen {
+    background: none;
+    color: var(--twox-fg-muted);
+  }
+}
+
+:root[data-motion="reduce"] *,
+:root[data-motion="reduce"] *::before,
+:root[data-motion="reduce"] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+:root[data-motion="reduce"] .tx-sheen {
+  background: none;
+  color: var(--twox-fg-muted);
+}
+
+/* Map (React Flow): its own colours follow the theme. */
+.twox-map .react-flow {
+  --xy-background-color: var(--twox-surface);
+  --xy-background-pattern-color: var(--twox-line-strong);
+  --xy-minimap-background-color: var(--twox-surface);
+  --xy-minimap-mask-background-color: color-mix(in srgb, var(--twox-surface-muted) 70%, transparent);
+  --xy-controls-button-background-color: var(--twox-surface);
+  --xy-controls-button-background-color-hover: var(--twox-surface-muted);
+  --xy-controls-button-color: var(--twox-fg);
+  --xy-controls-button-color-hover: var(--twox-fg);
+  --xy-controls-button-border-color: var(--twox-line);
+  --xy-edge-label-background-color: var(--twox-surface);
+  --xy-edge-label-color: var(--twox-fg-muted);
+  --xy-attribution-background-color: color-mix(in srgb, var(--twox-surface) 70%, transparent);
+  --xy-selection-background-color: color-mix(in srgb, var(--twox-accent) 10%, transparent);
+  --xy-selection-border: 1px dotted var(--twox-accent);
+}
+
+.twox-map .react-flow__attribution a {
+  color: var(--twox-fg-muted);
+}

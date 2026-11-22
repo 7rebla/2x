@@ -9,5 +9,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     include: ["src/**/*.test.{ts,tsx}"],
+    // Vitest empties CSS files; the contrast test reads the theme tokens as raw text.
+    css: { include: [/\/src\/index\.css\?raw$/] },
   },
 });

@@ -9,6 +9,7 @@ import { installApiErrorHandling } from "./api/errors.ts";
 import { createQueryClient } from "./api/queryClient.ts";
 import { App } from "./App.tsx";
 import { routes } from "./routes.tsx";
+import { installDisplaySettings } from "./theme/store.ts";
 import "./index.css";
 
 const container = document.getElementById("root");
@@ -18,6 +19,8 @@ if (container === null) {
 
 installClientConfig();
 installApiErrorHandling();
+// Colour mode, accent and motion (index.html set them already before the first paint).
+installDisplaySettings();
 
 createRoot(container).render(
   <StrictMode>
