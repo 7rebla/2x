@@ -1,6 +1,6 @@
 # Auftrag 081 – Tabellen auf schmalen Bildschirmen als Karten
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: C (entschieden mit E-65) · Status: zur Prüfung
+Meilenstein: Gestaltung (D1) · Freigabestufe: C (entschieden mit E-65) · Status: erledigt
 
 Voraussetzung: 079 ist auf `main`.
 
