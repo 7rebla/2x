@@ -26,7 +26,7 @@ import { Icon } from "../icons/Icon.tsx";
 
 | Group | Names |
 | --- | --- |
-| Navigation | `structure`, `map`, `import`, `audit`, `selftest`, `settings`, `user` |
+| Navigation | `structure`, `map`, `ingest` (work order 055), `import`, `audit`, `selftest`, `settings`, `user` |
 | Objects | `site`, `area`, `plant` (own), `device` (own, generic), `network`, `document`, `version` |
 | Device classes (own) | `devicePlc`, `deviceController`, `deviceComputer`, `deviceRouter`, `deviceRobot`, `deviceFirewall` |
 | Actions | `create`, `edit`, `upload`, `download`, `retry`, `apply`, `filter`, `resetFilter`, `search`, `fitView`, `previous`, `next`, `signOut` |

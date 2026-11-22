@@ -18,11 +18,12 @@ import { renderApp } from "./test/renderApp.tsx";
 // Routing inside the frame for a signed-in manager (who may see every page).
 // Sign-in, redirects and roles: session.test.tsx.
 
-// The map and search pages are loaded lazily; importing them once here keeps the
+// The map, search and ingest pages are loaded lazily; importing them once here keeps the
 // first click on their entries within the usual waiting time.
 beforeAll(async () => {
   await import("./pages/MapPage.tsx");
   await import("./pages/SearchPage.tsx");
+  await import("./pages/IngestPage.tsx");
 });
 
 afterEach(async () => {
@@ -66,6 +67,7 @@ describe("frame", () => {
       "Struktur",
       "Landkarte",
       "Suche",
+      "Einlesen",
       "Import",
       "Änderungsprotokoll",
       "Selbsttest",
@@ -147,6 +149,15 @@ describe("addresses", () => {
 
     expect((await pageHeading()).textContent).toBe("Search");
     expect(await screen.findByTestId("search-form")).toBeDefined();
+  });
+
+  it("/ingest shows the ingest overview, loaded lazily", async () => {
+    fakeApi(manager);
+    renderApp("/ingest");
+
+    expect((await pageHeading()).textContent).toBe("Ingestion");
+    expect(await screen.findByTestId("ingest-filter")).toBeDefined();
+    expect(within(mainNavigation()).getByRole("link", { name: "Ingestion" }).getAttribute("aria-current")).toBe("page");
   });
 
   it("/selftest shows the self-test page", async () => {

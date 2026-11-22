@@ -1,0 +1,45 @@
+{
+  "intro": "Ingest jobs of all devices, newest first. Without a filter the page lists the jobs that failed, are running or wait in the queue.",
+  "filter": {
+    "legend": "Filter the ingest jobs",
+    "status": "Status",
+    "device": "Device",
+    "allDevices": "All devices",
+    "unknownDevice": "Device no. {{id}}"
+  },
+  "statusFilter": {
+    "open": "Open: error, ingesting, queued",
+    "failed": "Error",
+    "running": "Ingesting",
+    "queued": "Queued",
+    "done": "Ingested",
+    "skipped": "Skipped",
+    "all": "All"
+  },
+  "tableLabel": "Ingest jobs",
+  "column": {
+    "device": "Device",
+    "document": "File",
+    "status": "Status",
+    "times": "Times",
+    "requestedBy": "Started by"
+  },
+  "version": "Version {{number}}",
+  "created": "Created",
+  "finished": "Finished",
+  "notFinished": "not yet",
+  "system": "System",
+  "superseded": "Older attempt: a newer job of this version is listed above.",
+  "polling": "Jobs are running: the list updates every 5 seconds.",
+  "empty": {
+    "open": "Nothing open: no job has failed, none is running or queued.",
+    "filtered": "No ingest job matches this filter."
+  },
+  "pagination": {
+    "label": "Pages of the ingest jobs",
+    "previous": "Previous page",
+    "next": "Next page",
+    "status": "Page {{page}} of {{pages}}",
+    "total": "Jobs: {{count, number}}"
+  }
+}

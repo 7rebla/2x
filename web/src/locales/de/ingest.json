@@ -1,0 +1,45 @@
+{
+  "intro": "Einlese-Aufträge aller Geräte, neueste zuerst. Ohne Filter stehen hier die Aufträge mit Fehler, die laufenden und die wartenden.",
+  "filter": {
+    "legend": "Einlese-Aufträge filtern",
+    "status": "Status",
+    "device": "Gerät",
+    "allDevices": "Alle Geräte",
+    "unknownDevice": "Gerät Nr. {{id}}"
+  },
+  "statusFilter": {
+    "open": "Offen: Fehler, wird eingelesen, in Warteschlange",
+    "failed": "Fehler",
+    "running": "Wird eingelesen",
+    "queued": "In Warteschlange",
+    "done": "Eingelesen",
+    "skipped": "Übersprungen",
+    "all": "Alle"
+  },
+  "tableLabel": "Einlese-Aufträge",
+  "column": {
+    "device": "Gerät",
+    "document": "Datei",
+    "status": "Status",
+    "times": "Zeitpunkte",
+    "requestedBy": "Angestoßen von"
+  },
+  "version": "Version {{number}}",
+  "created": "Angelegt",
+  "finished": "Beendet",
+  "notFinished": "noch nicht",
+  "system": "System",
+  "superseded": "Älterer Versuch: Ein neuerer Auftrag dieser Version steht weiter oben.",
+  "polling": "Es laufen Aufträge: Die Liste wird alle 5 Sekunden aktualisiert.",
+  "empty": {
+    "open": "Nichts offen: Kein Auftrag ist gescheitert, keiner läuft oder wartet.",
+    "filtered": "Kein Einlese-Auftrag passt zu diesem Filter."
+  },
+  "pagination": {
+    "label": "Seiten der Einlese-Aufträge",
+    "previous": "Vorherige Seite",
+    "next": "Nächste Seite",
+    "status": "Seite {{page}} von {{pages}}",
+    "total": "Aufträge: {{count, number}}"
+  }
+}

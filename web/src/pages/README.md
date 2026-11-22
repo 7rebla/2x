@@ -11,6 +11,7 @@ so each address can be opened directly or reloaded.
 | `/` | `StructurePage.tsx` | 032 |
 | `/map` | `MapPage.tsx` (loaded lazily) | 039 |
 | `/search` | `SearchPage.tsx` (loaded lazily) | 054 |
+| `/ingest` | `IngestPage.tsx` (loaded lazily) | 055 |
 | `/devices/:deviceId` | `DevicePage.tsx` | 032 |
 | `/documents/:documentId` | `DocumentPage.tsx` | 036 |
 | `/import` | `ImportPage.tsx` | 035 |
@@ -26,8 +27,10 @@ Routes, the frame (`../components/Layout.tsx`) and the navigation stay as they a
 ## Frame and navigation
 
 - `../components/Layout.tsx` draws the header (name, navigation, user menu) around every page, always on one line:
-  every navigation entry has an icon (`../navigation.ts`, `../icons/README.md`); below 1024 px only the icons show,
-  with the text as accessible name and tooltip, and a navigation that is still too wide scrolls on its own.
+  every navigation entry has an icon (`../navigation.ts`, `../icons/README.md`); below 1280 px (`xl`) only the icons show,
+  with the text as accessible name and tooltip, and a navigation that is still too wide scrolls on its own. From
+  1280 px the header is wider than the page content (`max-w-7xl`), so the seven entries of M2 show their texts in
+  German and English on one line (work order 055; `../../e2e/navigation.spec.ts` checks 1024 and 1280 px).
   The user menu (`../components/UserMenu.tsx`) is a button with the user name; it opens a panel with the role,
   the link to the settings, the language switch and "Sign out". Before sign-in the language switch stands in the header.
   An account without a role sees a hint above the page.
@@ -172,6 +175,28 @@ if (query.isError) return <ErrorMessage error={query.error} />;
   Unicode code points: the snippet is split with `Array.from` first, so marks do not slip after an emoji or another
   character outside the BMP. The found places are `<mark>` elements with text inside; nothing is rendered as HTML.
 - Tests fake the search API with `search/testData.ts` (test sentences only, devices of `structure/testData.ts`).
+
+## Ingest overview
+
+- `IngestPage.tsx` (`/ingest`, role `read`, entry "Ingestion" / "Einlesen" with the icon `ingest`) lists the ingest
+  jobs of all devices through `GET /api/v1/ingest-jobs/` (`ingestJobsListOptions`), newest first, 50 per page with
+  "previous" and "next" like `/audit`. `routes.tsx` loads it with `lazy()`.
+- Filters: status and device, both in the address (`/ingest?status=…&device=…`) and applied at once. Without a status
+  the page asks for `failed`, `running` and `queued` (what needs attention); one state can be chosen, and `all` sends no
+  status, so ingested and skipped jobs show as well. An unknown status means the default, a device value that cannot
+  be an id means all devices, a device that is not in the list is named by its id. A new filter starts on page 1.
+- A row shows the device (link, key), the file (link to `/documents/:id`) with version and file name, the status with
+  its step and the page and section counts (`IngestStatusBadge`), the translated message with the technical text to
+  unfold (`IngestError`), the times (created, finished) and, for `manage` only, who started the job ("System" for
+  none; the API sends `null` to `read`, E-57). All three building blocks come from
+  `../components/files/IngestStatus.tsx` (work order 053); `error_detail` and every name are rendered as text.
+- "Ingest again" (`IngestRetryButton`) stands on every row of a manager whose job is not queued or running. Every job is
+  one attempt (E-55): when a newer job of the same version is listed on the same page, the older row says so and has
+  no button. A failed attempt stays in the list after a successful retry (the API has no filter for the newest job).
+- While a listed job is queued or running, the page asks again every 5 seconds (`INGEST_POLL_INTERVAL_MS`) and says
+  so; otherwise it does not poll. With the AI features switched off (E-59) no job has the step "embed".
+- Tests fake the list and `POST …/ingest/` inside `IngestPage.test.tsx`; `../../e2e/ingest.spec.ts` uploads a
+  plain-text file, which the format check skips without a converter.
 
 ## Map
 

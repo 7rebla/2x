@@ -37,6 +37,12 @@ const SearchPage = lazy(async () => {
   return { default: module.SearchPage };
 });
 
+// The ingest overview (work order 055) is loaded when it is opened, like the search page.
+const IngestPage = lazy(async () => {
+  const module = await import("./pages/IngestPage.tsx");
+  return { default: module.IngestPage };
+});
+
 /** A page that needs the role of `path` in navigation.ts ("read" if it has no entry). */
 function guarded(path: string, page: ReactElement): ReactElement {
   return <RequireRole role={requiredRole(path)}>{page}</RequireRole>;
@@ -73,6 +79,15 @@ export const routes: RouteObject[] = [
                   "/search",
                   <Suspense fallback={<Loading />}>
                     <SearchPage />
+                  </Suspense>,
+                ),
+              },
+              {
+                path: "ingest",
+                element: guarded(
+                  "/ingest",
+                  <Suspense fallback={<Loading />}>
+                    <IngestPage />
                   </Suspense>,
                 ),
               },

@@ -3,6 +3,7 @@
   "structure": "Structure",
   "map": "Map",
   "search": "Search",
+  "ingest": "Ingestion",
   "device": "Device",
   "document": "File",
   "import": "Import",
