@@ -133,12 +133,12 @@ const catalogFiles =import.meta.glob<unknown>("./locales/*/*.json", {
 });
 
 describe("catalogs", () => {
-  it("has a JSON file for every namespace of M1 in both languages, and no others", () => {
+  it("has a JSON file for every namespace in both languages, and no others", () => {
     const expected = supportedLanguages
       .flatMap((language) => namespaces.map((ns) => `./locales/${language}/${ns}.json`))
       .sort();
     expect(Object.keys(catalogFiles).sort()).toEqual(expected);
-    expect(namespaces).toHaveLength(8);
+    expect(namespaces).toHaveLength(9);
   });
 
   it.each(namespaces)("namespace %s has the same keys in German and English", (ns) => {

@@ -1,0 +1,50 @@
+{
+  "intro": "Sites, areas, plants and devices as recorded, plus the IP networks of the devices. The map shows only what is stored; connections from configuration files follow in a later milestone.",
+  "listLink": "Show the structure as a list",
+  "empty": "No structure recorded yet.",
+  "emptyLink": "Go to the structure",
+  "legend": "Dashed line: the device's address lies in this network (IPv4 by /24, IPv6 by /64). No other connections are drawn.",
+  "label": "Map of sites, areas, plants, devices and networks",
+  "kind": {
+    "site": "Site",
+    "area": "Area",
+    "plant": "Plant",
+    "device": "Device",
+    "network": "Network"
+  },
+  "edge": {
+    "inNetwork": "in network"
+  },
+  "search": {
+    "label": "Search on the map",
+    "placeholder": "Name, key or IP address",
+    "matches_one": "{{count}} match",
+    "matches_other": "{{count}} matches",
+    "noMatch": "No match"
+  },
+  "showNetworks": "Show networks",
+  "aria": {
+    "node": "node",
+    "group": "{{kind}} {{name}}",
+    "plant": "Plant {{name}} ({{key}})",
+    "device": "Device {{name}} ({{key}}), opens the device page",
+    "deviceWithIp": "Device {{name}} ({{key}}), {{ip}} in network {{network}}, opens the device page",
+    "network_one": "Network {{cidr}} with {{count}} device",
+    "network_other": "Network {{cidr}} with {{count}} devices",
+    "direction": {
+      "up": "up",
+      "down": "down",
+      "left": "left",
+      "right": "right"
+    },
+    "nodeHelp": "Press Tab to move between nodes. Enter on a device opens its page. Space selects a node, the arrow keys move a selected device, Escape clears the selection.",
+    "edgeHelp": "Device is in this network.",
+    "moved": "Moved {{direction}} to {{x}}, {{y}}",
+    "controls": "Map controls",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fitView": "Fit view",
+    "minimap": "Overview of the whole map",
+    "handle": "Anchor of a network line"
+  }
+}

@@ -26,6 +26,8 @@ export interface NavigationEntry {
 /** Order of the entries in the header. Pages with a parameter (device, file) and the sign-in page are not listed. */
 export const navigation: readonly NavigationEntry[] = [
   { path: "/", textKey: "structure", end: true, requires: "read" },
+  // Interactive preview of the map (work order 039, E-48).
+  { path: "/map", textKey: "map", requires: "read" },
   { path: "/import", textKey: "import", requires: "manage" },
   // The change log names users; only "manage" may read it (E-43, work order 028, question 3).
   { path: "/audit", textKey: "audit", requires: "manage" },

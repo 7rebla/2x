@@ -1,6 +1,7 @@
 {
   "label": "Main navigation",
   "structure": "Structure",
+  "map": "Map",
   "device": "Device",
   "document": "File",
   "import": "Import",

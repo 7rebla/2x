@@ -71,21 +71,30 @@ RUN npm run build
 # Shipped code: the production dependencies (react, react-dom, scheduler,
 # i18next, react-i18next, html-parse-stringify, react-router with cookie-es
 # and @remix-run/route-pattern, @tanstack/react-query with
-# @tanstack/query-core), the API client that @hey-api/openapi-ts copies from
+# @tanstack/query-core, @xyflow/react with @xyflow/system, classcat, zustand,
+# react-compiler-runtime and the d3 modules it uses: d3-color, d3-dispatch,
+# d3-drag, d3-ease, d3-interpolate, d3-selection, d3-timer, d3-transition,
+# d3-zoom), the API client that @hey-api/openapi-ts copies from
 # its templates into src/api/generated (including the TanStack Query options),
 # the module preload helper Vite inlines and the base styles Tailwind CSS
-# emits. The dependencies of react-router get a notice even where the bundler
-# drops parts of them.
+# emits. The dependencies of react-router and @xyflow/react get a notice even
+# where the bundler drops parts of them.
+# react-compiler-runtime ships without a licence file; its package.json says
+# MIT and its source header refers to the licence file of the facebook/react
+# repository, which is the same file the react package ships. The notice
+# therefore quotes react's licence file for it.
 # The build fails if the production dependencies change, so that a new
 # runtime package cannot ship without its notice.
 # npm also lists typescript, @types/react, @types/react-dom and csstype here:
-# i18next, react-i18next, react-router and @tanstack/react-query declare
-# typescript, @types/react or @types/react-dom as optional peer dependencies,
-# and the dev install satisfies them. They are type information only, nothing
-# of them reaches the bundle, so they get no notice.
+# i18next, react-i18next, react-router, @tanstack/react-query and
+# @xyflow/react declare typescript, @types/react or @types/react-dom as
+# optional peer dependencies, and the dev install satisfies them. The six
+# @types/d3-* packages are regular dependencies of @xyflow/system. All of them
+# are type information only, nothing of them reaches the bundle, so they get
+# no notice.
 RUN set -eu; \
     runtime=$(npm ls --omit=dev --all --parseable | sed -n 's|^/web/node_modules/||p' | sort | tr '\n' ' '); \
-    if [ "$runtime" != "@remix-run/route-pattern @tanstack/query-core @tanstack/react-query @types/react @types/react-dom cookie-es csstype html-parse-stringify i18next react react-dom react-i18next react-router scheduler typescript " ]; then \
+    if [ "$runtime" != "@remix-run/route-pattern @tanstack/query-core @tanstack/react-query @types/d3-color @types/d3-drag @types/d3-interpolate @types/d3-selection @types/d3-transition @types/d3-zoom @types/react @types/react-dom @xyflow/react @xyflow/system classcat cookie-es csstype d3-color d3-dispatch d3-drag d3-ease d3-interpolate d3-selection d3-timer d3-transition d3-zoom html-parse-stringify i18next react react-compiler-runtime react-dom react-i18next react-router scheduler typescript zustand " ]; then \
         echo "Production dependencies changed ($runtime): update the notice list in backend/Dockerfile." >&2; \
         exit 1; \
     fi; \
@@ -96,9 +105,12 @@ RUN set -eu; \
         echo; \
         echo "The files below /static/ contain code from the following packages."; \
         echo "Each section quotes the package's licence file unchanged."; \
-        for pkg in react react-dom scheduler i18next react-i18next html-parse-stringify react-router cookie-es @remix-run/route-pattern @tanstack/react-query @tanstack/query-core @hey-api/openapi-ts vite tailwindcss; do \
+        for pkg in react react-dom scheduler i18next react-i18next html-parse-stringify react-router cookie-es @remix-run/route-pattern @tanstack/react-query @tanstack/query-core @xyflow/react @xyflow/system classcat zustand react-compiler-runtime d3-color d3-dispatch d3-drag d3-ease d3-interpolate d3-selection d3-timer d3-transition d3-zoom @hey-api/openapi-ts vite tailwindcss; do \
             dir=node_modules/$pkg; \
-            licence_file=$(find "$dir" -maxdepth 1 -type f -iname 'licen[cs]e*' | sort | head -n 1); \
+            case "$pkg" in \
+                react-compiler-runtime) licence_file=node_modules/react/LICENSE;; \
+                *) licence_file=$(find "$dir" -maxdepth 1 -type f -iname 'licen[cs]e*' | sort | head -n 1);; \
+            esac; \
             if [ -z "$licence_file" ]; then echo "No licence file in $dir" >&2; exit 1; fi; \
             echo; \
             echo "------------------------------------------------------------"; \
@@ -107,6 +119,7 @@ RUN set -eu; \
                 @hey-api/openapi-ts) echo "Used for: the generated API client (src/api/generated), copied from the generator's templates.";; \
                 vite) echo "Used for: the module preload helper that the build inlines into the bundle.";; \
                 tailwindcss) echo "Used for: the base styles in the generated stylesheet.";; \
+                react-compiler-runtime) echo "Used for: runtime dependency of the web interface (map page). The package has no licence file; quoted below is the licence file of the facebook/react repository its source header refers to, as shipped with the react package.";; \
                 *) echo "Used for: runtime dependency of the web interface.";; \
             esac; \
             echo "------------------------------------------------------------"; \
