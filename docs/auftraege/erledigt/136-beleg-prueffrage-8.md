@@ -1,6 +1,6 @@
 # Auftrag 136 – Beleg für Prüffrage 8
 
-Meilenstein: M3 · Freigabestufe: C · Status: wartet auf a7 (Frage an die Leitstelle zum Test aus 120, siehe Kurzbericht)
+Meilenstein: M3 · Freigabestufe: C · Status: erledigt
 
 Voraussetzung: 120 (Suchgrundlinie Prüffragen) ist nach `main` zusammengeführt; `backend/twox/search/probes/m3.json` und das erweiterte Probe-Format mit Fundstelle über den Überschriftenpfad liegen dort vor. Start erst nach Entscheidung D2 durch a7 (siehe „Fragen an a7“). Der Umfang hängt von der gewählten Option ab: Nur bei Option (a) wird hochgeladen und eine Probe ergänzt, bei (b) oder (c) entsteht nur ein Vermerk.
 
