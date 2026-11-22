@@ -27,6 +27,7 @@ from tests.search.test_keyword_search import add_sections, make_device, make_doc
 from twox.answers import chat as chat_module
 from twox.answers import service
 from twox.answers.chat import FakeChatModel
+from twox.answers.citations import value_occurs
 from twox.answers.evaluation import (
     NOT_MEASURED_NOTE,
     Mode,
@@ -430,6 +431,38 @@ def test_key_facts_are_normalised(written: str) -> None:
     assert missing_key_facts(questions()[1], f"Er hält {written}.") == []
 
 
+def fact_question(*key_facts: str) -> Question:
+    return Question(id=1, question="Frage?", kind=QuestionKind.FACT, key_facts=key_facts)
+
+
+@pytest.mark.parametrize(
+    ("fact", "text", "found"),
+    [
+        ("5 kg", "Er hält 25 kg [1].", False),
+        ("5 kg", "Er hält 12,5 kg [1].", False),
+        ("5 kg", "Er hält 5 kg [1].", True),
+        ("5 kg", "Er hält 5kg [1].", True),
+        ("1880", "Port 18800 [1].", False),
+        ("1880", "Port 1880 [1].", True),
+        ("1880", "unter http://192.168.0.100:1880 [1].", True),
+        ("V18", "TIA Portal V180 [1].", False),
+        ("V18", "TIA Portal V18 [1].", True),
+        ("V18", "TIA Portal V 18 [1].", True),
+        ("Reset", "Über den Reset-Button [1].", True),
+        ("OPC UA", "Der OPC-UA-Server [1].", True),
+    ],
+)
+def test_key_facts_are_whole_values(fact: str, text: str, found: bool) -> None:
+    assert value_occurs(fact, text) is found
+    assert missing_key_facts(fact_question(fact), text) == ([] if found else [fact])
+
+
+def test_a_lengthened_key_fact_makes_a_fact_question_wrong() -> None:
+    result = judged(1, seen([ref(1)], text="Der Greifer G-12 hält 25 kg [1]."))
+    assert result.verdict is Verdict.WRONG
+    assert result.missing_key_facts == ["5 kg"]
+
+
 def test_right_file_wrong_page_is_wrong() -> None:
     result = judged(1, seen([ref(1, page=6)]))
     assert result.verdict is Verdict.WRONG
@@ -671,6 +704,32 @@ def test_rules_can_differ_and_passed_follows_the_rule() -> None:
     assert not per_run.passed
     strict = summarise(results, runs=3, mode=Mode.STRICT, rule=Rule.PER_RUN)
     assert not strict.passed
+
+
+def test_without_control_question_nothing_is_passed() -> None:
+    results = matrix([ALWAYS] * 10, ALWAYS)[:-1]
+    for rule in Rule:
+        summary = summarise(results, runs=3, rule=rule)
+        assert summary.correct_count == 10
+        assert not summary.control_asked
+        assert not summary.control_ok
+        assert not summary.passed_per_question
+        assert not summary.passed_per_run
+        assert not summary.passed
+        assert all(not item.control_ok and not item.passed for item in summary.per_run)
+
+
+@pytest.mark.usefixtures("ai_on")
+def test_report_says_control_question_not_asked() -> None:
+    scripted = ScriptedAnswer([SourcesEvent(sources=[ref(1)]), done()])
+    report = evaluate([questions()[1]], places(), answer=scripted, ingested=all_ingested)
+    text = format_table(report)
+    assert "1/1 right, control question not asked (strict); passed: no" in text
+    assert "Rule per-question: NOT PASSED" in text
+    assert "1    1/1    not asked         no" in text
+    data = json.loads(format_json(report))
+    assert data["summary"]["control_asked"] is False
+    assert data["summary"]["passed"] is False
 
 
 def test_failed_control_question_fails_even_with_ten_of_ten() -> None:
@@ -1034,6 +1093,9 @@ def test_command_reads_questions_from_standard_input_and_takes_a_subset(
     assert [item["question_id"] for item in data["questions"]] == [1]
     assert data["questions"][0]["correct_runs"] == 2
     assert data["runs"] == 2
+    # --only without the control question: no acceptance.
+    assert data["summary"]["control_asked"] is False
+    assert data["summary"]["passed"] is False
 
 
 @pytest.mark.django_db

@@ -138,7 +138,7 @@ Der Auftrag ist ohne Entscheidung startbar; das Werkzeug unterstützt alle Varia
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
 
-**Status: zur Prüfung.** Eigenes Compose-Projekt `twox-127`, `TWOX_API_PORT=18127`. „2x“ und „twox-leit“ nicht angefasst. Keine neue Abhängigkeit, keine Migration, keine Einstellung; `citations.py` unverändert (`normalise_value` war schon öffentlich).
+**Status: zur Prüfung.** Eigenes Compose-Projekt `twox-127`, `TWOX_API_PORT=18127`. „2x“ und „twox-leit“ nicht angefasst. Keine neue Abhängigkeit, keine Migration, keine Einstellung; in `citations.py` nur die neue öffentliche Funktion `value_occurs` (Nachbesserung).
 
 ### Was wurde gebaut?
 
@@ -189,10 +189,16 @@ Der Auftrag ist ohne Entscheidung startbar; das Werkzeug unterstützt alle Varia
 1. **Standard `--runs 3` im Befehl:** Der Auftrag nennt „Standard 1 bis zur Entscheidung“; D5 (a) ist mit E-69 entschieden, deshalb hat der Befehl 3 Läufe als Vorgabe. `evaluate()` selbst behält `runs=1` wie in der Signatur des Auftrags. `--mode majority`, `--rule per-question`, Kontrollfrage streng wie vorgegeben.
 2. **„Quote gültiger Zitate“ ausgelegt** als Anteil der gültigen Zitate (`done.cited`), die auf eine erwartete Fundstelle zeigen, über alle Läufe (`expected_citations / valid_citations`). Ungültige Nummern sieht das Werkzeug nicht (nur die Zahl der verworfenen Sätze, die je Lauf mit ausgegeben wird).
 3. **Zusätzliche, injizierbare Parameter von `evaluate`:** `mode`, `control_mode`, `rule`, `wording`, `literal`, `required` (Standard 8) und `ingested` (Standard `ingested_checksums`), damit Lauftests ohne Datenbank auskommen und 135 einen kleineren Fragensatz mit eigener Schwelle prüfen kann. `x/10` heißt allgemein „x/n“ mit n = Zahl der Nicht-Kontrollfragen.
-4. **Key facts als Enthaltensein:** Der Vergleich ist ein Teilstring-Test auf vereinheitlichtem Text; „5 kg“ steht auch in „25 kg“. Im Modul-Docstring genannt; die Bestätigung durch a7 (D5 (d)) fängt das ab.
+4. **Key facts als ganze Werte (seit der Nachbesserung):** Vergleich über `citations.value_occurs` mit Vereinheitlichung und Grenzregeln der Zitatprüfung; „5 kg“ trifft nicht „25 kg“ oder „12,5 kg“, „1880“ nicht „18800“, „V18“ nicht „V180“. Die Bedeutung wird nicht geprüft („Limits“ in `citations.py`); dafür bestätigt a7 jedes Urteil (D5 (d)). Das ist eine kleine Änderung an `citations.py` (neue öffentliche Funktion, `verify` unverändert).
 5. **Endurteil `error`:** Eine Frage, deren Läufe alle mit `error` enden, hat das Endurteil `error`, sonst `wrong`; beides zählt nicht als richtig.
 6. **Teilweise nicht eingelesen:** Bei gestellten Fragen nennt `not_ingested` die fehlenden Handbücher (wie „partly not ingested“ bei `evaluate_search`).
-7. `citations.py` nicht geändert: `normalise_value` war bereits öffentlich (123).
+7. `citations.py`: `normalise_value` war bereits öffentlich (123); mit der Nachbesserung kam `value_occurs` dazu (siehe 4).
 8. Lokal bleiben die Images `twox-127-*`; die ignorierte `.env` hat `TWOX_API_PORT=18127`.
 
 Offene Fragen an a7: keine.
+
+### Nachbesserung (nach Prüfung der Leitstelle)
+
+1. **Key facts als ganze Werte:** Neue öffentliche Funktion `citations.value_occurs(value, text)`, ein dünner Wrapper um die bestehende Grenzprüfung (`_occurs`/`_bounded`); `verify` ist unverändert. `missing_key_facts` nutzt sie statt des Teilstring-Tests. Tests (`test_key_facts_are_whole_values`): „5 kg“ gegen „25 kg“ und „12,5 kg“ fehlt, gegen „5 kg“ und „5kg“ gefunden; „1880“ gegen „18800“ fehlt, gegen „1880“ und „…:1880“ gefunden; „V18“ gegen „V180“ fehlt, gegen „V18“ und „V 18“ gefunden; „Reset“ in „Reset-Button“ und „OPC UA“ in „OPC-UA-Server“ gefunden. Dazu `test_a_lengthened_key_fact_makes_a_fact_question_wrong`. Docstring und Abweichung 4 angepasst.
+2. **Ohne Kontrollfrage keine Abnahme:** `Summary.control_asked`. Ist keine Kontrollfrage gestellt worden (z. B. `--only` ohne 11), sind `control_ok`, `control_ok` je Lauf, `passed_per_question`, `passed_per_run` und `passed` falsch; der Bericht sagt „control question not asked“. Tests: `test_without_control_question_nothing_is_passed` (beide Regeln, 10/10), `test_report_says_control_question_not_asked` (Text und JSON) und `--only 1` im Befehlstest.
+3. **Prüfungen (twox-127):** `ruff check`, `ruff format --check` (221 Dateien), `mypy` (220 Dateien) ohne Befund; `pytest tests/answers` 914 passed; `pytest` 3338 passed, 6 deselected; `pytest -m worker` 6 passed; Übersetzungskatalog, Migrationen („No changes detected“), Lizenzprüfung und OpenAPI-Schema ohne Unterschied. `down -v` Exit 0, kein Container und kein Volume `twox-127` übrig.

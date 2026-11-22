@@ -33,11 +33,13 @@ Verdict of one run (:func:`judge_run`, pure)
     places (E-55: a section may be stored at several devices) is compared
     with :func:`~twox.search.evaluation.matching_place`, so pages and heading
     paths count exactly as in the search measurement. A key fact is present
-    when its value, normalised by :func:`twox.answers.citations.normalise_value`
-    (white space, case, dashes; "5 kg" = "5kg"), occurs in the normalised final
-    text, or one of its alternatives does (not with ``literal``). The
-    comparison is a plain containment of normalised text: "5 kg" is also found
-    in "25 kg"; that is why a7 confirms every automatic verdict (D5).
+    when it occurs in the final text as a whole value, or one of its
+    alternatives does (not with ``literal``):
+    :func:`twox.answers.citations.value_occurs` normalises as the citation
+    check does (white space, case, dashes, decimal comma; "5 kg" = "5kg") and
+    applies its boundaries ("5 kg" is not in "25 kg" or "12,5 kg", "1880" not
+    in "18800", "V18" not in "V180"). Meaning is not checked (see "Limits" of
+    :mod:`twox.answers.citations`); a7 confirms every automatic verdict (D5).
 
     * ``fact``: right when the status is ``answered``, every key fact is
       present and at least one cited source points to an expected place.
@@ -61,7 +63,9 @@ Over several runs (:func:`aggregate`, :func:`summarise`, pure)
     question is right) and *per run* (a run passes with at least
     :data:`REQUIRED_CORRECT` right questions and the control question right in
     that run; passed when the majority, or with ``strict`` every run, passes).
-    ``rule`` decides which of them gives ``passed``.
+    ``rule`` decides which of them gives ``passed``. Without a control question
+    among the asked questions (``--only`` without it) the report says "control
+    question not asked" and nothing is passed: an acceptance needs it.
 
 With the AI features off (E-59) no question is asked and the model service
 is never contacted: the report says "not measured" and gives no x/10.
@@ -87,7 +91,7 @@ from typing import Any, Protocol
 from django.conf import settings
 
 from twox.answers import prompt, service
-from twox.answers.citations import normalise_value
+from twox.answers.citations import value_occurs
 from twox.answers.types import (
     AnswerEvent,
     AnswerStatus,
@@ -322,7 +326,7 @@ class RunSummary:
     run: int
     #: Judged (not control) questions right in this run.
     correct_count: int
-    #: Every control question right in this run (``True`` without one).
+    #: A control question was asked and every one is right in this run.
     control_ok: bool
     #: ``correct_count >= required`` and ``control_ok``.
     passed: bool
@@ -336,7 +340,9 @@ class Summary:
     judged: int
     #: Judged questions whose final verdict is right.
     correct_count: int
-    #: Every control question right by its final verdict.
+    #: Whether a control question was asked; without one nothing is passed.
+    control_asked: bool
+    #: A control question was asked and every one is right by its final verdict.
     control_ok: bool
     passed_per_question: bool
     per_run: list[RunSummary]
@@ -603,17 +609,15 @@ def _hits(source: SourceRef, expected: Sequence[ExpectedPlace]) -> bool:
 def missing_key_facts(question: Question, text: str, *, literal: bool = False) -> list[str]:
     """The key facts of ``question`` found in ``text`` neither as written nor as an alternative.
 
-    Both sides are normalised with :func:`twox.answers.citations.normalise_value`.
+    Compared with :func:`twox.answers.citations.value_occurs`: normalised like
+    the check values of the citation check and with the same boundaries, so
+    "5 kg" is not found in "25 kg" and "1880" not in "18800".
     """
-    normalised = normalise_value(text)
     alternatives = {} if literal else dict(question.alternatives)
     return [
         fact
         for fact in question.key_facts
-        if not any(
-            normalise_value(spelling) in normalised
-            for spelling in (fact, *alternatives.get(fact, ()))
-        )
+        if not any(value_occurs(spelling, text) for spelling in (fact, *alternatives.get(fact, ())))
     ]
 
 
@@ -773,11 +777,13 @@ def summarise(
     judged = [result for result in results if not result.is_control]
     controls = [result for result in results if result.is_control]
     correct_count = sum(result.verdict is Verdict.CORRECT for result in judged)
-    control_ok = all(result.verdict is Verdict.CORRECT for result in controls)
+    # Without an asked control question there is no acceptance (D5).
+    control_asked = any(result.runs for result in controls)
+    control_ok = control_asked and all(result.verdict is Verdict.CORRECT for result in controls)
     per_run: list[RunSummary] = []
     for run in range(1, runs + 1):
         count = sum(_run_correct(result, run) for result in judged)
-        run_control = all(_run_correct(result, run) for result in controls)
+        run_control = control_asked and all(_run_correct(result, run) for result in controls)
         per_run.append(
             RunSummary(
                 run=run,
@@ -795,6 +801,7 @@ def summarise(
     return Summary(
         judged=len(judged),
         correct_count=correct_count,
+        control_asked=control_asked,
         control_ok=control_ok,
         passed_per_question=passed_per_question,
         per_run=per_run,
@@ -1035,6 +1042,12 @@ def _yes(value: bool) -> str:
     return "yes" if value else "no"
 
 
+def _control_text(asked: bool, ok: bool) -> str:
+    if not asked:
+        return "not asked"
+    return "ok" if ok else "not ok"
+
+
 def _header_lines(report: Report) -> list[str]:
     ai = "on" if report.ai_enabled else "off"
     facts = "literal" if report.literal else "with alternatives"
@@ -1153,7 +1166,7 @@ def format_table(report: Report) -> str:
                 [
                     str(item.run),
                     f"{item.correct_count}/{summary.judged}",
-                    "ok" if item.control_ok else "not ok",
+                    _control_text(summary.control_asked, item.control_ok),
                     _yes(item.passed),
                 ]
                 for item in summary.per_run
@@ -1161,7 +1174,7 @@ def format_table(report: Report) -> str:
         ),
         "",
         f"Per question ({report.mode}): {summary.correct_count}/{summary.judged} right,"
-        f" control question {'ok' if summary.control_ok else 'not ok'}"
+        f" control question {_control_text(summary.control_asked, summary.control_ok)}"
         f" ({report.control_mode}); passed: {_yes(summary.passed_per_question)}",
         f"Per run ({report.mode}): {summary.runs_passed} of {report.runs} runs passed;"
         f" passed: {_yes(summary.passed_per_run)}",
