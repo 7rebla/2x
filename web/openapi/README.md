@@ -24,7 +24,15 @@ From the repository root (the services `backend-dev` and `web-dev` are in the co
    (do not redirect the output with `>` in Windows PowerShell 5.1, that writes UTF-16):
 
    ```sh
-   docker compose run --rm -v "$(pwd)/web/openapi:/out" backend-dev \
+   docker compose run --rm -v "$PWD/web/openapi:/out" backend-dev \
+     python manage.py spectacular --file /out/schema.yml
+   ```
+
+   This is the form of the CI, for a POSIX shell (Linux, macOS). In Git Bash on Windows put `MSYS_NO_PATHCONV=1` in front of
+   `docker compose`; otherwise Git Bash rewrites `/out/schema.yml` into a Windows path and the command fails with `FileNotFoundError`:
+
+   ```sh
+   MSYS_NO_PATHCONV=1 docker compose run --rm -v "$PWD/web/openapi:/out" backend-dev \
      python manage.py spectacular --file /out/schema.yml
    ```
 
