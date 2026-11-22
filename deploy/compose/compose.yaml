@@ -231,6 +231,17 @@ services:
       DOCLING_SERVE_MAX_NUM_PAGES: "2000"
       DOCLING_SERVE_MAX_DOCUMENT_TIMEOUT: "7200"
       DOCLING_SERVE_ENG_LOC_NUM_WORKERS: "1"
+    # Memory limit (E-60): measured peak 6.6 GiB for a manual of 267 pages
+    # (work order 057). Above the limit the kernel kills the process (out of
+    # memory, exit 137) and restart: unless-stopped starts the service again.
+    # The ingestion job sees "Docling unreachable" and then a lost task and
+    # submits again; a document that always needs more memory fails each
+    # time and the job ends as failed (docling_unavailable) once
+    # TWOX_INGEST_MAX_RETRIES are used up. Tasks of other documents waiting
+    # in Docling are lost as well and are submitted again. Without
+    # memswap_limit Docker allows the same amount again as swap, as far as
+    # the host (Docker VM) has swap. Checked in work order 066.
+    mem_limit: ${TWOX_DOCLING_MEM_LIMIT:-8g}
     # E-32: internal network only, no route to the internet. api and worker
     # are attached to it as well; nothing else is.
     networks:

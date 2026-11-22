@@ -27,7 +27,7 @@ How 2x is put together is described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.
 - **Docker with the Compose plugin.** Everything runs in Linux containers; nothing is installed on the host (no Python, no Node).
   The root `compose.yaml` uses `include`, so an old Compose v1 (`docker-compose`) does not work.
 - **Disk space:** the document converter image (Docling) alone needs about 7.6 GB on disk (about 2.2 GB download).
-- **Memory:** Docling converts on the CPU and needs a lot of memory for large manuals. Measured in work order 057: up to 6.6 GiB for a manual of 267 pages, 2.8 GiB when idle (Docker VM with 15.5 GiB and 16 CPUs). The `docling` service has no memory limit yet; whether it gets one (recommended: 8 GiB) is still open with a7.
+- **Memory:** Docling converts on the CPU and needs a lot of memory for large manuals. Measured in work order 057: up to 6.6 GiB for a manual of 267 pages, 2.8 GiB when idle (Docker VM with 15.5 GiB and 16 CPUs). The `docling` service is limited to 8 GiB (`TWOX_DOCLING_MEM_LIMIT`, decision E-60), so the Docker VM needs at least that much plus the other services.
 - **Optional: [Ollama](https://ollama.com/)** on the host, outside the containers, for the AI features (see [Ingestion and search](#ingestion-and-search)). Without `TWOX_AI_ENABLED` nothing talks to it.
 
 ## Quick start
@@ -268,6 +268,7 @@ All variables and their defaults are listed in [docs/ARCHITECTURE.md](docs/ARCHI
 | `TWOX_INGEST_MAX_RETRIES`, `TWOX_INGEST_POLL_MIN_SECONDS`, `TWOX_INGEST_POLL_MAX_SECONDS` | Retries after a temporary error (5) and the wait between two status queries at Docling (10 to 60 s). |
 | `TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS`, `TWOX_INGEST_TIMEOUT_SECONDS` | Time limit sent to Docling per document (7,200 s, at most that) and the deadline of a conversion from its start at Docling (9,000 s). |
 | `TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS` | Deadline of a job whose Docling task never starts, from the start of the job (86,400 s = 24 hours, at least `TWOX_INGEST_TIMEOUT_SECONDS`); long, so that a large batch waiting in Docling's queue is not cut off. |
+| `TWOX_DOCLING_MEM_LIMIT` | Memory limit of the `docling` service (`8g`, compose `mem_limit`). Above it Docker stops and restarts Docling; the job retries and fails with "Docling unreachable" if the document needs more every time. |
 | `TWOX_SECTION_MAX_CHARS` | Largest section in characters (2,000). |
 | `TWOX_EMBED_TASK_MAX_SECONDS` | One embedding task works at most this long, then continues in a new task (240 s). |
 

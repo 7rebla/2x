@@ -69,7 +69,10 @@ The `worker` gets `REMAP_SIGTERM: SIGQUIT` and `stop_grace_period: 90s`, so that
 - Because the warm-up at boot would use `auto`, models are not loaded at boot (`DOCLING_SERVE_LOAD_MODELS_AT_BOOT=false`). Healthy therefore means "server and queue run"; the models load with the first conversion.
 - Limits (decision E-55), set in `deploy/compose/compose.yaml`: files up to 200,000,000 bytes (equal to the upload limit), at most 2,000 pages, at most 7,200 s per document (`DOCLING_SERVE_MAX_DOCUMENT_TIMEOUT`), one local worker (`DOCLING_SERVE_ENG_LOC_NUM_WORKERS=1`): Docling converts one document after the other.
 - The 2-hour limit stands in three places that have to agree: `DOCLING_SERVE_MAX_DOCUMENT_TIMEOUT` in `deploy/compose/compose.yaml`, `DEFAULT_DOCUMENT_TIMEOUT_SECONDS` in `twox/ingest/docling.py` (the client refuses larger values) and `TWOX_DOCLING_MAX_DOCUMENT_TIMEOUT_SECONDS` in `settings.py`. `TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS` can only lower it.
-- **Memory:** the service has no memory limit. Measured in work order 057: 6.6 GiB at the peak while converting a manual of 267 pages, 2.8 GiB idle. A limit (recommended `mem_limit: 8g`) is still open with a7; until the decision the service runs without one.
+- **Memory:** `mem_limit: 8g` (decision E-60), set through `TWOX_DOCLING_MEM_LIMIT` (default `8g`). Measured in work order 057: 6.6 GiB at the peak while converting a manual of 267 pages, 2.8 GiB idle; documents of more than 267 pages were not measured.
+  - Above the limit the kernel kills docling-serve (Docker event `oom`, exit code 137) and `restart: unless-stopped` starts it again within a second. Docling forgets all its tasks. The ingestion job sees "docling-serve refused the connection" and then "docling-serve does not know the task" and submits the file again (rules of work order 046). A document that needs more than the limit every time kills Docling every time; after `TWOX_INGEST_MAX_RETRIES` (5) the job ends as `failed` with `docling_unavailable` ("does not know the task (gave up after 5 retries)"). Tasks of other documents waiting in Docling's queue are lost with it, are submitted again and use one of their retries.
+  - Checked in work order 066 with `TWOX_DOCLING_MEM_LIMIT=1g` and the BetrSichV (60 pages): Docling was killed at 1 GiB about 20 to 30 s after each of the six uploads and restarted each time, and the job failed after 6.5 minutes as described.
+  - Docker allows the same amount again as swap when only `mem_limit` is set (`MemorySwap` = twice the limit), as far as the Docker VM has swap (4 GiB on the development machine). The limit therefore bounds the memory, not memory plus swap.
 
 ## Images
 
@@ -324,7 +327,7 @@ Development machine, CPU only, Docker VM with 15.5 GiB and 16 CPUs, `bge-m3`, se
 | Table `ingest_section`, freshly written | 49 MB for 2,623 sections, about 19 kB per section (HNSW 19 MB, data 3.3 MB, trigram 5.9 MB, GIN 3.4 MB) |
 | Whole test factory (21 versions, 1,099 new pages) | 21 min 18 s from start to the last `done` |
 
-At 0.65 to 1.7 s per page a document of 2,000 pages needs 0.4 to 0.9 hours; only a document as slow as the BetrSichV (4.3 s per page) would pass the limit of 2 hours and fail with `timeout`. Which embedding model is the default and whether Docling gets a memory limit are still open with a7 after this measurement; until the decision `bge-m3`, sections of 2,000 characters, the 2-hour limit and no memory limit stay as they are.
+At 0.65 to 1.7 s per page a document of 2,000 pages needs 0.4 to 0.9 hours; only a document as slow as the BetrSichV (4.3 s per page) would pass the limit of 2 hours and fail with `timeout`. Decided after this measurement (E-60): `bge-m3`, sections of 2,000 characters and the 2-hour limit stay; Docling gets a memory limit of 8 GiB (work order 066).
 
 ## Search
 
@@ -547,6 +550,7 @@ Every deployment-specific value comes from an environment variable with the pref
 | `TWOX_DOCLING_DOCUMENT_TIMEOUT_SECONDS` | `document_timeout` sent to Docling; at most 7,200. | `7200` | `7200` |
 | `TWOX_INGEST_TIMEOUT_SECONDS` | Deadline of a conversion from its start at Docling; greater than the value above. | `9000` | `9000` |
 | `TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS` | Deadline of a job whose Docling task never starts, from the start of the job; at least the value above. | `86400` | `86400` |
+| `TWOX_DOCLING_MEM_LIMIT` | Memory limit of the `docling` service (compose `mem_limit`, read by compose only, not by the backend); see [Restrictions on Docling](#restrictions-on-docling). | `8g` | `8g` |
 | `TWOX_SECTION_MAX_CHARS` | Largest section in characters; a change takes effect with `ingest_versions --all`. | `2000` | `2000` |
 | `TWOX_EMBED_TASK_MAX_SECONDS` | Longest run of one embedding task before it continues in a new one; below the soft time limit (300). | `240` | `240` |
 | `TWOX_E2E_USERNAME`, `TWOX_E2E_PASSWORD` | Test account of the browser test. Passed only to the `e2e` container and used by the step "Create test account"; never use the values for a real account. | `e2e-manager`, a development-only password | the browser test cannot sign in |
@@ -614,7 +618,7 @@ What M2 deliberately leaves open or knowingly accepts. Planned work is in [ROADM
 - **Test account:** `e2e-manager` with the public development password from `.env.example` exists only where the step "Create test account" ran (CI or by hand), never automatically.
 - **No rights per device** (E-40): every account with a role reads, downloads and searches the documents of all devices.
 - **Extension `vector` needs a superuser:** pgvector's extension is not "trusted". In compose the database user is a superuser, so the migration creates it; without one an administrator has to run `CREATE EXTENSION vector` before the first migration (M6). Going back with `migrate ingest zero` removes both extensions and needs a superuser as well.
-- **Docling without memory limit** (open with a7, see [Restrictions on Docling](#restrictions-on-docling)): a large manual can take more than 6.6 GiB; on a host with little memory Docker or the system may stop the container, and the job ends after its retries.
+- **Docling memory limit** (8 GiB, see [Restrictions on Docling](#restrictions-on-docling)): a manual that needs more than the limit cannot be ingested; Docling is killed and restarted on every attempt, the job ends as `failed` (`docling_unavailable`) after its retries, and other documents waiting in Docling lose one retry each time. The message does not name the memory; `docker inspect` or `docker events` (`oom`) show it. Raise `TWOX_DOCLING_MEM_LIMIT` and start the job again. Only measured up to 267 pages.
 
 ### Configuration files
 
