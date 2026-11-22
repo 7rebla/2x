@@ -8,7 +8,7 @@ factories of both clients fail the test if anything calls them.
 """
 
 import io
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import BinaryIO
@@ -28,7 +28,15 @@ from twox.ingest.docling import (
     DocumentConverter,
     TaskStatus,
 )
-from twox.ingest.models import IngestJob
+from twox.ingest.models import (
+    EMBEDDING_DIMENSIONS,
+    IngestJob,
+    IngestStatus,
+    IngestStep,
+    Section,
+    section_rows,
+)
+from twox.ingest.sections import SectionDraft
 
 #: Stand-in bytes of BetrSichV.pdf; Docling never sees them, the fake answers.
 PDF_CONTENT = b"%PDF-1.7 stand-in for testdata/klein/recht/BetrSichV.pdf\n"
@@ -131,8 +139,14 @@ def _no_real_model_service() -> embeddings.Embedder:
 def isolated_services(
     settings: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[Path]:
-    """Own blob storage per test; no real Docling, no real model service."""
+    """Own blob storage per test; no real Docling, no real model service.
+
+    The AI features are off unless a test switches them on (E-59): the
+    containers get ``TWOX_AI_ENABLED=true`` from the development template,
+    and the flow of work order 046 ends after the sections only without them.
+    """
     media_root = tmp_path / "media"
+    settings.TWOX_AI_ENABLED = False
     settings.TWOX_MEDIA_ROOT = media_root
     settings.TWOX_DOCLING_URL = "http://docling.invalid:5001"
     settings.TWOX_LLM_BASE_URL = "http://ollama.invalid:11434/v1"
@@ -168,6 +182,100 @@ def make_version(
 
 def make_job(version: DocumentVersion) -> IngestJob:
     return IngestJob.objects.create(document_version=version)
+
+
+# --- Step embed (work order 048) -------------------------------------------------------
+
+#: Model name the embedding stand-in reports.
+FAKE_MODEL = "fake-embed"
+
+
+def vector_for(number: int) -> list[float]:
+    """The vector of the ``number``-th embedded text: length 1 along one axis."""
+    vector = [0.0] * EMBEDDING_DIMENSIONS
+    vector[number % EMBEDDING_DIMENSIONS] = 1.0
+    return vector
+
+
+@dataclass
+class FakeEmbedder:
+    """A scripted :class:`~twox.answers.embeddings.Embedder` for section texts.
+
+    Every call of :meth:`embed_documents` first takes the next entry of
+    ``errors`` (``None``: no error) and raises it. The texts that were
+    embedded are kept in order; the ``n``-th text gets :func:`vector_for` ``(n)``.
+    """
+
+    model: str = FAKE_MODEL
+    size: int = EMBEDDING_DIMENSIONS
+    errors: list[Exception | None] = field(default_factory=list)
+    texts: list[str] = field(default_factory=list)
+    batches: list[int] = field(default_factory=list)
+    #: Called after every successful batch (to let time pass in a test).
+    after_batch: Callable[[], None] | None = None
+
+    @property
+    def model_name(self) -> str:
+        return self.model
+
+    @property
+    def dimensions(self) -> int:
+        return self.size
+
+    def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
+        if self.errors:
+            error = self.errors.pop(0)
+            if error is not None:
+                raise error
+        first = len(self.texts)
+        self.texts.extend(texts)
+        self.batches.append(len(texts))
+        if self.after_batch is not None:
+            self.after_batch()
+        return [vector_for(first + index)[: self.size] for index in range(len(texts))]
+
+    def embed_query(self, text: str) -> list[float]:
+        raise UnexpectedServiceCallError("the ingest flow embeds section texts only")
+
+
+def install_embedder(
+    monkeypatch: pytest.MonkeyPatch, settings: Settings, embedder: FakeEmbedder | None = None
+) -> FakeEmbedder:
+    """Switch the AI features on; ``get_embedder()`` of 044 gives ``embedder``."""
+    stand_in = embedder or FakeEmbedder()
+    settings.TWOX_AI_ENABLED = True
+    settings.TWOX_EMBED_MODEL = stand_in.model
+    settings.TWOX_EMBED_DIMENSIONS = EMBEDDING_DIMENSIONS
+    monkeypatch.setattr(embeddings, "get_embedder", lambda: stand_in)
+    return stand_in
+
+
+def add_sections(version: DocumentVersion, count: int, *, prefix: str = "Text") -> IngestJob:
+    """``count`` sections of ``version`` from a finished job, as the step sections leaves them."""
+    job = IngestJob.objects.create(
+        document_version=version, status=IngestStatus.DONE, step=IngestStep.SECTIONS
+    )
+    drafts = [
+        SectionDraft(
+            ordinal=number,
+            heading_path=("Chapter", f"Part {number}"),
+            text=f"{prefix} {number}",
+            page_start=1,
+            page_end=1,
+        )
+        for number in range(count)
+    ]
+    Section.objects.bulk_create(section_rows(drafts, version, job))
+    return job
+
+
+def make_embed_job(version: DocumentVersion, *, sections: int = 5) -> IngestJob:
+    """A queued job in the step embed (as ``embed_sections`` creates it), with sections."""
+    if not Section.objects.filter(document_version=version).exists():
+        add_sections(version, sections)
+    return IngestJob.objects.create(
+        document_version=version, status=IngestStatus.QUEUED, step=IngestStep.EMBED
+    )
 
 
 def run_job(

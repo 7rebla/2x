@@ -29,15 +29,28 @@ delay, at most ``TWOX_INGEST_MAX_RETRIES`` times per job (the counter is
 first ``started`` reported by Docling; waiting in Docling's own queue does
 not count.
 
+:func:`embed` (task ``twox.ingest.embed``, work order 048)
+    Only with the AI features on (E-59). Computes the embeddings of the
+    sections through the embedding interface of work order 044 and stores
+    them with the model name. Sections whose version has the same content
+    (SHA-256) as another version with an embedding of the current model for
+    the same ordinal, heading and text get that embedding copied, without
+    asking the model. The rest is embedded batch by batch, and every batch is
+    written at once, so an error later on keeps what is done. A task embeds
+    for a limited time and then continues in a new task.
+
 Both entry points are idempotent: a job that is not in the expected state is
 left alone, and the last step locks the job row, so a duplicate or
-redelivered message changes nothing.
+redelivered message changes nothing. A message that comes back again and
+again (the worker process died while working on it) counts as an attempt;
+see :func:`count_redelivery`.
 
-The flow is the same with and without the AI features (E-59): it ends after
-the sections, never schedules an embedding task and never contacts the model
-service. Work order 048 adds the embedding step behind ``TWOX_AI_ENABLED``.
+Without the AI features (E-59) the flow ends after the sections, never
+schedules an embedding task and never contacts the model service. With them,
+it continues with the step ``embed`` after the sections.
 
-Document contents are data, not instructions: nothing here interprets them.
+Document contents are data, not instructions: nothing here interprets them,
+and no section text is written to the log.
 """
 
 import ipaddress
@@ -46,7 +59,8 @@ import logging
 import mimetypes
 import re
 import tempfile
-from collections.abc import Callable, Iterable
+import time
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import StrEnum
@@ -56,10 +70,21 @@ from typing import IO, Any, BinaryIO, Final, cast
 from celery.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Exists, F, OuterRef, Q, Subquery
 from django.utils import timezone
 
+from twox.answers import embeddings
+from twox.answers.embeddings import (
+    Embedder,
+    EmbeddingDimensionError,
+    EmbeddingDisabledError,
+    EmbeddingRejectedError,
+    EmbeddingRemoteModelError,
+    EmbeddingUnavailableError,
+)
 from twox.files.models import DocumentVersion
 from twox.files.storage import BlobNotFoundError, BlobStorage, get_blob_storage
+from twox.ingest.checks import embedding_column_dimensions, embedding_dimension_problem
 from twox.ingest.docling import (
     ConversionErrorItem,
     DoclingConversionError,
@@ -73,6 +98,7 @@ from twox.ingest.docling import (
     load_result,
 )
 from twox.ingest.models import (
+    ACTIVE_STATUSES,
     ERROR_DETAIL_MAX_LENGTH,
     IngestErrorCode,
     IngestJob,
@@ -97,10 +123,18 @@ SECTION_BATCH_SIZE: Final = 500
 MAX_FAILURE_ANSWER_BYTES: Final = 1024 * 1024
 #: Detail of an unexpected error; the exception itself goes to the server log only.
 INTERNAL_DETAIL: Final = "unexpected error in the ingest flow; details are in the server log"
+#: Detail of a job whose message was delivered again too often (see count_redelivery).
+REDELIVERY_DETAIL: Final = (
+    "the worker stopped while working on this job too often; details are in the server log"
+)
+#: Start of the detail of a partly converted document; such an answer is never reused.
+PARTIAL_DETAIL_PREFIX: Final = "converted with "
+#: Separator between the headings and the text of a section in the embedded text.
+EMBEDDING_TEXT_SEPARATOR: Final = "\n\n"
 
 
 class Outcome(StrEnum):
-    """What one call of :func:`convert` or :func:`poll` did."""
+    """What one call of :func:`convert`, :func:`poll` or :func:`embed` did."""
 
     #: No job with this ID.
     MISSING = "missing"
@@ -108,17 +142,25 @@ class Outcome(StrEnum):
     IGNORED = "ignored"
     #: Waiting for Docling; the next status query is due in ``poll_after`` seconds.
     POLLING = "polling"
+    #: The step embed goes on in a new task in ``embed_after`` seconds.
+    EMBEDDING = "embedding"
     DONE = "done"
     FAILED = "failed"
 
 
 @dataclass(frozen=True, slots=True)
 class StepResult:
-    """Result of one step; the task schedules :func:`poll` if ``poll_after`` is set."""
+    """Result of one step; the task schedules the next one if it asks for it.
+
+    ``poll_after`` asks for :func:`poll`, ``embed_after`` for :func:`embed`;
+    at most one of them is set.
+    """
 
     outcome: Outcome
     #: Seconds until the next call of :func:`poll`; ``None``: no further call.
     poll_after: int | None = None
+    #: Seconds until the next call of :func:`embed`; ``None``: no further call.
+    embed_after: int | None = None
 
 
 # --- Error details ------------------------------------------------------------
@@ -321,6 +363,52 @@ def _retry(job: IngestJob, error: Exception, *, task_lost: bool) -> StepResult:
     return StepResult(Outcome.POLLING, poll_after=retry_delay(attempt))
 
 
+def count_redelivery(job_id: object) -> StepResult | None:
+    """Count a message that the broker delivers again; end the job once that happened too often.
+
+    The tasks acknowledge late and give a message back when their worker
+    process dies (``reject_on_worker_lost``). A message whose processing
+    kills the process every time (for example out of memory while reading a
+    huge answer) would come back forever. Each redelivery of a message for an
+    unfinished job therefore counts as an attempt (``attempts``, shared with
+    the retries); once ``TWOX_INGEST_MAX_RETRIES`` is reached, the job ends
+    as ``failed``/``internal`` instead of running the step again.
+
+    Returns ``None`` if the step may run, or the result that ends the message.
+    """
+    job = _load_job(job_id)
+    if job is None:
+        return StepResult(Outcome.MISSING)
+    if job.status not in ACTIVE_STATUSES:
+        # The step itself ignores a finished job.
+        return None
+    limit: int = settings.TWOX_INGEST_MAX_RETRIES
+    now = timezone.now()
+    active = IngestJob.objects.filter(pk=job.pk, status__in=ACTIVE_STATUSES)
+    if job.attempts >= limit:
+        logger.error(
+            "ingest: job %s, message delivered again after %s attempts; giving up",
+            job.pk,
+            job.attempts,
+        )
+        active.update(
+            status=IngestStatus.FAILED,
+            error_code=IngestErrorCode.INTERNAL,
+            error_detail=REDELIVERY_DETAIL,
+            finished_at=now,
+            updated_at=now,
+        )
+        return StepResult(Outcome.FAILED)
+    logger.warning(
+        "ingest: job %s, message delivered again (attempt %s of %s)",
+        job.pk,
+        job.attempts + 1,
+        limit,
+    )
+    active.update(attempts=F("attempts") + 1, updated_at=now)
+    return None
+
+
 def _guarded(job: IngestJob, step: Callable[[], StepResult]) -> StepResult:
     """Run ``step`` and turn every error into a retry or a failed job."""
     try:
@@ -358,8 +446,13 @@ def convert(
     if job is None:
         return StepResult(Outcome.MISSING)
     now = timezone.now()
-    claimed = IngestJob.objects.filter(pk=job.pk, status=IngestStatus.QUEUED).update(
-        status=IngestStatus.RUNNING, step=IngestStep.CONVERT, started_at=now, updated_at=now
+    # A queued job in the step embed (embed_sections) belongs to embed only.
+    claimed = (
+        IngestJob.objects.filter(pk=job.pk, status=IngestStatus.QUEUED)
+        .exclude(step=IngestStep.EMBED)
+        .update(
+            status=IngestStatus.RUNNING, step=IngestStep.CONVERT, started_at=now, updated_at=now
+        )
     )
     if not claimed:
         logger.info("ingest: job %s is %s, not queued; nothing to do", job.pk, job.status)
@@ -384,8 +477,11 @@ def poll(
     job = _load_job(job_id)
     if job is None:
         return StepResult(Outcome.MISSING)
-    if job.status != IngestStatus.RUNNING:
-        logger.info("ingest: job %s is %s; no status query", job.pk, job.status)
+    if job.status != IngestStatus.RUNNING or job.step == IngestStep.EMBED:
+        # In the step embed the sections exist; a stray message must not replace them.
+        logger.info(
+            "ingest: job %s is %s in step %r; no status query", job.pk, job.status, job.step
+        )
         return StepResult(Outcome.IGNORED)
     blobs = storage or get_blob_storage()
     return _guarded(job, lambda: _poll(job, blobs, converter))
@@ -411,7 +507,9 @@ def _reusable_job(job: IngestJob, storage: BlobStorage) -> IngestJob | None:
 
     Only a job that is ``done`` counts: its answer gave sections. An answer
     that could not be read (``conversion_failed``) is never reused, so a new
-    attempt asks Docling again.
+    attempt asks Docling again. Neither is a partial answer (``partial_success``,
+    for example after Docling's ``document_timeout``): only a complete
+    conversion is reused; the next job of the same content asks Docling again.
     """
     candidates = (
         IngestJob.objects.filter(
@@ -419,6 +517,7 @@ def _reusable_job(job: IngestJob, storage: BlobStorage) -> IngestJob | None:
         )
         .exclude(pk=job.pk)
         .exclude(result_blob_key="")
+        .exclude(error_detail__startswith=PARTIAL_DETAIL_PREFIX)
         .order_by("-pk")
     )
     for candidate in candidates:
@@ -522,21 +621,29 @@ def _page_count(document: dict[str, Any]) -> int | None:
 def _partial_detail(errors: tuple[ConversionErrorItem, ...]) -> str:
     """A short note for a partly converted document: number of errors and their pages."""
     pages = sorted({error.page_no for error in errors if error.page_no is not None})
-    text = f"converted with {len(errors)} errors"
+    text = f"{PARTIAL_DETAIL_PREFIX}{len(errors)} errors"
     if pages:
         text += f" on pages {', '.join(str(page) for page in pages[:20])}"
     return text
 
 
 def _finish(job: IngestJob, storage: BlobStorage) -> StepResult:
-    """Read the stored answer, replace the sections of the version and end the job."""
+    """Read the stored answer, replace the sections of the version, then embed or end the job.
+
+    Without the AI features (E-59) the job is ``done`` here. With them it
+    stays ``running`` in the step ``embed`` and the result asks for
+    :func:`embed`.
+    """
     with storage.open_blob(job.result_blob_key) as stream:
         result = load_result(cast(BinaryIO, stream))
     drafts = build_sections(result.document, max_chars=settings.TWOX_SECTION_MAX_CHARS)
     detail = ""
     if result.status == TaskStatus.PARTIAL_SUCCESS:
         logger.warning("ingest: job %s, partial conversion: %s", job.pk, result.errors)
+        # Built from numbers only; not cleaned, so that the prefix stays
+        # recognisable (see _reusable_job).
         detail = _partial_detail(result.errors)
+    ai_enabled = bool(settings.TWOX_AI_ENABLED)
 
     with transaction.atomic():
         # The lock makes a repeated message wait here and then find the job done.
@@ -544,6 +651,7 @@ def _finish(job: IngestJob, storage: BlobStorage) -> StepResult:
             IngestJob.objects.select_for_update(of=("self",))
             .select_related("document_version")
             .filter(pk=job.pk, status=IngestStatus.RUNNING)
+            .exclude(step=IngestStep.EMBED)
             .first()
         )
         if locked is None:
@@ -553,19 +661,235 @@ def _finish(job: IngestJob, storage: BlobStorage) -> StepResult:
         Section.objects.filter(document_version_id=locked.document_version_id).delete()
         Section.objects.bulk_create(rows, batch_size=SECTION_BATCH_SIZE)
         now = timezone.now()
-        # Work order 048 continues with the step embed here when TWOX_AI_ENABLED
-        # is on (E-59); until then, and always without AI, the job ends here.
-        IngestJob.objects.filter(pk=locked.pk).update(
-            status=IngestStatus.DONE,
-            step=IngestStep.SECTIONS,
-            section_count=len(rows),
-            page_count=_page_count(result.document),
-            error_code="",
-            error_detail=sanitize_error_detail(
-                detail, filenames=[locked.document_version.original_filename]
-            ),
-            finished_at=now,
-            updated_at=now,
-        )
+        fields: dict[str, Any] = {
+            "section_count": len(rows),
+            "page_count": _page_count(result.document),
+            "error_code": "",
+            "error_detail": detail[:ERROR_DETAIL_MAX_LENGTH],
+            "updated_at": now,
+        }
+        if ai_enabled:
+            # E-59: only with the AI features on; the task sends embed.
+            fields |= {"step": IngestStep.EMBED}
+        else:
+            fields |= {"status": IngestStatus.DONE, "step": IngestStep.SECTIONS, "finished_at": now}
+        IngestJob.objects.filter(pk=locked.pk).update(**fields)
+    if ai_enabled:
+        logger.info("ingest: job %s has %s sections; embedding follows", job.pk, len(rows))
+        return StepResult(Outcome.EMBEDDING, embed_after=0)
     logger.info("ingest: job %s done with %s sections", job.pk, len(rows))
     return StepResult(Outcome.DONE)
+
+
+# --- Step embed (work order 048) ------------------------------------------------
+
+
+def embedding_text(heading_text: str, text: str) -> str:
+    """The text that is embedded for a section: its headings, an empty line, its text."""
+    if not heading_text:
+        return text
+    return f"{heading_text}{EMBEDDING_TEXT_SEPARATOR}{text}"
+
+
+def should_pause(elapsed_seconds: float) -> bool:
+    """Whether an embedding task stops here and continues in a new task.
+
+    It stops after ``TWOX_EMBED_TASK_MAX_SECONDS``, and as soon as less time
+    is left until the soft time limit of the task than one request may take
+    (``TWOX_EMBED_TIMEOUT_SECONDS``, the socket time limit of the client): a
+    batch started later could run past the soft time limit (work order 045).
+    """
+    task_max: int = settings.TWOX_EMBED_TASK_MAX_SECONDS
+    soft_limit: int = settings.TWOX_TASK_SOFT_TIME_LIMIT
+    request_limit: int = settings.TWOX_EMBED_TIMEOUT_SECONDS
+    return elapsed_seconds >= task_max or soft_limit - elapsed_seconds < request_limit
+
+
+def needs_embedding(model: str) -> Q:
+    """Sections without an embedding of ``model``."""
+    return Q(embedding__isnull=True) | ~Q(embedding_model=model)
+
+
+def embed(
+    job_id: object,
+    *,
+    embedder: Embedder | None = None,
+    clock: Callable[[], float] = time.monotonic,
+) -> StepResult:
+    """Embed the sections of a job in the step ``embed``; continue later if time runs out.
+
+    Takes a ``running`` job in the step ``embed`` (after the sections) or a
+    ``queued`` one that ``embed_sections`` created. ``clock`` measures the
+    time of this task (seconds, monotonic).
+    """
+    started = clock()
+    job = _load_job(job_id)
+    if job is None:
+        return StepResult(Outcome.MISSING)
+    if job.step != IngestStep.EMBED or job.status not in ACTIVE_STATUSES:
+        logger.info(
+            "ingest: job %s is %s in step %r; nothing to embed", job.pk, job.status, job.step
+        )
+        return StepResult(Outcome.IGNORED)
+    if job.status == IngestStatus.QUEUED:
+        now = timezone.now()
+        claimed = IngestJob.objects.filter(
+            pk=job.pk, status=IngestStatus.QUEUED, step=IngestStep.EMBED
+        ).update(status=IngestStatus.RUNNING, started_at=now, updated_at=now)
+        if not claimed:
+            return StepResult(Outcome.IGNORED)
+        job.status, job.started_at, job.updated_at = IngestStatus.RUNNING, now, now
+    return _guarded_embedding(job, lambda: _embed(job, embedder, lambda: clock() - started))
+
+
+def _guarded_embedding(job: IngestJob, step: Callable[[], StepResult]) -> StepResult:
+    """Run the step ``embed`` and turn every error into a retry or a failed job."""
+    try:
+        return step()
+    except EmbeddingDisabledError:
+        return _end_embedding(job, skipped=True)
+    except EmbeddingUnavailableError as error:
+        return _retry_embedding(job, error)
+    except EmbeddingRejectedError as error:
+        return _fail_with_error(job, IngestErrorCode.EMBEDDING_REJECTED, _with_pull_hint(error))
+    except EmbeddingRemoteModelError as error:
+        return _fail_with_error(job, IngestErrorCode.EMBEDDING_REJECTED, str(error))
+    except EmbeddingDimensionError as error:
+        return _fail_with_error(job, IngestErrorCode.EMBEDDING_DIMENSION_MISMATCH, str(error))
+    except SoftTimeLimitExceeded:
+        logger.warning("ingest: job %s ran past the soft time limit while embedding", job.pk)
+        return _fail(job, IngestErrorCode.TIMEOUT, "an ingest step ran past the time limit")
+    except Exception:
+        logger.exception("ingest: job %s failed with an unexpected error while embedding", job.pk)
+        return _fail(job, IngestErrorCode.INTERNAL, INTERNAL_DETAIL)
+
+
+def _with_pull_hint(error: EmbeddingRejectedError) -> str:
+    """The message of a refused request, always with the hint how to load the model."""
+    text = str(error)
+    if "ollama pull" in text:
+        return text
+    return (
+        f"{text}; if the model is not loaded, load it with: ollama pull {settings.TWOX_EMBED_MODEL}"
+    )
+
+
+def _retry_embedding(job: IngestJob, error: EmbeddingUnavailableError) -> StepResult:
+    """Embed again later (model service unreachable), or fail once the retries are used up."""
+    limit: int = settings.TWOX_INGEST_MAX_RETRIES
+    if job.attempts >= limit:
+        return _fail_with_error(
+            job,
+            IngestErrorCode.EMBEDDING_UNAVAILABLE,
+            f"{error} (gave up after {limit} retries)",
+        )
+    attempt = job.attempts + 1
+    logger.info("ingest: job %s, embedding retry %s of %s after: %s", job.pk, attempt, limit, error)
+    if not _update(job, attempts=attempt):
+        return StepResult(Outcome.IGNORED)
+    return StepResult(Outcome.EMBEDDING, embed_after=retry_delay(attempt))
+
+
+def _end_embedding(job: IngestJob, *, skipped: bool = False) -> StepResult:
+    """End the job as ``done``; ``skipped``: AI features off (E-59), nothing was embedded."""
+    now = timezone.now()
+    finished = IngestJob.objects.filter(pk=job.pk, status=IngestStatus.RUNNING).update(
+        status=IngestStatus.DONE, finished_at=now, updated_at=now
+    )
+    if not finished:
+        return StepResult(Outcome.IGNORED)
+    if skipped:
+        logger.info("ingest: job %s done; AI features are off, nothing was embedded", job.pk)
+    else:
+        logger.info("ingest: job %s done; all sections are embedded", job.pk)
+    return StepResult(Outcome.DONE)
+
+
+def _embed(job: IngestJob, embedder: Embedder | None, elapsed: Callable[[], float]) -> StepResult:
+    if not settings.TWOX_AI_ENABLED:
+        return _end_embedding(job, skipped=True)
+    problem = embedding_dimension_problem()
+    if problem is not None:
+        logger.error("ingest: job %s: %s", job.pk, problem)
+        return _fail(job, IngestErrorCode.EMBEDDING_DIMENSION_MISMATCH, problem)
+    client = embedder or embeddings.get_embedder()
+    column = embedding_column_dimensions()
+    if client.dimensions != column:
+        raise EmbeddingDimensionError(
+            f"the embedder gives {client.dimensions} values per vector,"
+            f" the embedding column has {column}"
+        )
+    model = client.model_name
+    version = job.document_version
+    copied = _copy_embeddings(version, model)
+    if copied:
+        logger.info(
+            "ingest: job %s, %s embeddings taken over from the same content", job.pk, copied
+        )
+
+    batch_size: int = settings.TWOX_EMBED_BATCH_SIZE
+    pending = Section.objects.filter(document_version_id=version.pk).filter(needs_embedding(model))
+    last_ordinal = -1
+    batches = 0
+    while True:
+        rows = list(
+            pending.filter(ordinal__gt=last_ordinal)
+            .order_by("ordinal")
+            .only("pk", "ordinal", "heading_text", "text")[:batch_size]
+        )
+        if not rows:
+            break
+        # At least one batch per task, so that every task makes progress.
+        if batches and should_pause(elapsed()):
+            logger.info("ingest: job %s, embedding continues in a new task", job.pk)
+            return StepResult(Outcome.EMBEDDING, embed_after=0)
+        _embed_batch(client, rows, model, column)
+        batches += 1
+        last_ordinal = rows[-1].ordinal
+        # Also shows progress in updated_at; stops if the job ended meanwhile.
+        if not _update(job):
+            return StepResult(Outcome.IGNORED)
+    return _end_embedding(job)
+
+
+def _embed_batch(client: Embedder, rows: Sequence[Section], model: str, column: int) -> None:
+    """Embed one batch and write it at once (no change log entries, E-55)."""
+    vectors = client.embed_documents([embedding_text(row.heading_text, row.text) for row in rows])
+    if len(vectors) != len(rows):
+        raise EmbeddingUnavailableError(
+            f"unexpected answer: expected {len(rows)} vector(s), got {len(vectors)}"
+        )
+    for row, vector in zip(rows, vectors, strict=True):
+        if len(vector) != column:
+            raise EmbeddingDimensionError(
+                f"model {model!r} returned {len(vector)} values, the embedding column has {column}"
+            )
+        row.embedding = list(vector)
+        row.embedding_model = model
+    Section.objects.bulk_update(rows, ["embedding", "embedding_model"])
+
+
+def _copy_embeddings(version: DocumentVersion, model: str) -> int:
+    """Copy embeddings of ``model`` from other versions with the same content (E-55).
+
+    A section takes over the embedding of a section of another version with
+    the same SHA-256, the same ordinal, the same headings and the same text,
+    so the model is not asked for it again. Returns the number of sections.
+    """
+    donors = Section.objects.filter(
+        document_version__sha256=version.sha256,
+        ordinal=OuterRef("ordinal"),
+        heading_text=OuterRef("heading_text"),
+        text=OuterRef("text"),
+        embedding_model=model,
+        embedding__isnull=False,
+    ).exclude(document_version_id=version.pk)
+    return (
+        Section.objects.filter(document_version_id=version.pk)
+        .filter(needs_embedding(model))
+        .filter(Exists(donors))
+        .update(
+            embedding=Subquery(donors.order_by("pk").values("embedding")[:1]),
+            embedding_model=model,
+        )
+    )
