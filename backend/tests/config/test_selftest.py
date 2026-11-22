@@ -2,8 +2,9 @@
 
 Plain ``pytest`` needs the database only; the worker part is replaced or made
 to fail on purpose. The success case against a running worker carries the
-marker ``worker``. The AI part (E-59, work order 048) talks to a stand-in of
-Ollama in the test process, never to a real model service.
+marker ``worker``. The AI part (E-59, work order 048) and its chat model
+fields (work order 129) talk to a stand-in of Ollama in the test process,
+never to a real model service.
 """
 
 import re
@@ -29,7 +30,13 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 from rest_framework.test import APIClient
 
 from tests.accounts.users import make_user
-from tests.answers.fake_ollama import FakeOllama, fake_ollama
+from tests.answers.fake_ollama import (
+    CHAT_MODEL,
+    EMBEDDING_ONLY_MODEL,
+    LOCAL_MODEL,
+    FakeOllama,
+    fake_ollama,
+)
 from twox.answers.embeddings import OpenAICompatibleEmbedder
 from twox.config import selftest, taskqueue
 from twox.config.tasks import ping
@@ -104,6 +111,8 @@ def ai_off(settings: Settings) -> None:
     """
     settings.TWOX_AI_ENABLED = False
     settings.TWOX_LLM_BASE_URL = "http://ollama.invalid:11434/v1"
+    # No chat model unless a test sets one (the default until it is chosen).
+    settings.TWOX_CHAT_MODEL = ""
 
 
 @pytest.mark.django_db
@@ -490,10 +499,21 @@ def test_schema_contains_selftest_path_and_fields() -> None:
     assert set(selftest_schema["properties"]) == {"database", "worker", "ai"}
     assert sorted(selftest_schema["required"]) == ["ai", "database", "worker"]
     ai_schema = components["AiCheck"]
-    assert set(ai_schema["properties"]) == {"enabled", "ok", "model", "dimensions", "error"}
+    assert set(ai_schema["properties"]) == {
+        "enabled",
+        "ok",
+        "model",
+        "dimensions",
+        "error",
+        "chat_model",
+        "chat_ok",
+        "chat_error",
+    }
     # Only "enabled" is always there; the rest only with the AI features on.
     assert ai_schema["required"] == ["enabled"]
     assert ai_schema["properties"]["dimensions"]["type"] == "integer"
+    assert ai_schema["properties"]["chat_ok"]["type"] == "boolean"
+    assert ai_schema["properties"]["chat_model"]["type"] == "string"
     assert set(components["DatabaseCheck"]["properties"]) == {"ok", "server_version", "error"}
     assert set(components["WorkerCheck"]["properties"]) == {
         "ok",
@@ -521,6 +541,9 @@ def test_selftest_against_running_worker() -> None:
 
 
 # --- AI part (E-59, work order 048) ----------------------------------------------------
+
+# The chat fields with AI on and no chat model configured (work order 129).
+NO_CHAT_MODEL = {"chat_model": "", "chat_ok": False, "chat_error": "chat model not configured"}
 
 
 @pytest.fixture
@@ -562,6 +585,7 @@ def test_ai_part_reports_model_and_dimensions_when_on(ai_on: FakeOllama) -> None
         "model": "bge-m3",
         "dimensions": 1024,
         "error": "",
+        **NO_CHAT_MODEL,
     }
     # The model list, then one embedding of the fixed sentence.
     assert [(request.method, request.path) for request in ai_on.requests] == [
@@ -587,6 +611,7 @@ def test_ai_part_reports_a_model_that_is_not_loaded(ai_on: FakeOllama) -> None:
         "model": "bge-m3",
         "dimensions": 1024,
         "error": "model 'bge-m3' is not loaded in Ollama; load it with: ollama pull bge-m3",
+        **NO_CHAT_MODEL,
     }
     assert ai_on.embed_requests == []
 
@@ -654,3 +679,355 @@ def test_ai_check_uses_a_short_time_limit(settings: Settings) -> None:
     assert vars(embedder)["_timeout"] == selftest.AI_TIMEOUT_SECONDS
     # Worker part and AI part together stay below the limit of the web page (15 s).
     assert selftest.WORKER_TIMEOUT_SECONDS + 2 * selftest.AI_TIMEOUT_SECONDS < 15
+
+
+# --- Chat model in the AI part (work order 129) ------------------------------------------
+
+# A striking address and text: neither may ever reach a chat_error.
+LEAK_HOST = "leak-marker-host.invalid"
+LEAK_TEXT = "LEAK-MARKER-7f3a"
+
+
+@pytest.fixture
+def chat_on(ai_on: FakeOllama, settings: Settings) -> FakeOllama:
+    """AI on with a local chat model next to the embedding model in the model list."""
+    ai_on.models = [dict(LOCAL_MODEL), dict(CHAT_MODEL)]
+    settings.TWOX_CHAT_MODEL = "local-chat"
+    return ai_on
+
+
+def chat_fields(ai: dict[str, Any]) -> tuple[str, bool, str]:
+    return ai["chat_model"], ai["chat_ok"], ai["chat_error"]
+
+
+def assert_no_address(text: str) -> None:
+    assert_no_internals(text)
+    for fragment in ("http://", "https://", "127.0.0.1", "11434", LEAK_HOST, LEAK_TEXT, "/api/"):
+        assert fragment not in text, f"chat_error leaks {fragment!r}: {text!r}"
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_chat_fields_are_missing_and_nothing_is_contacted_when_ai_is_off(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings.TWOX_CHAT_MODEL = "local-chat"
+    attempts: list[object] = []
+
+    def refuse(*args: object, **kwargs: object) -> object:
+        attempts.append(args)
+        raise AssertionError("the model service must not be contacted with AI off")
+
+    # urllib connects through socket.create_connection; the database driver
+    # does not use the Python socket module.
+    monkeypatch.setattr(socket, "create_connection", refuse)
+    monkeypatch.setattr(socket.socket, "connect", refuse)
+
+    body = get_selftest()
+
+    assert body["ai"] == {"enabled": False}
+    assert attempts == []
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_chat_model_with_completion_is_ok_and_generates_nothing(chat_on: FakeOllama) -> None:
+    ai = get_selftest()["ai"]
+
+    assert ai["ok"] is True
+    assert chat_fields(ai) == ("local-chat", True, "")
+    # One model list for both checks, one embedding, no chat request.
+    assert [(request.method, request.path) for request in chat_on.requests] == [
+        ("GET", "/api/tags"),
+        ("POST", "/v1/embeddings"),
+    ]
+    assert chat_on.chat_requests == []
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_empty_chat_model_is_reported_without_any_request(
+    ai_on: FakeOllama, settings: Settings
+) -> None:
+    # The embedding check stops before its first request, so every request
+    # would come from the chat check.
+    settings.TWOX_EMBED_DIMENSIONS = 768
+
+    ai = get_selftest()["ai"]
+
+    assert chat_fields(ai) == ("", False, selftest.CHAT_NOT_CONFIGURED)
+    assert selftest.CHAT_NOT_CONFIGURED == "chat model not configured"
+    assert ai_on.requests == []
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_chat_model_that_is_not_loaded(chat_on: FakeOllama, settings: Settings) -> None:
+    settings.TWOX_CHAT_MODEL = "other-chat"
+
+    ai = get_selftest()["ai"]
+
+    assert ai["ok"] is True
+    assert chat_fields(ai) == (
+        "other-chat",
+        False,
+        "model 'other-chat' is not loaded in Ollama; load it with: ollama pull other-chat",
+    )
+    assert chat_on.chat_requests == []
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+@pytest.mark.parametrize("name", ["gpt-oss:120b-cloud", "minimax-m2:cloud"])
+def test_cloud_chat_model_by_name_is_refused_before_any_request(
+    chat_on: FakeOllama, settings: Settings, name: str
+) -> None:
+    settings.TWOX_CHAT_MODEL = name
+    settings.TWOX_EMBED_DIMENSIONS = 768
+
+    ai = get_selftest()["ai"]
+
+    assert chat_fields(ai) == (
+        name,
+        False,
+        f"model {name!r} is an Ollama cloud model; only local models are allowed",
+    )
+    assert chat_on.requests == []
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+@pytest.mark.parametrize("field", ["remote_host", "remote_model"])
+def test_cloud_chat_model_by_remote_entry_is_refused(chat_on: FakeOllama, field: str) -> None:
+    chat_on.models = [dict(LOCAL_MODEL), dict(CHAT_MODEL, **{field: f"https://{LEAK_HOST}:443"})]
+
+    ai = get_selftest()["ai"]
+
+    assert chat_fields(ai) == (
+        "local-chat",
+        False,
+        "model 'local-chat' runs remotely (Ollama cloud model); only local models are allowed",
+    )
+    assert_no_address(ai["chat_error"])
+    assert chat_on.chat_requests == []
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_chat_model_without_completion_is_refused(chat_on: FakeOllama, settings: Settings) -> None:
+    # An embedding model cannot answer.
+    chat_on.models = [dict(EMBEDDING_ONLY_MODEL)]
+    settings.TWOX_CHAT_MODEL = "bge-m3"
+
+    ai = get_selftest()["ai"]
+
+    assert ai["ok"] is True
+    assert chat_fields(ai) == (
+        "bge-m3",
+        False,
+        "model 'bge-m3' cannot generate text (no capability 'completion');"
+        " set TWOX_CHAT_MODEL to a chat model",
+    )
+    # /api/show is not asked; the model list says enough.
+    assert [request.path for request in chat_on.requests] == ["/api/tags", "/v1/embeddings"]
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_chat_model_without_listed_capabilities_passes_with_the_list_check(
+    chat_on: FakeOllama,
+) -> None:
+    chat_on.models = [
+        dict(LOCAL_MODEL),
+        {"name": "local-chat:latest", "model": "local-chat:latest"},
+    ]
+
+    ai = get_selftest()["ai"]
+
+    assert chat_fields(ai) == ("local-chat", True, "")
+    assert [request.path for request in chat_on.requests] == ["/api/tags", "/v1/embeddings"]
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_server_without_model_list_checks_the_chat_model_name_only(chat_on: FakeOllama) -> None:
+    chat_on.tags_status = 404
+
+    ai = get_selftest()["ai"]
+
+    assert ai["ok"] is True
+    assert chat_fields(ai) == ("local-chat", True, "")
+    assert [request.path for request in chat_on.requests] == ["/api/tags", "/v1/embeddings"]
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_unreachable_model_service_is_asked_once_and_named_without_address(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as unused:
+        unused.bind(("127.0.0.1", 0))
+        port = unused.getsockname()[1]
+    settings.TWOX_AI_ENABLED = True
+    settings.TWOX_LLM_BASE_URL = f"http://127.0.0.1:{port}/v1"
+    settings.TWOX_CHAT_MODEL = "local-chat"
+    connect = socket.create_connection
+    attempts: list[object] = []
+
+    def counted(
+        address: tuple[str, int], timeout: float | None = None, *args: object
+    ) -> socket.socket:
+        attempts.append(address)
+        return connect(address, timeout)
+
+    monkeypatch.setattr(socket, "create_connection", counted)
+
+    ai = get_selftest()["ai"]
+
+    refused = "the model service refused the connection (is Ollama running?)"
+    assert ai["error"] == refused
+    assert chat_fields(ai) == ("local-chat", False, refused)
+    assert str(port) not in ai["chat_error"]
+    assert_no_address(ai["chat_error"])
+    # The failed model list serves both checks: one attempt only.
+    assert len(attempts) == 1
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_chat_error_never_names_address_or_answer_text(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def leak(address: tuple[str, int], *args: object, **kwargs: object) -> socket.socket:
+        raise OSError(f"cannot connect to http://{address[0]}:{address[1]}/api/tags {LEAK_TEXT}")
+
+    monkeypatch.setattr(socket, "create_connection", leak)
+    settings.TWOX_AI_ENABLED = True
+    settings.TWOX_LLM_BASE_URL = f"http://{LEAK_HOST}:11434/v1"
+    settings.TWOX_EMBED_MODEL = "bge-m3"
+    settings.TWOX_EMBED_DIMENSIONS = 1024
+    settings.TWOX_CHAT_MODEL = "local-chat"
+
+    ai = get_selftest()["ai"]
+
+    assert ai["chat_ok"] is False
+    assert ai["chat_error"] == "cannot reach the model service (URLError)"
+    assert_no_address(ai["chat_error"])
+    assert_no_address(ai["error"])
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+@pytest.mark.parametrize(
+    ("change", "error"),
+    [
+        ({"tags_status": 500}, "the model service failed (HTTP 500)"),
+        (
+            {"tags_body": f'{{"error": "http://{LEAK_HOST}:11434 {LEAK_TEXT}"}}'.encode()},
+            "unexpected answer to the model list",
+        ),
+    ],
+)
+def test_chat_error_never_repeats_the_answer_of_the_model_service(
+    chat_on: FakeOllama, change: dict[str, object], error: str
+) -> None:
+    for name, value in change.items():
+        setattr(chat_on, name, value)
+
+    ai = get_selftest()["ai"]
+
+    assert chat_fields(ai) == ("local-chat", False, error)
+    assert_no_address(ai["chat_error"])
+    assert [request.path for request in chat_on.requests] == ["/api/tags"]
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_unexpected_chat_check_failure_does_not_leak_its_text(
+    chat_on: FakeOllama, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def explode(status: int, body: bytes, model: str) -> None:
+        raise RuntimeError(f"cannot read http://{LEAK_HOST}:11434 {LEAK_TEXT}")
+
+    monkeypatch.setattr(selftest, "check_chat_model_list", explode)
+
+    ai = get_selftest()["ai"]
+
+    assert ai["ok"] is True
+    assert chat_fields(ai) == ("local-chat", False, "chat model check failed")
+    assert_no_address(ai["chat_error"])
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+@pytest.mark.parametrize(
+    "change",
+    [
+        {},
+        {"models": []},
+        {"tags_status": 404},
+        {"tags_status": 500},
+        {"embed_status": 503},
+        {"dimensions": 3},
+    ],
+)
+def test_ai_part_asks_the_model_list_at_most_once(
+    chat_on: FakeOllama, change: dict[str, object]
+) -> None:
+    for name, value in change.items():
+        setattr(chat_on, name, value)
+
+    get_selftest()
+
+    paths = [request.path for request in chat_on.requests]
+    assert paths.count("/api/tags") == 1
+    assert len(paths) <= selftest.AI_MAX_REQUESTS
+    assert chat_on.chat_requests == []
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_chat_check_asks_the_model_list_itself_when_the_embedding_check_did_not(
+    chat_on: FakeOllama, settings: Settings
+) -> None:
+    # The embedding check stops before its first request (wrong dimensions).
+    settings.TWOX_EMBED_DIMENSIONS = 768
+
+    ai = get_selftest()["ai"]
+
+    assert ai["ok"] is False
+    assert chat_fields(ai) == ("local-chat", True, "")
+    assert [request.path for request in chat_on.requests] == ["/api/tags"]
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("worker_answers_pong")
+def test_silent_model_service_keeps_the_ai_part_within_one_time_limit(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Worst case: the port accepts connections, but nothing ever answers.
+    monkeypatch.setattr(selftest, "AI_TIMEOUT_SECONDS", 0.5)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as silent:
+        silent.bind(("127.0.0.1", 0))
+        silent.listen(8)
+        settings.TWOX_AI_ENABLED = True
+        settings.TWOX_LLM_BASE_URL = f"http://127.0.0.1:{silent.getsockname()[1]}/v1"
+        settings.TWOX_EMBED_MODEL = "bge-m3"
+        settings.TWOX_EMBED_DIMENSIONS = 1024
+        settings.TWOX_CHAT_MODEL = "local-chat"
+
+        started = time.monotonic()
+        ai = get_selftest()["ai"]
+        elapsed = time.monotonic() - started
+
+    timeout = "no answer from the model service within 0.5s"
+    assert ai["error"] == timeout
+    assert chat_fields(ai) == ("local-chat", False, timeout)
+    # One wait for the model list, not one per check.
+    assert elapsed < 2 * 0.5
+
+
+def test_worst_case_of_the_whole_selftest_stays_below_the_page_limit() -> None:
+    # The page waits 15 s (SELFTEST_TIMEOUT_MS in web/src/api/selftest.ts).
+    worst = selftest.WORKER_TIMEOUT_SECONDS + selftest.AI_MAX_REQUESTS * selftest.AI_TIMEOUT_SECONDS
+    assert worst < 15
