@@ -62,6 +62,7 @@ Alle Befehle laufen in Git Bash im Hauptordner auf `main`, Compose-Projekt der T
 
 ## Vorgaben und Hinweise
 
+- Kalibrierung nach 124/125 (Festlegung der Leitstelle): Bei der Standardschwelle 0.60 öffnet auch die Kontrollfrage die Sperre (ihre Treffer beginnen bei 0,51). Der Messlauf prüft deshalb zusätzlich, ob nach geöffneter Sperre nur relevante Treffer (Abstand ≤ Schwelle oder exakter Treffer) in den Kontext sollen – in `backend/twox/answers/context.py` eine Zeile (Filter mit `_is_relevant` in `_select_mains`) – und wählt Schwelle und Filter so, dass Frage 8 (Beleg bei 0,549) belegt bleibt und die Kontrollfrage absagt. Ergebnis mit Messwerten im Kurzbericht; eine Änderung am Standardwert ist eine Datenänderung in `settings.py`/`.env.example`, die die Leitstelle zusammenführt.
 - **Voraussetzungen:** 126 (Antwortdienst und `ask`) und 127 (`evaluate_answers`) sind auf `main`. Die Abstände kommen aus 124 (`--distance`), die Proben aus 120 (`m3.json`). Ohne D1 kein `ollama pull` und keine Änderung am Host.
 - **Ausnahme am Host:** `ollama pull`, eine Aktualisierung von Ollama und `OLLAMA_CONTEXT_LENGTH` sind Eingriffe außerhalb des Projektordners. Sie sind nur mit der ausdrücklichen Freigabe D1 erlaubt, wie E-56 für die Einbettungsmodelle (`docs/DECISIONS.md:66`). Andere Host-Einstellungen (`OLLAMA_NUM_PARALLEL`, `OLLAMA_KEEP_ALIVE`) nur lesen und berichten, nicht ändern.
 - **KI optional (E-59, `docs/DECISIONS.md:69`):** gemessen wird mit `TWOX_AI_ENABLED=true`. Der Lauf mit KI aus gehört zu 138.
