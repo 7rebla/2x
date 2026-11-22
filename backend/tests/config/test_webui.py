@@ -40,10 +40,25 @@ def write_build(root: Path) -> Path:
     return root
 
 
+# Stand-ins for the icons Vite copies from web/public/ (not real image data).
+ICONS = {
+    "favicon.ico": b"\x00\x00\x01\x00prepared icon",
+    "favicon.svg": b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"></svg>\n',
+    "apple-touch-icon.png": b"\x89PNG\r\n\x1a\nprepared icon",
+}
+
+
+def write_icons(root: Path) -> None:
+    """Write the icons next to index.html, where the Vite build puts them."""
+    for name, content in ICONS.items():
+        (root / name).write_bytes(content)
+
+
 @pytest.fixture
 def built_ui(tmp_path: Path, settings: Settings) -> Path:
     """Point STATIC_ROOT at a prepared build, as collectstatic leaves it in the image."""
     static_root = write_build(tmp_path / "staticfiles")
+    write_icons(static_root)
     settings.STATIC_ROOT = static_root
     return static_root
 
@@ -107,6 +122,69 @@ def test_unknown_static_path_is_404(path: str) -> None:
 
     assert response.status_code == 404
     assert '<div id="root">' not in response.content.decode()
+
+
+@pytest.mark.usefixtures("built_ui")
+@pytest.mark.parametrize(
+    ("name", "content_type"),
+    [
+        ("favicon.ico", "image/x-icon"),
+        ("favicon.svg", "image/svg+xml"),
+        ("apple-touch-icon.png", "image/png"),
+    ],
+)
+def test_icons_are_served_at_the_root(name: str, content_type: str) -> None:
+    response = Client().get(f"/{name}")
+
+    assert response.status_code == 200
+    assert response["Content-Type"] == content_type
+    assert response.getvalue() == ICONS[name]
+    assert response["Cache-Control"] == "public, max-age=86400"
+    assert "csrftoken" not in response.cookies
+
+
+@pytest.mark.usefixtures("built_ui")
+@pytest.mark.parametrize(
+    ("name", "content_type"),
+    [
+        ("favicon.ico", "image/x-icon"),
+        ("favicon.svg", "image/svg+xml"),
+        ("apple-touch-icon.png", "image/png"),
+    ],
+)
+def test_icons_are_served_below_static_too(name: str, content_type: str) -> None:
+    # The built index.html links them with the base /static/ in front.
+    response = Client().get(f"/static/{name}")
+
+    assert response.status_code == 200
+    assert response["Content-Type"].partition(";")[0] == content_type
+    assert response.getvalue() == ICONS[name]
+
+
+@pytest.mark.usefixtures("built_ui")
+@pytest.mark.parametrize("name", ["favicon.ico", "favicon.svg", "apple-touch-icon.png"])
+def test_icons_answer_head_but_reject_writes(name: str) -> None:
+    assert Client().head(f"/{name}").status_code == 200
+    assert Client().post(f"/{name}").status_code == 405
+
+
+@pytest.mark.usefixtures("missing_ui")
+@pytest.mark.parametrize("path", ["/favicon.ico", "/favicon.svg", "/apple-touch-icon.png"])
+def test_missing_icon_is_404_not_the_ui(path: str) -> None:
+    response = Client().get(path)
+
+    assert response.status_code == 404
+    assert '<div id="root">' not in response.content.decode()
+
+
+@pytest.mark.usefixtures("built_ui")
+@pytest.mark.parametrize("path", ["/favicon.ico/", "/favicon.png", "/x/favicon.ico", "/index.html"])
+def test_other_root_names_stay_page_paths(path: str) -> None:
+    # Only the three icon names are files; everything else is a page path of the UI.
+    response = Client().get(path)
+
+    assert response.status_code == 200
+    assert response["Content-Type"] == "text/html; charset=utf-8"
 
 
 @pytest.mark.usefixtures("built_ui")

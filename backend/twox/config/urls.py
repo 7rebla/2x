@@ -8,7 +8,7 @@ from django.urls import URLPattern, URLResolver, include, path, re_path
 
 from twox.config.health import HealthView
 from twox.config.selftest import SelftestView
-from twox.config.webui import web_index
+from twox.config.webui import ROOT_FILES, web_index, web_root_file
 
 # First path segments that never belong to the web UI. A request below one of
 # them that matches no pattern stays a 404 (or gets its slash appended).
@@ -52,5 +52,7 @@ urlpatterns: list[URLPattern | URLResolver] = [
     # The web UI routes in the browser: / and all its page paths return the
     # same index.html. The files below /static/ come from WhiteNoise.
     path("", web_index, name="web-index"),
+    # Icons at the root of the site (/favicon.ico ...); never the index.html.
+    *(path(name, web_root_file, {"name": name}) for name in ROOT_FILES),
     re_path(WEB_UI_PATH, web_index, name="web-ui"),
 ]
