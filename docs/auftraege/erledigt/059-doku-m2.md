@@ -1,6 +1,6 @@
 # Auftrag 059 – README und ARCHITECTURE für M2
 
-Meilenstein: M2 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 
