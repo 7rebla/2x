@@ -6,20 +6,20 @@ All addresses are in `../routes.tsx` (react-router, data mode, no framework mode
 Django serves `index.html` for every path except `api/`, `static/`, `admin/`, `_allauth/` and `accounts/`,
 so each address can be opened directly or reloaded.
 
-| Address | Page file | Built by work order |
-| --- | --- | --- |
-| `/` | `StructurePage.tsx` | 032 |
-| `/map` | `MapPage.tsx` (loaded lazily) | 039 |
-| `/search` | `SearchPage.tsx` (loaded lazily) | 054 |
-| `/ingest` | `IngestPage.tsx` (loaded lazily) | 055 |
-| `/devices/:deviceId` | `DevicePage.tsx` | 032 |
-| `/documents/:documentId` | `DocumentPage.tsx` | 036 |
-| `/import` | `ImportPage.tsx` | 035 |
-| `/audit` | `AuditPage.tsx` | 033 |
-| `/login` | `LoginPage.tsx` | 030 |
-| `/selftest` | `SelftestPage.tsx` | (done, M0) |
-| `/settings` | `SettingsPage.tsx` (from the user menu, role `read`) | 070 |
-| anything else | `../components/NotFound.tsx` | – |
+| Address | Page file | Loaded | Built by work order |
+| --- | --- | --- | --- |
+| `/` | `StructurePage.tsx` | main bundle | 032 |
+| `/map` | `MapPage.tsx` | on demand (`lazyPage()`) | 039 |
+| `/search` | `SearchPage.tsx` | on demand (`lazyPage()`) | 054 |
+| `/ingest` | `IngestPage.tsx` | on demand (`lazyPage()`) | 055, 064 |
+| `/devices/:deviceId` | `DevicePage.tsx` | on demand (`lazyPage()`) | 032 |
+| `/documents/:documentId` | `DocumentPage.tsx` | on demand (`lazyPage()`) | 036 |
+| `/import` | `ImportPage.tsx` | on demand (`lazyPage()`) | 035 |
+| `/audit` | `AuditPage.tsx` | on demand (`lazyPage()`) | 033 |
+| `/login` | `LoginPage.tsx` | main bundle | 030 |
+| `/selftest` | `SelftestPage.tsx` | on demand (`lazyPage()`) | (done, M0) |
+| `/settings` | `SettingsPage.tsx` (from the user menu, role `read`) | on demand (`lazyPage()`) | 070 |
+| anything else | `../components/NotFound.tsx` | main bundle | – |
 
 A work order that builds a page replaces only its file here (and fills its own catalog, see `../locales/README.md`).
 Routes, the frame (`../components/Layout.tsx`) and the navigation stay as they are.
@@ -141,6 +141,8 @@ if (query.isError) return <ErrorMessage error={query.error} />;
   "already being ingested", a 400 as "configurations are not ingested". The file page and the device page poll every
   5 s (`INGEST_POLL_INTERVAL_MS`) while a shown version has a queued or running job, and not otherwise. Skipped and
   queued are neutral, not errors; with the AI features off (E-59) missing embeddings are not shown at all.
+  Known limit: a change of state found by polling is not announced to screen readers (no live region; work order 053).
+  The same holds for `/ingest`.
 - Downloads are plain links to `/api/v1/document-versions/<id>/download/`; the API answers with
   `Content-Disposition: attachment` and the session cookie goes along.
 - Uploads go through the generated client (multipart/form-data) in `../components/files/upload.ts`, with a fetch of
@@ -172,7 +174,7 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 ## Search
 
 - `SearchPage.tsx` (`/search`, role `read`, entry "Search" with the icon `search`) searches the ingested files through
-  `GET /api/v1/search/` (`searchOptions` of the generated client). `routes.tsx` loads it with `lazy()`, like the map.
+  `GET /api/v1/search/` (`searchOptions` of the generated client). `routes.tsx` loads it on demand with `lazyPage()`, like every page except sign-in and structure.
 - The form has one field for a term, an identifier or a question (at most 500 characters) and a choice of device
   (`GET /api/v1/devices/`, grouped by plant; "All devices" first). Sending the form (Enter or the button) writes the
   trimmed text and the device into the browser address, `/search?q=…&device=…` (question 1 of work order 052): a
@@ -194,7 +196,7 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 
 - `IngestPage.tsx` (`/ingest`, role `read`, entry "Ingestion" / "Einlesen" with the icon `ingest`) lists the ingest
   jobs of all devices through `GET /api/v1/ingest-jobs/` (`ingestJobsListOptions`), newest first, 50 per page with
-  "previous" and "next" like `/audit`. `routes.tsx` loads it with `lazy()`.
+  "previous" and "next" like `/audit`. `routes.tsx` loads it on demand with `lazyPage()`.
 - Filters: status, device and the switch "Also show older attempts" / "Auch ältere Versuche zeigen", all in the address
   (`/ingest?status=…&device=…&older=1`) and applied at once. Without a status the page asks for `failed`, `running` and
   `queued` (what needs attention); one state can be chosen, and `all` sends no status, so ingested and skipped jobs
@@ -221,7 +223,7 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 ## Map
 
 - `MapPage.tsx` (`/map`, role `read`) is an interactive preview of milestone M7 (work order 039, E-48), drawn with
-  React Flow (`@xyflow/react`). `routes.tsx` loads it with `lazy()`, so React Flow is not part of the main bundle.
+  React Flow (`@xyflow/react`). `routes.tsx` loads it on demand with `lazyPage()`, so React Flow is not part of the main bundle.
 - It reads the same four lists as the structure page. `map/graph.ts` turns them into nodes and edges: sites, areas and
   plants as groups (parent nodes), devices inside their plant, and one network node per IPv4 /24 or IPv6 /64 that
   holds a device address. The only edges are the dashed "device is in network" lines. Nothing else is derived; links
