@@ -208,17 +208,20 @@
 }
 
 /*
- * Text animations (E-52), pure CSS. Only opacity, transform, filter,
+ * Text animations (E-52), pure CSS. Only opacity, transform,
  * background-position and background-size move, so no box changes size and
  * nothing jumps. components/TextMotion.tsx renders the classes, but not while
  * reduced motion is on.
  */
 @layer components {
-  /* A: headings clear up word by word. */
+  /*
+   * A: the first heading of a session fades in word by word (E-65), without
+   * blur. 280 ms per word, at most four steps of 30 ms apart: done within 400 ms.
+   */
   .tx-clear .tx-word {
     display: inline-block;
-    animation: tx-clear 640ms var(--ease-calm) both;
-    animation-delay: calc(var(--tx-index, 0) * 55ms);
+    animation: tx-clear 280ms var(--ease-calm) both;
+    animation-delay: calc(min(var(--tx-index, 0), 4) * 30ms);
   }
 
   /* B: a line rises behind a fixed edge; the wrapper keeps its height. */
@@ -309,13 +312,11 @@
   from {
     opacity: 0;
     transform: translateY(0.3em);
-    filter: blur(6px);
   }
 
   to {
     opacity: 1;
     transform: none;
-    filter: none;
   }
 }
 

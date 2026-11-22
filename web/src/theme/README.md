@@ -65,17 +65,26 @@ Work order 072. The files are the project's own work (Apache-2.0 like the reposi
 
 ## Text animations (E-52)
 
-Pure CSS in `index.css`; only `opacity`, `transform`, `filter`, `background-position` and `background-size` move, so no box changes size. Curve `cubic-bezier(0.22, 1, 0.36, 1)` (`--ease-calm`).
+Pure CSS in `index.css`; only `opacity`, `transform`, `background-position` and `background-size` move, so no box changes size. Curve `cubic-bezier(0.22, 1, 0.36, 1)` (`--ease-calm`).
 
 | Pattern | Where | Component or class |
 | --- | --- | --- |
-| A, words clear up | page headings | `AnimatedHeading` (`components/TextMotion.tsx`) |
+| A, words fade in (E-65, work order 085) | the first page heading of a browser session; every later heading stands there at once | `AnimatedHeading` (`components/TextMotion.tsx`) |
 | B, line mask | device header, file title | `MaskedTitle` |
 | C, navigation line | main navigation, settings link | class `nav-link` around an icon and a `nav-label` with `data-label` (reserves the width of the bold label); the current entry also gets the soft accent background |
 | D, loading shimmer | `Loading`, self-test "checking" | `LoadingText` |
 | E, typing (E-64, work order 076) | the name next to the brand mark in the header | `TypedText` (via `BrandMark` with `typing`, set in `Layout.tsx`) |
 
 With reduced motion (settings page or operating system) the components render plain text without animation classes, and `index.css` switches off every animation and transition.
+
+### Heading fade (pattern A)
+
+| | |
+| --- | --- |
+| When | Once per browser session (E-65): only the first `AnimatedHeading` that mounts fades in; it sets `twox.heading` in `sessionStorage` (access in `try/catch`). Every later heading, on any page of the same session, renders plain text at once. Without a usable storage headings never fade. A heading whose text changes while it is shown (language switch) shows the new text at once. |
+| Duration | 280 ms per word, words start 30 ms apart, at most four steps (`min(var(--tx-index), 4)`): the whole heading is done within 400 ms. |
+| Look | Opacity and a short rise (`translateY(0.3em)`), no blur. |
+| Switched off | With reduced motion the heading is plain text and the session counts as done, so switching reduced motion off later does not start the fade. |
 
 ### Typing (pattern E)
 
