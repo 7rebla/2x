@@ -565,7 +565,11 @@ def _poll(job: IngestJob, storage: BlobStorage, converter: DocumentConverter | N
     status = docling.poll(job.docling_task_id)
     # The deadline counts from the first start, not from the wait in Docling's queue.
     first_start = status.status == TaskStatus.STARTED and job.docling_started_at is None
-    if first_start and not _update(job, docling_started_at=timezone.now()):
+    # Every query of a running job writes updated_at (conditional UPDATE in
+    # _update), so that a long conversion is not taken for a stuck job
+    # (ingest_versions --stuck, work order 049).
+    fields: dict[str, Any] = {"docling_started_at": timezone.now()} if first_start else {}
+    if not _update(job, **fields):
         return StepResult(Outcome.IGNORED)
     if not status.finished:
         return StepResult(Outcome.POLLING, poll_after=poll_delay(_elapsed(job)))

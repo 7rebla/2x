@@ -288,6 +288,38 @@ def test_answer_of_a_failed_job_is_not_reused() -> None:
     assert len(converter.submissions) == 1
 
 
+@pytest.mark.parametrize("status", [PENDING, STARTED], ids=["pending", "started"])
+def test_every_status_query_of_a_running_job_writes_updated_at(status: TaskStatus) -> None:
+    # From the review of 049 (work order 048): ingest_versions --stuck looks at
+    # updated_at; a long conversion must not look stuck between state changes.
+    job = make_job(make_version())
+    converter = FakeConverter(statuses=[status])
+    assert pipeline.convert(job.pk, converter=converter).outcome == POLLING
+    long_ago = timezone.now() - timedelta(hours=1)
+
+    for _ in range(3):
+        IngestJob.objects.filter(pk=job.pk).update(updated_at=long_ago)
+        before = timezone.now()
+
+        assert pipeline.poll(job.pk, converter=converter).outcome == POLLING
+
+        job.refresh_from_db()
+        assert job.status == IngestStatus.RUNNING
+        assert job.updated_at >= before
+
+
+def test_status_query_does_not_touch_a_finished_job() -> None:
+    job = make_job(make_version())
+    run_job(job, FakeConverter())
+    long_ago = timezone.now() - timedelta(hours=1)
+    IngestJob.objects.filter(pk=job.pk).update(updated_at=long_ago)
+
+    assert pipeline.poll(job.pk, converter=FakeConverter()) == StepResult(Outcome.IGNORED)
+
+    job.refresh_from_db()
+    assert job.updated_at == long_ago
+
+
 def test_partial_answer_is_not_reused() -> None:
     # From the review of 046 (work order 048): an answer that Docling cut short
     # (partial_success, for example after document_timeout) is not reused for
