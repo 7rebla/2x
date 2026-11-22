@@ -4,6 +4,83 @@ info:
   version: 0.0.0
   description: Asset records with sourced answers.
 paths:
+  /api/v1/answers/:
+    post:
+      operationId: answer
+      description: |-
+        The answer to ``question`` from the documents, with numbered sources.
+
+        Only one answer per user runs at a time. The pieces of ``delta`` are
+        provisional; ``final_text`` of ``done`` is the checked answer.
+      tags:
+      - answers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnswerRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/AnswerEvent'
+          description: 'Server-sent events: sources, then delta pieces, then done;
+            or error at any point. Each event is ''event: <type>'' and ''data: <JSON>''.'
+        '400':
+          description: Invalid input; the errors are per field.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: No role or no CSRF token.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnswerRefusal'
+          description: AI features off (ai_disabled), or an answer runs already.
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Too many questions.
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnswerRefusal'
+          description: No chat model configured.
+  /api/v1/answers/status/:
+    get:
+      operationId: answer_status
+      description: |-
+        Whether the AI features are on, a chat model is set and ready.
+
+        With the AI features off or without a chat model the model service is
+        not contacted.
+      tags:
+      - answers
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnswerStatus'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: No role.
   /api/v1/areas/:
     get:
       operationId: areas_list
@@ -1071,6 +1148,232 @@ components:
         chat_error:
           type: string
       required:
+      - enabled
+    AnswerDeltaEvent:
+      type: object
+      description: A piece of the answer text; provisional, ``done`` brings the checked
+        text.
+      properties:
+        type:
+          type: string
+          description: Always "delta".
+        text:
+          type: string
+      required:
+      - text
+      - type
+    AnswerDoneEvent:
+      type: object
+      description: 'Last event of an answer: the checked text replaces the pieces.'
+      properties:
+        type:
+          type: string
+          description: Always "done".
+        status:
+          type: string
+          description: answered, no_evidence, contradiction.
+        cited:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        removed_sentences:
+          type: integer
+          minimum: 0
+        final_text:
+          type: string
+      required:
+      - cited
+      - final_text
+      - removed_sentences
+      - status
+      - type
+    AnswerErrorEvent:
+      type: object
+      description: The answer failed; nothing follows. No model output, no address.
+      properties:
+        type:
+          type: string
+          description: Always "error".
+        code:
+          type: string
+          description: ai_disabled, model_unavailable, model_rejected, timeout, search_failed,
+            internal.
+        detail:
+          type: string
+      required:
+      - code
+      - detail
+      - type
+    AnswerEvent:
+      oneOf:
+      - $ref: '#/components/schemas/AnswerSourcesEvent'
+      - $ref: '#/components/schemas/AnswerDeltaEvent'
+      - $ref: '#/components/schemas/AnswerDoneEvent'
+      - $ref: '#/components/schemas/AnswerErrorEvent'
+      discriminator:
+        propertyName: type
+        mapping:
+          sources: '#/components/schemas/AnswerSourcesEvent'
+          delta: '#/components/schemas/AnswerDeltaEvent'
+          done: '#/components/schemas/AnswerDoneEvent'
+          error: '#/components/schemas/AnswerErrorEvent'
+    AnswerLocation:
+      type: object
+      description: One place a source is stored at (document, version, device, plant).
+      properties:
+        section_id:
+          type: integer
+        document_id:
+          type: integer
+        document_title:
+          type: string
+        version_id:
+          type: integer
+        version_number:
+          type: integer
+        version_filename:
+          type: string
+        is_latest_version:
+          type: boolean
+        device_id:
+          type: integer
+        device_key:
+          type: string
+        device_name:
+          type: string
+        plant_id:
+          type: integer
+        plant_key:
+          type: string
+        plant_name:
+          type: string
+      required:
+      - device_id
+      - device_key
+      - device_name
+      - document_id
+      - document_title
+      - is_latest_version
+      - plant_id
+      - plant_key
+      - plant_name
+      - section_id
+      - version_filename
+      - version_id
+      - version_number
+    AnswerRefusal:
+      type: object
+      description: '409 or 503: no answer is started; ``code`` says why.'
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+          description: ai_disabled (409), answer_in_progress (409) or chat_not_configured
+            (503).
+      required:
+      - code
+      - detail
+    AnswerRequest:
+      type: object
+      description: The question and its optional scope.
+      properties:
+        question:
+          type: string
+          description: The question, 1 to 500 characters after trimming white space.
+          maxLength: 500
+        device:
+          type: array
+          items:
+            type: integer
+            maximum: 9223372036854775807
+            minimum: 1
+            format: int64
+          description: Only sections of one of these devices (ids).
+          maxItems: 100
+        plant:
+          type: array
+          items:
+            type: integer
+            maximum: 9223372036854775807
+            minimum: 1
+            format: int64
+          description: Only sections in one of these plants (ids).
+          maxItems: 100
+      required:
+      - question
+    AnswerSource:
+      type: object
+      description: A numbered source of the answer; the answer cites it as ``[n]``.
+      properties:
+        n:
+          type: integer
+          minimum: 1
+        section_id:
+          type: integer
+        version_id:
+          type: integer
+        sha256:
+          type: string
+        page_start:
+          type: integer
+          nullable: true
+        page_end:
+          type: integer
+          nullable: true
+        heading_path:
+          type: array
+          items:
+            type: string
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnswerLocation'
+        snippet:
+          type: string
+          description: Start of the section, at most 300 characters; not the whole
+            section, not HTML.
+      required:
+      - heading_path
+      - locations
+      - n
+      - page_end
+      - page_start
+      - section_id
+      - sha256
+      - snippet
+      - version_id
+    AnswerSourcesEvent:
+      type: object
+      description: 'First event: the sources the answer may cite (empty: nothing found).'
+      properties:
+        type:
+          type: string
+          description: Always "sources".
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnswerSource'
+      required:
+      - sources
+      - type
+    AnswerStatus:
+      type: object
+      description: Whether answers can be asked for.
+      properties:
+        enabled:
+          type: boolean
+          description: The AI features are on (TWOX_AI_ENABLED).
+        chat_model_configured:
+          type: boolean
+          description: TWOX_CHAT_MODEL is set.
+        available:
+          type: boolean
+          description: Both, and the chat model is loaded and can generate text.
+      required:
+      - available
+      - chat_model_configured
       - enabled
     Area:
       type: object

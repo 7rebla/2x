@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { areasCreate, areasList, areasPartialUpdate, areasRetrieve, areasUpdate, auditLogList, deviceDocumentsCreate, deviceDocumentsList, devicesCreate, devicesImport, devicesList, devicesPartialUpdate, devicesRetrieve, devicesUpdate, documentRetrieve, documentVersionCreate, documentVersionDownload, documentVersionIngest, healthRetrieve, ingestJobsList, meRetrieve, type Options, plantsCreate, plantsList, plantsPartialUpdate, plantsRetrieve, plantsUpdate, search, selftestRetrieve, sitesCreate, sitesList, sitesPartialUpdate, sitesRetrieve, sitesUpdate } from '../sdk.gen';
-import type { AreasCreateData, AreasCreateResponse, AreasListData, AreasListResponse, AreasPartialUpdateData, AreasPartialUpdateResponse, AreasRetrieveData, AreasRetrieveResponse, AreasUpdateData, AreasUpdateResponse, AuditLogListData, AuditLogListResponse, DeviceDocumentsCreateData, DeviceDocumentsCreateError, DeviceDocumentsCreateResponse, DeviceDocumentsListData, DeviceDocumentsListError, DeviceDocumentsListResponse, DevicesCreateData, DevicesCreateResponse, DevicesImportData, DevicesImportError, DevicesImportResponse, DevicesListData, DevicesListResponse, DevicesPartialUpdateData, DevicesPartialUpdateResponse, DevicesRetrieveData, DevicesRetrieveResponse, DevicesUpdateData, DevicesUpdateResponse, DocumentRetrieveData, DocumentRetrieveError, DocumentRetrieveResponse, DocumentVersionCreateData, DocumentVersionCreateError, DocumentVersionCreateResponse, DocumentVersionDownloadData, DocumentVersionDownloadError, DocumentVersionDownloadResponse, DocumentVersionIngestData, DocumentVersionIngestError, DocumentVersionIngestResponse, HealthRetrieveData, HealthRetrieveResponse, IngestJobsListData, IngestJobsListError, IngestJobsListResponse, MeRetrieveData, MeRetrieveResponse, PlantsCreateData, PlantsCreateResponse, PlantsListData, PlantsListResponse, PlantsPartialUpdateData, PlantsPartialUpdateResponse, PlantsRetrieveData, PlantsRetrieveResponse, PlantsUpdateData, PlantsUpdateResponse, SearchData, SearchError, SearchResponse, SelftestRetrieveData, SelftestRetrieveResponse, SitesCreateData, SitesCreateResponse, SitesListData, SitesListResponse, SitesPartialUpdateData, SitesPartialUpdateResponse, SitesRetrieveData, SitesRetrieveResponse, SitesUpdateData, SitesUpdateResponse } from '../types.gen';
+import { answerStatus, areasCreate, areasList, areasPartialUpdate, areasRetrieve, areasUpdate, auditLogList, deviceDocumentsCreate, deviceDocumentsList, devicesCreate, devicesImport, devicesList, devicesPartialUpdate, devicesRetrieve, devicesUpdate, documentRetrieve, documentVersionCreate, documentVersionDownload, documentVersionIngest, healthRetrieve, ingestJobsList, meRetrieve, type Options, plantsCreate, plantsList, plantsPartialUpdate, plantsRetrieve, plantsUpdate, search, selftestRetrieve, sitesCreate, sitesList, sitesPartialUpdate, sitesRetrieve, sitesUpdate } from '../sdk.gen';
+import type { AnswerStatusData, AnswerStatusError, AnswerStatusResponse, AreasCreateData, AreasCreateResponse, AreasListData, AreasListResponse, AreasPartialUpdateData, AreasPartialUpdateResponse, AreasRetrieveData, AreasRetrieveResponse, AreasUpdateData, AreasUpdateResponse, AuditLogListData, AuditLogListResponse, DeviceDocumentsCreateData, DeviceDocumentsCreateError, DeviceDocumentsCreateResponse, DeviceDocumentsListData, DeviceDocumentsListError, DeviceDocumentsListResponse, DevicesCreateData, DevicesCreateResponse, DevicesImportData, DevicesImportError, DevicesImportResponse, DevicesListData, DevicesListResponse, DevicesPartialUpdateData, DevicesPartialUpdateResponse, DevicesRetrieveData, DevicesRetrieveResponse, DevicesUpdateData, DevicesUpdateResponse, DocumentRetrieveData, DocumentRetrieveError, DocumentRetrieveResponse, DocumentVersionCreateData, DocumentVersionCreateError, DocumentVersionCreateResponse, DocumentVersionDownloadData, DocumentVersionDownloadError, DocumentVersionDownloadResponse, DocumentVersionIngestData, DocumentVersionIngestError, DocumentVersionIngestResponse, HealthRetrieveData, HealthRetrieveResponse, IngestJobsListData, IngestJobsListError, IngestJobsListResponse, MeRetrieveData, MeRetrieveResponse, PlantsCreateData, PlantsCreateResponse, PlantsListData, PlantsListResponse, PlantsPartialUpdateData, PlantsPartialUpdateResponse, PlantsRetrieveData, PlantsRetrieveResponse, PlantsUpdateData, PlantsUpdateResponse, SearchData, SearchError, SearchResponse, SelftestRetrieveData, SelftestRetrieveResponse, SitesCreateData, SitesCreateResponse, SitesListData, SitesListResponse, SitesPartialUpdateData, SitesPartialUpdateResponse, SitesRetrieveData, SitesRetrieveResponse, SitesUpdateData, SitesUpdateResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -38,6 +38,27 @@ const createQueryKey = <TOptions extends Options>(id: string, options?: TOptions
     }
     return [params];
 };
+
+export const answerStatusQueryKey = (options?: Options<AnswerStatusData>) => createQueryKey('answerStatus', options);
+
+/**
+ * Whether the AI features are on, a chat model is set and ready.
+ *
+ * With the AI features off or without a chat model the model service is
+ * not contacted.
+ */
+export const answerStatusOptions = (options?: Options<AnswerStatusData>) => queryOptions<AnswerStatusResponse, AnswerStatusError, AnswerStatusResponse, ReturnType<typeof answerStatusQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await answerStatus({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: answerStatusQueryKey(options)
+});
 
 export const areasListQueryKey = (options?: Options<AreasListData>) => createQueryKey('areasList', options);
 
