@@ -3,6 +3,7 @@
 // an error. The German catalogs must have the same keys; a test checks that.
 import "i18next";
 
+import type answers from "./locales/en/answers.json";
 import type assets from "./locales/en/assets.json";
 import type audit from "./locales/en/audit.json";
 import type auth from "./locales/en/auth.json";
@@ -32,6 +33,7 @@ declare module "i18next" {
       settings: typeof settings;
       search: typeof search;
       ingest: typeof ingest;
+      answers: typeof answers;
     };
     returnNull: false;
   }

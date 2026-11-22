@@ -1,0 +1,63 @@
+{
+  "title": "Auskunft",
+  "intro": "Stellen Sie eine Frage zu den eingelesenen Unterlagen. Die Antwort nennt ihre Quellen; ohne Beleg in den Unterlagen gibt es keine Antwort.",
+  "form": {
+    "label": "Frage stellen",
+    "question": "Frage",
+    "hint": "Strg+Enter sendet die Frage; Enter beginnt eine neue Zeile.",
+    "length": "{{length}} von {{max}} Zeichen",
+    "tooLong": "Höchstens {{max}} Zeichen – bitte die Frage kürzen.",
+    "submit": "Fragen",
+    "submitting": "Wird beantwortet…",
+    "cancel": "Abbrechen"
+  },
+  "state": {
+    "searching": "Suche Quellen…",
+    "writing": "Antwort wird erstellt…",
+    "done": "Fertig",
+    "cancelled": "Abgebrochen"
+  },
+  "unavailable": {
+    "off": "Die KI-Funktionen sind ausgeschaltet, deshalb gibt es keine Antworten. Die Suche findet die Stellen in den Unterlagen weiterhin.",
+    "notAvailable": "Auskunft derzeit nicht verfügbar. Die Suche findet die Stellen in den Unterlagen weiterhin.",
+    "toSearch": "Zur Suche"
+  },
+  "answer": {
+    "label": "Antwort",
+    "provisional": "Vorläufig, noch nicht geprüft",
+    "checked": "Antwort mit geprüften Quellen",
+    "contradiction": "Antwort mit widersprüchlichen Quellen",
+    "cancelled": "Abgebrochen – dieser Text wurde nicht geprüft.",
+    "removed": "Nicht belegte Aussagen wurden entfernt."
+  },
+  "noEvidence": {
+    "text": "Dazu finde ich nichts in den Unterlagen.",
+    "search": "Die Unterlagen nach dieser Frage durchsuchen"
+  },
+  "contradiction": {
+    "text": "Die Unterlagen widersprechen sich. Vergleichen Sie die markierten Stellen.",
+    "place": "Widersprüchliche Stelle"
+  },
+  "sources": {
+    "label": "Quellen",
+    "source": "Quelle {{n}}",
+    "withoutPage": "Fundstelle ohne Seitenangabe"
+  },
+  "citation": {
+    "page": "Seite {{page}}",
+    "pages": "Seiten {{start}}–{{end}}"
+  },
+  "error": {
+    "interrupted": "Die Verbindung brach ab, bevor die Antwort fertig war. Bitte erneut fragen.",
+    "inProgress": "Eine andere Antwort für Sie läuft noch. Bitte warten Sie, bis sie fertig ist.",
+    "tooMany": "Zu viele Fragen in kurzer Zeit. Bitte kurz warten und erneut fragen.",
+    "code": "Code: {{code}}",
+    "stream": {
+      "model_unavailable": "Das Sprachmodell ist nicht erreichbar.",
+      "model_rejected": "Das Sprachmodell hat die Anfrage abgelehnt.",
+      "timeout": "Die Antwort hat zu lange gedauert.",
+      "search_failed": "Die Suche nach Quellen ist fehlgeschlagen.",
+      "internal": "Die Antwort ist wegen eines internen Fehlers gescheitert."
+    }
+  }
+}
