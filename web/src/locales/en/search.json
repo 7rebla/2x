@@ -23,7 +23,12 @@
     "label": "Found by",
     "exact": "Exact",
     "keyword": "Keyword",
-    "semantic": "Meaning"
+    "semantic": "Meaning",
+    "hint": {
+      "exact": "An identifier from the search, such as an IP address or a part number, appears word for word in the text.",
+      "keyword": "The words of the search appear in the text, also in other forms, such as the plural.",
+      "semantic": "The text matches the search in meaning, even without the same words (AI search)."
+    }
   },
   "page": {
     "one": "p. {{page}}",
@@ -31,6 +36,13 @@
   },
   "headingPath": "Section",
   "locations": "Stored in",
+  "moreLocations": {
+    "devices_one": "+{{count}} more device",
+    "devices_other": "+{{count}} more devices",
+    "places_one": "+{{count}} more place",
+    "places_other": "+{{count}} more places",
+    "hide": "Show fewer"
+  },
   "version": "Version {{number}}",
   "olderVersion": "Older version",
   "olderVersionHint": "This file has a newer version that is not searchable yet.",

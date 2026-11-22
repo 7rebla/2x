@@ -187,12 +187,21 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 - `semantic` of the answer: `unavailable` shows the hint "Keyword search only – language model not reachable";
   `disabled` (AI features switched off, E-59) shows one calm line, no warning; `used` shows nothing.
 - A hit (`search/SearchHitView.tsx`) shows the page ("p. 31", "pp. 31–32"; German "S. 31", "S. 31–32"), the heading
-  path, how it was found (exact, keyword, meaning), the snippet and every place it is stored at: file (link to
+  path, how it was found (exact, keyword, meaning), the snippet and the places it is stored at: file (link to
   `/documents/:id`), version with its file name, "Older version" when `is_latest` is false, device (link to
   `/devices/:id`) and plant.
+- Compact hits (work order 087): only the first place is shown. Further places sit behind a ghost button
+  "+10 more devices" / "+10 weitere Geräte" (`aria-expanded`, `aria-controls` on the list of places), which opens
+  and closes them; it says "places" / "Fundstellen" instead when one device holds the text more than once
+  (`hiddenPlacesKind`). A hit with one place has no button.
+- Each kind (exact, keyword, meaning) explains itself: the short name stays visible, the explanation is the
+  `title` of the badge and follows the name as `sr-only` text ("Exact: An identifier from the search …"), in German
+  and English (`matchKind.hint.*` in `locales/*/search.json`).
 - The snippet is plain text. `search/snippet.ts` cuts it into pieces by the `highlights` of the API, which count
   Unicode code points: the snippet is split with `Array.from` first, so marks do not slip after an emoji or another
   character outside the BMP. The found places are `<mark>` elements with text inside; nothing is rendered as HTML.
+  A mark has no side padding (`px-0`, `box-decoration-clone`, `MARK_CLASS`), so a mark inside a word such as
+  "IP-Addresses" leaves no gaps.
 - Tests fake the search API with `search/testData.ts` (test sentences only, devices of `structure/testData.ts`).
 
 ## Ingest overview

@@ -233,3 +233,94 @@ test("hits show page, heading path, marked snippet, device and links", async ({ 
 
   expect(consoleErrors, "errors in the browser console").toEqual([]);
 });
+
+test("a hit shows its first place, the others behind a button, unpadded marks and explained kinds", async ({ page }) => {
+  // Work order 087: the same file stored for many devices does not push the
+  // snippet away. Narrow screen, so the layout is checked where it is tight.
+  const consoleErrors = collectConsoleErrors(page);
+  await page.setViewportSize({ width: 375, height: 800 });
+  const device = await newDevice(page, 87);
+  const documentId = 2_147_483_002;
+  const place = (index: number): object => ({
+    document: { id: documentId, title: "e2e test manual" },
+    version: { id: 1, number: 1, original_filename: "e2e-test-manual.pdf", is_latest: true },
+    // The first place is the real test device; the others only stand in the answer.
+    device:
+      index === 0
+        ? { id: device.id, key: device.key, name: device.name }
+        : { id: 2_147_483_000 + index, key: `e2e-device-${String(index)}`, name: `e2e device ${String(index)}` },
+    plant: { id: device.plantId, key: device.plantKey, name: device.plantName },
+  });
+  const result = {
+    semantic: "used",
+    hits: [
+      {
+        section_id: 1,
+        score: 1,
+        match_kinds: ["exact", "semantic"],
+        snippet: "Set the IP-Addresses of the e2e test station first.",
+        highlights: [{ start: 8, end: 10 }],
+        page_start: 4,
+        page_end: 4,
+        heading_path: ["e2e chapter"],
+        locations: Array.from({ length: 11 }, (_unused, index) => place(index)),
+      },
+    ],
+  };
+  await page.route(
+    (url) => url.pathname === SEARCH_API,
+    async (route) => {
+      await route.fulfill({ json: result });
+    },
+  );
+
+  await page.goto("/search?q=IP");
+  const card = page.getByTestId("search-hit");
+  await expect(card).toHaveCount(1);
+
+  // The first place with the page and a link to the file; ten more behind the button.
+  await expect(card.getByTestId("search-hit-page")).toHaveText("p. 4");
+  await expect(card.getByTestId("search-location")).toHaveCount(1);
+  await expect(card.getByRole("link", { name: "e2e test manual" })).toHaveAttribute(
+    "href",
+    `/documents/${String(documentId)}`,
+  );
+  const more = card.getByRole("button", { name: "+10 more devices" });
+  await expect(more).toHaveAttribute("aria-expanded", "false");
+  // The snippet stands above the place.
+  const snippetBox = await card.getByTestId("search-snippet").boundingBox();
+  const placeBox = await card.getByTestId("search-location").boundingBox();
+  expect(snippetBox !== null && placeBox !== null && snippetBox.y < placeBox.y).toBe(true);
+  const closedHeight = (await card.boundingBox())?.height ?? 0;
+
+  await more.click();
+  await expect(card.getByTestId("search-location")).toHaveCount(11);
+  const less = card.getByRole("button", { name: "Show fewer" });
+  await expect(less).toHaveAttribute("aria-expanded", "true");
+  expect((await card.boundingBox())?.height ?? 0).toBeGreaterThan(closedHeight);
+  await less.click();
+  await expect(card.getByTestId("search-location")).toHaveCount(1);
+  // The focus stays on the same button.
+  await expect(card.getByRole("button", { name: "+10 more devices" })).toBeFocused();
+
+  // The mark has no side padding, so "IP-Addresses" is not torn apart.
+  const mark = card.locator("mark");
+  await expect(mark).toHaveText("IP");
+  const padding = await mark.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return [style.paddingLeft, style.paddingRight];
+  });
+  expect(padding).toEqual(["0px", "0px"]);
+
+  // The kinds explain themselves as a tooltip; the short name stays visible.
+  await expect(card.getByTestId("search-match-kind")).toHaveText(["Exact", "Meaning"]);
+  await expect(card.getByTestId("search-match-kind-item").nth(1)).toHaveAttribute(
+    "title",
+    "The text matches the search in meaning, even without the same words (AI search).",
+  );
+
+  // Nothing sticks out sideways on a narrow screen.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+
+  expect(consoleErrors, "errors in the browser console").toEqual([]);
+});
