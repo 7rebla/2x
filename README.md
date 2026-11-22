@@ -74,7 +74,7 @@ Run everything from the repository root.
    docker compose run --rm backend-dev python manage.py import_devices /testfactory/layout/devices.csv --user admin --commit
    ```
 
-   For the test factory the result is 1 site, 3 areas, 10 plants and 13 devices. A second import changes nothing (everything "unchanged").
+   For the test factory the result is 1 site, 3 areas, 10 plants and 13 devices, each with its device class (five PLCs, four controllers, one computer, one router, one robot, one firewall). A second import changes nothing (everything "unchanged").
 
 6. Optional: the self-test page <http://localhost:8000/selftest> shows two cards: **Database - OK** with the PostgreSQL server version, and **Worker - OK** with the result `pong` and the round-trip time.
    "Check again" repeats the test. If the worker is stopped, the worker card turns red and shows the error from the API.
@@ -103,13 +103,15 @@ Nothing can be deleted in the web UI or the API. A superuser can delete sites, a
 
 ## Device list (CSV)
 
-The import takes exactly the format of `testfactory/layout/devices.csv` (decision E-44):
+The import takes exactly the format of `testfactory/layout/devices.csv` (decisions E-44 and E-53):
 
 - UTF-8 (a byte order mark at the start is accepted), comma as separator, double quotes as in RFC 4180 (a value may hold commas, quotes and line breaks).
 - The first line names exactly these 13 columns, in this order:
   `site`, `area`, `plant_id`, `plant_name`, `device_id`, `device_name`, `manufacturer`, `model`, `software_version`, `ip_address`, `address_source`, `protocols`, `notes`.
+  A 14th column `device_class` may follow as the last one; then every line has 14 values. Files with 13 columns stay valid.
 - One line per device. `site` and `area` are names, `plant_id` and `device_id` are keys (lower-case letters, digits and `-`; a plant key is unique among all plants, a device key among all devices, across all sites), `plant_name` and `device_name` are names. The other columns go unchanged into the fields of the device; `ip_address` must be an IPv4 or IPv6 address or empty.
-- A line without `device_id` names a plant without devices; its `notes` become the notes of the plant.
+- `device_class` is the kind of device, one of `plc`, `controller` (controller or embedded device), `computer` (computer or edge device), `router`, `firewall`, `robot`, `other`, written exactly like this. Any other value is an error at its line and column. Without the column, or with an empty value, a new device gets `other` and an existing device keeps its class. In the web UI and the admin the class is a choice in the device form.
+- A line without `device_id` names a plant without devices; its `notes` become the notes of the plant. Its device columns, `device_class` included, stay empty.
 
 Rules of the import:
 
