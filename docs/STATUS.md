@@ -154,6 +154,6 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 
 | Nr. | Auftrag | Stufe | Voraussetzung | Status |
 | --- | --- | --- | --- | --- |
-| 070 | Theme, Schrift Inter, Text-Animationen, Einstellungsseite | C | Frage zur Schriftlizenz (OFL) | wartet auf a7 |
-| 071 | Icon-Schicht mit Lucide | C | 070; Frage Lucide | wartet auf a7 |
+| 070 | Theme, Schrift Inter, Text-Animationen, Einstellungsseite | C | – (E-50, E-52) | in Arbeit |
+| 071 | Icon-Schicht mit Lucide | C | 070 (E-51) | offen (wartet auf 070) |
 | 072 | Marke: Bildmarke im Kopf, Favicon | C | 070; Bildmarke von a7 freigegeben | in Vorbereitung (Logo noch in Arbeit) |

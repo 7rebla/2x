@@ -60,6 +60,8 @@ Voraussetzung: a7 hat die Lizenzfrage zur Schrift (Frage 1) beantwortet; paralle
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Empfehlungen übernommen (E-50 bis E-52).
+
 1. **Schriftlizenz SIL OFL 1.1 für Inter zulassen?** (a) Ja, als benannte Ausnahme für die unverändert ausgelieferte Schriftdatei; (b) Nein, dann Systemschriften. Empfehlung: (a) – OFL ist die übliche freie Schriftlizenz, erlaubt Weitergabe mit Lizenztext, Inter hat keinen reservierten Namen.
 2. **Welche Animationsmuster?** (a) alle vier (A–D), dezent; (b) nur C und D (Navigation, Laden); (c) keine. Empfehlung: (a), mit Abschaltung über „Bewegung reduzieren“.
 

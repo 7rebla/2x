@@ -50,6 +50,8 @@ Voraussetzung: Auftrag 070 ist auf `main` (Tokens, Farben über `currentColor`);
 
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
+**Antwort a7, 22.11.2026:** Empfehlungen übernommen (E-50 bis E-52).
+
 1. **Lucide (`lucide-react`, ISC) als Icon-Bibliothek zulassen?** (a) Ja; (b) eigene SVGs ohne Bibliothek. Empfehlung: (a) – laut Design-Übergabe bereits akzeptiert; ISC ist nach E-23 zulässig.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)

@@ -57,6 +57,9 @@ Quelle der Einträge E-01 bis E-13: `STARTUNTERLAGE.md`, Entwurf 2 vom 21.11.202
 | E-47 | Font Awesome Free 6.7.2 (CC-BY-4.0) ist als benannte Ausnahme zugelassen, nur als Teil des unveränderten Django-Admins (`admin/img/*.svg`); die Namensnennung liefert die mitgelieferte `admin/img/README.md` | ✔ | 21.11.2026 |
 | E-48 | Eine vereinfachte, **interaktive** Landkarte wird als Vorschau auf M7 vorgezogen (M1b, Auftrag 039): Struktur und Geräte als Knoten, zusätzlich IP-Netze der Geräte; keine abgeleiteten Verbindungen vor M5/M7. Darstellung mit React Flow (`@xyflow/react`, MIT) als neue Abhängigkeit; Lizenz und Version prüft der Bearbeiter an der Quelle | ✔ | 22.11.2026 |
 | E-49 | Meilenstein M1 ist abgenommen (mit der vorgezogenen Landkarten-Vorschau M1b); bekannte Grenzen stehen in `docs/ARCHITECTURE.md`, „Limits and known gaps" | ✔ | 22.11.2026 |
+| E-50 | Die UI-Schrift Inter 4.1 (SIL OFL 1.1) ist als benannte Ausnahme zugelassen: Schriftdatei unverändert mit Lizenztext ausgeliefert (Auftrag 070) | ✔ | 22.11.2026 |
+| E-51 | Lucide (`lucide-react`, ISC) ist die Icon-Bibliothek für Navigation, Aktionen und Status; eigene Industrie-Icons kommen hinzu, sobald Geräte ein Typfeld haben (Auftrag 071) | ✔ | 22.11.2026 |
+| E-52 | Gestaltung: alle vier Text-Animationsmuster dezent und über „Bewegung reduzieren“ abschaltbar; im Kopf der Oberfläche steht bis zur Veröffentlichung des neuen Produktnamens die freigegebene Bildmarke mit dem Schriftzug „2x“ (Auftrag 072); die Bildmarke wird damit öffentlich | ✔ | 22.11.2026 |
 
 ## Begründungen
 
