@@ -1,6 +1,6 @@
 # Auftrag 122 – Antworttypen und Prompt mit Injektionsschutz
 
-Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: keine. Läuft in Welle 1 parallel zu 120, 121 und 123.
 
