@@ -1,6 +1,6 @@
 # Auftrag 127 – Messwerkzeug evaluate_answers
 
-Meilenstein: M3 · Freigabestufe: B · Status: offen
+Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
 
 Voraussetzung: 120 (Probe-Liste `m3.json`, Recall@k, Fundstelle über Überschriftenpfad) und 126 (Antwortdienst `answer()`, Befehl `ask`) sind auf `main`. Mittelbar damit auch 121 (`FakeChatModel`), 122 (`ContextSource`, `AnswerEvent`, `prompt_version()`), 123 (`citations.verify`) und 125 (Kontextauswahl).
 
@@ -137,7 +137,68 @@ Der Auftrag ist ohne Entscheidung startbar; das Werkzeug unterstützt alle Varia
 - **D4 Prüffragen beibehalten oder eigene.** (a) Die 11 Fragen aus `questions.yaml` bleiben Abnahmegrundlage; (b) Ersatz durch eigene Fragen; (c) beide Sätze, eigene nur informativ. **Empfehlung:** (a) mit (c); das Werkzeug liest jede Datei im selben Format über `--questions`.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Eigenes Compose-Projekt `twox-127`, `TWOX_API_PORT=18127`. „2x“ und „twox-leit“ nicht angefasst. Keine neue Abhängigkeit, keine Migration, keine Einstellung; in `citations.py` nur die neue öffentliche Funktion `value_occurs` (Nachbesserung).
+
+### Was wurde gebaut?
+
+- **`backend/twox/answers/evaluation.py`** (neu), Aufbau wie `search/evaluation.py`:
+  - Eingaben: `load_questions()`/`parse_questions()` (nur `questions`, `candidates` ignoriert; Eingabefehler `QuestionFormatError` mit Ortsangabe), optionales `key_fact_alternatives` (Schlüssel muss ein `key_fact` sein). `question_places()` lädt die Probe-Liste mit `load_probes` und vereinigt die `expected` aller Proben mit `basis.question == N` (Sprachfassungen über `editions`, E-61). `asked_text()` entfernt „Kontrollfrage …:“, Klammerbemerkungen und Sätze ab „Erwartet wird“. `contradiction_groups()` bildet Gruppe A/B aus `supports` („Statement A:“/„Statement B:“), Seite aus „PDF-S. n“, Prüfsumme aus der Probe derselben `manifest_id`, andere Sprachfassung eingeschlossen; Quellen ohne PDF-Seite entfallen.
+  - Urteil je Lauf: reine Funktion `judge_run(question, places, observed, *, run, literal)`. Zitierte Quelle = Quelle aus `SourcesEvent` mit Nummer in `DoneEvent.cited`; je Fundort ein `Place`, Abgleich über `matching_place` und (für getroffene/fehlende Fundstellen) `twox.search.evaluation.judge` – nichts neu geschrieben. Key facts über `citations.normalise_value` (Enthaltensein im vereinheitlichten `final_text`). Regeln für `fact`, `contradiction`, `no-evidence` und `error` wie im Auftrag. Ergebnis je Lauf mit allen geforderten Feldern (Urteil, fehlende key facts, getroffene/fehlende Fundstellen, Gruppen, Belegrang, zitiert ja/nein, Quellen, gültige Zitate, davon auf erwarteter Fundstelle, verworfene Sätze, Status, Code, Zeit bis erstes Token, Gesamtzeit).
+  - `observe()` liest den Ereignisstrom, misst die Zeiten und schließt den Generator mit `close()`, sobald `done` oder `error` kam (auch bei Ausnahme; Ausnahme des Dienstes ergibt `internal`).
+  - `aggregate()` (Mehrheit/streng, Kontrollfrage nach `control_mode`, Streuung: richtige Läufe von N, Belegrang min/max, Zeiten Median/min/max, `verdict_a7 = None`) und `summarise()` (beide Regeln `per_question` und `per_run`, `per_run: [{run, correct_count, control_ok, passed}]`, `passed` nach `--rule`, Quote der Zitate auf erwarteten Fundstellen, Zahl `no_probe`/`not_ingested`) sind rein.
+  - `evaluate(questions, places, *, runs=1, answer=None→service.answer, clock, mode, control_mode, rule, wording, literal, required=8, ingested=ingested_checksums)`: Läufe nacheinander über alle Fragen (Lauf 1 für alle, dann Lauf 2 …), `device_ids`/`plant_ids` leer. KI aus: nichts gefragt, nichts nachgeschlagen, Bericht „AI features not enabled: not measured“, `summary = null`, kein x/10. Kopf: Chat-Modell, Einbettungsmodell, `prompt_version()`, Temperatur, `max_tokens`, `reasoning_effort`, alle `TWOX_ANSWER_*` (dynamisch gelesen, damit `TWOX_ANSWER_TOTAL_TIMEOUT` aus 130 ohne Änderung erscheint), Läufe, Modus, Regel, Fragetext-Quelle, `literal`.
+  - `format_table()`/`format_json()` (ensure_ascii=False): nur Kennungen, Seiten, Überschriftenpfade der Proben, Zahlen, Status, Codes und die key facts aus `questions.yaml`.
+  - Protokoll: eine Zeile je Lauf `Evaluation run: question=… run=… verdict=… result=… model=… duration_ms=… sources=…`; bei Ausnahme nur der Typname.
+- **`backend/twox/answers/management/commands/evaluate_answers.py`** (neu): Optionen wie im Auftrag (`--questions PATH|-`, `--probes NAME|PATH`, `--runs`, `--mode`, `--rule`, `--control-mode`, `--wording`, `--literal`, `--only`, `--json`), `CommandError` bei ungültiger Eingabe, Exit 0 nach abgeschlossener Messung, `requires_system_checks = []` wie `ask`.
+- **Tests** `backend/tests/answers/test_evaluation.py` (82 Fälle), nur erfundene Kennungen/Prüfsummen und selbst geschriebene Texte (Greifer G-12).
+- **`docs/ARCHITECTURE.md`**: Modulzeile `answers`, Werkzeugtabelle Zeile „Answer quality“, „What CI does not run“ (Punkt „Test questions“ mit der Definition von „richtig“ je `kind`).
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-127 --profile dev`.
+
+| Nr. | Ergebnis | Nachweis |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` 29.9.3, `docker compose version` v5.7.0, je Exit 0 |
+| 1 | erfüllt | `test_fact_with_key_fact_and_citation_…`, `test_missing_key_fact_is_wrong`, `test_key_fact_only_as_alternative_counts_unless_literal`, `test_right_file_wrong_page_is_wrong`, `test_citation_of_the_other_language_edition_counts`, `test_number_not_in_cited_does_not_count`, drei Widerspruchstests (nur A; A+B mit `contradiction`; A+B mit `answered`), Kontrollfrage richtig / mit Zitat Fehlschlag, `test_failed_control_question_fails_even_with_ten_of_ten`, `test_error_event_gives_error`, `test_question_without_probe_gives_no_probe`; dazu Überschriftenpfad, Fundort an zweitem Gerät (E-55), Vereinheitlichung |
+| 2 | erfüllt | `test_majority_and_strict` (2 von 3), `test_control_question_is_strict_unless_asked`, `test_per_run_counts_9_7_8` (`per_run` 9/7/8, `passed_per_run` wahr), `test_rules_can_differ_and_passed_follows_the_rule` (je Frage 2 von 3, Läufe 6/7/7: `passed_per_question` wahr, `passed_per_run` falsch, `passed` folgt `--rule`) |
+| 3 | erfüllt | `test_asked_text_of_all_eleven_test_questions` (echte Datei) |
+| 4 | erfüllt | `test_groups_of_question_6_come_from_questions_yaml`: A = {34}, B = {36, 38} (mit `m3.json`, de und en) |
+| 5 | erfüllt | `test_output_holds_no_question_answer_or_section_text`: Marker in Fragetext, `final_text`, verworfenem Satz (Delta), `ContextSource.text` (Snippet) und Überschrift; Text und JSON, auch mit Fehlerlauf |
+| 6 | erfüllt | `test_ai_off_asks_nothing_and_says_not_measured` (`answer` und `ingested` lösen bei Aufruf aus), `test_command_with_ai_off_asks_nothing` |
+| 7 | erfüllt | `test_command_measures_over_the_real_answer_service`: echter Dienst, echte Kontextauswahl mit `FakeEmbedder`, `FakeChatModel` über `get_chat_model`; Text „1/2 right, control question ok“ und JSON; Kontrollfrage unter der Schwelle (Modell nur zweimal gefragt). Standardeingabe mit BOM und `--only`. Ungültige Fragen-/Probe-Datei, fehlende Datei, `--probes m9`, `--runs 0`, `--only` ungültig/unbekannt: `CommandError` |
+| 8 | erfüllt | `test_logs_hold_no_question_answer_or_section_text` (Wurzel und `twox` auf DEBUG, Marker in Frage, Antwort, Abschnitt; Kontrollfragetext) |
+| 9 | erfüllt | `D run --rm backend-dev pytest tests/answers`: 899 passed |
+| 10 | erfüllt | `ruff check .` „All checks passed!“; `ruff format --check .` 221 Dateien; `mypy .` „no issues found in 220 source files“; `pytest` 3323 passed, 6 deselected; `pytest -m worker` 6 passed; `makemessages` ohne Unterschied; `makemigrations --check --dry-run` „No changes detected“; „License check passed.“; `spectacular` ohne Unterschied in `web/openapi`. Jobs `web`, `testfactory`, `e2e`: keine Datei dort berührt |
+| 11 | erfüllt | `pyproject.toml` und `uv.lock` unverändert |
+| 12 | erfüllt | `D down -v` Exit 0; danach kein Container und kein Volume `twox-127*` |
+
+**Kurzer echter Probelauf (erlaubt):** `D run --rm backend-dev python manage.py evaluate_answers --runs 2` auf der leeren Datenbank, KI an, kein Chat-Modell: Fragen 1–10 `not_ingested`, Kontrollfrage 11 zweimal gestellt (Einbettung mit bge-m3 am Host, unter der Schwelle, kein Chat-Aufruf) → `correct 2/2`, „0/10 right, control question ok“, Exit 0.
+
+**Laufbefehl für 128/138 (Beispiel):** `docker compose run --rm backend-dev python manage.py evaluate_answers --runs 3 --json` bzw. im Container `api` mit `--questions -` und `< testfactory/questions.yaml`.
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-acc00677674317233`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-acc00677674317233` (relativ zum Projektordner)
+- Nicht gepusht, nichts zusammengeführt.
+
+### Abweichungen und Hinweise
+
+1. **Standard `--runs 3` im Befehl:** Der Auftrag nennt „Standard 1 bis zur Entscheidung“; D5 (a) ist mit E-69 entschieden, deshalb hat der Befehl 3 Läufe als Vorgabe. `evaluate()` selbst behält `runs=1` wie in der Signatur des Auftrags. `--mode majority`, `--rule per-question`, Kontrollfrage streng wie vorgegeben.
+2. **„Quote gültiger Zitate“ ausgelegt** als Anteil der gültigen Zitate (`done.cited`), die auf eine erwartete Fundstelle zeigen, über alle Läufe (`expected_citations / valid_citations`). Ungültige Nummern sieht das Werkzeug nicht (nur die Zahl der verworfenen Sätze, die je Lauf mit ausgegeben wird).
+3. **Zusätzliche, injizierbare Parameter von `evaluate`:** `mode`, `control_mode`, `rule`, `wording`, `literal`, `required` (Standard 8) und `ingested` (Standard `ingested_checksums`), damit Lauftests ohne Datenbank auskommen und 135 einen kleineren Fragensatz mit eigener Schwelle prüfen kann. `x/10` heißt allgemein „x/n“ mit n = Zahl der Nicht-Kontrollfragen.
+4. **Key facts als ganze Werte (seit der Nachbesserung):** Vergleich über `citations.value_occurs` mit Vereinheitlichung und Grenzregeln der Zitatprüfung; „5 kg“ trifft nicht „25 kg“ oder „12,5 kg“, „1880“ nicht „18800“, „V18“ nicht „V180“. Die Bedeutung wird nicht geprüft („Limits“ in `citations.py`); dafür bestätigt a7 jedes Urteil (D5 (d)). Das ist eine kleine Änderung an `citations.py` (neue öffentliche Funktion, `verify` unverändert).
+5. **Endurteil `error`:** Eine Frage, deren Läufe alle mit `error` enden, hat das Endurteil `error`, sonst `wrong`; beides zählt nicht als richtig.
+6. **Teilweise nicht eingelesen:** Bei gestellten Fragen nennt `not_ingested` die fehlenden Handbücher (wie „partly not ingested“ bei `evaluate_search`).
+7. `citations.py`: `normalise_value` war bereits öffentlich (123); mit der Nachbesserung kam `value_occurs` dazu (siehe 4).
+8. Lokal bleiben die Images `twox-127-*`; die ignorierte `.env` hat `TWOX_API_PORT=18127`.
+
+Offene Fragen an a7: keine.
+
+### Nachbesserung (nach Prüfung der Leitstelle)
+
+1. **Key facts als ganze Werte:** Neue öffentliche Funktion `citations.value_occurs(value, text)`, ein dünner Wrapper um die bestehende Grenzprüfung (`_occurs`/`_bounded`); `verify` ist unverändert. `missing_key_facts` nutzt sie statt des Teilstring-Tests. Tests (`test_key_facts_are_whole_values`): „5 kg“ gegen „25 kg“ und „12,5 kg“ fehlt, gegen „5 kg“ und „5kg“ gefunden; „1880“ gegen „18800“ fehlt, gegen „1880“ und „…:1880“ gefunden; „V18“ gegen „V180“ fehlt, gegen „V18“ und „V 18“ gefunden; „Reset“ in „Reset-Button“ und „OPC UA“ in „OPC-UA-Server“ gefunden. Dazu `test_a_lengthened_key_fact_makes_a_fact_question_wrong`. Docstring und Abweichung 4 angepasst.
+2. **Ohne Kontrollfrage keine Abnahme:** `Summary.control_asked`. Ist keine Kontrollfrage gestellt worden (z. B. `--only` ohne 11), sind `control_ok`, `control_ok` je Lauf, `passed_per_question`, `passed_per_run` und `passed` falsch; der Bericht sagt „control question not asked“. Tests: `test_without_control_question_nothing_is_passed` (beide Regeln, 10/10), `test_report_says_control_question_not_asked` (Text und JSON) und `--only 1` im Befehlstest.
+3. **Prüfungen (twox-127):** `ruff check`, `ruff format --check` (221 Dateien), `mypy` (220 Dateien) ohne Befund; `pytest tests/answers` 914 passed; `pytest` 3338 passed, 6 deselected; `pytest -m worker` 6 passed; Übersetzungskatalog, Migrationen („No changes detected“), Lizenzprüfung und OpenAPI-Schema ohne Unterschied. `down -v` Exit 0, kein Container und kein Volume `twox-127` übrig.

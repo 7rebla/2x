@@ -419,6 +419,21 @@ def _occurs(value: _Value, source: _Compact) -> bool:
     return False
 
 
+def value_occurs(value: str, text: str) -> bool:
+    """Whether ``value`` occurs in ``text`` as a whole value, as the check compares values.
+
+    Both are normalised with :func:`normalise_value`; the occurrence must not
+    be lengthened (same boundary rules as for check values, see the module
+    docstring): ``"5 kg"`` occurs in ``"5kg"`` but not in ``"25 kg"`` or
+    ``"12,5 kg"``, ``"V18"`` in ``"V 18"`` but not in ``"V180"``. For the
+    measurement of the answers (127); :func:`verify` does not use it.
+    """
+    key = normalise_value(value)
+    if not key:
+        return False
+    return _occurs(_Value(display=value, key=key), _compact(text))
+
+
 def _split_sentences(lines: list[str]) -> list[_Sentence]:
     """The sentences of the answer, line by line, in order."""
     sentences: list[_Sentence] = []
