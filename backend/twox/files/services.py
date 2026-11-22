@@ -2,8 +2,11 @@
 
 :func:`create_document` and :func:`add_version` check the upload, write its
 bytes through the blob storage interface (``twox.files.storage``) and create
-the rows in one database transaction. They do not start any later processing;
-the ingestion in M2 starts from the returned :class:`UploadResult`.
+the rows in one database transaction. Once that transaction is committed, the
+new version of a ``document`` is handed to the ingestion
+(:func:`twox.ingest.services.request_ingest`, work order 049): an explicit
+call, no signal. A failure there is logged and never fails the upload; a
+transaction that rolls back starts no ingestion.
 
 Rules (E-37, E-42):
 
@@ -22,10 +25,12 @@ blob stays in the storage without a version. It is harmless (same content,
 same key) and there is no deletion in M1.
 """
 
+import logging
 import re
 import unicodedata
 from collections.abc import Iterator
 from dataclasses import dataclass
+from functools import partial
 from typing import Protocol
 
 from django.conf import settings
@@ -44,6 +49,8 @@ from twox.files.models import (
     DocumentVersion,
 )
 from twox.files.storage import StoredBlob, get_blob_storage
+
+logger = logging.getLogger(__name__)
 
 #: Replacement for a file name that is empty after cleaning.
 FALLBACK_FILENAME = "unnamed"
@@ -256,6 +263,23 @@ def _duplicates(version: DocumentVersion) -> tuple[DuplicateLocation, ...]:
     )
 
 
+def _request_ingest(version: DocumentVersion, user: User | None) -> None:
+    """Hand the committed version to the ingestion; any error is logged only."""
+    # Imported here: the ingestion builds on the files app, not the other way round.
+    from twox.ingest.services import request_ingest
+
+    try:
+        request_ingest(version, user)
+    except Exception:
+        logger.exception("files: the ingestion of version %s could not be requested", version.pk)
+
+
+def _ingest_after_commit(version: DocumentVersion, user: User | None) -> None:
+    """Request the ingestion of a new ``document`` version once the upload is committed."""
+    if version.document.kind == DocumentKind.DOCUMENT:
+        transaction.on_commit(partial(_request_ingest, version, user))
+
+
 def create_document(
     device: Device,
     upload: Upload,
@@ -285,6 +309,7 @@ def create_document(
         document.full_clean()
         document.save()
         version = _create_version(document, 1, blob, upload, user)
+        _ingest_after_commit(version, user)
         return UploadResult(document=document, version=version, duplicates=_duplicates(version))
 
 
@@ -309,4 +334,5 @@ def add_version(document: Document, upload: Upload, user: User | None) -> Upload
             raise DuplicateVersionError(newest)
         number = 1 if newest is None else newest.number + 1
         version = _create_version(locked, number, blob, upload, user)
+        _ingest_after_commit(version, user)
         return UploadResult(document=locked, version=version, duplicates=_duplicates(version))
