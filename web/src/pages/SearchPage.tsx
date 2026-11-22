@@ -124,7 +124,7 @@ function SearchForm({
           <select
             id={deviceId}
             data-testid="search-device"
-            className="max-w-72 rounded border border-line-strong bg-surface px-2 py-1"
+            className="max-w-72 rounded border border-line-strong bg-surface px-2 py-1 text-base"
             value={device}
             aria-busy={devices.isPending}
             onChange={(event) => {

@@ -97,7 +97,7 @@ test("the navigation leads to the search page, which waits for a search text", a
 test.describe("without a session", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test("the search page leads to the sign-in page and back", async ({ page }) => {
+  test("the search page leads to the sign-in page", async ({ page }) => {
     await page.goto("/search");
 
     await expect(page).toHaveURL(/\/login\?next=%2Fsearch$/);

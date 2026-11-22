@@ -79,7 +79,7 @@ function LocationView({ location }: { location: SearchLocation }): ReactElement 
     <li
       data-testid="search-location"
       data-latest={version.is_latest ? "true" : "false"}
-      className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
+      className="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5 text-sm"
     >
       <span className="inline-flex items-center gap-1">
         <Icon name="document" decorative />
@@ -143,7 +143,7 @@ export function SearchHitView({ hit }: { hit: SearchHit }): ReactElement {
         <MatchKinds kinds={hit.match_kinds} />
       </div>
       <Snippet hit={hit} />
-      <ul aria-label={t("locations")} className="space-y-1 border-t border-line pt-2">
+      <ul aria-label={t("locations")} className="divide-y divide-line border-t border-line">
         {hit.locations.map((location, index) => (
           <LocationView key={`${String(location.version.id)}-${String(location.device.id)}-${String(index)}`} location={location} />
         ))}
