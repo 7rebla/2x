@@ -1,6 +1,6 @@
 # Auftrag 093 – Landkarten-e2e-Test unabhängig von Altdaten
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: erledigt
 
 ## Ziel
 

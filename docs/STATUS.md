@@ -182,7 +182,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 090 | Abnahmetest M2 auf das ROADMAP-Kriterium (E-67) | C (entschieden) | 058, 067 | erledigt |
 | 091 | Seite „keine Berechtigung“ mit Titel und h1 | B | 078 | erledigt |
 | 092 | Wackeligen e2e-Test des Strukturbaums stabilisieren | B | 083 | erledigt |
-| 093 | Landkarten-e2e-Test unabhängig von Altdaten | B | 080 | in Arbeit |
+| 093 | Landkarten-e2e-Test unabhängig von Altdaten | B | 080 | erledigt |
 
 - 078/079/083/085/087/088 zusammengeführt am 22.11.2026. Lücke aus 078: Die Seite „keine Berechtigung“ (RequireRole) hat weder Seitentitel noch h1 – Auftrag 091.
 - Reihenfolge: 078–092 erledigt; 093 läuft; danach Folgeauftrag Netzlinien-Beschriftung (s. 084).
@@ -193,6 +193,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 - 092: Ursache des wackeligen Spaltentests war ein Umbruch des zufälligen Testgerätenamens bei 1024 px (14 px = Versatz bei zweizeiligem Namen; 16 von 20 000 Namen). Testnamen kürzer, Messung im gesetzten Zustand und in einem Schritt; Grenzen unverändert.
 - 082: 768–1279 px Icon mit Kurztext (13 px, E-65 Punkt 5), unter 768 px Menüknopf; Menü schließt auch beim Verlassen per Tab. de-Kurztexte „Karte“ und „Protokoll“ sind nur Wortteile des vollen Namens (Breite), siehe pages/README.
 - 084: Schriftstufe `text-meta` (13/18 px) für Metadaten, 12 px nur noch für Großbuchstaben-Kennzeichen; `sourceTypography.test.ts` wacht darüber. Offen (Folgeauftrag nach 093): Beschriftung der Netzlinien auf der Landkarte steht als Inline-Stil mit 11 px (`MapPage.tsx`), und der Quelltexttest erfasst Inline-`fontSize` noch nicht.
+- 093: Der Landkarten-Test suchte nach einer zufälligen Adresse, die als Teil der Adressen alter Testgeräte vorkam; bei vielen Treffern stößt das Einpassen an `minZoom` 0.05. Der Test wählt jetzt eine freie dreistellige Endung („1 match“). Hinweis: Die Seite kann bei sehr vielen Treffern nicht alle zeigen (Grenzfall, kein Auftrag).
 
 ## M2 – Einlesen und Suche (freigegeben 22.11.2026, E-54; abgenommen 22.11.2026, E-67)
 
