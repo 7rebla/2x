@@ -383,11 +383,38 @@ TWOX_UPLOAD_MAX_BYTES = env_positive_int("TWOX_UPLOAD_MAX_BYTES", 200 * 1000 * 1
 
 # Messages of the project's own code (for example failed sign-ins) go to the
 # server log on stderr; Django's own logging stays as it is.
+# uvicorn.access: the access log of uvicorn without query strings, so that no
+# search text lands in it (052, E-57). Django configures logging after uvicorn
+# did, and configuring a logger here replaces its handlers; the handler
+# "access" is therefore uvicorn's own (same formatter, standard output). Its
+# level stays as uvicorn set it. uvicorn's --no-access-log no longer silences
+# it; to switch the access log off, remove its handler here.
 LOGGING: dict[str, Any] = {
     "version": 1,
     "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "loggers": {"twox": {"handlers": ["console"], "level": "INFO"}},
+    "filters": {"drop_query_string": {"()": "twox.config.logging.DropQueryString"}},
+    "formatters": {
+        "uvicorn_access": {
+            "()": "uvicorn.logging.AccessFormatter",
+            "fmt": '%(levelprefix)s %(client_addr)s - "%(request_line)s" %(status_code)s',
+        },
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+        "uvicorn_access": {
+            "class": "logging.StreamHandler",
+            "formatter": "uvicorn_access",
+            "stream": "ext://sys.stdout",
+        },
+    },
+    "loggers": {
+        "twox": {"handlers": ["console"], "level": "INFO"},
+        "uvicorn.access": {
+            "handlers": ["uvicorn_access"],
+            "filters": ["drop_query_string"],
+            "propagate": False,
+        },
+    },
 }
 
 # OpenAI-compatible model service (Ollama on the host by default).
@@ -408,6 +435,9 @@ TWOX_EMBED_QUERY_PREFIX = os.environ.get("TWOX_EMBED_QUERY_PREFIX", "")
 # Socket time limit of one request in seconds; the first request after a
 # start of Ollama also loads the model.
 TWOX_EMBED_TIMEOUT_SECONDS = env_positive_int("TWOX_EMBED_TIMEOUT_SECONDS", 120)
+# The same for embedding a search query (052): short, so a hanging model
+# service holds a search up only briefly before it falls back to keywords.
+TWOX_SEARCH_EMBED_TIMEOUT_SECONDS = env_positive_int("TWOX_SEARCH_EMBED_TIMEOUT_SECONDS", 20)
 
 CELERY_TASK_QUEUES = task_queues(ai_enabled=TWOX_AI_ENABLED)
 

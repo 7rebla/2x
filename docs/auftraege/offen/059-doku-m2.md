@@ -69,6 +69,8 @@ Voraussetzung: 055, 056 und 058 sind nach `main` zusammengeführt. Messwerte aus
 
 - **Nachtrag der Leitstelle (Prüfung 049):** In der Betriebsdoku das Restrisiko zu Leitplanke 5 nennen: Markdown wird über Endung und Textprüfung erkannt, PDF über die Signatur; eine Konfiguration, die als `.md` oder PDF hochgeladen wird, wird eingelesen. Office-Dateien werden nur am ZIP-Inhaltsverzeichnis erkannt. Dazu `ingest_versions` mit allen Optionen und der Hinweis, dass `--stuck` für laufende Umwandlungen mehr als `TWOX_INGEST_TIMEOUT_SECONDS` braucht.
 
+- **Nachtrag der Leitstelle (Prüfung 052):** Neuer Endpunkt `GET /api/v1/search/` (Parameter, Grenzen, Antwortform mit `semantic` used/disabled/unavailable), neue Variable `TWOX_SEARCH_EMBED_TIMEOUT_SECONDS` (Vorgabe 20), Logfilter in `config/logging.py`: Suchtexte stehen nicht im Zugriffsprotokoll (nicht mehr als Grenze führen). `uvicorn --no-access-log` wirkt wegen der Django-Konfiguration nicht – erwähnen.
+
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
 **Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).

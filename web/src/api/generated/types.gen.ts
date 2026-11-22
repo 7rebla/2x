@@ -498,6 +498,13 @@ export type IngestStatusEnum = 'queued' | 'running' | 'done' | 'failed' | 'skipp
 export type KindEnum = 'document' | 'configuration';
 
 /**
+ * * `exact` - exact
+ * * `keyword` - keyword
+ * * `semantic` - semantic
+ */
+export type MatchKindsEnum = 'exact' | 'keyword' | 'semantic';
+
+/**
  * The signed-in user as the web UI needs it.
  */
 export type Me = {
@@ -603,11 +610,114 @@ export type PlantRef = {
  */
 export type RoleEnum = 'manage' | 'read';
 
+/**
+ * The device the document of a hit belongs to.
+ */
+export type SearchDevice = {
+    id: number;
+    key: string;
+    name: string;
+};
+
+/**
+ * The document a hit is stored in.
+ */
+export type SearchDocument = {
+    id: number;
+    title: string;
+};
+
+/**
+ * A found place in the snippet: ``snippet[start:end]`` in Unicode code points.
+ */
+export type SearchHighlight = {
+    start: number;
+    end: number;
+};
+
+/**
+ * One found piece of text with every place it is stored at.
+ */
+export type SearchHit = {
+    section_id: number;
+    /**
+     * Higher is better; only the order matters.
+     */
+    score: number;
+    /**
+     * How the hit was found: exact identifier, keyword, meaning.
+     */
+    match_kinds: Array<MatchKindsEnum>;
+    /**
+     * Plain text around the first found place, about 300 characters; not HTML.
+     */
+    snippet: string;
+    highlights: Array<SearchHighlight>;
+    page_start: number | null;
+    page_end: number | null;
+    heading_path: Array<string>;
+    locations: Array<SearchLocation>;
+};
+
+/**
+ * One place a hit is stored at.
+ */
+export type SearchLocation = {
+    document: SearchDocument;
+    version: SearchVersion;
+    device: SearchDevice;
+    plant: SearchPlant;
+};
+
+/**
+ * The plant of the device of a hit.
+ */
+export type SearchPlant = {
+    id: number;
+    key: string;
+    name: string;
+};
+
+/**
+ * The hits of a search, best first.
+ */
+export type SearchResult = {
+    /**
+     * Whether the search by meaning took part: used; disabled (AI features off, a normal state); unavailable (model service failed, keyword search only).
+     *
+     * * `used` - used
+     * * `disabled` - disabled
+     * * `unavailable` - unavailable
+     */
+    semantic: SemanticEnum;
+    hits: Array<SearchHit>;
+};
+
+/**
+ * The document version a hit is stored in.
+ */
+export type SearchVersion = {
+    id: number;
+    number: number;
+    original_filename: string;
+    /**
+     * False when the document has a newer version that is not searchable yet (not ingested, or ingesting it failed).
+     */
+    is_latest: boolean;
+};
+
 export type Selftest = {
     database: DatabaseCheck;
     worker: WorkerCheck;
     ai: AiCheck;
 };
+
+/**
+ * * `used` - used
+ * * `disabled` - disabled
+ * * `unavailable` - unavailable
+ */
+export type SemanticEnum = 'used' | 'disabled' | 'unavailable';
 
 /**
  * A site of the operation.
@@ -1345,6 +1455,49 @@ export type PlantsUpdateResponses = {
 };
 
 export type PlantsUpdateResponse = PlantsUpdateResponses[keyof PlantsUpdateResponses];
+
+export type SearchData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Only hits on one of these devices (ids); repeat the parameter for more.
+         */
+        device?: Array<number>;
+        /**
+         * Most hits in the answer.
+         */
+        limit?: number;
+        /**
+         * Only hits in one of these plants (ids); repeat the parameter for more.
+         */
+        plant?: Array<number>;
+        /**
+         * What to search for: words, identifiers such as IP addresses or part numbers, or a question. "-word" excludes a word, "two words" in quotes is a phrase.
+         */
+        q: string;
+    };
+    url: '/api/v1/search/';
+};
+
+export type SearchErrors = {
+    /**
+     * Invalid parameter; the errors are per field.
+     */
+    400: unknown;
+    /**
+     * No role.
+     */
+    403: ErrorDetail;
+};
+
+export type SearchError = SearchErrors[keyof SearchErrors];
+
+export type SearchResponses = {
+    200: SearchResult;
+};
+
+export type SearchResponse = SearchResponses[keyof SearchResponses];
 
 export type SelftestRetrieveData = {
     body?: never;

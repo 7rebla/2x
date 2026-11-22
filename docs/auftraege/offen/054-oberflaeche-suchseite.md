@@ -64,6 +64,8 @@ Voraussetzung: 052 ist nach `main` zusammengeführt (Endpunkt im erzeugten Clien
 
 - **Nachtrag der Leitstelle (Prüfung 050):** Die Such-API (052) unterscheidet „KI nicht aktiviert“ von „Sprachmodell nicht erreichbar“. Bei „nicht aktiviert“ zeigt die Seite keinen Fehlerhinweis, höchstens einen neutralen Text (E-59); nur bei „nicht erreichbar“ den Hinweis „Nur Stichwortsuche – Sprachmodell nicht erreichbar“.
 
+- **Nachtrag der Leitstelle (Prüfung 052):** Die Such-API liefert `semantic` dreiwertig (`used`, `disabled`, `unavailable`) statt als Wahrheitswert. Hinweis „Nur Stichwortsuche – Sprachmodell nicht erreichbar“ nur bei `unavailable`; bei `disabled` kein Fehlerhinweis (E-59, neutral, höchstens ein ruhiger Text). `highlights` sind Objekte `{start, end}` in Unicode-Codepoints: den Ausschnitt mit `Array.from(snippet)` zerlegen, sonst verrutschen Markierungen nach Zeichen außerhalb der BMP; Vitest mit Emoji bzw. Zeichen außerhalb der BMP vor einer Markierung. Fundorte haben `version.original_filename` und `plant.id`. Die Vitest-Fälle zu `semantic: false` entsprechend auf die drei Zustände umstellen.
+
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
 **Antwort a7, 22.11.2026:** Alle Empfehlungen übernommen (E-54 bis E-58).

@@ -5,6 +5,7 @@ manufacturer's manual. The model interface is :class:`FakeEmbedder`; no test
 talks to a real model service (E-59).
 """
 
+import inspect
 import io
 import itertools
 import json
@@ -12,6 +13,7 @@ from collections.abc import Callable, Iterator, Sequence
 from typing import Any
 
 import pytest
+from django.conf import settings as django_settings
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from pytest_django.fixtures import Settings
@@ -29,6 +31,7 @@ from twox.answers.embeddings import EmbeddingUnavailableError
 from twox.assets.models import Device
 from twox.files.models import DocumentVersion
 from twox.ingest.models import Section
+from twox.search import evaluation
 from twox.search.evaluation import (
     AI_DISABLED_NOTE,
     DEPTH,
@@ -46,6 +49,7 @@ from twox.search.evaluation import (
     load_probes,
     summarise,
 )
+from twox.search.interface import SearchRequest, SearchResult, get_search_backend
 from twox.search.management.commands.evaluate_search import BYTE_ORDER_MARK, read_input
 
 SHA_A = sha256_of("evaluation manual A")
@@ -241,6 +245,7 @@ def test_ai_off_measures_the_keyword_search_only(
         raise AssertionError("the model service must not be asked")
 
     monkeypatch.setattr(embeddings, "get_embedder", no_model)
+    monkeypatch.setattr(embeddings, "get_query_embedder", no_model)
 
     report = evaluate(load_probes(probe_json(probe_data())), clock=ticking_clock())
 
@@ -283,6 +288,35 @@ def test_ai_on_measures_all_three_lists(
     summaries = {summary.kind: summary for summary in report.summaries}
     assert summaries[SearchKind.VECTOR].mrr == pytest.approx(1 / 3)
     assert summaries[SearchKind.COMBINED].recall_at_5 == 1.0
+
+
+class RecordingBackend:
+    """The real search backend that also records every request and the AI switch."""
+
+    def __init__(self) -> None:
+        self.requests: list[tuple[SearchRequest, bool]] = []
+
+    def search(self, request: SearchRequest) -> SearchResult:
+        self.requests.append((request, bool(django_settings.TWOX_AI_ENABLED)))
+        return get_search_backend().search(request)
+
+
+@pytest.mark.django_db
+def test_keyword_list_asks_for_the_keyword_search_without_touching_the_settings(
+    embedded_manual: list[Section], fake_embedder: FakeEmbedder
+) -> None:
+    backend = RecordingBackend()
+
+    evaluate(load_probes(probe_json(probe_data())), backend=backend)
+
+    # Keyword list, then combined; the AI switch stays on for both (no
+    # override_settings, which is not thread-safe).
+    assert [(request.keyword_only, ai) for request, ai in backend.requests] == [
+        (True, True),
+        (False, True),
+    ]
+    assert {request.query for request, _ in backend.requests} == {QUERY}
+    assert "override_settings" not in inspect.getsource(evaluation)
 
 
 @pytest.mark.django_db

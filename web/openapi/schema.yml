@@ -827,6 +827,77 @@ paths:
               schema:
                 $ref: '#/components/schemas/Plant'
           description: ''
+  /api/v1/search/:
+    get:
+      operationId: search
+      description: |-
+        Hits for ``q``, best first, at most ``limit``; optionally only on some devices or plants.
+
+        Exact identifiers come first, then keyword and meaning together.
+        The same content stored for several devices is one hit with all its
+        places.
+      parameters:
+      - in: query
+        name: device
+        schema:
+          type: array
+          items:
+            type: integer
+            maximum: 9223372036854775807
+            minimum: 1
+            format: int64
+          maxItems: 100
+        description: Only hits on one of these devices (ids); repeat the parameter
+          for more.
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          maximum: 50
+          minimum: 1
+          default: 20
+        description: Most hits in the answer.
+      - in: query
+        name: plant
+        schema:
+          type: array
+          items:
+            type: integer
+            maximum: 9223372036854775807
+            minimum: 1
+            format: int64
+          maxItems: 100
+        description: Only hits in one of these plants (ids); repeat the parameter
+          for more.
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 500
+          minLength: 1
+        description: 'What to search for: words, identifiers such as IP addresses
+          or part numbers, or a question. "-word" excludes a word, "two words" in
+          quotes is a phrase.'
+        required: true
+      tags:
+      - search
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResult'
+          description: ''
+        '400':
+          description: Invalid parameter; the errors are per field.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: No role.
   /api/v1/selftest/:
     get:
       operationId: selftest_retrieve
@@ -1867,6 +1938,16 @@ components:
       description: |-
         * `document` - document
         * `configuration` - configuration
+    MatchKindsEnum:
+      enum:
+      - exact
+      - keyword
+      - semantic
+      type: string
+      description: |-
+        * `exact` - exact
+        * `keyword` - keyword
+        * `semantic` - semantic
     Me:
       type: object
       description: The signed-in user as the web UI needs it.
@@ -2088,6 +2169,160 @@ components:
       description: |-
         * `manage` - manage
         * `read` - read
+    SearchDevice:
+      type: object
+      description: The device the document of a hit belongs to.
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+        name:
+          type: string
+      required:
+      - id
+      - key
+      - name
+    SearchDocument:
+      type: object
+      description: The document a hit is stored in.
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+      required:
+      - id
+      - title
+    SearchHighlight:
+      type: object
+      description: 'A found place in the snippet: ``snippet[start:end]`` in Unicode
+        code points.'
+      properties:
+        start:
+          type: integer
+        end:
+          type: integer
+      required:
+      - end
+      - start
+    SearchHit:
+      type: object
+      description: One found piece of text with every place it is stored at.
+      properties:
+        section_id:
+          type: integer
+        score:
+          type: number
+          format: double
+          description: Higher is better; only the order matters.
+        match_kinds:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatchKindsEnum'
+          description: 'How the hit was found: exact identifier, keyword, meaning.'
+        snippet:
+          type: string
+          description: Plain text around the first found place, about 300 characters;
+            not HTML.
+        highlights:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchHighlight'
+        page_start:
+          type: integer
+          nullable: true
+        page_end:
+          type: integer
+          nullable: true
+        heading_path:
+          type: array
+          items:
+            type: string
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchLocation'
+      required:
+      - heading_path
+      - highlights
+      - locations
+      - match_kinds
+      - page_end
+      - page_start
+      - score
+      - section_id
+      - snippet
+    SearchLocation:
+      type: object
+      description: One place a hit is stored at.
+      properties:
+        document:
+          $ref: '#/components/schemas/SearchDocument'
+        version:
+          $ref: '#/components/schemas/SearchVersion'
+        device:
+          $ref: '#/components/schemas/SearchDevice'
+        plant:
+          $ref: '#/components/schemas/SearchPlant'
+      required:
+      - device
+      - document
+      - plant
+      - version
+    SearchPlant:
+      type: object
+      description: The plant of the device of a hit.
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+        name:
+          type: string
+      required:
+      - id
+      - key
+      - name
+    SearchResult:
+      type: object
+      description: The hits of a search, best first.
+      properties:
+        semantic:
+          allOf:
+          - $ref: '#/components/schemas/SemanticEnum'
+          description: |-
+            Whether the search by meaning took part: used; disabled (AI features off, a normal state); unavailable (model service failed, keyword search only).
+
+            * `used` - used
+            * `disabled` - disabled
+            * `unavailable` - unavailable
+        hits:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchHit'
+      required:
+      - hits
+      - semantic
+    SearchVersion:
+      type: object
+      description: The document version a hit is stored in.
+      properties:
+        id:
+          type: integer
+        number:
+          type: integer
+        original_filename:
+          type: string
+        is_latest:
+          type: boolean
+          description: False when the document has a newer version that is not searchable
+            yet (not ingested, or ingesting it failed).
+      required:
+      - id
+      - is_latest
+      - number
+      - original_filename
     Selftest:
       type: object
       properties:
@@ -2101,6 +2336,16 @@ components:
       - ai
       - database
       - worker
+    SemanticEnum:
+      enum:
+      - used
+      - disabled
+      - unavailable
+      type: string
+      description: |-
+        * `used` - used
+        * `disabled` - disabled
+        * `unavailable` - unavailable
     Site:
       type: object
       description: A site of the operation.

@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { areasCreate, areasList, areasPartialUpdate, areasRetrieve, areasUpdate, auditLogList, deviceDocumentsCreate, deviceDocumentsList, devicesCreate, devicesImport, devicesList, devicesPartialUpdate, devicesRetrieve, devicesUpdate, documentRetrieve, documentVersionCreate, documentVersionDownload, documentVersionIngest, healthRetrieve, ingestJobsList, meRetrieve, type Options, plantsCreate, plantsList, plantsPartialUpdate, plantsRetrieve, plantsUpdate, selftestRetrieve, sitesCreate, sitesList, sitesPartialUpdate, sitesRetrieve, sitesUpdate } from '../sdk.gen';
-import type { AreasCreateData, AreasCreateResponse, AreasListData, AreasListResponse, AreasPartialUpdateData, AreasPartialUpdateResponse, AreasRetrieveData, AreasRetrieveResponse, AreasUpdateData, AreasUpdateResponse, AuditLogListData, AuditLogListResponse, DeviceDocumentsCreateData, DeviceDocumentsCreateError, DeviceDocumentsCreateResponse, DeviceDocumentsListData, DeviceDocumentsListError, DeviceDocumentsListResponse, DevicesCreateData, DevicesCreateResponse, DevicesImportData, DevicesImportError, DevicesImportResponse, DevicesListData, DevicesListResponse, DevicesPartialUpdateData, DevicesPartialUpdateResponse, DevicesRetrieveData, DevicesRetrieveResponse, DevicesUpdateData, DevicesUpdateResponse, DocumentRetrieveData, DocumentRetrieveError, DocumentRetrieveResponse, DocumentVersionCreateData, DocumentVersionCreateError, DocumentVersionCreateResponse, DocumentVersionDownloadData, DocumentVersionDownloadError, DocumentVersionDownloadResponse, DocumentVersionIngestData, DocumentVersionIngestError, DocumentVersionIngestResponse, HealthRetrieveData, HealthRetrieveResponse, IngestJobsListData, IngestJobsListError, IngestJobsListResponse, MeRetrieveData, MeRetrieveResponse, PlantsCreateData, PlantsCreateResponse, PlantsListData, PlantsListResponse, PlantsPartialUpdateData, PlantsPartialUpdateResponse, PlantsRetrieveData, PlantsRetrieveResponse, PlantsUpdateData, PlantsUpdateResponse, SelftestRetrieveData, SelftestRetrieveResponse, SitesCreateData, SitesCreateResponse, SitesListData, SitesListResponse, SitesPartialUpdateData, SitesPartialUpdateResponse, SitesRetrieveData, SitesRetrieveResponse, SitesUpdateData, SitesUpdateResponse } from '../types.gen';
+import { areasCreate, areasList, areasPartialUpdate, areasRetrieve, areasUpdate, auditLogList, deviceDocumentsCreate, deviceDocumentsList, devicesCreate, devicesImport, devicesList, devicesPartialUpdate, devicesRetrieve, devicesUpdate, documentRetrieve, documentVersionCreate, documentVersionDownload, documentVersionIngest, healthRetrieve, ingestJobsList, meRetrieve, type Options, plantsCreate, plantsList, plantsPartialUpdate, plantsRetrieve, plantsUpdate, search, selftestRetrieve, sitesCreate, sitesList, sitesPartialUpdate, sitesRetrieve, sitesUpdate } from '../sdk.gen';
+import type { AreasCreateData, AreasCreateResponse, AreasListData, AreasListResponse, AreasPartialUpdateData, AreasPartialUpdateResponse, AreasRetrieveData, AreasRetrieveResponse, AreasUpdateData, AreasUpdateResponse, AuditLogListData, AuditLogListResponse, DeviceDocumentsCreateData, DeviceDocumentsCreateError, DeviceDocumentsCreateResponse, DeviceDocumentsListData, DeviceDocumentsListError, DeviceDocumentsListResponse, DevicesCreateData, DevicesCreateResponse, DevicesImportData, DevicesImportError, DevicesImportResponse, DevicesListData, DevicesListResponse, DevicesPartialUpdateData, DevicesPartialUpdateResponse, DevicesRetrieveData, DevicesRetrieveResponse, DevicesUpdateData, DevicesUpdateResponse, DocumentRetrieveData, DocumentRetrieveError, DocumentRetrieveResponse, DocumentVersionCreateData, DocumentVersionCreateError, DocumentVersionCreateResponse, DocumentVersionDownloadData, DocumentVersionDownloadError, DocumentVersionDownloadResponse, DocumentVersionIngestData, DocumentVersionIngestError, DocumentVersionIngestResponse, HealthRetrieveData, HealthRetrieveResponse, IngestJobsListData, IngestJobsListError, IngestJobsListResponse, MeRetrieveData, MeRetrieveResponse, PlantsCreateData, PlantsCreateResponse, PlantsListData, PlantsListResponse, PlantsPartialUpdateData, PlantsPartialUpdateResponse, PlantsRetrieveData, PlantsRetrieveResponse, PlantsUpdateData, PlantsUpdateResponse, SearchData, SearchError, SearchResponse, SelftestRetrieveData, SelftestRetrieveResponse, SitesCreateData, SitesCreateResponse, SitesListData, SitesListResponse, SitesPartialUpdateData, SitesPartialUpdateResponse, SitesRetrieveData, SitesRetrieveResponse, SitesUpdateData, SitesUpdateResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -629,6 +629,28 @@ export const plantsUpdateMutation = (options?: Partial<Options<PlantsUpdateData>
     };
     return mutationOptions;
 };
+
+export const searchQueryKey = (options: Options<SearchData>) => createQueryKey('search', options);
+
+/**
+ * Hits for ``q``, best first, at most ``limit``; optionally only on some devices or plants.
+ *
+ * Exact identifiers come first, then keyword and meaning together.
+ * The same content stored for several devices is one hit with all its
+ * places.
+ */
+export const searchOptions = (options: Options<SearchData>) => queryOptions<SearchResponse, SearchError, SearchResponse, ReturnType<typeof searchQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await search({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: searchQueryKey(options)
+});
 
 export const selftestRetrieveQueryKey = (options?: Options<SelftestRetrieveData>) => createQueryKey('selftestRetrieve', options);
 

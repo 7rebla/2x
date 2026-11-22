@@ -55,6 +55,7 @@ print(json.dumps({
     "embed_batch_size": settings.TWOX_EMBED_BATCH_SIZE,
     "embed_query_prefix": settings.TWOX_EMBED_QUERY_PREFIX,
     "embed_timeout_seconds": settings.TWOX_EMBED_TIMEOUT_SECONDS,
+    "search_embed_timeout_seconds": settings.TWOX_SEARCH_EMBED_TIMEOUT_SECONDS,
     "ingest_max_retries": settings.TWOX_INGEST_MAX_RETRIES,
     "ingest_poll_min_seconds": settings.TWOX_INGEST_POLL_MIN_SECONDS,
     "ingest_poll_max_seconds": settings.TWOX_INGEST_POLL_MAX_SECONDS,
@@ -150,6 +151,8 @@ def test_settings_import_without_running_database() -> None:
     assert values["embed_batch_size"] == 16
     assert values["embed_query_prefix"] == ""
     assert values["embed_timeout_seconds"] == 120
+    # Search queries have their own, short time limit (052).
+    assert values["search_embed_timeout_seconds"] == 20
     # Ingestion (work order 045).
     assert values["ingest_max_retries"] == 5
     assert values["ingest_poll_min_seconds"] == 10
@@ -324,6 +327,7 @@ def test_settings_read_twox_variables() -> None:
             "TWOX_EMBED_BATCH_SIZE": "4",
             "TWOX_EMBED_QUERY_PREFIX": "Query: ",
             "TWOX_EMBED_TIMEOUT_SECONDS": "30",
+            "TWOX_SEARCH_EMBED_TIMEOUT_SECONDS": "5",
         },
     )
 
@@ -336,6 +340,7 @@ def test_settings_read_twox_variables() -> None:
     # Kept as written, trailing space included.
     assert values["embed_query_prefix"] == "Query: "
     assert values["embed_timeout_seconds"] == 30
+    assert values["search_embed_timeout_seconds"] == 5
     assert values["debug"] is True
     assert values["allowed_hosts"] == ["localhost", "example.test"]
     assert values["db"]["PORT"] == "6543"
@@ -385,7 +390,13 @@ def test_settings_reject_invalid_upload_limit(value: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "name", ["TWOX_EMBED_DIMENSIONS", "TWOX_EMBED_BATCH_SIZE", "TWOX_EMBED_TIMEOUT_SECONDS"]
+    "name",
+    [
+        "TWOX_EMBED_DIMENSIONS",
+        "TWOX_EMBED_BATCH_SIZE",
+        "TWOX_EMBED_TIMEOUT_SECONDS",
+        "TWOX_SEARCH_EMBED_TIMEOUT_SECONDS",
+    ],
 )
 @pytest.mark.parametrize("value", ["0", "-1", "1.5", "many"])
 def test_settings_reject_invalid_embedding_numbers(name: str, value: str) -> None:
