@@ -11,7 +11,8 @@
     "user": "User",
     "filename": "File name",
     "checksum": "Checksum (SHA-256)",
-    "download": "Download"
+    "download": "Download",
+    "ingest": "Ingestion"
   },
   "kind": {
     "document": "Document",
@@ -60,5 +61,48 @@
     "invalid": "The file was not uploaded. Please check the marked fields.",
     "configurationRejected": "Configuration files are not accepted yet (redaction of credentials follows in milestone M5).",
     "otherErrors": "Messages from the API"
+  },
+  "ingest": {
+    "status": {
+      "queued": "Queued",
+      "running": "Ingesting",
+      "done": "Ingested",
+      "failed": "Error",
+      "skipped": "Skipped",
+      "none": "Not ingested"
+    },
+    "runningStep": "Ingesting: {{step}}",
+    "step": {
+      "convert": "converting",
+      "sections": "building sections",
+      "embed": "computing embeddings"
+    },
+    "pageCount_one": "{{count}} page",
+    "pageCount_other": "{{count}} pages",
+    "sectionCount_one": "{{count}} section",
+    "sectionCount_other": "{{count}} sections",
+    "partlyConverted": "Converted only in part: some pages or elements could not be read.",
+    "error": {
+      "docling_unavailable": "The converter (Docling) could not be reached. Please try again later.",
+      "docling_rejected": "The converter rejected the file. It may be damaged or protected.",
+      "conversion_failed": "The conversion of the file failed.",
+      "content_missing": "The stored content of this version is missing. Please upload the file again.",
+      "unsupported_format": "This format is not ingested (until milestone M5). Ingested are PDF, DOCX, XLSX, PPTX, Markdown and images (PNG, JPEG, TIFF, BMP, WEBP). The file can still be downloaded.",
+      "embedding_unavailable": "The embedding service of the AI features could not be reached. The sections are stored; only their embeddings are missing.",
+      "embedding_rejected": "The embedding service of the AI features rejected the request. The sections are stored; only their embeddings are missing.",
+      "embedding_dimension_mismatch": "The embedding model returned vectors of the wrong length. Please check the model setting. The sections are stored; only their embeddings are missing.",
+      "timeout": "Ingestion took longer than the time limit.",
+      "internal": "Ingestion stopped because of an internal error.",
+      "unknown": "Ingestion did not finish (kind of error: {{code}}).",
+      "none": "Ingestion did not finish."
+    },
+    "technical": "Technical details",
+    "start": "Ingest",
+    "retry": "Ingest again",
+    "startVersion": "Ingest version {{number}}",
+    "retryVersion": "Ingest version {{number}} again",
+    "starting": "Starting…",
+    "active": "This version is already being ingested.",
+    "configuration": "Configuration files are not ingested."
   }
 }

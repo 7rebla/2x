@@ -11,7 +11,8 @@
     "user": "Benutzer",
     "filename": "Dateiname",
     "checksum": "Prüfsumme (SHA-256)",
-    "download": "Herunterladen"
+    "download": "Herunterladen",
+    "ingest": "Einlesen"
   },
   "kind": {
     "document": "Dokument",
@@ -60,5 +61,48 @@
     "invalid": "Die Datei wurde nicht hochgeladen. Bitte die markierten Felder prüfen.",
     "configurationRejected": "Konfigurationsdateien werden noch nicht angenommen (das Schwärzen von Zugangsdaten folgt mit Meilenstein M5).",
     "otherErrors": "Meldungen der API"
+  },
+  "ingest": {
+    "status": {
+      "queued": "In Warteschlange",
+      "running": "Wird eingelesen",
+      "done": "Eingelesen",
+      "failed": "Fehler",
+      "skipped": "Übersprungen",
+      "none": "Nicht eingelesen"
+    },
+    "runningStep": "Wird eingelesen: {{step}}",
+    "step": {
+      "convert": "Umwandeln",
+      "sections": "Abschnitte bilden",
+      "embed": "Einbettungen berechnen"
+    },
+    "pageCount_one": "{{count}} Seite",
+    "pageCount_other": "{{count}} Seiten",
+    "sectionCount_one": "{{count}} Abschnitt",
+    "sectionCount_other": "{{count}} Abschnitte",
+    "partlyConverted": "Nur teilweise umgewandelt: Einzelne Seiten oder Elemente konnten nicht gelesen werden.",
+    "error": {
+      "docling_unavailable": "Der Umwandlungsdienst (Docling) war nicht erreichbar. Bitte später erneut versuchen.",
+      "docling_rejected": "Der Umwandlungsdienst hat die Datei abgelehnt. Sie ist möglicherweise beschädigt oder geschützt.",
+      "conversion_failed": "Die Umwandlung der Datei ist gescheitert.",
+      "content_missing": "Der gespeicherte Inhalt dieser Version fehlt. Bitte die Datei erneut hochladen.",
+      "unsupported_format": "Dieses Format wird nicht eingelesen (bis Meilenstein M5). Eingelesen werden PDF, DOCX, XLSX, PPTX, Markdown und Bilder (PNG, JPEG, TIFF, BMP, WEBP). Die Datei bleibt herunterladbar.",
+      "embedding_unavailable": "Der Einbettungsdienst der KI-Funktionen war nicht erreichbar. Die Abschnitte sind gespeichert, nur ihre Einbettungen fehlen.",
+      "embedding_rejected": "Der Einbettungsdienst der KI-Funktionen hat die Anfrage abgelehnt. Die Abschnitte sind gespeichert, nur ihre Einbettungen fehlen.",
+      "embedding_dimension_mismatch": "Das Einbettungsmodell liefert Vektoren mit falscher Länge. Bitte die Modelleinstellung prüfen. Die Abschnitte sind gespeichert, nur ihre Einbettungen fehlen.",
+      "timeout": "Das Einlesen hat die Zeitgrenze überschritten.",
+      "internal": "Das Einlesen wurde wegen eines internen Fehlers abgebrochen.",
+      "unknown": "Das Einlesen wurde nicht abgeschlossen (Fehlerart: {{code}}).",
+      "none": "Das Einlesen wurde nicht abgeschlossen."
+    },
+    "technical": "Technische Angaben",
+    "start": "Einlesen",
+    "retry": "Erneut einlesen",
+    "startVersion": "Version {{number}} einlesen",
+    "retryVersion": "Version {{number}} erneut einlesen",
+    "starting": "Wird angestoßen …",
+    "active": "Diese Version wird bereits eingelesen.",
+    "configuration": "Konfigurationsdateien werden nicht eingelesen."
   }
 }

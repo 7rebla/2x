@@ -1,14 +1,22 @@
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Me } from "../api/generated";
-import { fakeChecksum, type FakeFilesApi, fakeFilesApi, fakeUploadApi as fakeApi, textFile } from "../components/files/testData.ts";
+import type { DocumentVersion, Me } from "../api/generated";
+import {
+  fakeChecksum,
+  type FakeFilesApi,
+  fakeFilesApi,
+  fakeUploadApi as fakeApi,
+  ingestJob,
+  textFile,
+} from "../components/files/testData.ts";
 import { changeLanguage } from "../i18n.ts";
 import { type FakeApi, jsonResponse, manager, reader } from "../test/fakeApi.ts";
 import { renderApp } from "../test/renderApp.tsx";
 import { fakeStructureApi } from "./structure/testData.ts";
 
 afterEach(async () => {
+  vi.useRealTimers();
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -29,8 +37,13 @@ function serve(user: Me): { files: FakeFilesApi; api: FakeApi } {
   return { files, api };
 }
 
-async function openDocument(user: Me, documentId = 7): Promise<{ files: FakeFilesApi; api: FakeApi }> {
+async function openDocument(
+  user: Me,
+  documentId = 7,
+  prepare: (files: FakeFilesApi) => void = () => undefined,
+): Promise<{ files: FakeFilesApi; api: FakeApi }> {
   const served = serve(user);
+  prepare(served.files);
   renderApp(`/documents/${String(documentId)}`);
   await screen.findByTestId("document-title");
   return served;
@@ -223,5 +236,193 @@ describe("upload of a new version", () => {
     upload(versionForm(), "new configuration");
 
     expect(await screen.findByTestId("upload-configuration-rejected")).toBeDefined();
+  });
+});
+
+const DOCUMENT_PATH = "/api/v1/documents/7/";
+
+/** Version `number` of file 7 in the fake (1: id 70, 2: id 71). */
+function storedVersion(files: FakeFilesApi, number: number): DocumentVersion {
+  const found = files.documents[0]?.versions.find((entry) => entry.number === number);
+  if (found === undefined) {
+    throw new Error(`no version ${String(number)}`);
+  }
+  return found;
+}
+
+/** The row of version `number` on the page. */
+function row(number: number): HTMLElement {
+  const found = versionRows().find((entry) => entry.getAttribute("data-version") === String(number));
+  if (found === undefined) {
+    throw new Error(`no row for version ${String(number)}`);
+  }
+  return found;
+}
+
+function ingestCell(number: number): HTMLElement {
+  return within(row(number)).getByTestId("version-ingest");
+}
+
+describe("ingestion state of the versions", () => {
+  it("shows the state of every version: done with counts, failed with its message", async () => {
+    await openDocument(reader, 7, (files) => {
+      storedVersion(files, 2).ingest = ingestJob("done", { page_count: 60, section_count: 140 });
+      storedVersion(files, 1).ingest = ingestJob("failed", {
+        error_code: "docling_rejected",
+        error_detail: "Docling answered 422",
+      });
+    });
+
+    expect(screen.getByRole("columnheader", { name: "Ingestion" })).toBeDefined();
+    expect(within(ingestCell(2)).getByTestId("ingest-status").textContent).toBe("Ingested");
+    expect(within(ingestCell(2)).getByTestId("ingest-counts").textContent).toBe("60 pages, 140 sections");
+    expect(within(ingestCell(1)).getByTestId("ingest-status").textContent).toBe("Error");
+    expect(within(ingestCell(1)).getByTestId("ingest-error-message").textContent).toBe(
+      "The converter rejected the file. It may be damaged or protected.",
+    );
+    expect(within(ingestCell(1)).getByTestId("ingest-error-detail").textContent).toBe("Docling answered 422");
+  });
+
+  it("shows a skipped version with its reason, and a version without a job as not ingested", async () => {
+    await openDocument(reader, 7, (files) => {
+      storedVersion(files, 2).ingest = ingestJob("skipped", {
+        error_code: "unsupported_format",
+        error_detail: "unsupported file extension .txt",
+      });
+    });
+
+    expect(within(ingestCell(2)).getByTestId("ingest-status").textContent).toBe("Skipped");
+    expect(within(ingestCell(2)).getByTestId("ingest-error-message").textContent).toMatch(
+      /^This format is not ingested/,
+    );
+    expect(within(ingestCell(1)).getByTestId("ingest-status").textContent).toBe("Not ingested");
+  });
+
+  it("shows the states in German", async () => {
+    await changeLanguage("de");
+    await openDocument(manager, 7, (files) => {
+      storedVersion(files, 2).ingest = ingestJob("running", { step: "sections" });
+      storedVersion(files, 1).ingest = ingestJob("failed", { error_code: "timeout" });
+    });
+
+    expect(screen.getByRole("columnheader", { name: "Einlesen" })).toBeDefined();
+    expect(within(ingestCell(2)).getByTestId("ingest-status").textContent).toBe("Wird eingelesen: Abschnitte bilden");
+    expect(within(ingestCell(1)).getByTestId("ingest-error-message").textContent).toBe(
+      "Das Einlesen hat die Zeitgrenze überschritten.",
+    );
+    expect(within(ingestCell(1)).getByRole("button", { name: "Version 1 erneut einlesen" })).toBeDefined();
+  });
+
+  it("a reader sees the states but no button", async () => {
+    await openDocument(reader, 7, (files) => {
+      storedVersion(files, 2).ingest = ingestJob("failed", { error_code: "internal" });
+    });
+
+    expect(within(ingestCell(2)).getByTestId("ingest-status").textContent).toBe("Error");
+    expect(screen.queryByTestId("ingest-retry")).toBeNull();
+  });
+
+  it("a manager gets the button on every version without an active job", async () => {
+    await openDocument(manager, 7, (files) => {
+      storedVersion(files, 2).ingest = ingestJob("queued");
+      storedVersion(files, 1).ingest = ingestJob("done");
+    });
+
+    expect(within(ingestCell(2)).queryByTestId("ingest-retry")).toBeNull();
+    expect(within(ingestCell(1)).getByRole("button", { name: "Ingest version 1 again" })).toBeDefined();
+  });
+
+  it("a configuration gets no button (the API does not ingest it)", async () => {
+    await openDocument(manager, 7, (files) => {
+      const first = files.documents[0];
+      if (first !== undefined) {
+        first.kind = "configuration";
+      }
+    });
+
+    expect(within(ingestCell(1)).getByTestId("ingest-status").textContent).toBe("Not ingested");
+    expect(screen.queryByTestId("ingest-retry")).toBeNull();
+  });
+
+  it("the button starts a new job, the version then shows it as queued and the page polls", async () => {
+    const { files, api } = await openDocument(manager, 7, (served) => {
+      storedVersion(served, 2).ingest = ingestJob("failed", { error_code: "docling_unavailable" });
+    });
+
+    fireEvent.click(within(ingestCell(2)).getByRole("button", { name: "Ingest version 2 again" }));
+
+    await waitFor(() => {
+      expect(within(ingestCell(2)).getByTestId("ingest-status").textContent).toBe("Queued");
+    });
+    expect(files.ingestRequests).toEqual([71]);
+    expect(api.requestsTo("/api/v1/document-versions/71/ingest/")[0]?.method).toBe("POST");
+    expect(within(ingestCell(2)).queryByTestId("ingest-retry")).toBeNull();
+    expect(within(ingestCell(2)).queryByTestId("ingest-error")).toBeNull();
+  });
+
+  it("shows a 409 as a message and then the active job", async () => {
+    const { files } = await openDocument(manager, 7, (served) => {
+      storedVersion(served, 2).ingest = ingestJob("failed", { error_code: "docling_unavailable" });
+    });
+    // Someone else started a job meanwhile: the API knows it, the page not yet.
+    const running = ingestJob("running");
+    files.rejectNextIngest(409, {
+      detail: "This document version is being ingested already.",
+      code: "ingest_active",
+      job: running,
+    });
+    storedVersion(files, 2).ingest = running;
+
+    fireEvent.click(within(ingestCell(2)).getByTestId("ingest-retry"));
+
+    expect((await within(ingestCell(2)).findByTestId("ingest-conflict")).textContent).toBe(
+      "This version is already being ingested.",
+    );
+    await waitFor(() => {
+      expect(within(ingestCell(2)).getByTestId("ingest-status").textContent).toBe("Ingesting: converting");
+    });
+    expect(within(ingestCell(2)).getByTestId("ingest-conflict")).toBeDefined();
+    expect(within(ingestCell(2)).queryByTestId("ingest-retry")).toBeNull();
+  });
+});
+
+describe("polling while a job is active", () => {
+  it("asks again every 5 seconds while a job is queued or running and stops when it has ended", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { files, api } = await openDocument(reader, 7, (served) => {
+      storedVersion(served, 2).ingest = ingestJob("queued");
+    });
+    const loads = (): number => api.requestsTo(DOCUMENT_PATH).length;
+    const first = loads();
+
+    storedVersion(files, 2).ingest = ingestJob("running", { step: "convert" });
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+    await waitFor(() => {
+      expect(within(ingestCell(2)).getByTestId("ingest-status").textContent).toBe("Ingesting: converting");
+    });
+    expect(loads()).toBe(first + 1);
+
+    storedVersion(files, 2).ingest = ingestJob("done", { page_count: 3, section_count: 9 });
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+    await waitFor(() => {
+      expect(within(ingestCell(2)).getByTestId("ingest-status").textContent).toBe("Ingested");
+    });
+    const afterDone = loads();
+    expect(afterDone).toBe(first + 2);
+
+    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    expect(loads()).toBe(afterDone);
+  });
+
+  it("does not poll when no job is active", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { api } = await openDocument(reader, 7, (served) => {
+      storedVersion(served, 2).ingest = ingestJob("failed", { error_code: "internal" });
+      storedVersion(served, 1).ingest = ingestJob("skipped", { error_code: "unsupported_format" });
+    });
+    const first = api.requestsTo(DOCUMENT_PATH).length;
+
+    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    expect(api.requestsTo(DOCUMENT_PATH)).toHaveLength(first);
   });
 });

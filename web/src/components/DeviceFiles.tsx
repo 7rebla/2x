@@ -9,6 +9,7 @@ import { Icon } from "../icons/Icon.tsx";
 import { useRole } from "../session.ts";
 import { ErrorMessage } from "./ErrorMessage.tsx";
 import { documentPath } from "./files/format.ts";
+import { IngestStatusBadge, ingestPollInterval } from "./files/IngestStatus.tsx";
 import { Checksum, DateTime, DownloadLink, KindLabel, Size, UserName } from "./files/parts.tsx";
 import { NewDocumentForm } from "./files/UploadForm.tsx";
 import { Loading } from "./Loading.tsx";
@@ -22,7 +23,11 @@ export function DeviceFiles({ deviceId }: { deviceId: number }): ReactElement {
   const { t } = useTranslation("files");
   const { canManage } = useRole();
   const headingId = useId();
-  const query = useQuery(deviceDocumentsListOptions({ path: { device_id: deviceId } }));
+  // While a newest version is queued or being ingested, the list asks again every few seconds.
+  const query = useQuery({
+    ...deviceDocumentsListOptions({ path: { device_id: deviceId } }),
+    refetchInterval: (current) => ingestPollInterval(current.state.data?.map((item) => item.latest_version)),
+  });
 
   return (
     <section
@@ -68,7 +73,8 @@ function FileTable({ documents }: { documents: readonly Document[] }): ReactElem
             <th className="py-2 pr-4 font-normal">{t("columns.size")}</th>
             <th className="py-2 pr-4 font-normal">{t("columns.user")}</th>
             <th className="py-2 pr-4 font-normal">{t("columns.checksum")}</th>
-            <th className="py-2 font-normal">{t("columns.download")}</th>
+            <th className="py-2 pr-4 font-normal">{t("columns.download")}</th>
+            <th className="py-2 font-normal">{t("columns.ingest")}</th>
           </tr>
         </thead>
         <tbody>
@@ -96,7 +102,7 @@ function FileRow({ item }: { item: Document }): ReactElement {
         <KindLabel kind={item.kind} />
       </td>
       {version === null ? (
-        <td colSpan={6} className="py-2 text-fg-muted">
+        <td colSpan={7} className="py-2 text-fg-muted">
           {t("noVersion")}
         </td>
       ) : (
@@ -117,8 +123,11 @@ function FileRow({ item }: { item: Document }): ReactElement {
           <td className="py-2 pr-4">
             <Checksum sha256={version.sha256} />
           </td>
-          <td className="py-2">
+          <td className="py-2 pr-4">
             <DownloadLink versionId={version.id} number={version.number} />
+          </td>
+          <td data-testid="file-ingest" className="py-2">
+            <IngestStatusBadge job={version.ingest} compact />
           </td>
         </>
       )}
