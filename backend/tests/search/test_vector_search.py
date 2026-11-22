@@ -114,6 +114,38 @@ def test_question_without_common_words_is_found_by_vector_only(
     assert keyword_only.semantic_used is False
 
 
+def test_question_naming_a_product_puts_the_best_meaning_first(
+    version: DocumentVersion, fake_embedder: FakeEmbedder
+) -> None:
+    # 063: a question in plain words that names a product on the side. Before,
+    # every section with "XR7" scored 1 and came before the answer. Here the
+    # sections that name XR7 are not among the nearest (no embedding); one that
+    # is would be in two lists and come first (RRF).
+    answer, level = add_sections(
+        version,
+        "Zum Wechsel des Getriebeöls die Ablassschraube lösen und das alte Öl auffangen.",
+        "Den Ölstand jeden Monat prüfen.",
+    )
+    naming = add_sections(
+        version,
+        "Der XR7 wiegt 40 kg.",
+        "Den XR7 nur mit Schutzbrille bedienen.",
+        "Das Typenschild des XR7 sitzt hinten.",
+    )
+    embed(answer, at_angle(10))
+    embed(level, at_angle(25))
+
+    result = search("Wie tausche ich beim XR7 das Getriebeöl?")
+
+    hits = result.hits
+    assert result.semantic is SemanticState.USED
+    # answer: vector rank 1 = 1/61; the three sections that only name XR7 tie
+    # in the exact list for places 1 to 3, rank 2 each: 1/62, like the vector rank 2.
+    assert [hit.section_id for hit in hits] == [answer.pk, level.pk] + [s.pk for s in naming]
+    assert [hit.match_kinds for hit in hits] == [[MatchKind.SEMANTIC]] * 2 + [[MatchKind.EXACT]] * 3
+    assert [hit.score for hit in hits] == pytest.approx([1 / 61] + [1 / 62] * 4)
+
+
 def test_vector_list_holds_the_50_nearest_sections(
     version: DocumentVersion, fake_embedder: FakeEmbedder
 ) -> None:

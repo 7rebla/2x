@@ -220,7 +220,9 @@ class SearchView(APIView):
     def get(self, request: Request) -> Response:
         """Hits for ``q``, best first, at most ``limit``; optionally only on some devices or plants.
 
-        Exact identifiers come first, then keyword and meaning together.
+        A query that is mainly identifiers (an address, an error code) gets
+        the sections that contain them first; a question ranks exact,
+        keyword and meaning matches together.
         The same content stored for several devices is one hit with all its
         places.
         """
