@@ -88,6 +88,10 @@ test("a device created and changed through the API shows up twice with the user"
   // entries at the same time, so only the rows of this device count.
   const rows = page.getByTestId("audit-entry").filter({ hasText: deviceKey });
   await expect(rows).toHaveCount(2);
+  // The number of entries the filter found, as a polite live region above the list (work order 089).
+  const resultCount = page.getByTestId("audit-result-count");
+  await expect(resultCount).toHaveAttribute("role", "status");
+  await expect(resultCount).toHaveText(/^[\d,]+ entries found$/);
   const [update, creation] = [rows.nth(0), rows.nth(1)];
 
   await expect(update.getByTestId("audit-action")).toHaveText("Changed");

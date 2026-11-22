@@ -60,9 +60,13 @@ test("upload a file and a second version, download version 1, same content again
 
   // The page sets the CSRF cookie; the session comes from fixtures.ts.
   await page.goto("/");
-  const siteId = await create(page, "/api/v1/sites/", { name: testName("site") });
-  const areaId = await create(page, "/api/v1/areas/", { site: siteId, name: testName("area") });
-  const plantId = await create(page, "/api/v1/plants/", { area: areaId, key: testName("plant"), name: testName("plant") });
+  const siteName = testName("site");
+  const areaName = testName("area");
+  const plantName = testName("plant");
+  const plantKey = testName("plant");
+  const siteId = await create(page, "/api/v1/sites/", { name: siteName });
+  const areaId = await create(page, "/api/v1/areas/", { site: siteId, name: areaName });
+  const plantId = await create(page, "/api/v1/plants/", { area: areaId, key: plantKey, name: plantName });
   const deviceName = testName("device");
   const deviceId = await create(page, "/api/v1/devices/", {
     plant: plantId,
@@ -118,6 +122,21 @@ test("upload a file and a second version, download version 1, same content again
   await expect(page).toHaveURL(/\/documents\/\d+$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
   await expect(page.getByTestId("document-device").getByRole("link")).toContainText(deviceName);
+  // The breadcrumb names the place of the file like the device page (work order 089).
+  const breadcrumb = page.getByRole("navigation", { name: "Location of the file" });
+  await expect(breadcrumb.getByRole("listitem")).toHaveText([
+    "Structure",
+    siteName,
+    areaName,
+    `${plantName} (${plantKey})`,
+    deviceName,
+    title,
+  ]);
+  await expect(breadcrumb.getByRole("listitem").last()).toHaveAttribute("aria-current", "page");
+  await expect(breadcrumb.getByRole("link", { name: deviceName })).toHaveAttribute(
+    "href",
+    `/devices/${String(deviceId)}`,
+  );
 
   const newVersion = page.getByRole("form", { name: "Upload a new version" });
   await expect(newVersion.getByRole("button", { name: "Upload" })).toBeDisabled();

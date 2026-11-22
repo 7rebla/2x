@@ -152,6 +152,12 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 - `DevicePage.tsx` (`/devices/:deviceId`) shows every field of one device, the chain as breadcrumb and
   `../components/DeviceFiles.tsx` (the files of the device, see "Files").
   An id that cannot be a device id, or a 404 of the API, shows `NotFound`.
+- Breadcrumb (work order 089): `../components/Breadcrumb.tsx` draws the trail of the device page and of the file page.
+  `Breadcrumb` is a named `<nav>` ("Location of the device", "Location of the file") with an ordered list; every
+  level has the icon of its kind (decorative) and its name as text, levels are separated by "›" from the style sheet,
+  the trail wraps between levels on narrow screens. The last level is the page itself (`aria-current="page"`, bold,
+  no link). `useDeviceCrumbs(device)` gives the levels Structure (link to `/`), site, area, plant with its key and the
+  device with the icon of its class (a link to its page wherever it is not the last level).
 - `structure/forms.tsx` holds the forms of all four levels: React 19 form actions (`useActionState`),
   no form library, the generated mutation options of TanStack Query. Only `manage` sees the buttons (`useRole()`).
 - Field errors: `structure/save.ts` sends a write call with a fetch of its own that keeps a copy of a 400 answer
@@ -174,6 +180,9 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 - `DocumentPage.tsx` (`/documents/:documentId`) shows one file with all versions, newest first, each with a
   download button, the form for a new version (managers) and the change log of the file (`AuditTrail`, managers only,
   because the change log API is readable for managers only).
+- Above the title the file page shows where the file sits (work order 089): Structure › site › area › plant › device ›
+  file, the same trail as the device page with the device as a link and the file title as the current level. Until the
+  device is loaded, or if it cannot be, the trail is Structure › "Device 12" (link) › file.
 - Tables on the desktop (work order 079): version, date, size and user never wrap (`whitespace-nowrap`). The user
   stands as a detail line below the upload time ("Uploaded"), the checksum as a quiet detail line ("SHA-256 1a2b…",
   no disclosure triangle, full value as tooltip and on click) below the title or the file name. Download is an icon
@@ -193,14 +202,16 @@ if (query.isError) return <ErrorMessage error={query.error} />;
   be reused (055). `IngestStatusBadge` shows the newest job of a version (field `ingest`): queued, ingesting (with the
   step), ingested (pages and sections), error, skipped, or not ingested; `compact` leaves out step and counts (device
   page). `IngestError` shows the translated message per kind of error (one per `error_code`, a general text for
-  unknown kinds) and folds the technical `error_detail` away (rendered as text only); for a done job that was
-  converted only in part (`partly_converted`) it shows that hint. `IngestRetryButton` (managers, documents only,
+  unknown kinds) and folds the technical `error_detail` away (rendered as text only). For a job of a version that was
+  converted only in part (`partly_converted`) it shows the hint "Converted only in part" in its own paragraph
+  (`warning`, with icon), whatever the state: alone for a done job and for a queued or running embedding job, below the
+  error message for a failed embedding (work order 089). `IngestRetryButton` (managers, documents only,
   hidden while a job is queued or running) calls `POST /api/v1/document-versions/<id>/ingest/`; a 409 appears as
   "already being ingested", a 400 as "configurations are not ingested". The file page and the device page poll every
   5 s (`INGEST_POLL_INTERVAL_MS`) while a shown version has a queued or running job, and not otherwise. Skipped and
   queued are neutral, not errors; with the AI features off (E-59) missing embeddings are not shown at all.
   Known limit: a change of state found by polling is not announced to screen readers (no live region; work order 053).
-  The same holds for `/ingest`.
+  The same holds for `/ingest`, where only a changed number of jobs is announced (result count, work order 089).
 - Downloads are plain links to `/api/v1/document-versions/<id>/download/`; the API answers with
   `Content-Disposition: attachment` and the session cookie goes along.
 - Uploads go through the generated client (multipart/form-data) in `../components/files/upload.ts`, with a fetch of
@@ -219,6 +230,8 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 
 - `../components/AuditTrail.tsx` shows the entries of `/api/v1/audit-log/` on `/audit` and on the file page. Time,
   user, action and object type never wrap.
+- Above the entries the result count says how many entries the filter found, of all pages ("120 entries found" /
+  "120 Einträge gefunden"), or "No entries found." in place of the list (`ResultCount`, see "Result count").
 - Below 768 px every entry is a card (work order 081): the object with its id as heading (`h2` on `/audit`; the file
   page passes `cardHeadingLevel={3}` below its section heading), the action below it, then time, user and object type
   as pairs and the changes over the full width of the card, with "Technical details" folded away as in the table.
@@ -290,6 +303,9 @@ if (query.isError) return <ErrorMessage error={query.error} />;
   `queued` (what needs attention); one state can be chosen, and `all` sends no status, so ingested and skipped jobs
   show as well. An unknown status means the default, a device value that cannot be an id means all devices, a device
   that is not in the list is named by its id. A new filter starts on page 1.
+- Between the filters and the list the result count says how many jobs the filter found, of all pages ("120 jobs
+  found" / "120 Aufträge gefunden"), or in place of the list that nothing is open (default view) or that no job
+  matches (`ResultCount`, see "Result count"). The pagination below the list keeps "Page 1 of 3".
 - Newest job only (work order 064): every job is one attempt (E-55). Without the switch the page sends `latest=true`,
   so the API lists only the newest job of each version (the job of the field `ingest`, embedding jobs included) and
   applies status and device to those. A failed attempt that a later one has ingested is therefore not "open" any
@@ -309,6 +325,35 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 - Tests fake the list (with `latest` and `is_latest`) and `POST …/ingest/` inside `IngestPage.test.tsx`;
   `../../e2e/ingest.spec.ts` uploads a plain-text file, which the format check skips without a converter, and checks
   the switch with answers of its own (`page.route`).
+
+## Result count
+
+Work order 089 (finding Ü12 of the UI analysis). `../components/ResultCount.tsx` is the shared building block for the
+number of entries of a filtered list; the change log (`AuditTrail`, so also on `/audit`) and `/ingest` use it. The
+structure search keeps its own region of the same kind (work order 083).
+
+```tsx
+const [count, reportCount] = useResultCount(filterKey); // in the part that stays
+<ResultCount count={count} text={(n) => t("resultCount", { count: n })} empty={t("empty")}
+  testId="audit-result-count" countTestId="audit-total" emptyTestId="audit-empty" />
+<ListPages key={filterKey} filterKey={filterKey} reportCount={reportCount} />
+// inside ListPages, after its query:
+useReportCount(filterKey, query.data?.count, reportCount);
+```
+
+- **A polite live region:** `role="status"` (polite by itself), with the number in small secondary text
+  ("120 entries found", plural forms `resultCount_one`/`_other` in the catalog of the page) or, for none, the text for
+  an empty list in secondary text of the normal size; that text stands in place of the list, there is no second one.
+- **The region stays in place.** Screen readers announce only changes inside a region that already exists, so the
+  region lives outside the part that a new filter mounts afresh (`key={filterKey}`). `useResultCount` keeps the
+  number the list part reports with `useReportCount`; while a new filter loads, or after an error, the region is empty
+  (`count` is null), and the new number is announced when it arrives. Turning pages keeps the number.
+- **No noise:** an unchanged number (a list that is polled, the same filter applied again) changes nothing in the page
+  and is not read again. A filter that changes with every key press must report its number only once the list for the
+  finished input has loaded, never per key; the filters of `/audit` (applied with a button) and `/ingest` (choices)
+  do not change per key.
+- Tests: `../components/ResultCount.test.tsx`, "result count" in `../components/AuditTrail.test.tsx` and in
+  `IngestPage.test.tsx`, `../../e2e/audit.spec.ts` and `../../e2e/ingest.spec.ts`.
 
 ## Map
 
