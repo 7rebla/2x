@@ -91,6 +91,32 @@ function renderMark(size?: number): void {
   );
 }
 
+describe("BrandMark without a link", () => {
+  it("draws the same lockup as plain text, without a link", () => {
+    render(
+      <MemoryRouter>
+        <BrandMark size={48} link={false} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+    const lockup = screen.getByTestId("brand-lockup");
+    expect(lockup.textContent.trim()).toBe("2x");
+    const mark = within(lockup).getByTestId("brand-mark");
+    expect(mark.getAttribute("aria-hidden")).toBe("true");
+    expect(mark.style.width).toBe("48px");
+    expect(lockup.style.gap).toBe(`${String(nameGap(48))}px`);
+  });
+
+  it("types the name like the header when asked to", () => {
+    render(
+      <MemoryRouter>
+        <BrandMark link={false} typing="sign-in" />
+      </MemoryRouter>,
+    );
+    expect(within(screen.getByTestId("brand-lockup")).getByTestId("typed-text").dataset.typing).toBe("type");
+  });
+});
+
 describe("brandForm", () => {
   it.each([
     [8, "small"],

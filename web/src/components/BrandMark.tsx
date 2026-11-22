@@ -64,6 +64,12 @@ interface BrandMarkProps {
   readonly size?: number;
   /** Lets the name type itself once per run and browser session (header only); without it the name stands still. */
   readonly typing?: TypingRun | "pending";
+  /**
+   * A link to the start page (default, header). False draws the same lockup
+   * as plain text, for a page that shows the brand above its content (the
+   * sign-in card, work order 086), where a link to "/" would lead nowhere.
+   */
+  readonly link?: boolean;
 }
 
 /**
@@ -72,14 +78,14 @@ interface BrandMarkProps {
  * accessible name. Its colour comes from the token "brand" (index.css). The
  * mark is visible from the start; only the name types (pattern E).
  */
-export function BrandMark({ size = HEADER_BRAND_SIZE, typing }: BrandMarkProps): ReactElement {
+export function BrandMark({ size = HEADER_BRAND_SIZE, typing, link = true }: BrandMarkProps): ReactElement {
   const { t } = useTranslation("common");
   const prefix = `brand${useId().replace(/[^\w-]/g, "")}`;
   const form = brandForm(size);
   const svg = withUniqueIds(form === "small" ? smallFormSvg : masterSvg, prefix);
   const markStyle: CSSProperties = { width: size, height: size };
-  return (
-    <Link to="/" className="inline-flex items-center" style={{ gap: nameGap(size) }}>
+  const content = (
+    <>
       <span
         aria-hidden="true"
         data-testid="brand-mark"
@@ -90,6 +96,19 @@ export function BrandMark({ size = HEADER_BRAND_SIZE, typing }: BrandMarkProps):
         dangerouslySetInnerHTML={{ __html: svg }}
       />
       {typing === undefined ? <span>{t("appTitle")}</span> : <TypedText text={t("appTitle")} run={typing} />}
+    </>
+  );
+  const lockupStyle: CSSProperties = { gap: nameGap(size) };
+  if (!link) {
+    return (
+      <span data-testid="brand-lockup" className="inline-flex items-center" style={lockupStyle}>
+        {content}
+      </span>
+    );
+  }
+  return (
+    <Link to="/" className="inline-flex items-center" style={lockupStyle}>
+      {content}
     </Link>
   );
 }

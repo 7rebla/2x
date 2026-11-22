@@ -32,10 +32,50 @@ test("a wrong password shows an error and no session", async ({ page }) => {
   await signInThroughThePage(page, testName("nobody"), "dev-only-wrong-password");
 
   await expect(page.getByTestId("login-error")).toHaveText("Username or password is wrong.");
+  await expect(page.getByTestId("login-card").getByTestId("login-error")).toBeVisible();
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByTestId("user-name")).toHaveCount(0);
   expect((await page.context().cookies()).some((cookie) => cookie.name === "sessionid")).toBe(false);
 });
+
+// The sign-in page is a centred card with the brand above it (work order 086,
+// E-65 point 7); fields and button are equally high and equally wide.
+for (const width of [375, 1024, 1600]) {
+  test(`the sign-in card is centred at ${String(width)} px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/login");
+    const card = page.getByTestId("login-card");
+    await expect(card).toBeVisible();
+
+    const [cardBox, mainBox, lockupBox] = await Promise.all([
+      card.boundingBox(),
+      page.getByRole("main").boundingBox(),
+      page.getByTestId("brand-lockup").boundingBox(),
+    ]);
+    if (cardBox === null || mainBox === null || lockupBox === null) {
+      throw new Error("card, main or brand without a box");
+    }
+    // At most max-w-sm (384 px), centred in the page grid.
+    expect(cardBox.width).toBeLessThanOrEqual(384);
+    expect(Math.abs(cardBox.x + cardBox.width / 2 - (mainBox.x + mainBox.width / 2))).toBeLessThanOrEqual(1);
+    // The brand stands centred above the card.
+    expect(lockupBox.y + lockupBox.height).toBeLessThanOrEqual(cardBox.y);
+    expect(Math.abs(lockupBox.x + lockupBox.width / 2 - (cardBox.x + cardBox.width / 2))).toBeLessThanOrEqual(1);
+
+    const boxes = await Promise.all(
+      [page.getByLabel("Username"), page.getByLabel("Password"), page.getByRole("button", { name: "Sign in" })].map(
+        (control) => control.boundingBox(),
+      ),
+    );
+    for (const box of boxes) {
+      expect(box?.height).toBe(36);
+      expect(box?.width).toBe(boxes[0]?.width);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(
+      false,
+    );
+  });
+}
 
 test("signing in through the page shows the user name and role", async ({ page }) => {
   const { username, password } = testAccount();

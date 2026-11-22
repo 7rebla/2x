@@ -51,7 +51,11 @@ loaded when it is opened (work order 062): `routes.tsx` wraps it with `lazyPage(
   take the whole grid. Paragraphs directly inside a page's `<section>` (the introduction) are held to `max-w-prose` by
   `PAGE_PROSE` on `<main>`; a page needs no class of its own for that. Form pages keep a narrow column at the left edge
   of the grid: settings `max-w-2xl`; the self-test keeps heading and button at `max-w-xl` and sets its result cards in
-  one column, two from 1024 px (`lg`) and three from 1280 px (`xl`). The sign-in page follows with work order 086.
+  one column, two from 1024 px (`lg`) and three from 1280 px (`xl`). The sign-in page (work order 086, E-65 point 7)
+  is a centred card inside the grid (`mx-auto max-w-sm`, `bg-surface`, border `line`, `p-6`) with the brand mark
+  (48 px) and the typing name above it; heading, introduction, error and form sit in the card, fields and the
+  primary button have the full width of the card and the same height (36 px). The language switch stays in the
+  header. `../../e2e/login.spec.ts` measures the card at 375, 1024 and 1600 px.
   The user menu (`../components/UserMenu.tsx`) is a button with the user name; it opens a panel with the role,
   the link to the settings, the language switch and "Sign out". Before sign-in the language switch stands in the header.
   An account without a role sees a hint above the page.

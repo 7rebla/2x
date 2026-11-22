@@ -1,10 +1,13 @@
-import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { openServerPage } from "../browserLocation.ts";
+import { HEADER_BRAND_SIZE } from "../components/BrandMark.tsx";
 import { changeLanguage } from "../i18n.ts";
 import { fakeApi, type FakeApi, jsonResponse, manager } from "../test/fakeApi.ts";
 import { renderApp } from "../test/renderApp.tsx";
+import { refreshDisplay, updateDisplaySettings } from "../theme/store.ts";
+import { CARD_BRAND_SIZE } from "./LoginPage.tsx";
 
 vi.mock("../browserLocation.ts", () => ({ openServerPage: vi.fn() }));
 
@@ -19,6 +22,8 @@ afterEach(async () => {
   vi.mocked(openServerPage).mockReset();
   await changeLanguage("en");
   window.localStorage.clear();
+  window.sessionStorage.clear();
+  refreshDisplay();
 });
 
 /** Nobody is signed in; the sign-in call answers with `status` and `body`, a 200 signs the manager in. */
@@ -107,6 +112,105 @@ describe("sign-in form", () => {
     expect((await screen.findByTestId("login-error")).textContent).toContain(
       "Zu viele fehlgeschlagene Anmeldeversuche",
     );
+  });
+});
+
+describe("sign-in card (work order 086)", () => {
+  it("centres a narrow card on the surface with a border", async () => {
+    fakeApi(null);
+    renderApp("/login");
+
+    const card = await screen.findByTestId("login-card");
+    const page = screen.getByTestId("login-page");
+    expect(page.classList).toContain("mx-auto");
+    expect(page.classList).toContain("max-w-sm");
+    expect(page.classList).toContain("w-full");
+    for (const name of ["bg-surface", "border", "border-line", "rounded-lg"]) {
+      expect(card.classList).toContain(name);
+    }
+    // Heading, introduction and form are inside the card.
+    expect(within(card).getByRole("heading", { level: 1, name: "Sign in" })).toBeDefined();
+    expect(within(card).getByText("Sign in with your 2x account.")).toBeDefined();
+    expect(within(card).getByTestId("login-form")).toBeDefined();
+  });
+
+  it("shows the brand mark and the name above the card, not as a second link", async () => {
+    fakeApi(null);
+    renderApp("/login");
+
+    const card = await screen.findByTestId("login-card");
+    const lockup = within(screen.getByTestId("login-page")).getByTestId("brand-lockup");
+    // Above the card in the order of the page.
+    expect(lockup.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(card.contains(lockup)).toBe(false);
+    expect(lockup.closest("a")).toBeNull();
+    expect(lockup.textContent.trim()).toBe("2x");
+    const mark = within(lockup).getByTestId("brand-mark");
+    expect(mark.getAttribute("aria-hidden")).toBe("true");
+    expect(mark.dataset.form).toBe("master");
+    expect(mark.style.width).toBe(`${String(CARD_BRAND_SIZE)}px`);
+    expect(CARD_BRAND_SIZE).toBeGreaterThan(HEADER_BRAND_SIZE);
+    // The only link named 2x is the one in the header.
+    expect(screen.getAllByRole("link", { name: "2x" })).toHaveLength(1);
+    expect(within(screen.getByRole("banner")).getByRole("link", { name: "2x" })).toBeDefined();
+  });
+
+  it("types the name in the card and in the header (run sign-in)", async () => {
+    fakeApi(null);
+    renderApp("/login");
+
+    const lockup = await screen.findByTestId("brand-lockup");
+    expect(within(lockup).getByTestId("typed-text").dataset.typing).toBe("type");
+    const header = within(screen.getByRole("banner")).getByRole("link", { name: "2x" });
+    expect(within(header).getByTestId("typed-text").dataset.typing).toBe("type");
+    expect(window.sessionStorage.getItem("twox.typed")).toBe("sign-in");
+  });
+
+  it("shows the name at once with reduced motion", async () => {
+    act(() => {
+      updateDisplaySettings({ reduceMotion: true });
+    });
+    fakeApi(null);
+    renderApp("/login");
+
+    const lockup = await screen.findByTestId("brand-lockup");
+    expect(lockup.querySelector(".tx-type")).toBeNull();
+    expect(lockup.textContent.trim()).toBe("2x");
+  });
+
+  it("gives fields and button the same height and the button the full width", async () => {
+    fakeApi(null);
+    renderApp("/login");
+
+    const button = await screen.findByRole("button", { name: "Sign in" });
+    expect(button.classList).toContain("w-full");
+    expect(button.classList).toContain("min-h-9");
+    for (const label of ["Username", "Password"]) {
+      const field = screen.getByLabelText(label);
+      expect(field.classList).toContain("w-full");
+      expect(field.classList).toContain("h-9");
+    }
+  });
+
+  it("keeps the card in German, with the language switch in the header", async () => {
+    await changeLanguage("de");
+    fakeApi(null);
+    renderApp("/login");
+
+    const card = await screen.findByTestId("login-card");
+    expect(within(card).getByRole("heading", { level: 1, name: "Anmelden" })).toBeDefined();
+    expect(within(card).getByRole("button", { name: "Anmelden" }).classList).toContain("w-full");
+    expect(within(screen.getByRole("banner")).getByRole("combobox")).toBeDefined();
+  });
+
+  it("shows a wrong password inside the card", async () => {
+    serverWithSignIn(400, { errors: [{ code: "username_password_mismatch", param: "password" }] });
+    renderApp("/login");
+
+    await fillAndSubmit();
+
+    const error = await screen.findByTestId("login-error");
+    expect(screen.getByTestId("login-card").contains(error)).toBe(true);
   });
 });
 
