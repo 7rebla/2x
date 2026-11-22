@@ -1,6 +1,6 @@
 # Auftrag 091 – Seite „keine Berechtigung“ mit Titel und Überschrift
 
-Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: in Arbeit
+Meilenstein: Gestaltung (D1) · Freigabestufe: B · Status: zur Prüfung
 
 ## Ziel
 
@@ -36,7 +36,10 @@ Lücke aus 078: Ruft ein angemeldeter Benutzer eine Seite auf, die seine Rolle n
 ## Fragen an a7 (mit Optionen und Empfehlung)
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+Status: zur Prüfung
+
+- Was wurde gebaut? `RequireRole` zeigt statt der Seite jetzt `NoPermissionPage`: `usePageTitle` („Keine Berechtigung – 2x“ / „No permission – 2x“), `AnimatedHeading` als einzige h1 und darunter der bisherige Hinweis. `NoPermission` bleibt der reine Hinweis (ohne h1, ohne Titel); einziger bisheriger Aufrufer war `RequireRole`, ein weiterer Aufrufer für einzelne Aktionen existiert nicht. Neuer Schlüssel `noPermissionHeading` in de und en. `web/src/pages/README.md` ergänzt.
+- Wie wurde getestet? Vitest in `web/src/session.test.tsx`: Leser auf `/import` und `/audit` (h1 und Titel englisch), Deutsch (h1 und Titel), `NoPermission` allein ohne Überschrift und Titel; bestehende Prüfungen unverändert. Container: lint, typecheck, test (880 grün), build, licenses grün; e2e 66 bestanden, 1 übersprungen (bereits vorher so). Neuer e2e-Schritt nicht nötig (keine Rollen-Spezifikation mit Leser-Konto vorhanden).
+- Zweig und Arbeitsverzeichnis: Zweig worktree-agent-acbc9b0d1843ccc44, Arbeitsverzeichnis .claude/worktrees/agent-acbc9b0d1843ccc44
+- Abweichungen: keine.

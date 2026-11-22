@@ -76,7 +76,10 @@ loaded when it is opened (work order 062): `routes.tsx` wraps it with `lazyPage(
   the browser goes to `/login?next=<address>` and comes back after signing in. `next` accepts only paths of
   this application (`safeNextPath`); `/admin/…` is opened as a page of its own.
 - Every page also sits inside `RequireRole` with the role from `navigation.ts` (`read` for pages without an entry).
-  A missing role shows "no permission" in the frame, without a redirect.
+  A missing role shows "no permission" in the frame, without a redirect. This replacement is a page of its own
+  (work order 091, `NoPermissionPage` in `../components/SessionGuards.tsx`): `usePageTitle` "No permission – 2x",
+  the only `<h1>` (`AnimatedHeading`) and the notice below. `NoPermission` alone is the notice for a part of a page
+  or an action, without heading and title.
 - A 403 of any other API call makes the app ask `/api/v1/me/` again: 403 there means the session expired
   (to the sign-in page), 200 means only the permission is missing (`ErrorMessage` shows "no permission").
 - Buttons that write are shown only to `manage`:
