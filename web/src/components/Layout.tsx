@@ -144,7 +144,7 @@ function useNarrowScreen(): boolean {
 /**
  * The entries of the main navigation. In the header bar (from 768 px) each
  * shows its icon; from 1280 px (`xl`) the text next to it, from 768 to 1279 px
- * the short text (`nav:short.*`, `text-xs`) below it. The full text stays the
+ * the short text (`nav:short.*`, 13 px on a 16 px line, E-65 point 5) below it. The full text stays the
  * accessible name and tooltip: the short text is drawn by CSS from
  * `data-short` (`.nav-short` in index.css) inside an `aria-hidden` element, so
  * it is neither read out twice nor part of the link's text. In the menu below
@@ -161,7 +161,7 @@ function NavigationList({
 }): ReactElement {
   const { t } = useTranslation("nav");
   return (
-    <ul className={inMenu ? "flex flex-col gap-y-1" : "flex w-max items-center gap-x-1 xl:p-1"}>
+    <ul className={inMenu ? "flex flex-col gap-y-1" : "flex w-max items-center xl:gap-x-1 xl:p-1"}>
       {entries.map((entry) => {
         const label = t(entry.textKey);
         return (
@@ -170,7 +170,9 @@ function NavigationList({
               to={entry.path}
               end={entry.end ?? false}
               className={
-                inMenu ? "nav-link w-full py-2" : "nav-link max-xl:flex-col max-xl:gap-0.5 max-xl:px-2 max-xl:py-0.5"
+                inMenu
+                  ? "nav-link w-full py-2"
+                  : "nav-link max-xl:flex-col max-xl:gap-0.5 max-xl:px-1 max-xl:py-0.5 max-xl:-outline-offset-2"
               }
               title={label}
               onClick={onChoose}
@@ -181,7 +183,11 @@ function NavigationList({
                 {label}
               </span>
               {inMenu ? null : (
-                <span className="nav-short text-xs xl:hidden" data-short={t(`short.${entry.textKey}`)} aria-hidden="true" />
+                <span
+                  className="nav-short text-[13px] leading-4 xl:hidden"
+                  data-short={t(`short.${entry.textKey}`)}
+                  aria-hidden="true"
+                />
               )}
             </NavLink>
           </li>
@@ -194,7 +200,7 @@ function NavigationList({
 /**
  * Below 768 px: the button "Menu" opens a panel under the header with every
  * navigation entry and the content of the user menu. It closes on Escape (the
- * focus goes back to the button), on a click outside, on every change of the
+ * focus goes back to the button), when the focus leaves button and panel, on a click outside, on every change of the
  * address and when the window grows to 768 px. Choosing an entry closes it
  * and puts the focus on the button; the new page then moves it on to its
  * heading (work order 078).
@@ -251,7 +257,18 @@ function NavigationMenu({ user, entries }: { user: Me; entries: readonly Navigat
   };
 
   return (
-    <>
+    // Disclosure navigation (WAI-ARIA APG): when the focus moves on to an element outside button and panel
+    // (Tab after the last entry, Shift+Tab before the button), the panel closes and the focus stays where it went,
+    // so it never rests on content hidden under the panel (WCAG 2.4.11). A focus that goes nowhere (a click on
+    // text inside the panel, another window) leaves it open; a click outside closes it through pointerdown.
+    <div
+      onBlur={(event) => {
+        const next = event.relatedTarget;
+        if (open && next instanceof Node && !event.currentTarget.contains(next)) {
+          setOpenOn(null);
+        }
+      }}
+    >
       <Button
         ref={buttonRef}
         type="button"
@@ -285,7 +302,7 @@ function NavigationMenu({ user, entries }: { user: Me; entries: readonly Navigat
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -323,10 +340,13 @@ export function Layout(): ReactElement {
       <header className="relative border-b border-line bg-surface">
         {/*
           One line in every language and at every width: the navigation never
-          wraps. From 1280 px (xl) each entry shows icon and text (if that does
-          not fit, the navigation scrolls on its own instead of the page); from
-          768 to 1279 px the icon above a short text, as high as one entry at
-          1280 px (42 px), so the header keeps its height. Below 768 px
+          wraps. From 1280 px (xl) each entry shows icon and text; from 768 to
+          1279 px the icon above a short text, as high as one entry at 1280 px
+          (42 px), so the header keeps its height. If the entries do not fit
+          (a long user name at 768 px), the navigation scrolls on its own
+          instead of covering the user menu or widening the page; there the
+          focus ring is drawn inside the entry, so the scroll box does not cut
+          it off. Below 768 px
           navigation and user menu sit behind the button "Menu" (E-65 point 3,
           work order 082). Header and page content share one grid (PAGE_GRID,
           E-65), so the brand mark and the page heading start on the same line
@@ -338,7 +358,7 @@ export function Layout(): ReactElement {
           </div>
           <div className="min-w-0 flex-1">
             {!narrow && entries.length > 0 ? (
-              <nav aria-label={t("nav:label")} data-testid="main-navigation" className="max-md:hidden xl:overflow-x-auto">
+              <nav aria-label={t("nav:label")} data-testid="main-navigation" className="overflow-x-auto max-md:hidden">
                 <NavigationList entries={entries} inMenu={false} />
               </nav>
             ) : null}

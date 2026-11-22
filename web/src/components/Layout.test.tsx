@@ -60,7 +60,9 @@ describe("navigation with icons", () => {
       expect(short?.getAttribute("data-short")).toBe(enNav.short[entry?.textKey ?? "structure"]);
       expect(short?.getAttribute("aria-hidden")).toBe("true");
       expect(short?.textContent).toBe("");
-      expect(short?.classList.contains("text-xs")).toBe(true);
+      // 13 px on a 16 px line (E-65 point 5), so the entry stays 42 px high.
+      expect(short?.classList.contains("text-[13px]")).toBe(true);
+      expect(short?.classList.contains("leading-4")).toBe(true);
       expect(short?.classList.contains("xl:hidden")).toBe(true);
       expect(link.classList.contains("max-xl:flex-col")).toBe(true);
       // The link's text stays the full text.
@@ -255,6 +257,29 @@ describe("menu below 768 px (work order 082)", () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(heading);
     });
+  });
+
+  it("closes when the focus leaves button and panel, without taking the focus back", async () => {
+    await renderNarrow();
+    fireEvent.click(menuButton());
+    const panel = screen.getByTestId("navigation-menu");
+    // Within button and panel it stays open.
+    menuButton().focus();
+    within(panel).getByRole("link", { name: "Structure" }).focus();
+    const signOut = within(panel).getByRole("button", { name: "Sign out" });
+    signOut.focus();
+    expect(panel.hidden).toBe(false);
+    // A focus that goes nowhere (a click on text in the panel) leaves it open.
+    fireEvent.focusOut(signOut, { relatedTarget: null });
+    expect(panel.hidden).toBe(false);
+    // Tab after "Sign out": the focus moves on outside, the panel closes, the focus stays there.
+    // (jsdom sends focusout without relatedTarget, so the event names it, as a browser does.)
+    const outside = screen.getByRole("link", { name: "Skip to content" });
+    outside.focus();
+    fireEvent.focusOut(signOut, { relatedTarget: outside });
+    expect(panel.hidden).toBe(true);
+    expect(menuButton().getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(outside);
   });
 
   it("keeps the focus on the button when the current page is chosen", async () => {
