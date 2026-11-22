@@ -115,11 +115,11 @@ export function ImportPage(): ReactElement {
           {deviceListColumns.join(",")}
         </code>
         <p>{t("import:format.optionalColumn")}</p>
-        <code data-testid="import-optional-column" className="block font-mono break-words">
+        <code data-testid="import-optional-column" className="block font-sans tabular-nums slashed-zero break-words">
           {deviceListOptionalColumn}
         </code>
         <p>{t("import:format.deviceClassValues")}</p>
-        <code data-testid="import-device-classes" className="block font-mono break-words">
+        <code data-testid="import-device-classes" className="block font-sans tabular-nums slashed-zero break-words">
           {deviceClasses.join(", ")}
         </code>
         <ul className="list-disc space-y-1 pl-5">
