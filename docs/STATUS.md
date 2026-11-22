@@ -67,6 +67,7 @@ Nichts davon hält die laufende Arbeit auf.
 11. **Eigenes Feld für Teilumwandlungen (Aufträge 048, 061; Stufe C, Datenmodell).** Heute wird eine Teilumwandlung am Textpräfix `converted with ` in `error_detail` erkannt. Scheitert danach das Einbetten, überschreibt die Fehlermeldung den Hinweis, und die Oberfläche zeigt die Umwandlung als vollständig. Optionen: (a) Feld `partial_errors` (Zahl) am Einlese-Auftrag, Migration, Anzeige darüber – Empfehlung; (b) so lassen, Lücke dokumentieren. Blockiert nichts.
 12. ~~Messlauf 057~~ – entschieden mit E-60 (bge-m3, 2 000 Zeichen, Docling 8 GiB über 066, 2 h je Dokument).
 13. **Client-Adresse im Zugriffsprotokoll (Prüfung 059; Stufe C, Anmeldung/Datenschutz).** Das Zugriffsprotokoll von uvicorn enthält bei jeder Anfrage die Client-Adresse, auch bei fehlgeschlagenen Anmeldungen; die Doku sagte bisher „nie mit IP-Adresse“ (wird mit 059 berichtigt). Optionen: (a) Client-Adresse im Zugriffsprotokoll entfernen oder kürzen (z. B. letztes Oktett), wie schon die Suchtexte – Empfehlung, passt zu „Betrieb mit möglichst wenig personenbezogenen Daten“; (b) so lassen und als Betriebsinformation dokumentieren (hilft bei der Fehlersuche und gegen Anmeldeversuche).
+14. **Abnahmelauf 060 – zwei Befunde zur Suchgüte (Stufe C, Abnahmekriterium).** Alles andere ist erfüllt (Handbücher eingelesen, Fehler sichtbar). (1) IP-Probe: Die richtige Stelle steht auf Rang 2 – in der englischen APS-Dokumentation (gleiche Seite 38); Probe und Test zählen nur die deutsche (Rang 4). Empfehlung: beide Sprachfassungen als richtige Fundstelle werten (Probe `m2.json` und Abnahmetest ergänzen). (2) Prüffrage 9: Vektor Rang 1, zusammen Rang 12 (verlangt: unter den ersten 5). Empfehlung: Folgeauftrag „bei Fragen keine eigene exakte Liste“ (Option B aus 063), danach 060 wiederholen. Alternative: Grenze für Fragen im Abnahmetest auf 15 lockern – nicht empfohlen.
 
 ## Offene Abnahmebedingungen M0
 
@@ -189,7 +190,7 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 057 | Messlauf in der Testumgebung (Leitstelle) | C | 048, 049, 050, 056 | erledigt |
 | 058 | Abnahmetests M2 | B | 052–055 | erledigt |
 | 059 | README und ARCHITECTURE für M2 | B | 055, 056, 058 | erledigt |
-| 060 | Abnahmelauf M2 (Leitstelle) | C | 057, 058, 059 | in Arbeit |
+| 060 | Abnahmelauf M2 (Leitstelle) | C | 057, 058, 059 | wartet auf a7 |
 | 061 | Einbettungsaufträge im Feld `ingest` | B | 048, 051 | erledigt |
 | 062 | Seiten bei Bedarf nachladen (Bündelgröße) | B | 054, 055 | erledigt |
 | 063 | Gewichtung exakter Treffer in der kombinierten Suche | B | 052 | erledigt |

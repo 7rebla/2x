@@ -1,6 +1,6 @@
 # Auftrag 060 – Abnahmelauf M2 in der Testumgebung
 
-Meilenstein: M2 · Freigabestufe: C · Status: offen
+Meilenstein: M2 · Freigabestufe: C · Status: wartet auf a7
 
 ## Ziel
 
@@ -65,8 +65,35 @@ Voraussetzung: 057, 058 und 059 sind nach `main` zusammengeführt bzw. abgeschlo
    - (c) beides.
    Empfehlung: (c). (a) prüft Netz und Wiederholungen, (b) die Fehlermeldung von Docling; beides mit eigenen Dateien.
 
-## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+## Kurzbericht (Leitstelle, 22.11.2026)
+
+**Status: wartet auf a7.** Lauf in der Testumgebung „2x“ auf `main` (Stand nach 065, vor 066), Modell bge-m3, Abschnittsgröße 2 000 (E-60). Kriterien 0, 1, 2, 3, 5 erfüllt; Kriterium 4 nicht erfüllt (zwei Befunde zur Suchgüte, siehe unten); Kriterium 6 mit diesem Bericht.
+
+| Nr. | Ergebnis | Nachweis |
+| --- | --- | --- |
+| 0 | erfüllt | Docker Engine 29.9.3, Compose 5.7.0; `git status` ohne Änderungen an getrackten Dateien |
+| 1 | erfüllt | `up -d --wait … docling` Exit 0 (11:02); `check_docling`: `OK: docling-serve 1.38.2`; `check_llm --embed`: `OK: … bge-m3 … 1024 dimensions` |
+| 2 | erfüllt | `ingest_versions --missing --commit`: nichts mehr offen. Endzustand aller 223 Aufträge: 221 `done`, 1 `failed`/`docling_unavailable`, 1 `failed`/`conversion_failed` (beide absichtlich). Alle 21 Pflicht-Handbücher (PDF, Fertigungslinie und UR5e) `done`; dazu BetrSichV (Testdatei) und vier OPNsense-Markdown-Seiten `done` |
+| 3 | erfüllt | Eigene einseitige PDF bei gestopptem Docling hochgeladen (11:02:59): nach 224 s `failed`/`docling_unavailable`; danach Docling gestartet. Selbst erzeugte beschädigte PDF: nach Sekunden `failed`/`conversion_failed`. Beide stehen in `/ingest` (Vorgabe „Offen“) mit Meldung („Der Umwandlungsdienst (Docling) war nicht erreichbar …“, „Die Umwandlung der Datei ist gescheitert.“), technischen Angaben und „Erneut einlesen“ – in Chrome geprüft |
+| 4 | **nicht erfüllt** | Testkonto wie in `ci.yml` angelegt; lokaler Teil (`-g "local part"`, `TWOX_M2_REQUIRED` = 21 Handbücher, `TWOX_M2_FAILED_FILE=abnahme-060-defekt.pdf`) scheitert nach 2,6 min am Schritt „IP address of the central control“: `192.168.0.100` steht nicht unter den ersten 3. Die vorigen Schritte (Pflicht-Handbücher eingelesen, nichts offen) liefen durch. Den CI-Teil der Suite habe ich in „2x“ bewusst nicht laufen lassen (er legt Testgeräte und Dateien an); er ist in der CI grün |
+| 5 | erfüllt | `evaluate_search` (Ausgabe unten) |
+| 6 | erfüllt | Schrittfolge und Befunde unten |
+
+**`evaluate_search`, Endstand** (Rang der ersten richtigen Fundstelle Stichwort / Vektor / zusammen): ip-ccu 5 / 9 / 4; ip-drill-plc 10 / 11 / 11; question-1 – / 4 / 4; question-3 – / – / –; question-7 – / – / –; question-9 – / 1 / 12; question-10 – / 1 / 3. Zusammen: Recall@5 0,429, Recall@10 0,429, MRR 0,144; Mittel 52 ms je Anfrage.
+
+**Befunde (an a7):**
+
+1. **IP-Adresse:** Für `192.168.0.100` stehen vorne ein Router-Handbuch (TL-WR902AC, S. 57, die Adresse steht dort als Beispiel), auf Rang 2 die **englische** APS-Dokumentation S. 38 (dieselbe Stelle wie die deutsche, mit der Adresse) und auf Rang 4 die deutsche APS-Dokumentation S. 38. Probe und Abnahmetest werten nur die deutsche Ausgabe als richtig. Die Suche findet die richtige Stelle also auf Rang 2 – in der anderen Sprachfassung.
+2. **Prüffrage 9 (Traglast UR5e):** In der Vektorsuche auf Rang 1, zusammen auf Rang 12 – auch nach 063 verdrängen Abschnitte mit „UR5e“ (in Stichwort- und exakter Liste zugleich) den besten Treffer. Der Abnahmetest verlangt die ersten 5.
+3. Prüffragen 3 und 7 werden in keiner Liste gefunden (bekannt seit 057, nicht Teil des Abnahmetests).
+
+**Schrittfolge für a7 im eigenen Browser** (http://127.0.0.1:8000, eigenes Konto):
+
+1. **Eingelesen:** „Einlesen“ → Status „Alle“: alle Handbücher mit „Eingelesen“, Seiten und Abschnitten; Gerät z. B. „Zentralsteuerung“ oder „UR5e“ öffnen → Spalte „Einlesen“ der Dateien.
+2. **IP-Adresse:** „Suche“ → `192.168.0.100` → Treffer mit Marke „Exakt“, darunter APS-Dokumentation S. 38 (en Rang 2, de Rang 4); Link zur Datei.
+3. **Sinngemäße Frage:** „Suche“ → z. B. „Wie viel darf der Roboterarm tragen?“ oder eine eigene Frage ohne die Wörter der Fundstelle → Treffer mit Marke „Bedeutung“, Seitenangabe.
+4. **Fehler sichtbar:** „Einlesen“ (Vorgabe „Offen“) → die zwei Aufträge „Abnahme 060“ mit Meldung, „Technische Angaben“ und „Erneut einlesen“; dieselben auf der Geräteseite „SPS Bohrstation“.
+
+**Laufzeiten:** Einlesen insgesamt aus 057 (21 min für 1 099 Seiten); Fehlerprobe Docling aus 224 s, beschädigte PDF wenige Sekunden; lokaler Abnahmetest 2,6 min bis zum Abbruch.
+
+**Offen:** Entscheidung zu den Befunden 1 und 2 (STATUS „Wartet auf a7“, Punkt 14); danach den lokalen Teil erneut laufen lassen.
