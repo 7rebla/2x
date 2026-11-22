@@ -43,6 +43,13 @@ services:
       # "Browser test").
       TWOX_E2E_USERNAME: ${TWOX_E2E_USERNAME:-}
       TWOX_E2E_PASSWORD: ${TWOX_E2E_PASSWORD:-}
+      # Local part of the acceptance test of M2 (e2e/m2-acceptance.spec.ts),
+      # only in the test environment with the manuals: TWOX_M2_LOCAL=1, the
+      # file names of the required manuals (comma-separated) and the file
+      # name of a job that failed on purpose. Unset: the local part is skipped.
+      TWOX_M2_LOCAL: ${TWOX_M2_LOCAL:-}
+      TWOX_M2_REQUIRED: ${TWOX_M2_REQUIRED:-}
+      TWOX_M2_FAILED_FILE: ${TWOX_M2_FAILED_FILE:-}
     volumes:
       - ../../web:/app
       - web_node_modules:/app/node_modules
