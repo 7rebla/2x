@@ -10,6 +10,11 @@ clients therefore refuse a model
    there, and its entry must not carry ``remote_host`` or ``remote_model``
    (:func:`find_local_model`).
 
+A chat model must also be able to generate text: its entry must name the
+capability ``completion`` (:func:`check_chat_model`, :func:`require_completion`).
+The chat client, the self-test and the status of the answers (work order 130)
+use these checks, so they decide alike and give the same messages.
+
 The functions here are pure: they open no connection. The clients send the
 requests themselves and turn the neutral errors of this module into their own
 error classes. The messages name neither addresses nor texts.
@@ -46,11 +51,58 @@ class RemoteModelError(Exception):
     """The model is listed, but runs remotely (an Ollama cloud model)."""
 
 
+class NoCompletionError(Exception):
+    """The model cannot generate text (no capability ``completion``)."""
+
+
 def is_cloud_model_name(model: str) -> bool:
     """Return whether ``model`` is named like an Ollama cloud model."""
     tag = model.rpartition(":")[2] if ":" in model else model
     tag = tag.strip().lower()
     return tag == _CLOUD_TAG or tag.endswith(_CLOUD_TAG_SUFFIX)
+
+
+def require_local_name(model: str) -> None:
+    """Raise :class:`RemoteModelError` if ``model`` is named like an Ollama cloud model."""
+    if is_cloud_model_name(model):
+        raise RemoteModelError(
+            f"model {model!r} is an Ollama cloud model; only local models are allowed"
+        )
+
+
+def require_completion(capabilities: frozenset[str] | None, model: str) -> bool:
+    """Check that a chat model can generate text; return whether it was checked.
+
+    ``capabilities`` come from :func:`model_capabilities`; ``None`` (the
+    answer names none) cannot be checked and returns ``False``. Raises
+    :class:`NoCompletionError` if they lack ``completion``.
+    """
+    if capabilities is None:
+        return False
+    if COMPLETION_CAPABILITY not in capabilities:
+        raise NoCompletionError(
+            f"model {model!r} cannot generate text (no capability"
+            f" {COMPLETION_CAPABILITY!r}); set TWOX_CHAT_MODEL to a chat model"
+        )
+    return True
+
+
+def check_chat_model(status: int, body: bytes, model: str) -> Mapping[str, object] | None:
+    """Check the chat model ``model`` against the answer to ``GET /api/tags``.
+
+    ``status`` and ``body`` are that answer; nothing is generated. Returns
+    ``None`` when there is no model list (``status`` other than 200: not
+    Ollama, only the name can be checked), else the entry of the model.
+    Raises the errors of :func:`find_local_model`, and
+    :class:`NoCompletionError` when the entry names capabilities without
+    ``completion``. An entry without capabilities passes; the caller decides
+    whether to ask further (:data:`SHOW_PATH`).
+    """
+    if status != 200:
+        return None
+    entry = find_local_model(body, model)
+    require_completion(model_capabilities(entry), model)
+    return entry
 
 
 def ollama_root(base_url: str) -> str:

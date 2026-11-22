@@ -69,17 +69,18 @@ from urllib.parse import urlsplit
 from django.conf import settings
 
 from twox.answers.llm_guard import (
-    COMPLETION_CAPABILITY,
     SHOW_PATH,
     TAGS_PATH,
     ModelListError,
     ModelNotLoadedError,
+    NoCompletionError,
     RemoteModelError,
-    find_local_model,
-    is_cloud_model_name,
+    check_chat_model,
     is_timeout,
     model_capabilities,
     ollama_root,
+    require_completion,
+    require_local_name,
 )
 
 logger = logging.getLogger(__name__)
@@ -410,40 +411,35 @@ class OpenAICompatibleChat:
 
     def _ensure_local_model(self) -> None:
         """Refuse cloud models and models that cannot generate text (module docstring)."""
-        if is_cloud_model_name(self._model):
-            raise ChatRemoteModelError(
-                f"model {self._model!r} is an Ollama cloud model; only local models are allowed"
-            )
+        try:
+            require_local_name(self._model)
+        except RemoteModelError as error:
+            raise ChatRemoteModelError(str(error)) from None
         if self._model_checked:
             return
         root = ollama_root(self._base_url)
         status, body = self._request("GET", root + TAGS_PATH, None)
-        if status != 200:
-            # Not Ollama (another OpenAI-compatible server in the own network,
-            # Startunterlage 5.2): there is no model list to check against.
-            logger.info("No Ollama model list (HTTP %s); checked the model name only", status)
-            self._model_checked = True
-            return
         try:
-            entry = find_local_model(body, self._model)
+            entry = check_chat_model(status, body, self._model)
+            if entry is None:
+                # Not Ollama (another OpenAI-compatible server in the own network,
+                # Startunterlage 5.2): there is no model list to check against.
+                logger.info("No Ollama model list (HTTP %s); checked the model name only", status)
+            elif model_capabilities(entry) is None and not require_completion(
+                # The model is local (checked above), so asking for its details
+                # stays in the house.
+                self._show_capabilities(root),
+                self._model,
+            ):
+                logger.info("The model service names no capabilities; capability not checked")
         except ModelListError as error:
             raise ChatUnavailableError(str(error)) from error
         except RemoteModelError as error:
             raise ChatRemoteModelError(str(error)) from error
         except ModelNotLoadedError as error:
             raise ChatRejectedError(str(error)) from error
-        capabilities = model_capabilities(entry)
-        if capabilities is None:
-            # The model is local (checked above), so asking for its details
-            # stays in the house.
-            capabilities = self._show_capabilities(root)
-        if capabilities is None:
-            logger.info("The model service names no capabilities; capability not checked")
-        elif COMPLETION_CAPABILITY not in capabilities:
-            raise ChatRejectedError(
-                f"model {self._model!r} cannot generate text (no capability"
-                f" {COMPLETION_CAPABILITY!r}); set TWOX_CHAT_MODEL to a chat model"
-            )
+        except NoCompletionError as error:
+            raise ChatRejectedError(str(error)) from error
         self._model_checked = True
 
     def _show_capabilities(self, root: str) -> frozenset[str] | None:

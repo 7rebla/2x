@@ -49,15 +49,15 @@ from twox.answers.chat import (
 )
 from twox.answers.embeddings import EmbeddingError, OpenAICompatibleEmbedder
 from twox.answers.llm_guard import (
-    COMPLETION_CAPABILITY,
     TAGS_PATH,
     ModelListError,
     ModelNotLoadedError,
+    NoCompletionError,
     RemoteModelError,
-    find_local_model,
-    is_cloud_model_name,
+    check_chat_model,
     model_capabilities,
     ollama_root,
+    require_local_name,
 )
 from twox.config import taskqueue
 from twox.ingest.checks import embedding_dimension_problem
@@ -254,31 +254,24 @@ def selftest_embedder() -> SelftestEmbedder:
 def check_chat_model_list(status: int, body: bytes, model: str) -> None:
     """Check ``model`` against the answer of ``GET /api/tags``; raise a :class:`ChatError`.
 
-    The same checks as the chat client (:mod:`twox.answers.chat`), without
-    ``POST /api/show``: a server without the list (status other than 200)
-    and an entry without ``capabilities`` are logged and pass.
+    The shared check of the chat client (:func:`twox.answers.llm_guard.check_chat_model`),
+    without ``POST /api/show``: a server without the list (status other than
+    200) and an entry without ``capabilities`` are logged and pass.
     """
-    if status != 200:
-        logger.info(
-            "Self-test: no Ollama model list (HTTP %s); checked the chat model name only", status
-        )
-        return
     try:
-        entry = find_local_model(body, model)
+        entry = check_chat_model(status, body, model)
     except ModelListError as error:
         raise ChatUnavailableError(str(error)) from error
     except RemoteModelError as error:
         raise ChatRemoteModelError(str(error)) from error
-    except ModelNotLoadedError as error:
+    except (ModelNotLoadedError, NoCompletionError) as error:
         raise ChatRejectedError(str(error)) from error
-    capabilities = model_capabilities(entry)
-    if capabilities is None:
-        logger.info("Self-test: the model list names no capabilities of the chat model")
-    elif COMPLETION_CAPABILITY not in capabilities:
-        raise ChatRejectedError(
-            f"model {model!r} cannot generate text (no capability"
-            f" {COMPLETION_CAPABILITY!r}); set TWOX_CHAT_MODEL to a chat model"
+    if entry is None:
+        logger.info(
+            "Self-test: no Ollama model list (HTTP %s); checked the chat model name only", status
         )
+    elif model_capabilities(entry) is None:
+        logger.info("Self-test: the model list names no capabilities of the chat model")
 
 
 def check_chat(embedder: SelftestEmbedder | None) -> ChatCheck:
@@ -292,10 +285,10 @@ def check_chat(embedder: SelftestEmbedder | None) -> ChatCheck:
         # The expected state until the chat model is chosen; nothing is asked.
         return {"chat_model": "", "chat_ok": False, "chat_error": CHAT_NOT_CONFIGURED}
     try:
-        if is_cloud_model_name(model):
-            raise ChatRemoteModelError(
-                f"model {model!r} is an Ollama cloud model; only local models are allowed"
-            )
+        try:
+            require_local_name(model)
+        except RemoteModelError as error:
+            raise ChatRemoteModelError(str(error)) from None
         source = embedder if embedder is not None else selftest_embedder()
         status, body = source.model_list()
         check_chat_model_list(status, body, model)
