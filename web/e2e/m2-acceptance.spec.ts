@@ -192,7 +192,7 @@ test("M2 acceptance, CI part: uploaded files with their ingest state, the ingest
   // 1. Sign in through the sign-in page with the test account (role "manage");
   // from here on the browser console stays free of errors.
   const username = await signInAt(page, "/ingest");
-  await expect(page).toHaveURL(/\/ingest$/);
+  await expectIngestAddress(page, {});
   const consoleErrors = collectConsoleErrors(page);
 
   // 2. A plain-text file and a Markdown file at one new test device.
@@ -234,7 +234,7 @@ test("M2 acceptance, CI part: uploaded files with their ingest state, the ingest
   await test.step("ingest overview", async () => {
     await page.goto(`/ingest?device=${String(device.id)}`);
     await page.getByTestId("ingest-filter-status").selectOption({ label: "All" });
-    await expect(page).toHaveURL(new RegExp(`/ingest\\?status=all&device=${String(device.id)}$`));
+    await expectIngestAddress(page, { status: "all", device: String(device.id) });
     const rows = page.getByTestId("ingest-job");
     await expect(rows).toHaveCount(2);
 
@@ -419,19 +419,38 @@ async function documentsOf(page: Page, manual: Manual): Promise<Set<number>> {
 /** The row of `job` in the ingest overview of its device under `status`, turning pages if needed. */
 async function overviewRow(page: Page, job: IngestJob, status: string): Promise<Locator> {
   await page.goto(`/ingest?status=${status}&device=${String(job.device.id)}`);
-  await expect(page.getByTestId("ingest-jobs")).toBeVisible();
+  const list = page.getByTestId("ingest-jobs");
   const row = page.locator(`[data-testid="ingest-job"][data-job="${String(job.id)}"]`);
-  for (;;) {
-    await expect(page.getByTestId("ingest-page-status")).toBeVisible();
+  const notListed = new Error(`job ${String(job.id)} (${job.version.original_filename}) is not listed under ${status}`);
+  for (let shown = 1; ; shown += 1) {
+    // The page keeps the rows of the previous page while the next one loads
+    // (keepPreviousData, aria-busy): look only once the list shows page `shown`.
+    await expect(list).toHaveAttribute("aria-busy", "false");
+    if ((await page.getByTestId("ingest-empty").count()) > 0) {
+      throw notListed;
+    }
+    const pageStatus = page.getByTestId("ingest-page-status");
+    await expect(pageStatus).toHaveText(new RegExp(`^Page ${String(shown)} of \\d+$`));
     if ((await row.count()) > 0) {
       return row;
     }
-    const next = page.getByTestId("ingest-next");
-    if (!(await next.isEnabled())) {
-      throw new Error(`job ${String(job.id)} (${job.version.original_filename}) is not listed under ${status}`);
+    const pages = Number(/of (\d+)$/.exec((await pageStatus.textContent()) ?? "")?.[1] ?? "0");
+    if (shown >= pages) {
+      throw notListed;
     }
-    await next.click();
+    await page.getByTestId("ingest-next").click();
+    await expect(pageStatus).toHaveText(new RegExp(`^Page ${String(shown + 1)} of \\d+$`));
   }
+}
+
+/** The address is /ingest with these parameters; other parameters (such as a later `latest`) may stand there as well. */
+async function expectIngestAddress(page: Page, params: Readonly<Record<string, string>>): Promise<void> {
+  await expect(page).toHaveURL((url) => {
+    if (url.pathname !== "/ingest") {
+      return false;
+    }
+    return Object.entries(params).every(([name, value]) => url.searchParams.get(name) === value);
+  });
 }
 
 function pageText(hit: SearchHit): string {
@@ -459,7 +478,7 @@ test("M2 acceptance, local part: the manuals of the test factory are ingested an
   expect(failedFile, "TWOX_M2_FAILED_FILE names the file of the job that failed on purpose").not.toBe("");
 
   await signInAt(page, "/ingest?status=all");
-  await expect(page).toHaveURL(/\/ingest\?status=all$/);
+  await expectIngestAddress(page, { status: "all" });
   const consoleErrors = collectConsoleErrors(page);
   const jobs = await allJobs(page);
 
