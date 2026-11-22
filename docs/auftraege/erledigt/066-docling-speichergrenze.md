@@ -1,6 +1,6 @@
 # Auftrag 066 – Speichergrenze für Docling
 
-Meilenstein: M2 · Freigabestufe: C (entschieden mit E-60) · Status: zur Prüfung
+Meilenstein: M2 · Freigabestufe: C (entschieden mit E-60) · Status: erledigt
 
 Voraussetzung: E-60.
 
