@@ -194,6 +194,15 @@ services:
       # and fails once "auto" is not allowed. Models load with the first
       # conversion instead.
       DOCLING_SERVE_LOAD_MODELS_AT_BOOT: "false"
+      # Limits (E-55). File size in bytes, equal to the upload limit
+      # TWOX_UPLOAD_MAX_BYTES; at most 2000 pages; at most 2 hours per
+      # document (the backend's DEFAULT_DOCUMENT_TIMEOUT_SECONDS); one local
+      # worker, because conversion runs on the CPU and large manuals need a
+      # lot of memory.
+      DOCLING_SERVE_MAX_FILE_SIZE: "200000000"
+      DOCLING_SERVE_MAX_NUM_PAGES: "2000"
+      DOCLING_SERVE_MAX_DOCUMENT_TIMEOUT: "7200"
+      DOCLING_SERVE_ENG_LOC_NUM_WORKERS: "1"
     # E-32: internal network only, no route to the internet. api and worker
     # are attached to it as well; nothing else is.
     networks:

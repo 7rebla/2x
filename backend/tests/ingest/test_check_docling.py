@@ -6,17 +6,28 @@ listens on the loopback interface of the test container.
 
 import json
 import socket
+import sys
 import threading
+import time
 from collections.abc import Iterator
 from contextlib import closing, contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from io import StringIO
+from io import BytesIO, StringIO, TextIOWrapper
+from pathlib import Path
 from typing import ClassVar
 
 import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from pytest_django import Settings
+
+from tests.ingest.fake_docling import (
+    FakeDocling,
+    fixture_document,
+    result_answer,
+    running_fake_docling,
+)
+from twox.ingest.management.commands import check_docling as check_docling_command
 
 # Answer of docling-serve 1.38.2 to GET /version (platform shortened; the key
 # "plaform" is spelled like that by the service).
@@ -271,3 +282,181 @@ def test_default_timeout_is_five_seconds(
 def test_timeout_must_be_a_positive_number(value: str) -> None:
     with pytest.raises(CommandError):
         call_command("check_docling", "--timeout", value, stdout=StringIO())
+
+
+# --convert
+
+
+@pytest.fixture
+def fake(settings: Settings, monkeypatch: pytest.MonkeyPatch) -> Iterator[FakeDocling]:
+    monkeypatch.setattr(check_docling_command, "POLL_INTERVAL_SECONDS", 0.01)
+    with running_fake_docling(result_answer(fixture_document())) as stand_in:
+        settings.TWOX_DOCLING_URL = stand_in.base_url
+        yield stand_in
+
+
+def run_convert(*args: str, stdin: bytes | None = None) -> tuple[int, str, str]:
+    """Run the command with ``--convert``; return exit code, stdout and stderr."""
+    stdout, stderr = StringIO(), StringIO()
+    saved = sys.stdin
+    if stdin is not None:
+        sys.stdin = TextIOWrapper(BytesIO(stdin))
+    try:
+        call_command("check_docling", "--convert", *args, stdout=stdout, stderr=stderr)
+    except SystemExit as exit_:
+        assert isinstance(exit_.code, int)
+        return exit_.code, stdout.getvalue(), stderr.getvalue()
+    finally:
+        sys.stdin = saved
+    return 0, stdout.getvalue(), stderr.getvalue()
+
+
+def test_convert_file_reports_pages_texts_tables_and_time(
+    fake: FakeDocling, tmp_path: Path
+) -> None:
+    source = tmp_path / "Original Name.PDF"
+    source.write_bytes(b"%PDF-1.7 test")
+    document = fixture_document()
+
+    code, output, errors = run_convert(str(source))
+
+    line = single_line(output)
+    assert code == 0, line
+    assert errors == ""
+    assert line.startswith(
+        f"OK: converted {len(document['pages'])} pages, {len(document['texts'])} texts,"
+        f" {len(document['tables'])} tables in "
+    )
+    assert line.endswith("s (docling: 1.5s)")
+    upload = fake.requests[0]
+    assert upload.file is not None
+    # Neutral name: the original file name never reaches docling-serve.
+    assert upload.file.filename == "upload.pdf"
+    assert upload.file.content == b"%PDF-1.7 test"
+    assert upload.field_values("ocr_preset") == ["rapidocr"]
+    assert fake.tasks == {}
+
+
+def test_convert_standard_input_with_page_range_and_suffix(fake: FakeDocling) -> None:
+    code, output, _errors = run_convert(
+        "-", "--page-range", "1", "5", "--suffix", ".MD", stdin=b"# Title\n"
+    )
+
+    assert code == 0
+    assert single_line(output).startswith("OK: converted ")
+    upload = fake.requests[0]
+    assert upload.file is not None
+    assert upload.file.filename == "upload.md"
+    assert upload.file.content_type == "text/markdown"
+    assert upload.file.content == b"# Title\n"
+    assert upload.field_values("page_range") == ["1", "5"]
+
+
+def test_convert_standard_input_defaults_to_pdf(fake: FakeDocling) -> None:
+    code, _output, _errors = run_convert("-", stdin=b"%PDF-1.7")
+
+    assert code == 0
+    assert fake.requests[0].file is not None
+    assert fake.requests[0].file.filename == "upload.pdf"
+
+
+def test_json_out_prints_only_the_docling_document(fake: FakeDocling) -> None:
+    code, output, errors = run_convert("-", "--json-out", "-", stdin=b"%PDF-1.7")
+
+    assert code == 0
+    assert errors == ""
+    assert json.loads(output) == fixture_document()
+    assert not output.startswith(("OK", "FAILED"))
+
+
+def test_convert_failure_names_the_kind_of_error(fake: FakeDocling) -> None:
+    fake.submit_answer = (422, b'{"detail":[{"loc":["body","ocr_preset"],"msg":"no"}]}')
+
+    code, output, _errors = run_convert("-", stdin=b"%PDF-1.7")
+
+    assert code == 1
+    assert single_line(output) == (
+        "FAILED: DoclingRejectedError: docling-serve rejected the request"
+        " (HTTP 422, fields: ocr_preset)"
+    )
+
+
+def test_convert_failure_with_json_out_keeps_stdout_empty(fake: FakeDocling) -> None:
+    fake.status_sequence = ("started", "failure")
+    fake.result = json.dumps(
+        {"kind": "TaskFailureResult", "failure": {"category": "internal", "message": "x"}}
+    ).encode()
+
+    code, output, errors = run_convert("-", "--json-out", "-", stdin=b"%PDF-1.7")
+
+    assert code == 1
+    assert output == ""
+    assert single_line(errors) == (
+        "FAILED: DoclingConversionError: the conversion task failed (internal)"
+    )
+
+
+def test_convert_lost_task_after_restart(
+    fake: FakeDocling, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake.status_sequence = ("pending", "started")
+
+    def restart_then_sleep(seconds: float) -> None:
+        fake.restart()
+
+    monkeypatch.setattr(time, "sleep", restart_then_sleep)
+    code, output, _errors = run_convert("-", stdin=b"%PDF-1.7")
+
+    assert code == 1
+    assert single_line(output) == (
+        "FAILED: DoclingTaskLostError: docling-serve does not know the task"
+    )
+
+
+def test_convert_unavailable_service(settings: Settings) -> None:
+    settings.TWOX_DOCLING_URL = f"http://127.0.0.1:{unused_port()}"
+
+    code, output, _errors = run_convert("-", stdin=b"%PDF-1.7")
+
+    assert code == 1
+    assert single_line(output) == (
+        "FAILED: DoclingUnavailableError: docling-serve refused the connection"
+    )
+
+
+def test_convert_missing_file(fake: FakeDocling, tmp_path: Path) -> None:
+    code, output, _errors = run_convert(str(tmp_path / "missing.pdf"))
+
+    assert code == 1
+    assert single_line(output).startswith("FAILED: cannot read the input file")
+    assert fake.requests == []
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--page-range", "1", "5"],
+        ["--json-out", "-"],
+        ["--suffix", ".md"],
+    ],
+)
+def test_convert_options_need_convert(args: list[str]) -> None:
+    with pytest.raises(CommandError, match="need --convert"):
+        call_command("check_docling", *args, stdout=StringIO())
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["-", "--page-range", "0", "5"],
+        ["-", "--page-range", "5", "1"],
+        ["-", "--page-range", "1"],
+        ["-", "--json-out", "out.json"],
+        ["-", "--suffix", "pdf"],
+        ["-", "--suffix", ".p/f"],
+        ["no-suffix"],
+    ],
+)
+def test_convert_rejects_bad_options(args: list[str]) -> None:
+    with pytest.raises(CommandError):
+        call_command("check_docling", "--convert", *args, stdout=StringIO())
