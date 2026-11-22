@@ -238,10 +238,11 @@ services:
     # submits again; a document that always needs more memory fails each
     # time and the job ends as failed (docling_unavailable) once
     # TWOX_INGEST_MAX_RETRIES are used up. Tasks of other documents waiting
-    # in Docling are lost as well and are submitted again. Without
-    # memswap_limit Docker allows the same amount again as swap, as far as
-    # the host (Docker VM) has swap. Checked in work order 066.
+    # in Docling are lost as well and are submitted again. Checked in work
+    # order 066. memswap_limit has the same value (E-62): the limit includes
+    # swap, Docling gets no swap on top of it. Checked in work order 075.
     mem_limit: ${TWOX_DOCLING_MEM_LIMIT:-8g}
+    memswap_limit: ${TWOX_DOCLING_MEM_LIMIT:-8g}
     # E-32: internal network only, no route to the internet. api and worker
     # are attached to it as well; nothing else is.
     networks:
