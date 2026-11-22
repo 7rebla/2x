@@ -113,6 +113,16 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 - `DocumentPage.tsx` (`/documents/:documentId`) shows one file with all versions, newest first, each with a
   download link, the form for a new version (managers) and the change log of the file (`AuditTrail`, managers only,
   because the change log API is readable for managers only).
+- Ingestion state (work order 053): the building blocks are in `../components/files/IngestStatus.tsx` and are meant to
+  be reused (055). `IngestStatusBadge` shows the newest job of a version (field `ingest`): queued, ingesting (with the
+  step), ingested (pages and sections), error, skipped, or not ingested; `compact` leaves out step and counts (device
+  page). `IngestError` shows the translated message per kind of error (one per `error_code`, a general text for
+  unknown kinds) and folds the technical `error_detail` away (rendered as text only); for a done job that was
+  converted only in part (`partly_converted`) it shows that hint. `IngestRetryButton` (managers, documents only,
+  hidden while a job is queued or running) calls `POST /api/v1/document-versions/<id>/ingest/`; a 409 appears as
+  "already being ingested", a 400 as "configurations are not ingested". The file page and the device page poll every
+  5 s (`INGEST_POLL_INTERVAL_MS`) while a shown version has a queued or running job, and not otherwise. Skipped and
+  queued are neutral, not errors; with the AI features off (E-59) missing embeddings are not shown at all.
 - Downloads are plain links to `/api/v1/document-versions/<id>/download/`; the API answers with
   `Content-Disposition: attachment` and the session cookie goes along.
 - Uploads go through the generated client (multipart/form-data) in `../components/files/upload.ts`, with a fetch of
