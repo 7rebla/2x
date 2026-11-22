@@ -6,7 +6,7 @@ import { Icon } from "../icons/Icon.tsx";
 import { LanguageSwitch } from "../LanguageSwitch.tsx";
 import { visibleNavigation } from "../navigation.ts";
 import { useSession } from "../session.ts";
-import { BrandMark } from "./BrandMark.tsx";
+import { BrandMark, typingRunFor } from "./BrandMark.tsx";
 import { UserMenu } from "./UserMenu.tsx";
 
 /**
@@ -34,7 +34,7 @@ export function Layout(): ReactElement {
         */}
         <div className="mx-auto flex w-full max-w-5xl items-center gap-x-4 px-4 py-4 xl:max-w-7xl">
           <h1 className="text-3xl font-semibold tracking-tight">
-            <BrandMark />
+            <BrandMark typing={typingRunFor(session.status)} />
           </h1>
           <div className="min-w-0 flex-1">
             {entries.length > 0 ? (
