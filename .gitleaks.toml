@@ -21,3 +21,11 @@ paths = ['''^(/repo/)?testfactory/extern/''']
 [[allowlists]]
 description = "Working directories of other work orders; each one is scanned on its own"
 paths = ['''^(/repo/)?\.claude/worktrees/''']
+
+[[allowlists]]
+description = "Recorded answers for CI (work order 135): the field key is the SHA-256 lookup key of a recording, not a secret"
+condition = "AND"
+targetRules = ["generic-api-key"]
+paths = ['''^(/repo/)?backend/tests/answers/recorded/ci_questions\.json$''']
+regexTarget = "secret"
+regexes = ['''^[0-9a-f]{64}$''']
