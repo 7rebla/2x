@@ -180,15 +180,16 @@ Einbau der von a7 ausgewählten Design-Vorlagen, parallel zu M2. Vorlagen liegen
 | 051 | Einlese-API | C | 049 | erledigt |
 | 052 | Such-API | C | 050, 051 | erledigt |
 | 053 | Oberfläche: Einlese-Status | B | 051 | erledigt |
-| 054 | Oberfläche: Suchseite | B | 052 | in Arbeit |
+| 054 | Oberfläche: Suchseite | B | 052 | zur Prüfung |
 | 055 | Oberfläche: Einlese-Übersicht | B | 051, 053, 054 | offen |
 | 056 | Suchprobe: Befehl evaluate_search | B | 050 | erledigt |
-| 057 | Messlauf in der Testumgebung (Leitstelle) | C | 048, 049, 050, 056 | in Arbeit |
+| 057 | Messlauf in der Testumgebung (Leitstelle) | C | 048, 049, 050, 056 | wartet auf a7 |
 | 058 | Abnahmetests M2 | B | 052–055 | offen |
 | 059 | README und ARCHITECTURE für M2 | B | 055, 056, 058 | offen |
 | 060 | Abnahmelauf M2 (Leitstelle) | C | 057, 058, 059 | offen |
 | 061 | Einbettungsaufträge im Feld `ingest` | B | 048, 051 | erledigt |
 | 062 | Seiten bei Bedarf nachladen (Bündelgröße) | B | 054, 055 | offen |
+| 063 | Gewichtung exakter Treffer in der kombinierten Suche | B | 052 | in Arbeit |
 - 073: Feld `device_class` (plc, controller, computer, router, firewall, robot, other) in Modell, API, Admin, Protokoll und Formular; CSV mit optionaler 14. Spalte; Testfabrik: 5 SPS, 4 Controller, je 1 Rechner, Router, Roboter, Firewall. Die Geräteseite zeigt den Typ noch nur im Bearbeiten-Formular (für 074).
 - 040: Erweiterungen `vector` und `pg_trgm` per Migration `ingest.0001_extensions`. Für M6 (Betrieb ohne Superuser): `vector` ist nicht „trusted“ – ein Administrator legt die Erweiterung vor der ersten Migration an; die Rückwärtsmigration entfernt sie und braucht dann ebenfalls einen Superuser.
 - Für M3 vorgemerkt (22.11.2026): Chat-Assistent als animierte Pixelfigur ist von a7 ausgewählt (Vorlage lokal und ungetrackt unter `docs/design/bildmarke/assistent/`). Einbau als eigener M3-Auftrag nach Freigabe; erscheint nur bei eingeschalteten KI-Funktionen (E-59). Der Name der Figur kommt wie der Produktname nicht in getrackte Dateien, bis a7 beide veröffentlicht; vorher Registerprüfung.

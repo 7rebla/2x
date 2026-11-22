@@ -202,3 +202,17 @@ Zum Vergleich bge-m3: Digest `7907646426070047a77226ac3e684fbbe8410524f7b4a74d02
 - Zeiten unter paralleler Last durch `twox-leit` (siehe oben); die Suchmessungen und der Geschwindigkeitsvergleich liefen in ruhigen Phasen.
 - Zusätzlich zum Auftrag: ein Kontrolllauf von `evaluate_search` im Endzustand und der Geschwindigkeitsvergleich über den Einbettungs-Client (liest nur, schreibt nichts). Daten von a7 wurden nicht verändert; es entstanden nur Einlese-Aufträge (3–89), Abschnitte und gespeicherte Docling-Antworten mit `requested_by` = `e2e-manager`.
 - Zweig und Arbeitsverzeichnis: Hauptordner, `main`, kein eigener Zweig (Lauf der Leitstelle).
+
+### Nachtrag der Leitstelle (22.11.2026, 08:06)
+
+- **Ursache für Kriterium 4:** Das Ladeskript der Leitstelle für die Testumgebung hat Einträge übersprungen, deren `assigned_to` Anlagen statt Geräte nennt. Betroffen waren 12 Handbücher, darunter `aps-documentation-de`. Es sind Testdaten der Leitstelle, keine Daten von a7. Die Leitstelle hat sie nachgeladen: je Handbuch zuerst ein Gerät der ersten Anlage (12 Umwandlungen), danach die übrigen Geräte der Anlagen (120 Kopien, Antwort wiederverwendet). Alle 221 Aufträge sind `done`, keiner `failed`. Das Siemens-Systemhandbuch fehlt lokal weiter (E-27: nur von Hand geladen).
+- **`evaluate_search` mit allen 7 Proben** (bge-m3, 2 000 Zeichen, Tiefe 50):
+
+| Art | gemessen | Recall@5 | Recall@10 | MRR | Mittel ms |
+| --- | --- | --- | --- | --- | --- |
+| Stichwort | 7 | 0,143 | 0,286 | 0,043 | 88 |
+| Vektor | 7 | 0,429 | 0,571 | 0,350 | 60 |
+| zusammen | 7 | 0,286 | 0,286 | 0,095 | 155 |
+
+  Ränge der ersten richtigen Fundstelle (Stichwort / Vektor / zusammen): ip-ccu 5 / 9 / 4; ip-drill-plc 10 / 11 / 11; question-1 – / 4 / 4; question-3 – / – / –; question-7 – / – / –; question-9 – / 1 / 27; question-10 – / 1 / 27.
+- **Kriterium 4 nicht erfüllt:** Die IP-Probe `192.168.0.100` steht in der Stichwortsuche auf Rang 5 statt 1–3. Ursache: Die Adresse steht wörtlich in weiteren Abschnitten anderer Dokumente (u. a. Konfigurationsbeschreibungen der Testfabrik); unter den exakten Treffern entscheidet der Stichwortrang, und die erwartete Seite hat dort keinen Vorsprung. Befund an a7 (STATUS „Wartet auf a7“). Die kombinierte Suche (Rang 27 bei Fragen mit „UR5e“) behandelt Folgeauftrag 063.
