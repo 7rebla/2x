@@ -29,7 +29,7 @@ export function Layout(): ReactElement {
           stays as accessible name and tooltip), and if even that does not
           fit, the navigation scrolls on its own instead of the page.
         */}
-        <div className="mx-auto flex w-full max-w-5xl items-center gap-x-6 px-4 py-4">
+        <div className="mx-auto flex w-full max-w-5xl items-center gap-x-4 px-4 py-4">
           <h1 className="text-3xl font-semibold tracking-tight">
             <BrandMark />
           </h1>
