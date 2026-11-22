@@ -13,6 +13,7 @@ import { NotFound } from "../components/NotFound.tsx";
 import { Icon } from "../icons/Icon.tsx";
 import type { IconName } from "../icons/names.ts";
 import { useRole } from "../session.ts";
+import { deviceClassIcon, PLANT_ICON } from "./structure/deviceClass.ts";
 import { DeviceForm, type FieldName } from "./structure/forms.tsx";
 import { AnimatedHeading, MaskedTitle } from "../components/TextMotion.tsx";
 
@@ -58,6 +59,7 @@ function DeviceDetails({ id }: { id: number }): ReactElement {
 const TEXT_FIELDS = [
   "key",
   "name",
+  "device_class",
   "manufacturer",
   "model",
   "software_version",
@@ -75,6 +77,7 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
   const { canManage } = useRole();
   const [editing, setEditing] = useState(false);
   const dateFormat = new Intl.DateTimeFormat(i18n.resolvedLanguage, { dateStyle: "medium", timeStyle: "short" });
+  const icon = deviceClassIcon(device.device_class);
 
   return (
     <section className="space-y-4">
@@ -87,18 +90,22 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
           </Crumb>
           <Crumb icon="site" testId="breadcrumb-site">{device.site.name}</Crumb>
           <Crumb icon="area" testId="breadcrumb-area">{device.area.name}</Crumb>
-          <Crumb icon="plant" testId="breadcrumb-plant">
+          <Crumb icon={PLANT_ICON} testId="breadcrumb-plant">
             {device.plant.name} <span className="tabular-nums slashed-zero">({device.plant.key})</span>
           </Crumb>
           <li data-testid="breadcrumb-device" aria-current="page" className="font-semibold text-fg">
-            <Icon name="device" className="mr-1" decorative />
+            <Icon name={icon} className="mr-1" decorative />
             {device.name}
           </li>
         </ol>
       </nav>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <MaskedTitle text={device.name} testId="device-title" />
+        {/* The class icon before the name; the class itself is written out in the field list. */}
+        <div data-testid="device-heading" className="flex min-w-0 items-center gap-2">
+          <Icon name={icon} size={24} className="text-fg-muted" decorative />
+          <MaskedTitle text={device.name} testId="device-title" />
+        </div>
         {canManage && !editing ? (
           <button
             type="button"
@@ -141,7 +148,8 @@ function DeviceView({ device, error }: { device: Device; error: unknown }): Reac
           {device.plant.name} <span className="tabular-nums slashed-zero">({device.plant.key})</span>
         </Field>
         {TEXT_FIELDS.map((field) => {
-          const value = device[field];
+          // The class is shown by its label (E-53), the icon stays decorative (work order 074).
+          const value = field === "device_class" ? t(`assets:deviceClass.${device.device_class}`) : device[field];
           return (
             <Field
               key={field}

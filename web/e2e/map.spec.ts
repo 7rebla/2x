@@ -69,6 +69,7 @@ test("the map shows a device and its network, finds it and opens its page", asyn
     name: deviceName,
     ip_address: ip,
     model: "Test model",
+    device_class: "plc",
   });
   // A second device without an address: on the map, but without a network line.
   const plainKey = testName("device");
@@ -92,12 +93,17 @@ test("the map shows a device and its network, finds it and opens its page", asyn
   await search.fill(deviceKey);
   await expect(page.getByTestId("map-search-status")).toHaveText("1 match");
   const deviceNode = canvas.getByRole("link", {
-    name: `Device ${deviceName} (${deviceKey}), ${ip} in network 192.0.2.0/24, opens the device page`,
+    name: `Device ${deviceName} (${deviceKey}), PLC, ${ip} in network 192.0.2.0/24, opens the device page`,
   });
   await expect(deviceNode).toBeVisible();
   await expect(deviceNode).toBeInViewport();
   await expect(deviceNode.getByTestId("map-device")).toHaveAttribute("data-match", "true");
   await expect(deviceNode.getByTestId("map-device")).toHaveText(`${deviceName}${deviceKey}${ip}Test model`);
+  // The PLC shows the PLC icon (work order 074), the class named as tooltip.
+  const deviceClass = deviceNode.getByTestId("map-device-class");
+  await expect(deviceClass).toHaveAttribute("title", "PLC");
+  await expect(deviceClass.locator("svg")).toHaveAttribute("data-icon", "devicePlc");
+  await expect(deviceClass.locator("svg")).toHaveAttribute("aria-hidden", "true");
   // Its network line is drawn and highlighted; a device without an address has none.
   await expect(canvas.locator(".react-flow__edge.map-membership-active")).toHaveCount(1);
   await expect(canvas.locator(`[data-id="member:device:${String(device.id)}"]`)).toHaveCount(1);
@@ -135,6 +141,18 @@ test("the map shows a device and its network, finds it and opens its page", asyn
   await expect(deviceNode.getByTestId("map-device")).toHaveAttribute("data-highlighted", "true");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(new RegExp(`/devices/${String(device.id)}$`));
+  // The device page shows the class icon before the name and the class as a field.
+  await expect(page.getByTestId("device-heading").locator("svg")).toHaveAttribute("data-icon", "devicePlc");
+  await expect(page.getByTestId("breadcrumb-device").locator("svg")).toHaveAttribute("data-icon", "devicePlc");
+  await expect(page.getByTestId("device-device_class")).toHaveText("PLC");
+
+  // In the structure tree the PLC shows the same icon and its class as text.
+  await page.goto("/");
+  await page.getByTestId("structure-search").fill(deviceKey);
+  const row = page.getByTestId("device-item").filter({ has: page.getByTestId("device-key").getByText(deviceKey, { exact: true }) });
+  await expect(row).toHaveCount(1);
+  await expect(row.getByTestId("device-class")).toHaveText("PLC");
+  await expect(row.getByTestId("device-class").locator("svg")).toHaveAttribute("data-icon", "devicePlc");
 
   expect(consoleErrors, "errors in the browser console").toEqual([]);
 });

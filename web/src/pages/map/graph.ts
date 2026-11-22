@@ -12,7 +12,7 @@
 // always gives the same positions. Positions are never stored.
 import type { Edge, Node } from "@xyflow/react";
 
-import type { Area, Device, Plant, Site } from "../../api/generated";
+import type { Area, Device, DeviceClassEnum, Plant, Site } from "../../api/generated";
 import { type AreaNode, buildTree, normaliseQuery, type PlantNode, type SiteNode } from "../structure/tree.ts";
 
 export type GroupKind = "site" | "area" | "plant";
@@ -35,6 +35,8 @@ export type DeviceData = {
   readonly key: string;
   readonly ip: string | null;
   readonly model: string;
+  /** Class of the device (E-53); chooses the icon and is named in the tooltip and the label. */
+  readonly deviceClass: DeviceClassEnum;
   /** Network node of the device's address, null without an address. */
   readonly network: string | null;
   readonly match?: boolean;
@@ -209,6 +211,7 @@ function placeDevice(device: Device): Placed {
           key: device.key,
           ip: device.ip_address,
           model: device.model,
+          deviceClass: device.device_class,
           network: networkOf(device.ip_address)?.cidr ?? null,
         },
         width: DEVICE_SIZE.width,

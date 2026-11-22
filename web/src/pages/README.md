@@ -99,6 +99,10 @@ if (query.isError) return <ErrorMessage error={query.error} />;
   The entry stays in the form.
 - After saving, every cached answer except the sign-in state is fetched again (`reloadAfterSave`), then the form closes.
 - Tests fake the structure API with `structure/testData.ts` (names `Test …`, addresses from 192.0.2.0/24).
+- Device class (E-53, work order 074): `structure/deviceClass.ts` lists the classes and maps each to its icon
+  (`deviceClassIcon()`, `../icons/README.md`). A device row in the tree shows the icon and the label of its class
+  instead of the word "device"; the device page shows the icon before the name and in the breadcrumb, and the class
+  as the field "Device class". Plants show the plant icon (`PLANT_ICON`).
 
 ## Files
 
@@ -150,5 +154,6 @@ if (query.isError) return <ErrorMessage error={query.error} />;
 - A click or Enter on a device opens `/devices/:id`. Selected, focused and found devices are highlighted with their
   network line. The search (name, key, IP address) marks matches and fits the view to them. The network nodes can be
   hidden. The React Flow attribution link stays visible (the project asks to remove it only with a Pro subscription).
+- A device node shows the icon of its class with the class as tooltip; the label of the node names the class too.
 - Node components live in `map/nodes.tsx`; every text from the data is rendered as text. Under jsdom the tests stub
   `ResizeObserver`, `DOMMatrixReadOnly`, `offsetWidth`/`offsetHeight` and `getBBox` (`map/MapPage.test.tsx`).

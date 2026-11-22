@@ -27,8 +27,8 @@
     "node": "Knoten",
     "group": "{{kind}} {{name}}",
     "plant": "Anlage {{name}} ({{key}})",
-    "device": "Gerät {{name}} ({{key}}), öffnet die Geräteseite",
-    "deviceWithIp": "Gerät {{name}} ({{key}}), {{ip}} im Netz {{network}}, öffnet die Geräteseite",
+    "device": "Gerät {{name}} ({{key}}), {{deviceClass}}, öffnet die Geräteseite",
+    "deviceWithIp": "Gerät {{name}} ({{key}}), {{deviceClass}}, {{ip}} im Netz {{network}}, öffnet die Geräteseite",
     "network_one": "Netz {{cidr}} mit {{count}} Gerät",
     "network_other": "Netz {{cidr}} mit {{count}} Geräten",
     "direction": {

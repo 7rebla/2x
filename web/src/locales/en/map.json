@@ -27,8 +27,8 @@
     "node": "node",
     "group": "{{kind}} {{name}}",
     "plant": "Plant {{name}} ({{key}})",
-    "device": "Device {{name}} ({{key}}), opens the device page",
-    "deviceWithIp": "Device {{name}} ({{key}}), {{ip}} in network {{network}}, opens the device page",
+    "device": "Device {{name}} ({{key}}), {{deviceClass}}, opens the device page",
+    "deviceWithIp": "Device {{name}} ({{key}}), {{deviceClass}}, {{ip}} in network {{network}}, opens the device page",
     "network_one": "Network {{cidr}} with {{count}} device",
     "network_other": "Network {{cidr}} with {{count}} devices",
     "direction": {
