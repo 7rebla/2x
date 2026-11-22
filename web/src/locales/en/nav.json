@@ -4,6 +4,7 @@
   "structure": "Structure",
   "map": "Map",
   "search": "Search",
+  "ask": "Ask",
   "ingest": "Ingestion",
   "device": "Device",
   "document": "File",
@@ -16,9 +17,9 @@
     "structure": "Structure",
     "map": "Map",
     "search": "Search",
+    "ask": "Ask",
     "ingest": "Ingestion",
     "import": "Import",
-    "audit": "Log",
-    "selftest": "Self-test"
+    "audit": "Log"
   }
 }

@@ -1,6 +1,6 @@
 # Auftrag 134 – Navigation Auskunft
 
-Meilenstein: M3 · Freigabestufe: C · Status: offen
+Meilenstein: M3 · Freigabestufe: C · Status: erledigt
 
 Voraussetzung: 132 (Seite Auskunft unter `/ask`) ist auf `main`. Start erst nach Entscheidung von a7 zu D13 und D14 (Icon); siehe „Fragen an a7“.
 
@@ -129,7 +129,55 @@ Empfehlung: (a). Bei 768 px und langem Namen sind heute nur 25 px frei, ein acht
 Empfehlung: (g). Eine eigene Zeichnung trägt nichts zur Abnahme von M3 bei und kann als Gestaltungsauftrag nach M3 folgen, zusammen mit der Assistentenfigur (D17).
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+Status: zur Prüfung. Entschieden mit E-69: D13 (a), D14 (g).
+
+**Was wurde gebaut?**
+
+- `navigation.ts`: Eintrag `{ path: "/ask", textKey: "ask", icon: "answer", requires: "read" }` direkt nach „Suche“ (wie vorgeschlagen), mit Kommentar (132/134). Der Eintrag `selftest` ist entfernt; ein Kommentar an seiner Stelle nennt den Grund. `/selftest` bekommt über `requiredRole()` weiter `read` (Vitest in `session.test.tsx`).
+- `nav.json` de/en: `ask` „Auskunft“/„Ask“, `short.ask` „Auskunft“/„Ask“ (jeweils der volle Name, ganzes Wort). `short.selftest` entfällt, der Langtext `selftest` bleibt.
+- Icon `answer` = Lucide `FileQuestionMark` (NAV-06, Kommentar nach dem Muster von `map`; `icons/README.md` ergänzt). In Lucide 1.77.0 vorhanden sind `FileQuestionMark` (aktueller Name, `FileQuestion` ist nur Alias) und `BookOpenCheck`. Gewählt wurde `FileQuestionMark`, weil es wörtlich „Frage an eine Unterlage“ zeigt: Blatt mit Fragezeichen, ohne Sprechblase, Funkeln oder Figur. `BookOpenCheck` wirkt eher wie „gelesen/erledigt“ und ähnelt dem Haken der Statusicons. Das Icon unterscheidet sich von allen anderen (`icons.test.tsx` und `Layout.test.tsx` grün).
+- `UserMenu.tsx` (`UserMenuContent`): zweiter `NavLink` auf `/selftest` (Icon `selftest`, Text `nav:selftest`, Klassen `nav-link`/`nav-label` mit `data-label`, `data-testid="selftest-link"`), nur mit Rolle `read`, nach den Einstellungen. Beide Links stehen in einem Wrapper `flex flex-col items-start gap-1`, damit sie untereinander stehen (`nav-link` ist `inline-flex`). Doc-Kommentare nachgezogen.
+- Doku: `pages/README.md`, Abschnitt „Frame and navigation“ (sieben Einträge für `manage`, fünf für `read`; Auskunft nach Suche; Selbsttest im Benutzermenü; Kurztexte; freie Breite bei 768 px).
+
+**Wie wurde getestet?** (Compose-Projekte `twox-134-web` und `twox-134`, `TWOX_API_PORT=18134`, `.env` aus `.env.example`, ohne Chat-Modell)
+
+- 0: `docker version`, `docker compose version`: Exit 0.
+- 1: Web-Job: `lint`, `typecheck`, `test` (55 Dateien, 1093 Tests), `build`, `licenses`, `api:generate`: Exit 0. Danach ohne Änderung unter `web/openapi`, `web/src/api`, `package.json`, `package-lock.json`.
+- 2: e2e wie in `ci.yml` (Konto per `create_account`): 88 bestanden, 1 übersprungen (lokaler Teil der M2-Abnahme), Exit 0.
+- 3: `e2e/navigation.spec.ts` einzeln: 16 von 16 grün. Freie Breite nach dem letzten Eintrag (Anmerkungen im Bericht):
+  - 1280 px: en 300 px, de 169 px
+  - 1024 px: en 399 px, de 347 px
+  - 768 px: en 143 px, de 91 px
+  - 768 px, langer Benutzername (Knopf 192 px): **de 40 px** (vorher mit „Selbsttest“ 25 px), **en 92 px**
+  - Überall eine Zeile, `overflow <= 0`, Kopf 76 px, kein Überlauf der Seite.
+- 4: Vitest `Layout.test.tsx`: `reader` und `manager` sehen „Ask“ direkt nach „Search“ und keinen Selbsttest in der Leiste. Ohne Rolle gibt es weder Leiste noch „Ask“ noch den Selbsttest-Link.
+- 5: Selbsttest über das Benutzermenü:
+  - e2e: neuer Test bei 768 px (Link nach „Settings“, öffnet `/selftest`, Menü zu, Fokus auf der Überschrift, `aria-current`). Der erste Test geht jetzt über das Menü (`worker-result` und `database-version` bleiben geprüft). Telefonprüfung: Link im Benutzerteil des Felds.
+  - Vitest: `UserMenu.test.tsx` (neu: `read`/`manage` ja, ohne Rolle nein, de/en, `aria-current`) und `Layout.test.tsx` (Feld unter 768 px).
+  - `selftest.spec.ts`, `login.spec.ts` und `i18n.spec.ts` sind unverändert grün.
+- 6: Tastaturprüfung unter 768 px unverändert grün (der Weg zu „Search“ bleibt drei Tab-Schritte, weil „Ask“ danach kommt). `accessibility.spec.ts` (Titel, Fokus auf der Überschrift) läuft jetzt über „Ask“ und ist grün.
+- 7: Neuer e2e-Test „Ask“: öffnet `/ask`, `aria-current="page"`, Überschrift fokussiert, Titel „Ask – 2x“. Icon `aria-hidden` (Test aus Z. 137 ff. mit den neuen Konstanten).
+- 8: `git grep -n "lucide-react" -- web/src` findet nur `names.ts` (und den Hinweis in `icons/README.md`, wie vorher).
+- 9: Sichtprüfung im eigenen Tab unter `twox134.localhost:18134`, angemeldet mit einem zweiten Testkonto mit langem Namen (`e2e-manager-with-a-very-long-user-name`, nur in der Wegwerf-Datenbank):
+  - 768 px, de, dunkel: sieben Kurztexte in einer Zeile, „Auskunft“ mit Blatt-und-Fragezeichen-Icon, deutlicher Abstand zum Knopf „e2e-manager-with-…“. Benutzermenü: Einstellungen, darunter Selbsttest, dann Sprache und Abmelden.
+  - 1024 px, hell, de und en: Selbsttest im Menü als aktuell markiert (weicher Hintergrund), kein Eintrag der Leiste markiert.
+  - 1280 px, dunkel, en: „Ask“ mit Icon und Text, aktuell markiert, Seite „Ask“ mit Hinweis „nicht verfügbar“.
+  - 768 px, hell, en: im Browser gemessen Kopf 76 px, Knopf 192 px, frei 84 px (mit 15 px Bildlaufleiste), kein Überlauf.
+  - 375 px, hell, en: Menü mit sieben Einträgen („Ask“ markiert), darunter Settings und Self-test im Benutzerteil, kein waagerechter Überlauf.
+  - Bildschirmfotos nur lokal.
+- 10: Keine neue Abhängigkeit.
+- 11: `down -v` beider Projekte: Exit 0.
+
+**Zweig und Arbeitsverzeichnis:** `worktree-agent-affa3ab5bd22403bf`, `.claude/worktrees/agent-affa3ab5bd22403bf`
+
+**Abweichungen**
+
+- Zwei fremde Testdateien minimal angepasst, weil sie die Liste der Navigationseinträge fest prüfen und sonst rot wären:
+  - `web/src/session.test.tsx`: Liste der Einträge, Texte für `manage`/`read`/de. Dazu `requiredRole("/selftest")` und `requiredRole("/ask")` gleich `read`.
+  - `web/src/routes.test.tsx`: deutsche Liste der Einträge.
+- `settings.spec.ts`: Der Breitenvergleich wechselt auf „Ask“.
+- `web/src/pages/README.md`, Adressentabelle (Z. 20 und 22) nicht geändert. Dort steht noch „no navigation entry before work order 134“ bei `/ask`; das stimmt weiterhin. `/selftest` ist dort nicht als „from the user menu“ vermerkt. Die Tabelle liegt außerhalb des Abschnitts „Frame and navigation“; 133 ändert dieselbe Datei. Das kann beim Zusammenführen nachgezogen werden.
+- Im Benutzermenü bricht „Angemeldet/Signed in … als/as“ bei sehr langen Namen um. Das war schon vor diesem Auftrag so und ist nicht geändert.
+
+**Offene Fragen:** keine.
