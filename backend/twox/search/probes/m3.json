@@ -1,0 +1,211 @@
+{
+  "schema_version": 1,
+  "notes": "Search probes of milestone M3 (work order 120) for the command evaluate_search (--probes m3): the baseline of the search for the test questions before there is an answer feature. References only: manifest_id and sha256 name a file of testfactory/manifest.yaml, pages are page indexes of the PDF file counted from 1 ('PDF-S.'), taken from the sources of the test question in testfactory/questions.yaml (basis 'question'); every PDF page of those sources is expected. A place in the other language edition of the same manual counts as correct as well (E-61): basis 'other_language_edition' maps it to the documented place, with the same pages. The English pages of aps-documentation-en were compared with the German ones in work order 067 (pages 18, 22, 27, 31, 36, 38) and in work order 120 (page 34), by key figures only. Queries are written in the project's own words and never repeat the test question; no text of a vendor document is quoted. The probes question-1, question-3, question-7, question-9 and question-10 use the queries of m2.json, so the results can be compared with the acceptance run of M2; question-3b, question-7b and question-10b ask the same in other words, without the term that carries the first query. Sources in the git repositories of the test factory have no pages and no file checksum and are left out (D3). Test question 8 is not measurable yet: all its sources are Markdown files of aps-repository-dev, which are not ingested; its probe follows with work order 136 (decision D2) and will locate its places by file path and heading path (heading_path, path). The control probe control-11 asks for test question 11, which has no evidence; it expects no place, is searched but not judged, and lists the identifiers of its first entries. tests/search/test_probes_m3.py checks every reference.",
+  "probes": [
+    {
+      "id": "question-1",
+      "query": "Welche IP-Adresse hat der zentrale Rechner der Produktionsanlage?",
+      "basis": {"question": 1, "other_language_edition": {"aps-documentation-en": "aps-documentation-de"}},
+      "expected": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [18, 31, 38]
+        },
+        {
+          "manifest_id": "aps-documentation-en",
+          "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
+          "pages": [18, 31, 38]
+        }
+      ]
+    },
+    {
+      "id": "question-2",
+      "query": "Auf welchem Port ist die Node-RED-Oberfläche des Zentralrechners zu finden?",
+      "basis": {"question": 2, "other_language_edition": {"aps-documentation-en": "aps-documentation-de"}},
+      "expected": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [38]
+        },
+        {
+          "manifest_id": "aps-documentation-en",
+          "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
+          "pages": [38]
+        }
+      ]
+    },
+    {
+      "id": "question-3",
+      "query": "Mit welchem Kommunikationsprotokoll reden die TXT-Steuerungen mit dem zentralen Rechner?",
+      "basis": {"question": 3, "other_language_edition": {"aps-documentation-en": "aps-documentation-de"}},
+      "expected": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [36, 38]
+        },
+        {
+          "manifest_id": "aps-documentation-en",
+          "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
+          "pages": [36, 38]
+        }
+      ]
+    },
+    {
+      "id": "question-3b",
+      "query": "Wie schicken die Controller der einzelnen Stationen ihre Nachrichten an die Zentrale der Anlage?",
+      "basis": {"question": 3, "other_language_edition": {"aps-documentation-en": "aps-documentation-de"}},
+      "expected": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [36, 38]
+        },
+        {
+          "manifest_id": "aps-documentation-en",
+          "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
+          "pages": [36, 38]
+        }
+      ]
+    },
+    {
+      "id": "question-4",
+      "query": "Auf welchem Weg kommen Aufträge vom Zentralrechner bei den SPS der Stationen an?",
+      "basis": {"question": 4, "other_language_edition": {"aps-documentation-en": "aps-documentation-de"}},
+      "expected": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [36, 38]
+        },
+        {
+          "manifest_id": "aps-documentation-en",
+          "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
+          "pages": [36, 38]
+        }
+      ]
+    },
+    {
+      "id": "question-5",
+      "query": "Mit welcher Ausgabe des TIA Portals lassen sich die SPS-Programme der Anlage öffnen?",
+      "basis": {"question": 5, "other_language_edition": {"aps-documentation-en": "aps-documentation-de"}},
+      "expected": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [34]
+        },
+        {
+          "manifest_id": "aps-documentation-en",
+          "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
+          "pages": [34]
+        }
+      ]
+    },
+    {
+      "id": "question-6",
+      "query": "Welches CPU-Modell ist als SPS in den Stationen der Anlage verbaut?",
+      "basis": {"question": 6, "other_language_edition": {"aps-documentation-en": "aps-documentation-de"}},
+      "expected": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [34, 36, 38]
+        },
+        {
+          "manifest_id": "aps-documentation-en",
+          "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
+          "pages": [34, 36, 38]
+        }
+      ]
+    },
+    {
+      "id": "question-7",
+      "query": "Das fahrerlose Fahrzeug ist von seiner Fahrlinie abgekommen. Wie geht man vor?",
+      "basis": {"question": 7, "other_language_edition": {"aps-documentation-en": "aps-documentation-de"}},
+      "expected": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [22, 27]
+        },
+        {
+          "manifest_id": "aps-documentation-en",
+          "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
+          "pages": [22, 27]
+        }
+      ]
+    },
+    {
+      "id": "question-7b",
+      "query": "Der kleine Transportwagen findet die Markierung am Boden nicht mehr. Was ist zu tun?",
+      "basis": {"question": 7, "other_language_edition": {"aps-documentation-en": "aps-documentation-de"}},
+      "expected": [
+        {
+          "manifest_id": "aps-documentation-de",
+          "sha256": "662ae19b00945aab2b014c72d6a6bd966403bf0f2cc2b939f6b97a4658350d55",
+          "pages": [22, 27]
+        },
+        {
+          "manifest_id": "aps-documentation-en",
+          "sha256": "f4555cab6cdc25d39769d7388b848622d23c1c4180ccb519c2965a4db19304d2",
+          "pages": [22, 27]
+        }
+      ]
+    },
+    {
+      "id": "question-9",
+      "query": "Wie viel Gewicht darf der Roboterarm UR5e höchstens tragen?",
+      "basis": {"question": 9},
+      "expected": [
+        {
+          "manifest_id": "ur5e-user-manual-de",
+          "sha256": "70940ab1cd824a2af60e75d1f2437f45fe479f2394057e267fecfe8448266102",
+          "pages": [16, 101, 102]
+        }
+      ]
+    },
+    {
+      "id": "question-10",
+      "query": "Wie bringt man den UR5e wieder in Gang, nachdem eine Schutzeinrichtung ihn angehalten hat (Safeguard Stop)?",
+      "basis": {"question": 10},
+      "expected": [
+        {
+          "manifest_id": "ur5e-user-manual-de",
+          "sha256": "70940ab1cd824a2af60e75d1f2437f45fe479f2394057e267fecfe8448266102",
+          "pages": [81, 84, 86, 252]
+        },
+        {
+          "manifest_id": "ur5e-software-handbook-en",
+          "sha256": "06488da8a8bc2be51e796d2e62e2f90ad4b00412acbac016c232780b1d0ee3ba",
+          "pages": [46]
+        }
+      ]
+    },
+    {
+      "id": "question-10b",
+      "query": "Eine Schutzvorrichtung hat den UR5e gestoppt. Was muss geschehen, damit er weiterarbeiten darf?",
+      "basis": {"question": 10},
+      "expected": [
+        {
+          "manifest_id": "ur5e-user-manual-de",
+          "sha256": "70940ab1cd824a2af60e75d1f2437f45fe479f2394057e267fecfe8448266102",
+          "pages": [81, 84, 86, 252]
+        },
+        {
+          "manifest_id": "ur5e-software-handbook-en",
+          "sha256": "06488da8a8bc2be51e796d2e62e2f90ad4b00412acbac016c232780b1d0ee3ba",
+          "pages": [46]
+        }
+      ]
+    },
+    {
+      "id": "control-11",
+      "query": "Wann war die letzte Wartung an der Frässtation?",
+      "basis": {"question": 11},
+      "expected": []
+    }
+  ]
+}

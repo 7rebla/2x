@@ -1,6 +1,6 @@
 # Auftrag 120 – Suchgrundlinie für die Prüffragen
 
-Meilenstein: M3 · Freigabestufe: B · Status: offen
+Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung (Messung in „2x“ durch die Leitstelle nach dem Zusammenführen)
 
 Voraussetzung: keine. Läuft in Welle 1 parallel zu 121, 122 und 123 (siehe „Abgrenzung“).
 
@@ -131,7 +131,70 @@ Heutige Lage:
 Keine, die den Auftrag aufhalten. Das Ergebnis fließt in die Vorlagen D12 (Suchgüte: zuerst mehr Kontext in 125, danach ggf. Überschriften stärker gewichten als Folgeauftrag) und D2 (Prüffrage 8: (a) zwei Markdown-Dateien in der Testumgebung hochladen, (b) Frage 8 erst mit M5, (c) mit 8 von 9 antreten; Empfehlung (a)) ein; beide legt die Leitstelle a7 gesondert vor.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Code, Probenliste, Tests und Doku fertig; die Messung mit allen Handbüchern (Kriterien 6–9, 13 für „2x“) ist **von der Leitstelle nach dem Zusammenführen auszuführen** (Vorgabe der Leitstelle für diesen Lauf, siehe Abweichung 1). Eigenes Compose-Projekt `twox-120`, `TWOX_API_PORT=18120`, Docker Engine 29.9.3, Compose v5.7.0. „2x“ und „twox-leit“ nicht angefasst. Keine neue Abhängigkeit, keine Migration, keine Änderung an Suche, API oder Datenmodell.
+
+### Was wurde gebaut?
+
+- **`backend/twox/search/probes/m3.json`** (neu, `m2.json` byte-gleich): 13 Proben – `question-1`, `-2`, `-3`, `-3b`, `-4`, `-5`, `-6`, `-7`, `-7b`, `-9`, `-10`, `-10b` und `control-11`. Fundstellen und Seiten wie in der Tabelle des Auftrags, Prüfsummen aus dem Manifest, APS-Proben zusätzlich mit `aps-documentation-en` (E-61). `question-1/-3/-7/-9/-10` verwenden die Anfragen aus `m2.json` (vergleichbar mit 060/067); `-3b` ohne „TXT“/„Kommunikationsprotokoll“, `-7b` ohne „fahrerlos“/„Fahrlinie“, `-10b` ohne „Safeguard Stop“ und nicht wörtlich der Satz aus 060. Prüffrage 8 fehlt, in `notes` als „not measurable yet“ mit Verweis auf D2/136 begründet.
+- **Seite 34 der englischen Fassung geprüft** (nach dem Muster von 067): Wegwerf-Container ohne Netz mit der PDF-Bibliothek des festgelegten Docling-Images (Digest aus `deploy/compose/compose.yaml`), Dateien nur lesend eingebunden, Prüfsummen beider Dateien gleich denen des Manifests, beide 38 Seiten. Nur Kennzahlen ausgegeben: S. 34 hat in beiden Fassungen je 1× „V18“, 1× „1512SP“, 1× „S7-1200“, 3× „TIA“, Zahlenabgleich 1,0 (8/8 Zahlen); Nachbarseiten 33/35 ohne diese Begriffe. → `aps-documentation-en` S. 34 ist eingetragen. Kein Text gespeichert oder ausgegeben; Prüfskript lag nur im Scratchpad.
+- **`evaluation.py`:**
+  - `ExpectedPlace` mit optionalem `heading_path` und `path`; genau eines von `pages`/`heading_path`, `path` genau bei `heading_path`; höchstens 8 Ebenen, je 120 Zeichen, `path` relativ, ohne `..`, `.`, `\`, höchstens 200 Zeichen. Treffer bei gleicher Prüfsumme und Präfix des Überschriftenpfads (Leerraum vereinheitlicht, `casefold`). `Place` trägt `heading_path`, `section_id`, `version_id` (mit Vorgaben, alte Aufrufe gültig). `matching_place` bleibt rein mit derselben Signatur.
+  - Kontrollprobe: `expected: []` ist nur erlaubt, wenn die Kennung mit `control-` beginnt (und umgekehrt), siehe Abweichung 2. Status `control`, kein Rang, zählt nicht in Recall/MRR; je Art (Stichwort, Vektor, kombiniert) die ersten 10 Einträge nur mit Rang, `section_id`, `version_id`, `sha256`, Seiten, Geräteschlüssel.
+  - `judge`/`summarise` mit frei wählbaren Grenzen (`correct_in_top`, `recall_at` je k) und erstem Rang je erwarteter Fundstelle (`place_ranks`; die andere Sprachfassung zählt über `basis.other_language_edition` für dieselbe Seite). Felder von 056 (`correct_in_top_5/10`, `recall_at_5/10`) bleiben.
+  - `parse_cutoffs` (1…50, aufsteigend, ohne Doppelte, nur ganze Zahlen) und `probe_list_text` (Name `^[a-z0-9-]+$`, Datei unter `twox/search/probes/`).
+  - Ausgabe: Spalten `top k`/`Recall@k` je Grenze; mit `--cutoffs` zusätzlich Tabelle „First rank per expected place“ und in JSON `cutoffs`, `recall_at`, `correct_in_top`, `place_ranks`. **Ohne `--cutoffs` sind Text und JSON für Listen ohne Kontrollprobe Byte für Byte wie vorher** (die neuen JSON-Schlüssel entfallen dann; `controls` erscheint nur bei Kontrollproben). Für 124 ist eine weitere Spalte je Art ohne Umbau möglich (`KindResult`-Feld plus Zelle in `_probe_rows`).
+- **`evaluate_search.py`:** Optionen `--probes NAME` und `--cutoffs K,K,…`; ungültige Werte enden mit `CommandError` („Invalid --cutoffs: …“, „Invalid --probes: …“), Exit 1. Docstring nachgezogen.
+- **Tests:** `test_evaluation.py` nur ergänzt (Importliste erweitert, bestehende Tests unverändert): Golden-Test der Ausgabe ohne `--cutoffs` (Text exakt und JSON mit Schlüsselreihenfolge, erzeugt vor der Änderung mit dem alten Code, KI an und aus), `--probes m2` gleich Standardeingabe, Recall@5/8/10/12 und MRR von Hand (49/180), gültige/ungültige Grenzen (0, 51, doppelt, absteigend, keine Zahl, leer; Meldung und `returncode == 1`), Rang je Fundstelle mit zwei Seiten und anderer Sprachfassung, Seitenbereich, Überschriftenpfad (Präfix, anderer Pfad, längerer Pfad, andere Prüfsumme, alle Formatfehler, Grenzwerte 8/120 gültig, Markdown-Abschnitt in der Datenbank gefunden), Kontrollprobe (nicht gezählt, Liste nur mit Kennungen in Text und JSON, kein Abschnittstext, kein Titel, höchstens 10 Einträge, Modellausfall), KI aus ohne Modellaufruf auch mit Kontrollprobe, `--probes m3` und ungültige Namen (`M3`, `../m2`, `m2.json`, leer, `m9`). Neu `test_probes_m3.py`: Prüfungen als Funktionen, die Probleme zurückgeben; `m3.json` ohne Probleme; Schlüssel je Probe; Abdeckung 1–7, 9, 10, 11, Fragen 3/7/10 je zweimal verschieden; keine Anfrage gleich der Prüffrage; Frage 8 fehlt mit Begründung oder nur mit `heading_path`; Sprachfassungen; eigene Proben mit `heading_path` (gültig; ungültig bei fremdem `path`, fremdem Repository, `kind: file`, Prüfsumme in Großbuchstaben) und mit Seiten (falsche Seite, falsche Prüfsumme, Anfrage = Frage, Kontrollprobe zu Frage mit Belegen). Hilfsfunktionen aus `test_probes.py` wiederverwendet, `test_probes.py` unverändert.
+- **Doku:** `docs/ARCHITECTURE.md` Z. 585 (Tabelle), Z. 604 („What CI does not run“), Abschnitt „Search“: Satz „still open“ durch die Werte der Nachmessung nach 067 ersetzt, neuer Punkt „Baseline of M3“ (Werte mit allen Handbüchern trägt die Leitstelle nach der Messung nach). `README.md` Abschnitt `evaluate_search`: `--probes`, `--cutoffs`, Kontrollprobe, Überschriftenpfad. Modultabelle (Z. 134–135) nicht berührt.
+
+### Wie wurde getestet?
+
+`D` = `docker compose -p twox-120`; `.env` aus `.env.example`, nur `TWOX_API_PORT=18120`.
+
+| Nr. | Ergebnis | Nachweis |
+| --- | --- | --- |
+| 0 | erfüllt | `docker version` 29.9.3, `docker compose version` v5.7.0, je Exit 0 |
+| 1 | erfüllt (backend) | siehe Prüfliste unten; Jobs `web`, `testfactory`, `e2e` nicht berührt (keine Datei dort geändert) und nicht lokal gelaufen |
+| 2 | erfüllt | `D run --rm backend-dev pytest tests/search` grün, neue Tests siehe oben |
+| 3 | erfüllt | bestehende Tests in `tests/search` und `tests/acceptance` unverändert grün; Golden-Test der Ausgabe ohne `--cutoffs` |
+| 4 | erfüllt | `mypy .` ohne Fehler |
+| 5 | erfüllt | `test_probes_m3.py` |
+| 6–9 | offen | Messung in „2x“ durch die Leitstelle, Befehle unten |
+| 10 | erfüllt | Prüffrage 8 „nicht messbar“ (Markdown aus `aps-repository-dev` nicht eingelesen), Verweis D2 und 136, auch in `m3.json`/`notes` |
+| 11 | erfüllt | ARCHITECTURE.md und README.md nachgezogen |
+| 12 | erfüllt | `pyproject.toml` und Lock unverändert |
+| 13 | eigener Teil erfüllt | `D --profile dev down -v` Exit 0, danach kein Container und kein Volume `twox-120*`; „2x“ nicht benutzt (Zählung vorher/nachher gehört zur Messung der Leitstelle) |
+
+**Prüfliste backend** (wie `ci.yml`, je Exit 0): `ruff check .` („All checks passed!“), `ruff format --check .`, `mypy .` („Success: no issues found in 196 source files“), `pytest` 2459 passed / 6 deselected / 0 failed, `pytest -m worker` 6 passed, `makemessages -l de --add-location=file` ohne Unterschied in `backend/locale`, `makemigrations --check --dry-run` („No changes detected“), `sh scripts/check-licenses.sh`, `spectacular --file` ohne Unterschied in `web/openapi`. Nach der letzten kleinen Änderung (Zeile „no entries“ bei leerer Kontrollliste) erneut `ruff check`, `ruff format --check`, `mypy` und `pytest tests/search tests/acceptance` (415 passed).
+
+Lauf im eigenen Projekt ohne Handbücher: `D run --rm -T backend-dev python manage.py evaluate_search --probes m3 --cutoffs 5,8,10,12` Exit 0, 13 Proben, Spalten `top 5/8/10/12`, `Recall@5/8/10/12`, „Not ingested: 12 of 13 probes“, `control-11` als „control, not judged“; `--json` mit `cutoffs` und `recall_at`; `--cutoffs 10,5` Exit 1.
+
+### Messung in „2x“ – von der Leitstelle nach dem Zusammenführen auszuführen
+
+1. Vorher: `docker compose -p 2x ps` (`db`, `api` laufen); `docker compose -p 2x exec -T api python manage.py check_llm`; Zählung `docker compose -p 2x exec -T db psql -U twox -d twox -Atc "select (select count(*) from ingest_section), (select count(*) from files_documentversion), (select count(*) from ingest_ingestjob)"`.
+2. Messung (Code des Zweigs bzw. `main` nach dem Zusammenführen; über einen Einmal-Container mit `--no-deps` oder nach Neubau von `api`):
+   `docker compose -p 2x --env-file <.env des Projektordners> --profile dev run --rm --no-deps backend-dev python manage.py evaluate_search --probes m3 --cutoffs 5,8,10,12` und dasselbe mit `--json`.
+3. Nachher dieselbe Zählung wie in 1 (muss gleich sein).
+4. Eintragen: Tabelle Probe × k (5/8/10/12) × Modus (kombiniert, Vektor; Stichwort informativ) mit Rang, Recall@k, MRR und Kopfzeile (Modell, `TWOX_SECTION_MAX_CHARS`); für `question-6` und `question-7`/`-7b` die Zeilen „First rank per expected place“ (S. 34/36/38 bzw. 22/27); für jede Probe ohne Beleg unter den ersten 10 (kombiniert) eine vermutete Ursache; für `control-11` die Liste der ersten 10 (Rang, `section_id`, Handbuch über die Prüfsumme, Seiten). Die Ausgabe enthält keine Texte; Seite 38 der APS-Dokumentation trotzdem nicht zitieren.
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-a6485d5523b62fca7`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-a6485d5523b62fca7` (relativ zum Projektordner)
+- Nicht gepusht, nichts zusammengeführt.
+
+### Abweichungen
+
+1. **Keine Messung in „2x“:** Nach der Vorgabe der Leitstelle für diesen Lauf nur beschrieben (oben); Kriterien 6–9 und der „2x“-Teil von 13 sind daher offen.
+2. **Kennzeichnung der Kontrollprobe über die Kennung `control-…`:** Der bestehende, unveränderte Test verlangt für `expected: []` weiter den Fehler „expected a non-empty list“. Damit beides gilt, ist eine leere Liste nur bei einer Kennung mit `control-` erlaubt (und eine solche Probe darf keine Fundstelle haben). Ein eigener Schlüssel wäre nach Kriterium 5 nicht zulässig.
+3. **Neue JSON-Felder nur mit `--cutoffs`:** Damit die Ausgabe ohne `--cutoffs` für `m2.json` unverändert bleibt, erscheinen `cutoffs`, `recall_at`, `correct_in_top` und `place_ranks` (und die Tabelle der Ränge je Fundstelle) nur mit `--cutoffs`. Für die Messung ist `--cutoffs` ohnehin gesetzt.
+4. **Eigenes Projekt mit KI an:** `.env.example` schaltet die KI ein; beim Lauf mit `--probes m3` im eigenen Projekt wurde die Kontrollanfrage einmal an Ollama auf dem Host eingebettet (nur lesend, keine Abschnitte vorhanden, Listen leer). Die Tests selbst nutzen nur die Attrappe.
+5. `testdata/klein/` wurde nicht eingelesen (ohne Docling kein Einlesen); der Nachweis ohne Handbücher läuft auf der leeren Datenbank von `twox-120` („not ingested“, wie erwartet).
+6. Lokal bleiben die Images `twox-120-*`; die ignorierte `.env` hat `TWOX_API_PORT=18120`.
+
+### Nachbesserung (nach Prüfung der Leitstelle)
+
+- `test_probes_m3.py`: Die Abdeckung erlaubt Frage 8, verlangt sie aber nicht (`covered - {8} == …`). Neuer Test `test_the_list_with_a_probe_for_question_8_is_accepted`: `m3.json` plus eine `markdown_probe()` für Frage 8 (Fundstelle über `heading_path`) besteht alle Prüfungen der Liste.
+- `test_evaluation.py::test_probe_list_m3_by_name`: Die Zahl der Proben kommt aus der geladenen `m3.json` statt fest 13; 136 kann `question-8` ohne Teständerung ergänzen.
+- Geprüft in `twox-120`: `ruff check`, `ruff format --check`, `mypy` (196 Dateien, keine Fehler), `pytest tests/search tests/acceptance` 416 passed; danach `--profile dev down -v` Exit 0, kein Container und kein Volume `twox-120*`.
