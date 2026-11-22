@@ -14,21 +14,34 @@ their own block between delimiters that carry a random identifier
     question
     <<<ENDE FRAGE 3f9a0c1d2e4b5a6f>>>
 
-Before a text goes into a block it is neutralised (:func:`neutralise`), so it
-cannot close its block early or open a new one. A block head holds the
-source number and nothing else; the heading path is the first line inside the
-block. No document names, file names, pages, devices or links go into the
-prompt: the server keeps the mapping from number to place.
+The real protection is the identifier: it is random per request, so a
+document cannot know it, and the system prompt says that only delimiters
+with it are real. As defence in depth, a text is also neutralised
+(:func:`neutralise`) before it goes into a block, so it does not even look
+like a delimiter. Which characters count as angle brackets and which as
+invisible gaps between them is derived from Unicode properties (names,
+NFKC forms, categories), not listed by hand (:func:`bracket_characters`).
+That derivation cannot catch every glyph that merely looks like a bracket in
+some font; it does not have to, because a look-alike without the identifier
+is no delimiter.
+
+A block head holds the source number and nothing else; the heading path is
+the first line inside the block. No document names, file names, pages,
+devices or links go into the prompt: the server keeps the mapping from number
+to place.
 
 Spotlighting is one layer of protection, not a complete one; the proof with a
 real model follows in work orders 128 and 135.
 """
 
+import functools
 import hashlib
 import re
 import secrets
+import sys
 import unicodedata
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Final, Literal, TypedDict
 
 from twox.answers import types as answer_types
@@ -87,38 +100,109 @@ NO_SOURCES_TEXT: Final = "(keine Abschnitte)"
 #: and so on), except the characters in :data:`KEPT_CHARACTERS`.
 REMOVED_CATEGORIES: Final = ("Cc", "Cf")
 KEPT_CHARACTERS: Final = "\n\t"
-#: Characters that look like an angle bracket of a delimiter; a run of two or
-#: more of them (also with white space in between) is replaced.
-OPENING_BRACKETS: Final = (
-    "<\u2039\u00ab\uff1c\ufe64\u3008\u27e8\u300a\u276e\u2770\u29fc\u2329\u02c2\u276c\u1438"
+
+# --- Angle brackets, derived from Unicode properties ---------------------------
+#: A character is an angle bracket when its NFKC form contains one of these ...
+BRACKET_NFKC: Final = ("<", ">")
+#: ... or its Unicode name contains one of these words.
+BRACKET_NAME_WORDS: Final = (
+    "LESS-THAN",
+    "GREATER-THAN",
+    "ANGLE BRACKET",
+    "ANGLE QUOTATION",
+    "GUILLEMET",
+    "CHEVRON",
+    "LEFT ARROWHEAD",
+    "RIGHT ARROWHEAD",
 )
-CLOSING_BRACKETS: Final = (
-    ">\u203a\u00bb\uff1e\ufe65\u3009\u27e9\u300b\u276f\u2771\u29fd\u232a\u02c3\u276d\u1433"
-)
-#: Characters that look like two or three angle brackets at once (much less
-#: than, very much less than, ...); replaced even when they stand alone.
-OPENING_MULTI_BRACKETS: Final = "\u226a\u22d8"
-CLOSING_MULTI_BRACKETS: Final = "\u226b\u22d9"
+#: Look-alikes that neither rule finds (letters of other scripts).
+EXTRA_OPENING_BRACKETS: Final = "\u1438"
+EXTRA_CLOSING_BRACKETS: Final = "\u1433"
+#: Name words of an opening and of a closing bracket; a bracket with neither
+#: or both counts as both.
+OPENING_NAME_WORDS: Final = ("LESS-THAN", "LEFT")
+CLOSING_NAME_WORDS: Final = ("GREATER-THAN", "RIGHT")
+#: A bracket counts as a run of brackets on its own when its name contains one
+#: of these words or its NFKC form holds more than one bracket.
+MULTI_NAME_WORDS: Final = ("DOUBLE", "TRIPLE", "NESTED", "MUCH")
+
+# --- Gaps between brackets -----------------------------------------------------
+#: Between two brackets, any sequence of white space, of characters of these
+#: category groups (separators, marks, other) and of :data:`INVISIBLE_FILLERS`
+#: counts as a gap.
+GAP_CATEGORY_GROUPS: Final = ("Z", "M", "C")
+#: Letters and symbols that are drawn as nothing (Hangul fillers, Braille blank).
+INVISIBLE_FILLERS: Final = "\u115f\u1160\u3164\uffa0\u2800"
+
 #: What each bracket character of a replaced run becomes.
 OPENING_REPLACEMENT: Final = "("
 CLOSING_REPLACEMENT: Final = ")"
-#: What may stand between the brackets of an imitated delimiter (format
-#: characters are already removed at that point).
-GAP_PATTERN: Final = r"\s*"
 #: What the current identifier becomes inside a text.
 NONCE_REPLACEMENT: Final = "[Kennung]"
 #: Accepted identifiers.
 NONCE_PATTERN: Final = r"[0-9a-f]{8,64}"
-
-
-def _run_pattern(brackets: str, multi: str) -> re.Pattern[str]:
-    every = re.escape(brackets + multi)
-    return re.compile(f"[{every}](?:{GAP_PATTERN}[{every}])+|[{re.escape(multi)}]")
-
-
-_OPENING_RUN = _run_pattern(OPENING_BRACKETS, OPENING_MULTI_BRACKETS)
-_CLOSING_RUN = _run_pattern(CLOSING_BRACKETS, CLOSING_MULTI_BRACKETS)
 _NONCE = re.compile(NONCE_PATTERN)
+
+
+@dataclass(frozen=True, slots=True)
+class BracketSet:
+    """The angle brackets and look-alikes, derived once per process."""
+
+    opening: frozenset[str]
+    closing: frozenset[str]
+    #: Brackets that count as a run on their own (``\u226a``, ``\u2af7``, ...).
+    multi: frozenset[str]
+
+    @property
+    def all(self) -> frozenset[str]:
+        """Every bracket character."""
+        return self.opening | self.closing
+
+
+@functools.cache
+def bracket_characters() -> BracketSet:
+    """All angle brackets and look-alikes of the Unicode version in use.
+
+    Derived from Unicode properties over every code point: the NFKC form
+    contains :data:`BRACKET_NFKC`, or the name contains one of
+    :data:`BRACKET_NAME_WORDS`; plus :data:`EXTRA_OPENING_BRACKETS` and
+    :data:`EXTRA_CLOSING_BRACKETS`. The side comes from the NFKC form or the
+    name (:data:`OPENING_NAME_WORDS`, :data:`CLOSING_NAME_WORDS`); doubtful
+    brackets count as both. Computed on first use, once per process.
+    """
+    opening: set[str] = set(EXTRA_OPENING_BRACKETS)
+    closing: set[str] = set(EXTRA_CLOSING_BRACKETS)
+    multi: set[str] = set()
+    less, greater = BRACKET_NFKC
+    for code in range(sys.maxunicode + 1):
+        char = chr(code)
+        name = unicodedata.name(char, "")
+        if not name:
+            continue
+        form = unicodedata.normalize("NFKC", char)
+        by_form = less in form or greater in form
+        if not by_form and not any(word in name for word in BRACKET_NAME_WORDS):
+            continue
+        is_opening = less in form or any(word in name for word in OPENING_NAME_WORDS)
+        is_closing = greater in form or any(word in name for word in CLOSING_NAME_WORDS)
+        if is_opening or not is_closing:
+            opening.add(char)
+        if is_closing or not is_opening:
+            closing.add(char)
+        if form.count(less) + form.count(greater) > 1 or any(
+            word in name for word in MULTI_NAME_WORDS
+        ):
+            multi.add(char)
+    return BracketSet(frozenset(opening), frozenset(closing), frozenset(multi))
+
+
+def is_gap(char: str) -> bool:
+    """Whether ``char`` may stand between the brackets of an imitated delimiter."""
+    return (
+        char.isspace()
+        or unicodedata.category(char)[0] in GAP_CATEGORY_GROUPS
+        or char in INVISIBLE_FILLERS
+    )
 
 
 def new_nonce() -> str:
@@ -129,9 +213,10 @@ def new_nonce() -> str:
 def prompt_version() -> str:
     """Short hash over the templates and neutralisation rules (12 hex characters).
 
-    Changes whenever the prompt or a neutralisation rule changes, the fixed
-    sentences included; the key of the recorded model answers in CI (E-10,
-    work order 135).
+    Changes whenever the prompt, a neutralisation rule or the Unicode version
+    of :mod:`unicodedata` (from which the brackets are derived) changes, the
+    fixed sentences included; the key of the recorded model answers in CI
+    (E-10, work order 135).
     """
     parts = (
         SYSTEM_TEMPLATE,
@@ -145,15 +230,20 @@ def prompt_version() -> str:
         NO_SOURCES_TEXT,
         *REMOVED_CATEGORIES,
         KEPT_CHARACTERS,
-        OPENING_BRACKETS,
-        CLOSING_BRACKETS,
-        OPENING_MULTI_BRACKETS,
-        CLOSING_MULTI_BRACKETS,
+        *BRACKET_NFKC,
+        *BRACKET_NAME_WORDS,
+        EXTRA_OPENING_BRACKETS,
+        EXTRA_CLOSING_BRACKETS,
+        *OPENING_NAME_WORDS,
+        *CLOSING_NAME_WORDS,
+        *MULTI_NAME_WORDS,
+        *GAP_CATEGORY_GROUPS,
+        INVISIBLE_FILLERS,
         OPENING_REPLACEMENT,
         CLOSING_REPLACEMENT,
-        GAP_PATTERN,
         NONCE_REPLACEMENT,
         NONCE_PATTERN,
+        unicodedata.unidata_version,
         answer_types.NO_EVIDENCE_TEXT,
         answer_types.CONTRADICTION_PHRASE,
     )
@@ -167,12 +257,11 @@ def neutralise(text: str, nonce: str) -> str:
     - Line breaks become ``\\n``. Control and format characters
       (:data:`REMOVED_CATEGORIES`: also zero-width characters and bidi
       controls) are removed, except line break and tab.
-    - Every run of two or more angle brackets or look-alikes
-      (:data:`OPENING_BRACKETS`, :data:`CLOSING_BRACKETS`, also with white
-      space in between) and every character that looks like several brackets
-      at once (:data:`OPENING_MULTI_BRACKETS`, :data:`CLOSING_MULTI_BRACKETS`)
-      becomes round brackets, so no delimiter can be imitated, with any
-      identifier or spelling. A single angle bracket stays.
+    - Every run of two or more angle brackets (:func:`bracket_characters`,
+      with any gap of :func:`is_gap` characters in between) and every bracket
+      that counts as a run on its own becomes round brackets, so the text does
+      not look like a delimiter, with any identifier or spelling. A single
+      angle bracket stays.
     - Every occurrence of ``nonce`` (any case) becomes
       :data:`NONCE_REPLACEMENT`.
 
@@ -184,16 +273,35 @@ def neutralise(text: str, nonce: str) -> str:
         for char in text
         if char in KEPT_CHARACTERS or unicodedata.category(char) not in REMOVED_CATEGORIES
     )
-    text = _OPENING_RUN.sub(lambda m: _replace_brackets(m.group(), OPENING_REPLACEMENT), text)
-    text = _CLOSING_RUN.sub(lambda m: _replace_brackets(m.group(), CLOSING_REPLACEMENT), text)
+    text = _replace_bracket_runs(text, bracket_characters())
     if nonce:
         text = re.sub(re.escape(nonce), NONCE_REPLACEMENT, text, flags=re.IGNORECASE)
     return text
 
 
-def _replace_brackets(run: str, replacement: str) -> str:
-    """Every non-space character of ``run`` becomes ``replacement``."""
-    return "".join(char if char.isspace() else replacement for char in run)
+def _replace_bracket_runs(text: str, brackets: BracketSet) -> str:
+    every = brackets.all
+    result = list(text)
+    index = 0
+    while index < len(text):
+        if text[index] not in every:
+            index += 1
+            continue
+        positions = [index]
+        cursor = index + 1
+        while cursor < len(text):
+            if text[cursor] in every:
+                positions.append(cursor)
+            elif not is_gap(text[cursor]):
+                break
+            cursor += 1
+        if len(positions) > 1 or text[index] in brackets.multi:
+            for position in positions:
+                char = text[position]
+                opening = char in brackets.opening
+                result[position] = OPENING_REPLACEMENT if opening else CLOSING_REPLACEMENT
+        index = positions[-1] + 1
+    return "".join(result)
 
 
 def system_prompt(nonce: str) -> str:
