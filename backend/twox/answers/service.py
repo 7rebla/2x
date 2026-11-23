@@ -29,7 +29,9 @@ The steps, in this order:
    ``TWOX_CHAT_*`` apply); ``seed`` is passed on unchanged.
 7. ``delta``: every piece of the model is passed on at once and collected.
 8. ``done``: :func:`twox.answers.citations.verify` with
-   ``drop_unsupported=True`` (D8 (c)). ``removed_sentences`` counts every
+   ``drop_unsupported=True`` (D8 (c)) and the question (``question=``), so
+   that a type designation repeated from it need not be in the cited
+   section (E-70). ``removed_sentences`` counts every
    flagged or dropped sentence. With ``no_evidence`` the final text is always
    :data:`NO_EVIDENCE_TEXT` and ``cited`` is empty.
 9. Errors of the chat model become ``error`` with a fixed code
@@ -291,6 +293,7 @@ def _events(
                 "".join(pieces),
                 {source.n: source.text for source in sources},
                 drop_unsupported=True,
+                question=question,
             )
             status = AnswerStatus(verdict.status)
             no_evidence = status is AnswerStatus.NO_EVIDENCE
