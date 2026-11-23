@@ -170,5 +170,19 @@ Keine. Die Vorgabe der Leitstelle setzt E-70 um; die Freistellung ist eng gefass
   3. Eine Einleitung, deren Doppelpunkt nur innerhalb von Markdown steht (`**Ports [1]:**`), endet nicht mit `:`. Ihre Punkte erben nichts; die Regel ist so eng wie vorgegeben.
   4. Als „Zeile mit Inhalt“ gilt jede Zeile, die nach `strip()` nicht leer ist, auch `---`. Eine solche Zeile beendet einen Listenblock.
   5. Keine neue Abhängigkeit, keine offene Frage an a7.
+- **Nacharbeit (nach Prüfung der Leitstelle):** `_is_designation` ist enger gefasst. Geändert ist nur `citations.py`, `identifiers.py` bleibt unverändert.
+  1. Wertebereiche und mehrere Einheiten in einem Token werden nicht mehr freigestellt (`100-240VAC`, `24-48VDC`, `24VDC/AC`, `2x10kg`). Grund: Ein Token, das mit einer Ziffer beginnt und irgendwo eine Ziffer mit Einheit aus `UNITS` enthält (optional mit `AC`/`DC`, danach kein Buchstabe), gilt nie als Bezeichnung. Neues festes Muster `_UNIT_IN_TOKEN` statt `_UNIT_TOKEN`, ohne verschachtelte Quantoren.
+  2. Die Einheiten-Ausnahme prüft ohne Rücksicht auf Groß- und Kleinschreibung (`re.IGNORECASE`). Damit werden `24v`, `10KG` und `8gb` nicht freigestellt, ebenso `4G` (die strengere Richtung).
+  3. MAC-Adressen in Punktschreibweise (`001a.2b3c.4d5e`) und Versionen mit Buchstabenanhang (`V2.1a`, `5.12a`, auch `V18b`) werden nicht freigestellt: neues festes Muster `_NOT_DESIGNATION` mit possessiven Quantoren. Folge: Auch `V2A` gilt nicht mehr als Bezeichnung aus der Frage.
+  4. Der Docstring-Absatz „Values from the question“ und der Docstring von `_is_designation` nennen die neuen Formen.
+  5. Tests, in `test_citations.py` Abschnitt 13 bei den übrigen Negativfällen zu Werten aus der Frage (Abschnitt 14 betrifft die Listen):
+     - Zehn Formen stehen jeweils in Frage und Antwort, neben einem belegten `5 kg`. Ergebnis: `unsupported_value` mit genau diesem Wert.
+     - Der Fall aus der Prüfung (`G-12` mit `100-240VAC`) als eigener Test.
+     - Drei weitere Laufzeitfälle mit langen Einzeltokens.
+     - Die Positivfälle bleiben grün.
+  6. Prüfungen (`twox-140`), je mit Exit-Code 0:
+     - `ruff format` ohne Änderung, `ruff check` „All checks passed!“, `mypy .` ohne Befund (228 Dateien).
+     - `pytest tests/answers`: 1065 bestanden, darin alle Laufzeittests.
+     - `down -v`.
 
 Status: zur Prüfung
