@@ -1,6 +1,6 @@
 # Auftrag 142 – evaluate_answers: --seed und Abstand je Lauf
 
-Meilenstein: M3 · Freigabestufe: B · Status: offen
+Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
 
 Voraussetzung: 127 (`evaluate_answers`), 126 (Antwortdienst `answer()` mit `seed`), 125 (Kontextauswahl mit `best_distance` und `below_threshold`) und 135 (Prüffragen in der CI mit Aufzeichnungen) sind auf `main`. Folgeauftrag zu Befund B6 aus 128 und zu E-70 („`evaluate_answers --seed`“).
 
@@ -128,7 +128,42 @@ Nicht berührt: `backend/tests/answers/test_service.py`, `context.py`, `citation
 Keine.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: zur Prüfung.** Compose-Projekt `twox-142`, `TWOX_API_PORT=18142`. „2x“ und „twox-leit“ nicht angefasst. Keine neue Abhängigkeit, keine Migration, keine neue Einstellung.
+
+### Was wurde gebaut?
+
+- **`service.py`** (nur die in Teil 1 genannten Stellen): Typalias `ContextObserver = Callable[[float | None, bool], None]`; `answer()` und `_events()` bekommen `on_context=None`; eine Aufrufzeile direkt nach der Kontextauswahl (nach dem `try`, vor der Sperre) mit `selection.best_distance` und `selection.below_threshold`, nie mit dem `ContextSelection`-Objekt. Moduldocstring Schritt 3 und Docstring von `answer()` ergänzt (Herkunft, „nicht Abstand der Belegstelle“, nicht aufgerufen bei KI aus und Fehler der Auswahl, Ausnahmen des Rückrufs werden nicht gefangen). Der äußere `try` des Generators hat nur `finally`, kein `except`: eine Ausnahme des Rückrufs verlässt den Generator unverändert, es entsteht kein Ereignis (so dokumentiert und getestet, nichts geändert). `types.py`, `api.py`, `ask`, `record_answers` unverändert.
+- **`evaluation.py`**: `AnswerFunction` um `seed` und `on_context` erweitert; `observe(..., seed=)` übergibt beides und hält den ersten Aufruf des Rückrufs fest; `Observed`, `RunResult` (über `base` in `judge_run` für jedes Urteil, auch `error` und `no_probe`) und `QuestionResult` (`best_distance` als `Spread`, `below_threshold_runs`) haben die neuen Felder; `Report.seed`, `evaluate(..., seed=)` (derselbe Seed für jede Frage und jeden Lauf; auch bei KI aus im Kopf). Text: „seed N“/„seed -“ im Kopf, Fragetabelle „best distance (min-max)“ (Median mit Minimum und Maximum, vier Nachkommastellen) und „below threshold“ (k/N), Lauftabelle „best distance“ und „below threshold“ (yes/no/-). JSON ohne Rundung, `null` ohne Wert. Moduldocstring um einen Absatz ergänzt.
+- **`evaluate_answers.py`**: Option `--seed N` (wie `ask`, ganze Zahl), Durchreichen an `evaluate`; Docstring ergänzt.
+- **`docs/ARCHITECTURE.md`** nur Zeile 645.
+
+### Wie wurde getestet?
+
+Alle Befehle in Docker (`docker compose -p twox-142 --profile dev ...`), ohne echtes Modell.
+
+| Nr. | Ergebnis | Nachweis |
+| --- | --- | --- |
+| 1 | erfüllt | `evaluate_answers --help` zeigt `--seed N`; Test `test_command_help_names_the_seed` |
+| 2 | erfüllt | `test_evaluate_sends_the_same_seed_with_every_question_and_run` (6 Aufrufe mit `7`, ohne Seed `None`), `test_observe_*`, `test_command_hands_the_seed_to_evaluate` (`--seed 7` und ohne), `test_command_passes_the_seed_and_reports_distances_of_the_real_service` (`FakeChatModel` erhält `seed=7` bzw. `None`) |
+| 3 | erfüllt | `test_report_shows_seed_distance_and_gate_in_text_and_json`, `test_report_shows_a_dash_without_seed_and_without_values`, `test_question_result_spreads_the_distance_and_counts_closed_gates` |
+| 4 | erfüllt | `test_service_context_observer.py` (Ersatz für `select_context`: genau ein Aufruf, vor `sources`, offen und unter der Schwelle, `None`-Abstand, nur zwei einfache Werte, nicht bei KI aus, nicht bei `search_failed`/`model_unavailable`, werfender Rückruf lässt `KeyError` aus dem Generator ohne Ereignis, ohne Rückruf unveränderte Ereignisse); `test_evaluate_reports_the_best_distance_of_every_asked_question` in `test_ci_questions.py` mit echtem Antwortdienst und den Aufzeichnungen (Zahl je Lauf vorhanden, Kontrollfrage 2/2 unter der Schwelle, Tatsachenfragen 0/2, keine festen Abstandswerte) |
+| 5 | erfüllt | Text-Test mit „seed 7;“/„seed -;“, „0.2500 (0.2500-0.2500)“, „0/1“, „1/1“, „-“ ohne Wert |
+| 6 | erfüllt | `git diff main -- types.py api.py` leer (beide Dateien nicht berührt); bestehende Tests grün, Aufzeichnungen unverändert |
+| 7 | erfüllt (zur Sichtprüfung) | `service.py`: Alias und Import `Callable`, Docstring Schritt 3, Signaturen und Docstring von `answer()`/`_events()`, eine Aufrufzeile; keine Umformatierung |
+| 8 | erfüllt | bestehender Test „keine Frage-, Antwort- oder Abschnittstexte“ läuft jetzt mit gemeldeten Abständen (`ScriptedAnswer(events, [(0.25, False)])`), Log-Test unverändert grün |
+| 9 | erfüllt | `ruff check .`, `ruff format --check .`, `mypy .` (228 Dateien), `pytest` (3444 bestanden, 6 abgewählt), `pytest -m worker` (6 bestanden), `makemigrations --check --dry-run`, `scripts/check-licenses.sh`, `makemessages` (kein Diff in `backend/locale`), `spectacular` (kein Diff). Jobs `web`, `testfactory`, `e2e` nicht berührt und nicht gelaufen |
+| 10 | erfüllt | `pyproject.toml` und Lock-Datei unverändert |
+| 11 | erfüllt | `docs/ARCHITECTURE.md:645` nennt `--seed N` und Abstand/Sperre je Lauf |
+
+### Zweig und Arbeitsverzeichnis
+
+Zweig `worktree-agent-abca60b22640cc32b`, Arbeitsverzeichnis `.claude/worktrees/agent-abca60b22640cc32b`. Zwei Commits (Dienst; Auswertung, Befehl, Tests, Doku) plus dieser Kurzbericht. Kein Push.
+
+### Abweichungen und Hinweise
+
+- Keine Abweichung vom Auftrag. Geändert nur die genannten Dateien; `test_service.py` unverändert (Hilfen importiert, `ai_on` als eigene Fixture).
+- `test_ci_questions.py`: `World.answer_function` nimmt `seed` und `on_context` an und reicht `on_context` weiter; der feste `SEED` der Aufzeichnungen bleibt, der Seed des Aufrufers wird dort nicht benutzt (Kommentar im Code), damit die Aufzeichnungen passen.
+- Bestehende Ersatzfunktionen in `test_evaluation.py` (`ScriptedAnswer`, die Funktion in `test_observe_reads_times_and_closes_the_stream`) mussten das erweiterte Protokoll erfüllen.
+- Vorschlag für `docs/ARCHITECTURE.md` Z. 167 (Leitstelle trägt nach dem Zusammenführen von 140 und 142 nach): „…, `on_context=None`: nicht öffentlicher Rückkanal, der einmal je Anfrage `best_distance` und `below_threshold` der Kontextauswahl meldet; nur für die Auswertung (`evaluate_answers`), nicht Teil des Ereignisvertrags.“
+- Beim Testen lag der gemeinsame `$TEMP` mehrerer paralleler Aufträge; ein gleichzeitiger zweiter pytest-Lauf auf derselben Testdatenbank schlug mit Setup-Fehlern fehl (reiner Konflikt, nicht Teil des Codes). Maßgeblich ist der saubere Gesamtlauf (3444 bestanden).
