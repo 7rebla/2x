@@ -241,8 +241,14 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 134 | Navigation Auskunft | C | 132 | erledigt |
 | 135 | Prüffragen in der CI mit Aufzeichnungen | C | 126, 127 | erledigt |
 | 136 | Beleg für Prüffrage 8 | C | 120 | erledigt |
-| 137 | Abnahmetests M3 und Browserfluss | B | 127, 130, 133, 134 | offen |
-| 138 | Abnahmelauf M3 | C | 128, 135, 136, 137 | offen |
+| 137 | Abnahmetests M3 und Browserfluss | B | 127, 130, 133, 134 | offen (nach 144) |
+| 138 | Abnahmelauf M3 | C | 128, 135, 136, 137 | offen (nach 144) |
+| 139 | Startwerte und Relevanzfilter (E-70) | B | 125, 128 | in Arbeit |
+| 140 | Zitatprüfung: Werte aus der Frage und Listenpunkte | B | 123, 128 | in Arbeit |
+| 141 | key_fact_alternatives für die Prüffragen 7 und 10 | C | 127, 128 | in Arbeit |
+| 142 | evaluate_answers: --seed und Abstand je Lauf | B | 127, 128 | in Arbeit |
+| 143 | Suche: Überschriften stärker gewichten (D12 b) | C | 120, 124, 128 | in Arbeit |
+| 144 | Messlauf 2 nach den Nachbesserungen | C | 139–143 | offen |
 
 - 136: Zwei Markdown-Dateien zur Bohrstation in 2x eingelesen (D2; Kennwort-Prüfung vorher und nachher 0). Prüffrage 8: Rang 9 (kombiniert). Schönheitsfehler: Der Titel von Dokument 158 hat beim Upload unter Windows ein Ersatzzeichen statt „ü“ bekommen; Umbenennen gibt es noch nicht – bei Gelegenheit in der Admin-Oberfläche berichtigen.
 - 120 (Messung in 2x): Fragen 3 und 4 in keiner Trefferliste; mit Frage 8 sind derzeit höchstens 8 Fragen belegbar. Nach D12 zuerst mehr Kontext (125), dann neu messen.
