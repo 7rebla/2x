@@ -1,6 +1,6 @@
 # Auftrag 147 – Diagnose: Warum findet die Suche die Belege für die Prüffragen 3, 4, 6 und 7 nicht?
 
-Meilenstein: M3 · Freigabestufe: B (Analyse ohne Codeänderung, E-74) · Status: offen
+Meilenstein: M3 · Freigabestufe: B (Analyse ohne Codeänderung, E-74) · Status: erledigt (Diagnose; Folgeauftrag 149, Entscheidung zu Teilstücken bei a7, STATUS Punkt 24)
 
 ## Ziel
 
