@@ -122,7 +122,9 @@ def test_question_naming_a_product_puts_the_best_meaning_first(
     # exact list of 063, a section that names XR7 and is also among the nearest
     # was in two lists and still came first (test question 9 in the acceptance
     # run 060). Since 067 (E-61) the name counts only through the keyword and
-    # the vector list. No keyword hit here (the keyword search needs every word).
+    # the vector list. Since 143 a question matches by keyword with any word
+    # that is not an identifier: the answer by "Getriebeöl", the sections that
+    # only name XR7 not at all.
     answer, near_naming, level = add_sections(
         version,
         "Zum Wechsel des Getriebeöls die Ablassschraube lösen und das alte Öl auffangen.",
@@ -142,8 +144,9 @@ def test_question_naming_a_product_puts_the_best_meaning_first(
 
     hits = result.hits
     assert result.semantic is SemanticState.USED
-    # vector: answer 1 = 1/61, near_naming 2 = 1/62, level 3 = 1/63; the two
-    # sections that only name XR7 are in no list: 0, last, still "exact".
+    # keyword: answer 1; vector: answer 1, near_naming 2, level 3. answer =
+    # 1/61 + 1/61 (before 143 only 1/61), near_naming = 1/62, level = 1/63;
+    # the two sections that only name XR7 are in no list: 0, last, still "exact".
     # With 063 the three sections naming XR7 tied for places 1 to 3 of the
     # exact list (rank 2 each): near_naming = 1/62 + 1/62 = 0.032258, before
     # the answer (0.016393).
@@ -151,13 +154,13 @@ def test_question_naming_a_product_puts_the_best_meaning_first(
         s.pk for s in naming
     ]
     assert [hit.match_kinds for hit in hits] == [
-        [MatchKind.SEMANTIC],
+        [MatchKind.KEYWORD, MatchKind.SEMANTIC],
         [MatchKind.EXACT, MatchKind.SEMANTIC],
         [MatchKind.SEMANTIC],
         [MatchKind.EXACT],
         [MatchKind.EXACT],
     ]
-    assert [hit.score for hit in hits] == pytest.approx([1 / 61, 1 / 62, 1 / 63, 0.0, 0.0])
+    assert [hit.score for hit in hits] == pytest.approx([1 / 61 + 1 / 61, 1 / 62, 1 / 63, 0.0, 0.0])
 
 
 def test_vector_list_holds_the_50_nearest_sections(
@@ -167,7 +170,9 @@ def test_vector_list_holds_the_50_nearest_sections(
     for index, section in enumerate(sections):
         embed(section, at_angle(1 + index))
 
-    hits = search("which spare is nearest", limit=MAX_LIMIT).hits
+    # No word of the question is in the texts (since 143 "spare" alone would
+    # make all 60 keyword hits).
+    hits = search("which item is nearest", limit=MAX_LIMIT).hits
 
     assert VECTOR_CANDIDATES == 50
     assert [hit.section_id for hit in hits] == [s.pk for s in sections[:VECTOR_CANDIDATES]]
@@ -511,7 +516,7 @@ def test_excluded_sections_do_not_shorten_the_vector_list(
     for index, section in enumerate(kept):
         embed(section, at_angle(1 + index))
 
-    hits = search("which spare is nearest -belt", limit=MAX_LIMIT).hits
+    hits = search("which item is nearest -belt", limit=MAX_LIMIT).hits
 
     assert [hit.section_id for hit in hits] == [s.pk for s in kept[:VECTOR_CANDIDATES]]
 
@@ -551,10 +556,12 @@ def test_version_rule_works_in_the_vector_list(
     embed(old, at_angle(0))
 
     # The newer version has sections, not embedded yet: the old one is not
-    # searched any more, neither by keyword nor by vector.
+    # searched any more, neither by keyword nor by vector. The new one is
+    # found by the word "change" of the question only (any word, since 143).
     newer = add_version(version.document)
     (new,) = add_sections(newer, "New wording of the oil change.")
-    assert section_ids(QUESTION) == []
+    assert section_ids(QUESTION) == [new.pk]
+    assert search(QUESTION).hits[0].match_kinds == [MatchKind.KEYWORD]
     assert section_ids("wording") == [new.pk]
 
     embed(new, at_angle(30))
