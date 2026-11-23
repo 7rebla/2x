@@ -1,6 +1,6 @@
 # Auftrag 149 – Vektorliste: 50 verschiedene Inhalte statt 50 Zeilen
 
-Meilenstein: M3 · Freigabestufe: B (Fehlerbehebung, Diagnose 147) · Status: offen
+Meilenstein: M3 · Freigabestufe: B (Fehlerbehebung, Diagnose 147) · Status: erledigt
 
 ## Ziel
 

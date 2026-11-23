@@ -794,7 +794,7 @@ def nearest_sections_with_distance(
     PostgreSQL reads all sections anyway from about 200 rows on (its cost
     model), and the HNSW index finds identical vectors (the copies) badly, so
     it can return far fewer rows than asked for (measured in 149). For 5 000
-    sections the query took about 5 ms with the index and about 30 ms
+    sections the query took about 8 ms with the index and about 30 ms
     exactly in 149.
 
     Runs in a transaction of its own; the HNSW settings are local to it and
