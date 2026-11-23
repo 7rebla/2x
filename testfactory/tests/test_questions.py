@@ -59,6 +59,13 @@ ITEM_FIELDS = {
     "verified_on",
     "notes",
 }
+OPTIONAL_ITEM_FIELDS = {"key_fact_alternatives"}
+# Questions that carry key_fact_alternatives (work order 141, D5 (f)). Only a7
+# extends this list.
+ALTERNATIVE_QUESTION_IDS = {7, 10}
+MAX_ALTERNATIVES_PER_FACT = 3
+MAX_ALTERNATIVE_LENGTH = 40
+QUOTATION_MARKS = ('"', "„", "“", "”")
 SOURCE_FIELDS = {"manifest_id", "locator", "supports"}
 KINDS = {"fact", "contradiction", "no-evidence"}
 # Since work order 112 every question has its evidence; pending is gone.
@@ -148,7 +155,9 @@ class QuestionTest(unittest.TestCase):
     def test_fields(self) -> None:
         for question in _questions():
             with self.subTest(question=_label(question)):
-                self.assertEqual(set(question), ITEM_FIELDS)
+                fields = set(question)
+                self.assertLessEqual(ITEM_FIELDS, fields)
+                self.assertLessEqual(fields - ITEM_FIELDS, OPTIONAL_ITEM_FIELDS)
 
     def test_kind(self) -> None:
         for question in _questions():
@@ -243,6 +252,108 @@ class ItemContentTest(unittest.TestCase):
                     self.assertTrue(source["locator"].strip())
                     self.assertIsInstance(source["supports"], str)
                     self.assertTrue(source["supports"].strip())
+
+
+def _simple(text: str) -> str:
+    """Casefolded text without white space and hyphens, as values are compared."""
+    return re.sub(r"[\s-]+", "", text.casefold())
+
+
+def alternative_errors(question: str, key_facts: list[str], alternatives: object) -> list[str]:
+    """The rule violations of a ``key_fact_alternatives`` value (empty if fine)."""
+    if not isinstance(alternatives, dict):
+        return ["not an object"]
+    errors: list[str] = []
+    asked = _simple(question)
+    for fact, spellings in alternatives.items():
+        if fact not in key_facts:
+            errors.append(f"{fact!r}: not a key fact of the question")
+        if not isinstance(spellings, list) or not spellings:
+            errors.append(f"{fact!r}: not a non-empty list")
+            continue
+        if len(spellings) > MAX_ALTERNATIVES_PER_FACT:
+            errors.append(f"{fact!r}: more than {MAX_ALTERNATIVES_PER_FACT} alternatives")
+        if len(set(spellings)) != len(spellings):
+            errors.append(f"{fact!r}: duplicate alternatives")
+        for text in spellings:
+            if not isinstance(text, str) or not text.strip():
+                errors.append(f"{fact!r}: empty or non-text alternative")
+                continue
+            if len(text) > MAX_ALTERNATIVE_LENGTH:
+                errors.append(f"{text!r}: longer than {MAX_ALTERNATIVE_LENGTH} characters")
+            if re.search(r"[.!?:;]\s", text):
+                errors.append(f"{text!r}: contains a sentence break")
+            if any(mark in text for mark in QUOTATION_MARKS):
+                errors.append(f"{text!r}: contains a quotation mark")
+            simple, simple_fact = _simple(text), _simple(fact)
+            if simple == simple_fact or simple_fact in simple:
+                errors.append(f"{text!r}: equals or contains the key fact")
+            if simple in asked:
+                errors.append(f"{text!r}: occurs in the question")
+    return errors
+
+
+class KeyFactAlternativesTest(unittest.TestCase):
+    def test_exactly_the_listed_questions_carry_the_field(self) -> None:
+        with_field = {q["id"] for q in _questions() if "key_fact_alternatives" in q}
+        self.assertEqual(with_field, ALTERNATIVE_QUESTION_IDS)
+
+    def test_candidates_carry_no_alternatives(self) -> None:
+        for candidate in _candidates():
+            self.assertNotIn("key_fact_alternatives", candidate)
+
+    def test_field_follows_key_facts(self) -> None:
+        for question in _questions():
+            if "key_fact_alternatives" not in question:
+                continue
+            keys = list(question)
+            self.assertEqual(keys.index("key_fact_alternatives"), keys.index("key_facts") + 1)
+
+    def test_alternatives_obey_the_rules(self) -> None:
+        for question in _questions():
+            if "key_fact_alternatives" not in question:
+                continue
+            with self.subTest(question=_label(question)):
+                self.assertEqual(
+                    alternative_errors(
+                        question["question"],
+                        question["key_facts"],
+                        question["key_fact_alternatives"],
+                    ),
+                    [],
+                )
+
+    def test_notes_name_the_work_order(self) -> None:
+        for question in _questions():
+            if "key_fact_alternatives" in question:
+                with self.subTest(question=_label(question)):
+                    self.assertIn("work order 141", question["notes"])
+
+    def test_good_example_passes(self) -> None:
+        self.assertEqual(
+            alternative_errors("Was ist Foo?", ["Alpha beta"], {"Alpha beta": ["Gamma"]}), []
+        )
+
+    def test_bad_examples_fail(self) -> None:
+        question, facts = "Was ist Foo?", ["Alpha beta", "Delta"]
+        bad: dict[str, object] = {
+            "not an object": ["Gamma"],
+            "key is not a key fact": {"Zeta": ["Gamma"]},
+            "empty list": {"Alpha beta": []},
+            "not a list": {"Alpha beta": "Gamma"},
+            "empty text": {"Alpha beta": [" "]},
+            "duplicates": {"Alpha beta": ["Gamma", "Gamma"]},
+            "too many": {"Alpha beta": ["G1", "G2", "G3", "G4"]},
+            "too long": {"Alpha beta": ["G" * (MAX_ALTERNATIVE_LENGTH + 1)]},
+            "sentence break": {"Alpha beta": ["Gamma. Epsilon"]},
+            "quotation mark": {"Alpha beta": ["„Gamma“"]},
+            "equals the key fact": {"Alpha beta": ["alpha-BETA"]},
+            "contains the key fact": {"Alpha beta": ["Alpha beta tool"]},
+            "occurs in the question": {"Alpha beta": ["Foo"]},
+        }
+        for name, alternatives in bad.items():
+            with self.subTest(case=name):
+                self.assertNotEqual(alternative_errors(question, facts, alternatives), [])
 
 
 class CandidateTest(unittest.TestCase):
