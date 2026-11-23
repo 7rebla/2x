@@ -1,6 +1,6 @@
 # Auftrag 144 – Messlauf 2 nach den Nachbesserungen
 
-Meilenstein: M3 · Freigabestufe: C · Status: zur Prüfung (Ergebnis 5/10, Entscheidung durch a7)
+Meilenstein: M3 · Freigabestufe: C · Status: erledigt (Ergebnis 5/10, Kontrollfrage stabil; Entscheidung durch a7, STATUS Punkt 23)
 
 ## Ziel
 
