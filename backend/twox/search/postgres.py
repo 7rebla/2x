@@ -20,13 +20,20 @@ How a section matches, in any of these ways:
 * **semantic** (AI features only, E-59): the query is embedded through the
   model interface (:func:`twox.answers.embeddings.get_query_embedder`, with
   ``TWOX_EMBED_QUERY_PREFIX`` and the short time limit
-  ``TWOX_SEARCH_EMBED_TIMEOUT_SECONDS``); the :data:`VECTOR_CANDIDATES` sections nearest
-  by cosine distance (``<=>``, the operator of pgvector's ``CosineDistance``)
-  take part. Only sections embedded with the current model count; sections
+  ``TWOX_SEARCH_EMBED_TIMEOUT_SECONDS``); the sections of the
+  :data:`VECTOR_CANDIDATES` contents nearest by cosine distance (``<=>``,
+  the operator of pgvector's ``CosineDistance``) take part. Copies of the
+  same content (the same manual for several devices, see below) count once
+  and all take part with the rank of their content (149); before, the limit
+  counted section rows, and 50 rows often held only 5 to 10 contents. Only
+  sections embedded with the current model count; sections
   without an embedding or with another model are found by keyword only.
   The HNSW index is searched with ``hnsw.iterative_scan = relaxed_order``
   and ``hnsw.ef_search =`` :data:`HNSW_EF_SEARCH`, set locally for the
   transaction of the vector query, so a filter does not leave the list short.
+  When the :data:`VECTOR_CANDIDATES` nearest sections of the index hold
+  fewer contents (copies), the same query takes all sections within the
+  scope exactly instead (:func:`vector_sql`).
 
 Exclusions (``-word``, ``-"two words"``): ``websearch_to_tsquery`` turns
 them into negated parts of the ``tsquery`` (``!'word'``). These parts are
@@ -90,8 +97,9 @@ same text are one hit with all locations, after the fusion; the hit gets the
 best score of its sections.
 
 Distance (124): the vector query returns the cosine distance of each of its
-sections, and a hit carries the smallest distance of its sections that are
-in the vector list (``SearchHit.semantic_distance``), the only signal of
+sections (since 149 the distance of its content: the smallest among the
+copies the query read), and a hit carries the smallest distance of its
+sections that are in the vector list (``SearchHit.semantic_distance``), the only signal of
 relevance that can be compared between queries (the score only orders).
 It is ``None`` for a hit found by keyword or exactly only, and for every hit
 when there is no vector list (AI features off, ``keyword_only``, model
@@ -151,7 +159,9 @@ RRF_K = 60
 #: A query is "essentially identifiers" (exact hits first, :func:`exact_hits_first`)
 #: when it has, besides its identifiers, at most this many other words.
 EXACT_FIRST_MAX_OTHER_WORDS = 1
-#: Nearest sections the vector search contributes.
+#: Nearest contents the vector search contributes (149): copies of the same
+#: content (the same manual for several devices) count once, with all their
+#: sections.
 VECTOR_CANDIDATES = 50
 #: ``hnsw.ef_search`` of the vector search (pgvector default 40): the size of
 #: the candidate list of the HNSW index, at least :data:`VECTOR_CANDIDATES`.
@@ -422,6 +432,31 @@ searchable AS (
 )"""
 
 
+#: The parts of a section's content key besides the checksum of its version
+#: (E-55): expression on the section ``s`` and its column name.
+_SECTION_KEYS = (
+    ("COALESCE(s.page_start, 0)", "page_start_key"),
+    ("COALESCE(s.page_end, 0)", "page_end_key"),
+    ("CASE WHEN s.page_start IS NULL THEN s.heading_text ELSE '' END", "heading_key"),
+    ("md5(s.text)", "text_key"),
+)
+#: The columns of :data:`_SECTION_KEYS` for a ``SELECT`` list.
+_SECTION_KEY_COLUMNS = ",\n        ".join(f"{expr} AS {name}" for expr, name in _SECTION_KEYS)
+#: The same columns as read from the CTE ``nearest`` (alias ``n``).
+_NEAREST_KEY_COLUMNS = ", ".join(f"n.{name}" for _, name in _SECTION_KEYS)
+#: The content key of a row ``i`` of the CTE ``indexed`` with its version ``sv``.
+_INDEXED_CONTENT_KEY = "sv.sha256, " + ", ".join(f"i.{name}" for _, name in _SECTION_KEYS)
+#: The section ``s`` has the pages (or headings) of the content ``c``: its key
+#: without the checksum and the text.
+_SAME_PLACE = "\n            AND ".join(
+    f"{expr} = c.{name}" for expr, name in _SECTION_KEYS if name != "text_key"
+)
+#: Same content for several devices: one hit (search) and one content (vector list).
+_CONTENT_KEY = "sha256, " + ", ".join(name for _, name in _SECTION_KEYS)
+#: The content key as positions of a ``SELECT`` list that starts with it.
+_CONTENT_KEY_POSITIONS = ", ".join(str(index) for index in range(1, len(_SECTION_KEYS) + 2))
+
+
 def _scope_params(request: SearchRequest) -> dict[str, Any]:
     return {
         "kind": DocumentKind.DOCUMENT.value,
@@ -433,34 +468,103 @@ def _scope_params(request: SearchRequest) -> dict[str, Any]:
 def vector_sql(
     *, filter_devices: bool, filter_plants: bool, exclusions: _Queries | None = None
 ) -> str:
-    """The vector search: the nearest sections, their rank by distance and the distance.
+    """The vector search: the sections of the nearest contents, with rank and distance.
+
+    A content is what the search later joins into one hit (E-55,
+    :data:`_CONTENT_KEY`): the same checksum of the version, the same pages
+    (or, without pages, the same headings) and the same text. The same manual
+    stored for several devices is one content with a section per copy.
+
+    Steps (149), all in one query:
+
+    1. ``indexed``: the ``vector_limit`` nearest sections, in the form the
+       HNSW index serves (``ORDER BY embedding <=> query LIMIT n``), as
+       before 149.
+    2. ``complete``: whether they hold ``vector_limit`` different contents.
+    3. ``nearest``: if so, these sections. If not (copies took up rows, the
+       scope holds fewer sections, or the index returned fewer than it has),
+       every section within the scope with its distance, exactly: no index,
+       no approximation. PostgreSQL runs only the branch the answer of
+       ``complete`` asks for (a one-time filter).
+    4. ``contents``: these sections grouped by content; the ``vector_limit``
+       contents with the smallest distance of their sections (at equal
+       distance the one with the lower section ID). Copies count once here.
+    5. ``copies``: every section of these contents within the scope, also
+       copies the index scan did not read, so every device and plant keeps
+       its location. Each carries the distance of its content.
+
+    Each row: section ID, the dense rank of its content's distance (copies
+    share it), that distance, and whether the exact branch ran.
 
     Parameters: those of the scope, ``embedding`` (pgvector text form),
-    ``model`` and ``vector_limit``, and those of ``exclusions``
+    ``model``, ``vector_limit`` and those of ``exclusions``
     (:func:`_query_params` with the prefix ``exclude_``): sections with an
-    excluded part do not take part, so the list stays full. The inner query
-    is the form the HNSW index serves (``ORDER BY embedding <=> query LIMIT
-    n``); with ``relaxed_order`` its rows may come slightly out of order, so
-    the materialised result is sorted again (pgvector README). ``distance +
-    0`` keeps PostgreSQL 17 and later from taking the order of the CTE as
-    given and skipping that sort.
+    excluded part do not take part, neither in ``nearest`` (so the list stays
+    full) nor as copies. Only sections embedded with ``model`` count. With
+    ``relaxed_order`` the rows of the index may come slightly out of order;
+    ``contents`` sorts by the smallest distance again (pgvector README), and
+    ``distance + 0`` keeps PostgreSQL 17 and later from taking the order of a
+    CTE as given.
     """
     scope = _scope_sql(filter_devices=filter_devices, filter_plants=filter_plants)
     exclude = _exclusion_condition(exclusions or _Queries(per_config={}))
-    return f"""
-WITH {scope},
-nearest AS MATERIALIZED (
-    SELECT s.id, s.embedding <=> %(embedding)s::vector AS distance
+    section = f"""
+    SELECT s.id, s.embedding <=> %(embedding)s::vector AS distance,
+        s.document_version_id, {_SECTION_KEY_COLUMNS}
     FROM ingest_section s
     WHERE s.embedding_model = %(model)s
         AND s.embedding IS NOT NULL
         AND s.document_version_id IN (SELECT version_id FROM searchable)
-        AND {exclude}
+        AND {exclude}"""
+    return f"""
+WITH {scope},
+indexed AS MATERIALIZED ({section}
     ORDER BY s.embedding <=> %(embedding)s::vector
     LIMIT %(vector_limit)s
+),
+complete AS MATERIALIZED (
+    SELECT COUNT(DISTINCT ({_INDEXED_CONTENT_KEY})) >= %(vector_limit)s AS done
+    FROM indexed i
+    JOIN searchable sv ON sv.version_id = i.document_version_id
+),
+nearest AS MATERIALIZED (
+    SELECT * FROM indexed WHERE (SELECT done FROM complete)
+    UNION ALL
+    SELECT * FROM ({section}
+    ) AS every_section
+    WHERE NOT (SELECT done FROM complete)
+),
+contents AS MATERIALIZED (
+    SELECT sv.sha256, {_NEAREST_KEY_COLUMNS},
+        MIN(n.distance) AS distance, MIN(n.id) AS first_id
+    FROM nearest n
+    JOIN searchable sv ON sv.version_id = n.document_version_id
+    GROUP BY {_CONTENT_KEY_POSITIONS}
+    ORDER BY MIN(n.distance) + 0, MIN(n.id)
+    LIMIT %(vector_limit)s
+),
+copies AS (
+    SELECT copy.id, c.distance
+    FROM contents c
+    CROSS JOIN LATERAL (
+        SELECT s.id
+        FROM ingest_section first
+        JOIN searchable sv ON sv.sha256 = c.sha256
+        JOIN ingest_section s ON s.document_version_id = sv.version_id
+        WHERE first.id = c.first_id
+            AND {_SAME_PLACE}
+            -- The same text as md5(text) = c.text_key, but texts of another
+            -- length differ without being read or hashed.
+            AND s.text = first.text
+            AND s.embedding_model = %(model)s
+            AND s.embedding IS NOT NULL
+            AND {exclude}
+        OFFSET 0
+    ) AS copy
 )
-SELECT id, DENSE_RANK() OVER (ORDER BY distance + 0) AS rank, distance
-FROM nearest
+SELECT id, DENSE_RANK() OVER (ORDER BY distance + 0) AS rank, distance,
+    NOT (SELECT done FROM complete) AS exact
+FROM copies
 ORDER BY distance + 0, id
 """
 
@@ -513,7 +617,7 @@ def _search_sql(
         semantic_distance = "sem.distance"
     where = " OR ".join(conditions)
     scope = _scope_sql(filter_devices=filter_devices, filter_plants=filter_plants)
-    content_key = "sha256, page_start_key, page_end_key, heading_key, text_key"
+    content_key = _CONTENT_KEY
     if exact_first:
         exact_part = "r.exact_count"
         tie_break = ""
@@ -530,10 +634,7 @@ candidates AS (
         sv.version_id,
         sv.sha256,
         sv.is_latest,
-        COALESCE(s.page_start, 0) AS page_start_key,
-        COALESCE(s.page_end, 0) AS page_end_key,
-        CASE WHEN s.page_start IS NULL THEN s.heading_text ELSE '' END AS heading_key,
-        md5(s.text) AS text_key,
+        {_SECTION_KEY_COLUMNS},
         {exact_count} AS exact_count,
         {keyword} AS keyword_match,
         {rank} AS rank,
@@ -678,10 +779,23 @@ def nearest_sections_with_distance(
     vector: Sequence[float],
     exclusions: _Queries | None = None,
 ) -> list[tuple[int, int, float]]:
-    """``(section ID, rank, cosine distance)`` of the sections nearest to ``vector``.
+    """``(section ID, rank, cosine distance)`` of the sections of the nearest contents.
 
-    Nearest first, at most :data:`VECTOR_CANDIDATES`. Sections with one of
-    the ``exclusions`` (the excluded parts of the query) do not take part.
+    Nearest first: the sections of at most :data:`VECTOR_CANDIDATES`
+    contents (:func:`vector_sql`); copies of a content (the same manual for
+    several devices) count once and all come with the rank and distance of
+    their content. Sections with one of the ``exclusions`` (the excluded
+    parts of the query) do not take part.
+
+    When the :data:`VECTOR_CANDIDATES` nearest sections of the HNSW index
+    hold as many contents (no copies among them), they are the list, as
+    before 149. Otherwise the same query takes every section within the scope
+    exactly (:func:`vector_sql`). An index scan for more rows is no way out:
+    PostgreSQL reads all sections anyway from about 200 rows on (its cost
+    model), and the HNSW index finds identical vectors (the copies) badly, so
+    it can return far fewer rows than asked for (measured in 149). For 5 000
+    sections the query took about 5 ms with the index and about 30 ms
+    exactly in 149.
 
     Runs in a transaction of its own; the HNSW settings are local to it and
     end with it. Inside an outer transaction (a savepoint) they last until the
@@ -710,7 +824,7 @@ def nearest_sections_with_distance(
         cursor.execute(sql, params)
         return [
             (int(section_id), int(rank), float(distance))
-            for section_id, rank, distance in cursor.fetchall()
+            for section_id, rank, distance, _ in cursor.fetchall()
         ]
 
 

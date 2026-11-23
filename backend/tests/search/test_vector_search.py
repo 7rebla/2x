@@ -685,7 +685,11 @@ def test_vector_ranks_are_sorted_again_after_the_index() -> None:
         cursor.execute("EXPLAIN " + sql, params)
         plan = "\n".join(row[0] for row in cursor.fetchall())
 
-    # A full sort on the distance expression above the CTE scan (not a sort
-    # that relies on the CTE being presorted by the plain distance).
-    full_sort = re.compile(r"->  Sort .*\n\s+Sort Key: \(\(nearest\.distance \+ '0'")
-    assert full_sort.search(plan), plan
+    # Since 149 the rows of the index scan are grouped into contents; the
+    # contents are sorted again by their smallest distance (a full sort on the
+    # distance expression, not one that relies on presorted input), and so is
+    # the final list.
+    contents_sort = re.compile(r"Sort .*\n\s+Sort Key: \(\(min\(n\.distance\) \+ '0'")
+    final_sort = re.compile(r"Sort Key: \(\(c\.distance \+ '0'")
+    assert contents_sort.search(plan), plan
+    assert final_sort.search(plan), plan
