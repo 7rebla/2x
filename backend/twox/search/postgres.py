@@ -13,16 +13,7 @@ How a section matches, in any of these ways:
   configurations ``simple``, ``german`` and ``english``, joined with OR, on
   :attr:`~twox.ingest.models.Section.search_vector`. ``simple`` keeps words
   and numbers as typed, the languages find word forms (``Steuerungen`` finds
-  ``Steuerung``). Within a configuration every word must match (AND).
-  A **question** (:func:`is_question`: more than
-  :data:`EXACT_FIRST_MAX_OTHER_WORDS` word besides the identifiers, the rule
-  of E-61) matches with **any** of its words instead (143, D12 b): each word
-  and phrase is parsed on its own, a word that ``german`` or ``english``
-  drops as a stop word is left out in every configuration (also in
-  ``simple``, so ``der`` or ``the`` find nothing), and a section that only
-  contains identifiers of the question is no keyword hit (E-61); identifiers
-  still count for "every word" and for the rank. Phrases stay phrases;
-  exclusions stay exclusions and are never positive words.
+  ``Steuerung``).
 * **exact:** every identifier of the query (:mod:`twox.search.identifiers`)
   occurs word for word in the text, checked with a case-insensitive regular
   expression; the trigram index on the text speeds this up.
@@ -53,11 +44,7 @@ the kind of error, never the query.
 
 Score (Reciprocal Rank Fusion, Cormack et al. 2009): ``1 / (RRF_K + rank)``
 for each list the section is in. The keyword list is ranked by ``ts_rank``
-(headings, weight A 1.0, above text, weight B 0.4); for a question the
-sections with every word (and identifier) come first, the others follow,
-each group by ``ts_rank`` over all words of the question with
-:data:`QUESTION_RANK_WEIGHTS` (text B 0.2, so one word in a heading
-outweighs several in the text). The vector list is ranked by
+(headings, weight A 1.0, above text, weight B 0.4), the vector list by
 distance; equal values share a rank (``DENSE_RANK``), so the same content
 stored for several devices does not push other sections down. Exact hits
 count in one of two ways (:func:`exact_hits_first`, 063 and 067):
@@ -120,7 +107,7 @@ on.
 
 import logging
 import re
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -157,10 +144,6 @@ logger = logging.getLogger(__name__)
 
 #: ``ts_rank`` normalisation: ``rank / (rank + 1)``; it only orders the keyword list.
 RANK_NORMALIZATION = 32
-#: ``ts_rank`` weights ``{D, C, B, A}`` of a question (:func:`is_question`,
-#: 143): headings (A) count five times as much as text (B); PostgreSQL's
-#: default is ``{0.1, 0.2, 0.4, 1.0}``, which other queries keep.
-QUESTION_RANK_WEIGHTS = (0.1, 0.2, 0.2, 1.0)
 
 #: Reciprocal Rank Fusion: a list adds ``1 / (RRF_K + rank)``, rank 1 first.
 #: 60 is the usual value (Cormack et al. 2009); the measurement in 057 checks it.
@@ -340,96 +323,6 @@ def exact_hits_first(query: str, identifiers: Sequence[Identifier], *, vector_li
     return len(other_words(query)) <= EXACT_FIRST_MAX_OTHER_WORDS
 
 
-def is_question(query: str) -> bool:
-    """Whether ``query`` is searched by keyword as a question (143, D12 b).
-
-    The same rule as for exact hits (:func:`exact_hits_first`, E-61): more
-    than :data:`EXACT_FIRST_MAX_OTHER_WORDS` word besides the identifiers.
-    A question matches by keyword with any of its words (:class:`_Question`);
-    every other query keeps the full-text search with every word.
-    """
-    return len(other_words(query)) > EXACT_FIRST_MAX_OTHER_WORDS
-
-
-#: A part of a query in the web search syntax: a phrase in quotes (open at
-#: the end; with ``-`` in front an excluded phrase) or a run of other characters.
-_QUERY_UNIT = re.compile(r'-*"[^"]*(?:"|$)|[^\s"]+')
-
-
-def query_units(query: str) -> list[str]:
-    """The words and phrases of ``query`` as typed, in order, without the exclusions.
-
-    Phrases (``"open valve"``) stay one unit; exclusions (``-word``,
-    ``-"two words"``) and parts without a letter or digit are left out.
-    """
-    units: list[str] = []
-    for match in _QUERY_UNIT.finditer(query):
-        unit = match.group()
-        if unit.lstrip(_TOKEN_PUNCTUATION).startswith("-"):
-            continue
-        if any(char.isalnum() for char in unit):
-            units.append(unit)
-    return units
-
-
-@dataclass(frozen=True, slots=True)
-class _Question:
-    """The keyword search of a question (:func:`is_question`), without its stop words.
-
-    Each word or phrase of the question (:func:`query_units`) is parsed on
-    its own in every configuration. A unit that a language configuration
-    drops as a stop word (``der``, ``mit``, ``welchem`` in German, ``the``
-    in English) is left out in every configuration, also in ``simple``;
-    identifiers always stay.
-    """
-
-    #: Which sections match: any word of the question that is not an
-    #: identifier, joined with OR (only the identifiers if there is no other
-    #: word). A section that only names a product of the question is not a
-    #: keyword hit (E-61).
-    matching: _Queries
-    #: Every word and identifier, joined with AND: such sections come first.
-    every: _Queries
-    #: Every word and identifier, joined with OR: ``ts_rank`` and highlights.
-    ranking: _Queries
-
-
-def _unit_queries(
-    indices: Sequence[int], parsed: Mapping[str, Sequence[str]], *, joiner: str
-) -> _Queries:
-    """The ``tsquery`` texts of the units at ``indices``, joined with ``joiner`` per config."""
-    per_config = {}
-    for config, texts in parsed.items():
-        parts = [f"( {texts[index]} )" for index in indices if texts[index]]
-        if parts:
-            per_config[config] = f" {joiner} ".join(parts)
-    return _Queries(per_config=per_config)
-
-
-def _build_question(units: Sequence[str], parsed: Mapping[str, Sequence[str]]) -> _Question:
-    """The :class:`_Question` of ``units``; ``parsed`` holds each unit's ``tsquery`` per config.
-
-    A part with a negation (``!``) is never a positive word of the question;
-    the exclusions are checked on their own (:meth:`_Queries.exclusions`).
-    """
-    languages = [config for config in parsed if config != "simple"]
-    words: list[int] = []
-    identifiers: list[int] = []
-    for index, unit in enumerate(units):
-        if any(negated_parts(texts[index]) for texts in parsed.values()):
-            continue
-        if find_identifiers(unit):
-            identifiers.append(index)
-        elif all(parsed[config][index] for config in languages):
-            words.append(index)
-    every_unit = sorted(words + identifiers)
-    return _Question(
-        matching=_unit_queries(words or identifiers, parsed, joiner="|"),
-        every=_unit_queries(every_unit, parsed, joiner="&"),
-        ranking=_unit_queries(every_unit, parsed, joiner="|"),
-    )
-
-
 def _configs() -> tuple[str, ...]:
     """The text search configurations; plain names, so they may go into SQL."""
     for config in SEARCH_CONFIGS:
@@ -452,35 +345,8 @@ def _parse_queries(cursor: CursorWrapper, query: str) -> _Queries:
     )
 
 
-def _parse_question(cursor: CursorWrapper, query: str) -> tuple[_Queries, _Question]:
-    """Like :func:`_parse_queries`, and each unit of the question on its own, in one query."""
-    units = query_units(query)
-    whole = ", ".join(f"websearch_to_tsquery('{config}', %(query)s)::text" for config in _configs())
-    per_unit = ", ".join(
-        f"ARRAY(SELECT websearch_to_tsquery('{config}', u.unit)::text"
-        " FROM unnest(%(units)s::text[]) WITH ORDINALITY AS u(unit, n) ORDER BY u.n)"
-        for config in _configs()
-    )
-    cursor.execute(f"SELECT {whole}, {per_unit}", {"query": query, "units": units})
-    row = cursor.fetchone()
-    if row is None:
-        raise RuntimeError("websearch_to_tsquery returned no row")
-    configs = _configs()
-    queries = _Queries(
-        per_config={
-            config: text for config, text in zip(configs, row[: len(configs)], strict=True) if text
-        }
-    )
-    parsed = {
-        config: list(texts) for config, texts in zip(configs, row[len(configs) :], strict=True)
-    }
-    return queries, _build_question(units, parsed)
-
-
 #: Parameter prefix of the excluded parts (:meth:`_Queries.exclusions`).
 _EXCLUDE = "exclude_"
-#: Parameter prefix of "every word of the question" (:attr:`_Question.every`).
-_EVERY = "every_"
 
 
 def _keyword_condition(queries: _Queries, prefix: str = "") -> str:
@@ -607,17 +473,8 @@ def _search_sql(
     filter_devices: bool,
     filter_plants: bool,
     exact_first: bool = True,
-    question: _Question | None = None,
 ) -> str:
     """The search query; user input goes in only as named parameters.
-
-    For a ``question`` (:func:`is_question`) a section matches by keyword
-    with any word of :attr:`_Question.matching`; the keyword list puts the
-    sections with every word (:attr:`_Question.every`, parameters with the
-    prefix ``every_``) first, then orders by ``ts_rank`` with
-    :data:`QUESTION_RANK_WEIGHTS` over all words (``rank_tsquery``).
-    Without a question the query is the one of 047 to 124: every word must
-    match, ``ts_rank`` with PostgreSQL's default weights.
 
     With ``semantic``, the sections of the vector search come in as the
     arrays ``semantic_ids``, ``semantic_ranks`` and ``semantic_distances``;
@@ -631,29 +488,15 @@ def _search_sql(
     and the module docstring). Sections that contain an identifier stay
     candidates either way, so the match kind ``exact`` is still reported.
     """
+    keyword = _keyword_condition(queries)
     exclude = _exclusion_condition(queries.exclusions())
     exact = [f"(s.text ~* %(pattern_{index})s)" for index in range(identifier_count)]
     exact_count = " + ".join(f"{condition}::int" for condition in exact) or "0"
-    every_column = ""
-    keyword_order = "c.rank DESC"
-    if question is None:
-        keyword = _keyword_condition(queries)
-        rank = (
-            f"ts_rank(s.search_vector, %(tsquery)s::tsquery, {RANK_NORMALIZATION})"
-            if queries.per_config
-            else "0.0"
-        )
-    else:
-        keyword = _keyword_condition(question.matching)
-        weights = ", ".join(str(weight) for weight in QUESTION_RANK_WEIGHTS)
-        rank = (
-            f"ts_rank('{{{weights}}}'::float4[], s.search_vector, %(rank_tsquery)s::tsquery,"
-            f" {RANK_NORMALIZATION})"
-            if question.ranking.per_config
-            else "0.0"
-        )
-        every_column = f"\n        {_keyword_condition(question.every, _EVERY)} AS keyword_every,"
-        keyword_order = "c.keyword_every DESC, c.rank DESC"
+    rank = (
+        f"ts_rank(s.search_vector, %(tsquery)s::tsquery, {RANK_NORMALIZATION})"
+        if queries.per_config
+        else "0.0"
+    )
     conditions = [keyword, *exact]
     semantic_join = ""
     semantic_rank = "NULL::bigint"
@@ -692,7 +535,7 @@ candidates AS (
         CASE WHEN s.page_start IS NULL THEN s.heading_text ELSE '' END AS heading_key,
         md5(s.text) AS text_key,
         {exact_count} AS exact_count,
-        {keyword} AS keyword_match,{every_column}
+        {keyword} AS keyword_match,
         {rank} AS rank,
         {semantic_rank} AS semantic_rank,
         {semantic_distance} AS semantic_distance
@@ -704,7 +547,7 @@ candidates AS (
 ranked AS (
     SELECT c.*,
         CASE WHEN c.keyword_match
-            THEN DENSE_RANK() OVER (PARTITION BY c.keyword_match ORDER BY {keyword_order})
+            THEN DENSE_RANK() OVER (PARTITION BY c.keyword_match ORDER BY c.rank DESC)
         END AS keyword_rank
     FROM candidates c
 ),
@@ -754,18 +597,10 @@ def _search_params(
     queries: _Queries,
     identifiers: Sequence[Identifier],
     semantic: Sequence[tuple[int, int, float]],
-    question: _Question | None = None,
 ) -> dict[str, Any]:
-    keyword: dict[str, str] = _query_params(queries)
-    if question is not None:
-        keyword = {
-            **_query_params(question.matching),
-            **_query_params(question.every, _EVERY),
-            "rank_tsquery": question.ranking.combined,
-        }
     params: dict[str, Any] = {
         **_scope_params(request),
-        **keyword,
+        **_query_params(queries),
         **_query_params(queries.exclusions(), _EXCLUDE),
         "limit": request.limit,
         "rrf_k": RRF_K,
@@ -1125,12 +960,8 @@ class PostgresSearchBackend:
         if not query:
             return SearchResult(semantic=idle)
         identifiers = find_identifiers(query)
-        question: _Question | None = None
         with connection.cursor() as cursor:
-            if is_question(query):
-                queries, question = _parse_question(cursor, query)
-            else:
-                queries = _parse_queries(cursor, query)
+            queries = _parse_queries(cursor, query)
         # A query without a word or identifier (only stop words or special
         # characters) finds nothing, also without asking the model.
         if not queries.per_config and not identifiers:
@@ -1154,17 +985,13 @@ class PostgresSearchBackend:
                 filter_devices=bool(request.device_ids),
                 filter_plants=bool(request.plant_ids),
                 exact_first=exact_hits_first(query, identifiers, vector_list=bool(semantic)),
-                question=question,
             )
-            cursor.execute(sql, _search_params(request, queries, identifiers, semantic, question))
+            cursor.execute(sql, _search_params(request, queries, identifiers, semantic))
             drafts = _collect_hits(cursor.fetchall())
             # A hit found by meaning only gets no highlights: single words of
             # the query in it (such as "the") would mark nothing that matters.
-            # A question marks its words without the stop words.
             keyword_spans = _keyword_spans(
-                cursor,
-                queries if question is None else question.ranking,
-                [draft for draft in drafts if draft.keyword],
+                cursor, queries, [draft for draft in drafts if draft.keyword]
             )
         hits = []
         for draft in drafts:
