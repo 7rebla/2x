@@ -11,6 +11,10 @@ Nach den Folgeaufträgen aus E-70 (`docs/DECISIONS.md:80`) wird der Messlauf 128
 
 Ausgeführt wird der Messlauf auf der Testumgebung „2x“ im Hauptordner, von der Leitstelle oder einem von ihr beauftragten Bearbeiter, wie 128. Nur der Hauptordner hat die eingelesenen Handbücher und Zugriff auf das Ollama am Host (E-58). Code wird nicht geändert; die einzige getrackte Änderung ist der Kurzbericht in dieser Datei.
 
+## Änderung nach E-73 (gilt vor allem anderen in diesem Auftrag)
+
+143 ist mit E-73 auf `main` zurückgenommen, 146 verworfen. Damit entfallen alle Voraussetzungen und Schritte zu 143: keine Freigabe von 143, kein Neuaufbau des Stichwortindex, keine Neuaufnahme der CI-Aufzeichnungen nach 143 (sie stehen auf dem Stand von 139 und passen zur Suche auf `main`). Stattdessen nennt der Bericht E-73 und den Revert-Commit. Die Suche für die Fragen 3, 4, 6 und 7 ist also unverändert gegenüber 128 (Befund B1 voraussichtlich „nicht behoben“); das ist erwartet und kein Grund, nicht zu messen. 145 (neue M2-Testfrage) liegt auf `main` und berührt die Messung nicht.
+
 ## Umfang
 
 Erst starten, wenn **alle** Voraussetzungen erfüllt sind:
