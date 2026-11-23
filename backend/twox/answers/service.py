@@ -16,7 +16,9 @@ The steps, in this order:
 2. An empty question raises :class:`ValueError` when :func:`answer` is
    called, before any event. The maximum length is checked by the caller.
 3. Context: :func:`twox.answers.context.select_context`. A failure becomes
-   ``error`` with a fixed code (:func:`context_error_code`).
+   ``error`` with a fixed code (:func:`context_error_code`). After a
+   successful selection an optional observer gets ``best_distance`` and
+   ``below_threshold`` (never the selection itself), once per request.
 4. ``sources``: the public view (:func:`twox.answers.types.to_source_ref`) of
    the selected sources, numbered as the selection numbers them.
 5. Below the threshold (or without any source): the ``sources`` event is
@@ -58,7 +60,7 @@ and recordings (work order 135) can replace them with ``monkeypatch``.
 
 import logging
 import urllib.error
-from collections.abc import Generator, Sequence
+from collections.abc import Callable, Generator, Sequence
 from dataclasses import dataclass
 from http import HTTPStatus
 from time import monotonic
@@ -80,6 +82,9 @@ from twox.answers.types import (
 )
 
 logger = logging.getLogger(__name__)
+
+#: Non-public callback of the evaluation tool: ``(best_distance, below_threshold)``.
+ContextObserver = Callable[[float | None, bool], None]
 
 #: Result in the log line when the caller closed the stream before its end.
 CANCELLED = "cancelled"
@@ -185,6 +190,7 @@ def answer(
     plant_ids: Sequence[int] = (),
     chat: ChatModel | None = None,
     seed: int | None = None,
+    on_context: ContextObserver | None = None,
 ) -> Generator[AnswerEvent]:
     """The events of the answer to ``question``, within the devices and plants given.
 
@@ -197,6 +203,16 @@ def answer(
     ``chat`` is used instead of :func:`twox.answers.chat.get_chat_model` and
     is not closed here (only its stream). ``seed`` goes to
     :meth:`~twox.answers.chat.ChatModel.stream` unchanged; ``None`` sends none.
+
+    ``on_context`` is a non-public measuring aid (the evaluation tool, work
+    order 142; not part of the event contract). It is called exactly once per
+    request, right after a successful context selection and before the
+    ``sources`` event, with the two values ``best_distance`` (the smallest
+    cosine distance of all search hits before the selection, not the distance
+    of a cited source) and ``below_threshold``; never with the selection or a
+    section text. It is not called with the AI features off or when the
+    selection fails. Exceptions of the callback are not caught here: they
+    leave the generator like any other error of the caller.
 
     Raises :class:`ValueError` at once for an empty question (with the AI
     features on).
@@ -214,6 +230,7 @@ def answer(
         plant_ids=tuple(plant_ids),
         chat=chat,
         seed=seed,
+        on_context=on_context,
     )
 
 
@@ -224,6 +241,7 @@ def _events(
     plant_ids: tuple[int, ...],
     chat: ChatModel | None,
     seed: int | None,
+    on_context: ContextObserver | None,
 ) -> Generator[AnswerEvent]:
     outcome = _Outcome(started=monotonic())
     model: ChatModel | None = None
@@ -244,6 +262,8 @@ def _events(
             outcome.finish(code.value, exception=error)
             yield ErrorEvent(code=code)
             return
+        if on_context is not None:
+            on_context(selection.best_distance, selection.below_threshold)
 
         # 4. and 5. Sources; below the threshold the model is not asked.
         if selection.below_threshold or not selection.sources:

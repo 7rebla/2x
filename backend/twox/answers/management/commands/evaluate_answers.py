@@ -16,7 +16,11 @@ in all of its runs), ``--control-mode strict|majority`` (the control question;
 strict unless asked), ``--rule per-question|per-run`` (which rule gives
 ``passed``), ``--wording yaml|probe`` (ask the question of ``questions.yaml``
 without its notes, or the query of its first probe), ``--literal`` (ignore
-``key_fact_alternatives``), ``--only ID[,ID...]`` (a part of the questions).
+``key_fact_alternatives``), ``--seed N`` (the seed for the chat model, sent
+with every question of every run; none by default), ``--only ID[,ID...]`` (a
+part of the questions). The tables also show per question and per run the
+best distance of the context selection and whether it was below the threshold
+("-" without a value).
 
 Examples::
 
@@ -158,6 +162,14 @@ class Command(BaseCommand):
             help="Ignore key_fact_alternatives; key facts count as written only.",
         )
         parser.add_argument(
+            "--seed",
+            type=int,
+            default=None,
+            metavar="N",
+            help="Seed for the chat model, sent with every question of every run"
+            " (for repeatable measurements); none by default.",
+        )
+        parser.add_argument(
             "--only", metavar="ID[,ID...]", help="Ask only these questions (ids, comma-separated)."
         )
         parser.add_argument(
@@ -176,6 +188,9 @@ class Command(BaseCommand):
         runs = options["runs"]
         if not isinstance(runs, int) or runs < 1:
             raise CommandError("Invalid --runs: expected a whole number from 1.")
+        seed = options["seed"]
+        if seed is not None and not isinstance(seed, int):
+            raise CommandError("--seed must be a whole number.")
         path = str(options["questions"])
         if path == "-":
             text = read_stdin(options.get("stdin") or sys.stdin)
@@ -207,6 +222,7 @@ class Command(BaseCommand):
             rule=Rule(str(options["rule"])),
             wording=Wording(str(options["wording"])),
             literal=bool(options["literal"]),
+            seed=seed,
         )
         output = format_json(report) if options["json"] else format_table(report)
         self.stdout.write(output, ending="")

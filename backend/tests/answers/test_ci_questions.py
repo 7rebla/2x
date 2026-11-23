@@ -345,11 +345,22 @@ class World:
         by_text = {question.question: question for question in questions}
 
         def run(
-            question: str, *, device_ids: Sequence[int] = (), plant_ids: Sequence[int] = ()
+            question: str,
+            *,
+            device_ids: Sequence[int] = (),
+            plant_ids: Sequence[int] = (),
+            seed: int | None = None,
+            on_context: service.ContextObserver | None = None,
         ) -> Iterator[AnswerEvent]:
+            # The seed of the recordings (SEED) stays; the one of the caller is not used.
             model = self.chat_for(by_text[question].id)
             events = service.answer(
-                question, device_ids=device_ids, plant_ids=plant_ids, chat=model, seed=SEED
+                question,
+                device_ids=device_ids,
+                plant_ids=plant_ids,
+                chat=model,
+                seed=SEED,
+                on_context=on_context,
             )
             seen: list[AnswerEvent] = []
             try:
@@ -712,6 +723,41 @@ def test_evaluate_with_the_small_question_set(ai_world: World) -> None:
     assert [result.verdict for result in report.questions] == [Verdict.CORRECT] * 3, report
     assert report.summary.control_ok
     assert report.summary.passed
+
+
+def test_evaluate_reports_the_best_distance_of_every_asked_question(ai_world: World) -> None:
+    """The values come from the context selection of the run itself (work order 142).
+
+    No particular distance is fixed here, so that a new recording does not break it.
+    """
+    chosen = [QUESTIONS[key] for key in ("ci-fact-1", "ci-fact-2", "ci-control")]
+    questions = [as_evaluation_question(n, q) for n, q in enumerate(chosen, 1)]
+    places = {
+        n: places_of(ai_world, n, q) for n, q in enumerate(chosen, 1) if q.kind != "no-evidence"
+    }
+    present = set(ai_world.checksums.values())
+    report = evaluate(
+        questions,
+        places,
+        runs=2,
+        answer=ai_world.answer_function(chosen),
+        required=2,
+        ingested=lambda checksums: set(checksums) & present,
+        seed=5,
+    )
+    assert report.seed == 5
+    for result in report.questions:
+        assert len(result.runs) == 2
+        for run in result.runs:
+            assert isinstance(run.best_distance, float), result.question_id
+            assert run.below_threshold is not None
+        assert result.best_distance.median is not None
+        # The control question is below the threshold in every run: the model is not asked.
+        if result.is_control:
+            assert result.below_threshold_runs == 2
+            assert all(run.below_threshold is True for run in result.runs)
+        else:
+            assert result.below_threshold_runs == 0
 
 
 # --- Control question ---------------------------------------------------------------------
