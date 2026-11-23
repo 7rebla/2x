@@ -317,6 +317,25 @@ TWOX_M2_LOCAL=1 TWOX_M2_REQUIRED=<file names, comma-separated> TWOX_M2_FAILED_FI
 
 Without `-g "local part"` the CI part of the same file runs as well; it creates a test device and two small files. Without `TWOX_M2_LOCAL` the local part is skipped (as in the CI); with it but without the two other variables it fails with a message.
 
+### Acceptance of M3 by hand
+
+Prerequisites: the test environment of the M2 acceptance (manuals of the test factory ingested at their devices, devices from `testfactory/layout/devices.csv`), the AI features on (`TWOX_AI_ENABLED=true`), the chat model pulled and set in `.env` (see [Chat model for answers](#chat-model-for-answers)), `api` and `worker` recreated, and the test account (see [Browser test](#browser-test-service-e2e-profile-e2e)). Ask in your own words, not with the wording of `testfactory/questions.yaml`:
+
+1. Open **Ask**: the form is usable, without the hint "not available".
+2. Ask about the payload of the UR5e without a limit (test question 9): the answer is marked "Answer with checked sources", contains 5 kg, and the list "Sources" holds the German UR5e user manual with page 16, 101 or 102; the card shows the page and links to the file. A number `[n]` in the text jumps to its card.
+3. Ask the same question from the device page of the UR5e ("Ask about this device", `/ask?device=<id>`): the note "Limited to: device …" shows, and a source lies in a manual of the UR5e. Then limit to the drilling station (device `drill-plc`): no source comes from a manual of the UR5e; "I can't find anything on this in the documents" or sources of that device are both right. "Remove limit" removes the note and the parameter.
+4. Ask when the milling station was serviced last (control question 11): the fixed sentence "I can't find anything on this in the documents" (German: "Dazu finde ich nichts in den Unterlagen"), no list of sources and no `[n]`.
+5. With the AI features off the page shows the calm hint with a link to the search, and field and button are disabled.
+
+Two tests automate this. The backend test asks all eleven test questions through `evaluate_answers` and requires at least `TWOX_M3_MINIMUM` (default 8) of questions 1 to 10 right, the control question right in every run, and a cited place with file and page (or heading path) for every right answer. `TWOX_M3_RUNS` (default 3) and `TWOX_M3_MODE` (`majority` or `strict`, default `majority`) set the runs; all three are passed with `-e` only and are not part of `.env`. The browser test runs steps 2 to 4 on the page and creates no data. Both run only with `TWOX_M3_LOCAL=1`; without it they are skipped (as in the CI), and with it but without AI or chat model they fail at once with a message:
+
+```sh
+docker compose run --rm -e TWOX_M3_LOCAL=1 -e TWOX_M3_RUNS=3 -e TWOX_M3_MODE=majority backend-dev pytest tests/acceptance/test_m3.py -v
+TWOX_M3_LOCAL=1 docker compose --profile e2e run --rm e2e npx playwright test e2e/m3-acceptance.spec.ts
+```
+
+The backend test starts `python manage.py evaluate_answers --json` as a subprocess in `backend-dev`, which uses the configured database and reaches Ollama on the host like `api`; it takes several minutes per run. Its message on failure names per question the verdict, the missing key facts and the missing places, never a question or an answer.
+
 ## Configuration
 
 All variables and their defaults are listed in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#configuration). New in milestone M2 (all optional; the defaults are in `.env.example`):
@@ -502,7 +521,7 @@ TWOX_ACCOUNT_PASSWORD="$TWOX_E2E_PASSWORD" docker compose exec -T -e TWOX_ACCOUN
 docker compose --profile e2e run --rm e2e
 ```
 
-Expected output: all tests passed (the local part of the M2 acceptance test is skipped), exit code 0. `e2e` uses the packages that `web-dev` installed (`npm ci`) in the shared volume.
+Expected output: all tests passed (the local parts of the M2 and M3 acceptance tests are skipped), exit code 0. `e2e` uses the packages that `web-dev` installed (`npm ci`) in the shared volume.
 
 - `TWOX_E2E_USERNAME` and `TWOX_E2E_PASSWORD` in `.env.example` are development values. Never use them for a real account.
 - The password reaches the container as a variable name only (`-e TWOX_ACCOUNT_PASSWORD` without a value), not as a command-line argument.
@@ -541,7 +560,7 @@ Scans the files of the working directory with gitleaks (no network, findings red
 
 ### What the CI does not run
 
-The CI (`.github/workflows/ci.yml`, jobs `backend`, `web`, `testfactory`, `e2e`) does not start `docling` and has no Ollama. So `check_docling`, `check_llm`, a real conversion, real embeddings and `evaluate_search` with ingested manuals run only locally; the tests use stand-ins instead. The local part of the M2 acceptance test is skipped. The CI does not run `testfactory/fetch.py`, and the test questions (`testfactory/questions.yaml`) run against a language model only locally (`evaluate_answers`); the CI replays recorded answers to its own small question set instead.
+The CI (`.github/workflows/ci.yml`, jobs `backend`, `web`, `testfactory`, `e2e`) does not start `docling` and has no Ollama. So `check_docling`, `check_llm`, a real conversion, real embeddings and `evaluate_search` with ingested manuals run only locally; the tests use stand-ins instead. The local parts of the M2 and M3 acceptance tests are skipped. The CI does not run `testfactory/fetch.py`, and the test questions (`testfactory/questions.yaml`) run against a language model only locally (`evaluate_answers`, and the local part of the M3 acceptance, see [Acceptance of M3 by hand](#acceptance-of-m3-by-hand)); the CI replays recorded answers to its own small question set instead and checks the page "Ask" with a stream written by the test (`web/e2e/answer.spec.ts`).
 
 ## Security notes
 
