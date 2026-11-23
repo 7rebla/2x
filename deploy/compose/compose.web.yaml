@@ -50,6 +50,10 @@ services:
       TWOX_M2_LOCAL: ${TWOX_M2_LOCAL:-}
       TWOX_M2_REQUIRED: ${TWOX_M2_REQUIRED:-}
       TWOX_M2_FAILED_FILE: ${TWOX_M2_FAILED_FILE:-}
+      # Local part of the acceptance test of M3 (e2e/m3-acceptance.spec.ts),
+      # only in the test environment with the manuals, the AI features on and
+      # the chat model: TWOX_M3_LOCAL=1. Unset: the local part is skipped.
+      TWOX_M3_LOCAL: ${TWOX_M3_LOCAL:-}
     volumes:
       - ../../web:/app
       - web_node_modules:/app/node_modules
