@@ -1,6 +1,6 @@
 # Auftrag 146 – Fusion: Teiltreffer der Stichwortsuche dämpfen
 
-Meilenstein: M3 · Freigabestufe: B (Richtung entschieden in E-72) · Status: offen
+Meilenstein: M3 · Freigabestufe: B (Richtung entschieden in E-72) · Status: verworfen (E-73; Zweig ungenutzt, Messung in STATUS Punkt 22)
 
 ## Ziel
 
