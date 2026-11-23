@@ -1,6 +1,6 @@
 # Auftrag 141 – key_fact_alternatives für die Prüffragen 7 und 10
 
-Meilenstein: M3 · Freigabestufe: C · Status: offen
+Meilenstein: M3 · Freigabestufe: C · Status: wartet auf a7 (Bestätigung der Alternativen)
 
 Voraussetzung: 127 (Messwerkzeug `evaluate_answers`, liest `key_fact_alternatives`) und 128 (Messlauf) sind erledigt und auf `main`. Entscheidungsgrundlage: D5 (f) nach E-69 (`docs/DECISIONS.md:79`) und E-70 (`docs/DECISIONS.md:80`, Folgeauftrag „`key_fact_alternatives` für die Fragen 7 und 10 (Bestätigung durch a7 nach D5)“). Stufe C, weil Daten der Testfabrik geändert werden, die die Abnahme von M3 bestimmen; a7 bestätigt jede Alternative.
 
@@ -136,19 +136,38 @@ Parallel laufen 139, 140, 142 und 143. Keiner von ihnen ändert etwas unter `tes
 
 Vor dem Start keine; D5 (f) ist mit E-69 entschieden.
 
-Nach Fertigstellung trägt der Auftragsbearbeiter hier ein:
+Eingetragen vom Auftragsbearbeiter:
 
-- **Bestätigung der Alternativen** (Tabelle im Kurzbericht). Optionen:
+- **Bestätigung der Alternativen** (Tabelle im Kurzbericht, sieben Alternativen in vier key_facts-Zeilen). Optionen:
   - (a) alle bestätigen;
   - (b) einzelne Alternativen streichen (Zeilen nennen);
   - (c) keine übernehmen; die Fragen 7 und 10 bleiben wörtlich (D5 (g)).
-  - Empfehlung mit Begründung.
-- Gegebenenfalls Begriffe, bei denen unklar war, ob sie gleichwertig sind, mit Fundstelle und Empfehlung.
+  - Empfehlung: (a), mit Streichung von „Zurücksetzen der Schutzeinrichtung“ erwägen, falls a7 den Zeilentitel der Tabelle nicht als gleichwertigen Begriff will. Alle Begriffe stehen an den genannten Fundstellen; sie lockern nur den Wortlaut, nicht die Quellenpflicht (Zitat auf die erwartete Fundstelle bleibt nötig).
+- **Unklar, ob gleichwertig:**
+  - „LOW auf HIGH“ (`ur5e-user-manual-de` PDF-S. 252, Zeile Schutzstopp-Reset) beschreibt dasselbe Ereignis wie „steigende Flanke“, ist aber ein Pegelwechsel statt des Fachbegriffs. Empfehlung: behalten; die Seite setzt beides gleich.
+  - „Schutzstopp-Reset“ (S. 252) ist die Zeilenbezeichnung derselben Sicherheitsfunktion SF2 wie „Schutz-Reset“ (S. 86). Empfehlung: behalten.
+  - Frage 7 hat nur eine Alternative („Dock to DPS“). Eine deutsche Verbform zu „Reset“ nennt S. 27 nicht; „Reset“ steht dort auch schon in „Reset-Button“. Deshalb keine Alternative zu „Reset“. Die englische Fassung ist als Antwort auf eine deutsche Frage selten; Wirkung auf Messlauf daher klein. Empfehlung: behalten (kostet nichts), sonst (b).
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
 
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Tabelle für a7: key_fact → Alternativen → Begründung (Fundstelle: manifest_id, PDF-S., Abschnitt)
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+- **Was wurde gebaut?** `testfactory/questions.yaml`: Feld `key_fact_alternatives` bei den Fragen 7 und 10 (direkt nach `key_facts`), je ein englischer Satz in `notes` dieser Fragen und im obersten `notes`. `testfactory/tests/test_questions.py`: `key_fact_alternatives` als optionales Feld (`OPTIONAL_ITEM_FIELDS`), Liste `ALTERNATIVE_QUESTION_IDS = {7, 10}`, neue Klasse `KeyFactAlternativesTest` mit Hilfsfunktion `alternative_errors` und einer Gegenprobe je Regel (Schlüssel kein key_fact, leere Liste, keine Liste, leerer Text, doppelt, mehr als drei, über 40 Zeichen, Satzende, Anführungszeichen, gleich/enthält key_fact, kommt in der Frage vor). Kandidaten bleiben bei genau `ITEM_FIELDS`. Backend unverändert.
+- **Wie wurde getestet?** (Projekt `twox-141`, alles im Container.)
+  - Jobs `testfactory`: `ruff check`, `ruff format --check`, `mypy` (14 Dateien), `unittest` ohne Netz (223 Tests, ok, 1 übersprungen), `manifest_tools check` und `format --check` für beide Manifeste: alle Exit-Code 0. `testfactory/extern` im Arbeitsverzeichnis nicht vorhanden.
+  - Selbstprüfung in `backend-dev` über `manage.py shell` (nicht committet): `load_questions` liest die echte Datei, nur 7 und 10 haben Alternativen. `value_occurs(alternative, Beispielsatz)` ist für alle sieben Alternativen `True` (Beispielsätze selbst geschrieben). `missing_key_facts` mit einem Satz nur aus Alternativen: ohne `literal` leer, mit `literal=True` fehlen Frage 7 „Docke an DPS“, Frage 10 „Schutz-Reset“ und „steigende Flanke“.
+  - Backend-`pytest`: `tests/answers` und `tests/search` (liest die echte Datei, darunter `test_evaluation.py` und `test_probes.py`) zusammen 1427 bestanden, Exit-Code 0. Ein erster Lauf mit `-x` brach bei `test_context.py::test_number_of_queries_does_not_grow_with_the_hits` ab; allein und im zweiten Lauf bestanden (unabhängig von dieser Änderung, vermutlich Lastabhängigkeit bei fünf parallelen Aufträgen). Der Rest der Backend-Suite (außerhalb von `answers` und `search`) lief wegen der Rechnerlast nicht in vertretbarer Zeit durch und wurde abgebrochen; er berührt die Datei nicht und `backend/` ist unverändert. Nicht gelaufen: `pytest -m worker`, `mypy .`, `ruff` im Backend, Übersetzungskatalog, Migrationen, Lizenzprüfung, OpenAPI-Schema (alle ohne Bezug zur Änderung). Die Leitstelle sollte den Job `backend` bei der Prüfung vollständig laufen lassen.
+- **Tabelle für a7** (Fundstellen nur gelesen; kein Text kopiert):
+
+  | Frage | key_fact | Alternative | Begründung (manifest_id, PDF-S., Abschnitt) |
+  | --- | --- | --- | --- |
+  | 7 | Docke an DPS | Dock to DPS | `aps-documentation-en`, PDF-S. 22, Abschnitt zum Positionieren des FTS (AGV): englischer Name derselben Schaltfläche; deutsche Fassung `aps-documentation-de` PDF-S. 22 |
+  | 7 | Reset | keine | `aps-documentation-de` PDF-S. 27 schreibt „Reset-Button“ (enthält den key_fact); englisch dasselbe Wort (`aps-documentation-en` PDF-S. 27). Keine Verbform zu „Reset“ belegt. |
+  | 10 | Schutz-Reset | Schutzstopp-Reset | `ur5e-user-manual-de`, PDF-S. 252, Kap. 21, Zeile zur Sicherheitsfunktion SF2: Bezeichnung derselben Funktion |
+  | 10 | Schutz-Reset | Zurücksetzen der Schutzeinrichtung | `ur5e-user-manual-de`, PDF-S. 86, Kap. 8.6.1, Tabelle Controller-Eingänge: Zeilenname desselben Eingangs |
+  | 10 | Schutz-Reset | Safeguard Reset | `ur5e-software-handbook-en`, PDF-S. 46, Kap. 2.7, Tabelle Control Box Inputs: englischer Name desselben Eingangs |
+  | 10 | steigende Flanke | steigenden Flanke | Beugung des Begriffs auf `ur5e-user-manual-de` PDF-S. 86 (dort „steigende Flanke“ im Zeilentext zum Schutz-Reset-Eingang); die Grenzregel von `value_occurs` verhindert sonst den Treffer |
+  | 10 | steigende Flanke | rising edge | `ur5e-software-handbook-en`, PDF-S. 46, Kap. 2.7, Zeile Safeguard Reset: englischer Begriff |
+  | 10 | steigende Flanke | LOW auf HIGH | `ur5e-user-manual-de`, PDF-S. 252, Kap. 21, Zeile Schutzstopp-Reset: Pegelwechsel desselben Ereignisses |
+
+  Verworfen: Oberbegriffe wie nur „Flanke“ oder „Reset“, die Seiten zu Roboterstopp und Not-Halt, die Schaltfläche „Reset-Button“ (enthält den key_fact) und alles, was die Frage selbst enthält („Schutzstopp“).
+- **Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-a39aca6bee941233d`, Arbeitsverzeichnis `.claude/worktrees/agent-a39aca6bee941233d`.
+- **Abweichungen:** Keine. Die PDF-Seiten wurden ohne `pdftoppm` gelesen: Text mit `pypdfium2` in einem einmalig gestarteten Container aus dem Docling-Image der Testumgebung, `testfactory/extern` nur lesend eingehängt; nichts geschrieben oder kopiert. Das Image `docling-serve-cpu` musste lokal neu gezogen werden (Digest wie in `deploy/compose/compose.yaml`); das Projekt „2x“ blieb unberührt.
