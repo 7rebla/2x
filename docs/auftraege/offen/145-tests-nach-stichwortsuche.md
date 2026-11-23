@@ -1,6 +1,6 @@
 # Auftrag 145 – Tests nach der weichen Stichwortsuche nachziehen
 
-Meilenstein: M3 · Freigabestufe: B (Inhalt entschieden in E-71) · Status: offen
+Meilenstein: M3 · Freigabestufe: B (Inhalt entschieden in E-71) · Status: zur Prüfung
 
 ## Ziel
 
@@ -55,7 +55,34 @@ Nach diesem Auftrag sind alle Tests grün, ohne dass eine Zusicherung ihren Zwec
 Keine. Inhalt entschieden in E-71.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+- **Was wurde gebaut?**
+  - **Abnahmetest M2, Option 1:** `QUESTION` in `backend/tests/acceptance/test_m2.py` lautet jetzt „Wann ist jemand sachverständig genug für so einen Auftrag?“ (selbst formuliert, gleicher Sinn, Ziel `QUESTION_TARGET = "Fachkundig ist"` unverändert). Kommentar dazu angepasst. Alle Zusicherungen des Tests unverändert (`hits == []` ohne KI, `match_kinds == ["semantic"]` mit KI).
+  - Nachweis, dass kein Inhaltswort im Testdokument steht: Je Wort der Frage `websearch_to_tsquery(config, wort)` und Anzahl der Abschnitte mit `search_vector @@ …`, über alle 17 Abschnitte beider Testdokumente (PDF 13, Markdown 4) nach der Aufnahme wie im Test (Hilfstest nur lokal, nicht committet):
+
+    | Wort | simple | german | english | Inhaltswort? |
+    | --- | --- | --- | --- | --- |
+    | Wann | 'wann' 0 | 'wann' 0 | 'wann' 0 | ja |
+    | ist | 'ist' 9 | (Stoppwort) | 'ist' 9 | nein |
+    | jemand | 'jemand' 0 | 'jemand' 0 | 'jemand' 0 | ja |
+    | sachverständig | 0 | 'sachverstand' 0 | 0 | ja |
+    | genug | 0 | 0 | 0 | ja |
+    | für | 'für' 8 | (Stoppwort) | 'für' 8 | nein |
+    | so | 'so' 4 | (Stoppwort) | (Stoppwort) | nein |
+    | einen | 'einen' 1 | (Stoppwort) | 'einen' 1 | nein |
+    | Auftrag | 'auftrag' 0 | 'auftrag' 0 | 'auftrag' 0 | ja |
+
+    Zum Vergleich die alte Frage: „Wer“ (1 Abschnitt), „Aufgabe“ (1), „Regel“ (2) trafen.
+  - **CI-Aufzeichnungen neu aufgenommen** (`backend/tests/answers/recorded/ci_questions.json`): `model` `gemma4:31b-it-qat`, `model_digest` `e0812a55…185e` (wie Abhängigkeitstabelle in `docs/DECISIONS.md`), `prompt_version` `64267b8d166e` unverändert, `recorded_on` 2026-11-23. Vor dem Lauf `/api/ps`: zuerst noch `bge-m3` geladen (Ablauf kurz danach), Lauf erst gestartet, als `/api/ps` leer war. Ollama nicht gestoppt.
+  - Aufnahmelauf am 23.11.2026, 20:56:16 bis 20:57:00 (Dauer 44 s, pytest 38 s): 18 bestanden, 5 übersprungen (prüfen nur die Wiedergabe), „OK: recorded“. Keine Frage hat eine Prüfung verfehlt.
+  - Quellen je Frage: `ci-control` 3, `ci-fact-1` 1, `ci-fact-2` 1, `ci-injection` 1. Geändert hat sich nur der Eintrag `ci-control` (neuer Schlüssel, andere Quellen und Reihenfolge, Antwort weiter „Dazu finde ich nichts in den Unterlagen.“); die Einträge `ci-fact-1`, `ci-fact-2` und `ci-injection` sind byte-gleich.
+  - Durchsicht: nur Modellausgabe (vier kurze deutsche Sätze), keine Links, keine Personennamen, keine Pfade.
+- **Wie wurde getestet?** (Compose-Projekt `twox-145`, `TWOX_API_PORT=18145`)
+  - `pytest`: 3560 bestanden, 6 abgewählt; `pytest -m worker`: 6 bestanden.
+  - `ruff check .`, `ruff format --check .`, `mypy .`: ohne Befund.
+  - `test_m2.py`: 12 bestanden, darunter `test_search_answers_a_question_in_other_words_by_meaning[ai-off]` und `[ai-on]`.
+  - `test_ci_questions.py` mit `TWOX_LLM_BASE_URL=http://127.0.0.1:9/v1`: 23 bestanden.
+  - e2e wie in der CI (`.env` aus `.env.example`, eigener Port, Modelladresse unerreichbar; Build, `npm ci`, Dienste, Testkonto, `--profile e2e run --rm e2e`): 88 bestanden, 1 übersprungen.
+  - Compose-Projekt danach mit `down -v` entfernt.
+- **Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-add44743aa8f69e7e`, Arbeitsverzeichnis `.claude/worktrees/agent-add44743aa8f69e7e`. Nicht gepusht.
+- **Abweichungen:** Keine. Diff nur in `test_m2.py`, `ci_questions.json` und dieser Auftragsdatei; keine neue Abhängigkeit, keine Änderung an `backend/twox/`.
