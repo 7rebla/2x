@@ -1,6 +1,6 @@
 # Auftrag 140 – Zitatprüfung: Werte aus der Frage und Listenpunkte
 
-Meilenstein: M3 · Freigabestufe: B · Status: offen
+Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
 
 Voraussetzung: 123 (`citations.verify`), 126 (Antwortdienst) und 127 (`evaluate_answers`) sind auf `main`. Folgeauftrag zu den Befunden B2 und B3 des Messlaufs 128 (`docs/auftraege/erledigt/128-messlauf-chat-modell.md`, Kurzbericht, Tabelle „Frage × Modell“ und Abschnitt Befunde) und zu E-70 (`docs/DECISIONS.md:80`, „Zitatprüfung (Werte aus der Frage, Listenpunkte)“).
 
@@ -131,7 +131,44 @@ Abgrenzung zu den parallelen Aufträgen:
 Keine. Die Vorgabe der Leitstelle setzt E-70 um; die Freistellung ist eng gefasst (nur Typbezeichnungen, nur neben einem weiteren belegten Wert, Nummer bleibt Pflicht). E-70 legt die Breite der Freistellung nicht fest; die engere Fassung deckt Frage 9 („5 kg“) ab.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+- **Was wurde gebaut?**
+  - `citations.verify(answer_text, sources, *, drop_unsupported, question=None)`. Die Prüfwerte der Frage werden einmal je Aufruf mit `_check_values` ermittelt. Nur Schlüssel mit `designation=True` zählen.
+  - `_Value.designation` wird nur im GENERIC-Zweig gesetzt (`_is_designation`): mindestens ein Buchstabe und eine Ziffer, und kein Ein-Token-Wert aus Zahl und Einheit, auch mit `AC`/`DC` (`10kg`, `24VDC`, `230VAC`; neues festes Muster `_UNIT_TOKEN` aus der Einheitenliste).
+  - `_missing_values` stellt einen Bezeichnungswert aus der Frage nur dann frei, wenn derselbe Satz einen weiteren Wert trägt, der nicht aus der Frage stammt und in einer gültig zitierten Quelle steht. Verglichen werden nur Schlüssel (`in` auf `frozenset`). Aus der Frage wird kein Muster gebaut.
+  - `_Sentence.in_list`. `_list_intros` geht einmal über die Zeilen und bestimmt den Einleitungssatz eines Listenblocks: letzter Satz der letzten Nicht-Listenzeile mit Inhalt; endet nach Entfernen der Nummern mit `:`. Leerzeilen erhalten den Block, eine andere Zeile mit Inhalt beendet ihn.
+  - In `verify` erbt ein Listenpunkt ohne eigene Nummer die gültigen Nummern eines belegten Einleitungssatzes (`supported_numbers`). Sonst bleibt er `no_citation`.
+  - Nachgezogen sind:
+    - der Modul-Docstring: Sentences, neuer Abschnitt „Values from the question“, Sentence verdict und zwei neue Punkte unter „Limits“;
+    - der Docstring von `verify`;
+    - in `service.py` der Aufruf mit `question=question` und Schritt 8;
+    - `docs/ARCHITECTURE.md:167`, dort nur der `verify`-Aufruf.
+- **Wie wurde getestet?** Compose-Projekt `twox-140`, API-Port 18140.
+  - Neu in `test_citations.py` (Abschnitte 13–15):
+    - positive Fälle: `G-12`, `S7 1500` (auch Frage `S7-1500`), `G-12-Greifer`, `**G-12**`;
+    - ohne Frage (`None` und `""`) bleibt `unsupported_value` mit `("G-12",)`;
+    - 15 Negativfälle: `10 kg`, `10kg`, `24VDC`, `230VAC`, IPv4, MAC, `Port 502`, `Firmware 5.12`, `5.12` ohne Wort, `V18`, `1.5`, `G-12`→`G-14`, Bezeichnung als einziger Wert, `E1234` gegen `E1235`, zweite Bezeichnung aus der Frage als „Anker“;
+    - ohne Nummer bleibt der Satz `no_citation`; keine Freistellung in einem anderen Satz; Regex-Zeichen in der Frage;
+    - Listen positiv: Nummer vor oder nach `:`, `1.`, `1)`, Leerzeile, eingerückter Unterpunkt;
+    - Listen negativ: unbelegter Punkt wird entfernt, ohne `:`, `:` mit Text danach, ohne Nummer, nur `[9]`, verworfene Einleitung, Zwischenzeile, Liste ohne Einleitung, Listenpunkt als Einleitung, eigene Nummer nur ungültig, eigene gültige Nummer;
+    - `contradiction` mit geerbten Nummern, `in_list`-Kennzeichen;
+    - Laufzeit: 7 Fälle (lange Liste, lange Frage mit 20 000 Zeichen), Wachstum < 8 und t(20000) < 1 s.
+  - Neu `tests/answers/test_service_question.py`: `verify` mit `monkeypatch` ersetzt; das Argument `question` kommt an. Dazu zwei Fälle Ende-zu-Ende mit `FakeChatModel` (positiv und Bezeichnung allein).
+  - `test_citations.py` und `test_service_question.py` zusammen: 230 bestanden. Bestehende Tests unverändert.
+  - Prüfungen aus `ci.yml`, je mit Exit-Code:
+    - `ruff check .` 0, `ruff format --check .` 0, `mypy .` 0 (228 Dateien);
+    - `pytest` 0 (3475 bestanden), `pytest -m worker` 0 (6 bestanden);
+    - `makemessages` 0 ohne Unterschied, `makemigrations --check --dry-run` 0 („No changes detected“), `check-licenses.sh` 0, `spectacular` 0 ohne Unterschied.
+  - Job `web` (`twox-140-web`): `npm ci`, `lint`, `typecheck`, `test`, `build`, `licenses` und `api:generate` je 0, ohne Unterschied.
+  - Job `testfactory` (`twox-140-tf`): Build, `ruff`, `format`, `mypy`, `unittest` und vier Manifestprüfungen je 0.
+  - `e2e` lokal nicht gelaufen. Begründung: Der Auftrag berührt weder Web noch API-Schema; im Schema gibt es keinen Unterschied.
+  - `docker compose -p twox-140 --profile dev down -v` Exit 0, ebenso für `-web` und `-tf`.
+- **CI-Aufzeichnungen:** Die vier Antworten in `recorded/ci_questions.json` (Stand dieses Zweigs, qwen) sind Einzelsätze ohne Liste. Keine trägt neben einer Bezeichnung aus der Frage einen weiteren belegten Wert. Ihr Urteil ändert sich nicht, `test_ci_questions.py` ist grün. Gegen die Neuaufnahme aus 139 (gemma4) konnte ich nicht prüfen, sie liegt noch nicht auf `main`.
+- **Zweig und Arbeitsverzeichnis:** `worktree-agent-a4eba25db25722898`, `.claude/worktrees/agent-a4eba25db25722898`.
+- **Abweichungen und Auslegungen:**
+  1. Freigestellt wird nur, wenn auch der Antwortwert eine Bezeichnung ist (`designation`) und nicht nur sein Schlüssel einem Fragewert gleicht. Das ist enger als der Wortlaut des Auftrags.
+  2. „Weiterer Wert, der nicht freigestellt ist“: Eine zweite Bezeichnung aus der Frage zählt nicht als weiterer Wert, auch wenn sie in der Quelle steht. `Der G-12 passt zur S7-1200 [1]` mit Quelle nur zu `S7-1200` bleibt `unsupported_value`. Dafür gibt es einen Test.
+  3. Eine Einleitung, deren Doppelpunkt nur innerhalb von Markdown steht (`**Ports [1]:**`), endet nicht mit `:`. Ihre Punkte erben nichts; die Regel ist so eng wie vorgegeben.
+  4. Als „Zeile mit Inhalt“ gilt jede Zeile, die nach `strip()` nicht leer ist, auch `---`. Eine solche Zeile beendet einen Listenblock.
+  5. Keine neue Abhängigkeit, keine offene Frage an a7.
+
+Status: zur Prüfung
