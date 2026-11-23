@@ -1,6 +1,6 @@
 # Auftrag 137 – Abnahmetests M3 und Browserfluss
 
-Meilenstein: M3 · Freigabestufe: B · Status: offen
+Meilenstein: M3 · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 127 (`evaluate_answers`), 130 (Antwort-API mit SSE und Status), 133 (Eingrenzen auf Gerät und Anlage) und 134 (Navigation Auskunft) sind auf `main`. Damit sind auch 121, 122, 126, 131 und 132 vorhanden.
 
@@ -179,7 +179,8 @@ Der Auftrag ist ohne Antwort startbar; beide Fragen betreffen nur Vorgabewerte b
   - 8: `D run --rm -e TWOX_M3_LOCAL=1 backend-dev pytest tests/acceptance/test_m3.py` → `No chat model configured (TWOX_CHAT_MODEL is empty): the acceptance of M3 needs the chat model (D5, D10).`, `1 failed, 16 passed`. Mit `-e TWOX_AI_ENABLED=false` → `The AI features are off (TWOX_AI_ENABLED): …`; mit `-e TWOX_M3_MODE=most` → `Invalid TWOX_M3_MODE='most': expected majority or strict.` Browser: `Error: answers not available (AI off or no chat model): enabled=true, chat_model_configured=false`, Test 399 ms, Befehl gesamt 4 s.
   - 10: `git diff main...HEAD --stat` zeigt nur die sechs Dateien aus „Betroffene Bereiche“ (dazu diese Auftragsdatei); keine `data-testid` ergänzt, `package.json`, `package-lock.json`, `pyproject.toml`, `uv.lock` unverändert.
   - 11: Skript im Container (`python -I`, eingebunden lesend): alle Sätze (≥ 20 Zeichen) und alle Folgen von sechs Wörtern aus `expected_answer` und `supports` (63 Texte) gegen die neuen und geänderten Dateien. Treffer nur „Dazu finde ich nichts in den Unterlagen“ (fester Satz der Anwendung, Leitplanke 3) und in ARCHITECTURE zusätzlich das bereits vorhandene „Die Unterlagen widersprechen sich“; kein Herstellertext.
-  - 12: siehe Rückmeldung an die Leitstelle (nach dem Commit ausgeführt).
+  - 12: Laut Rückmeldung an die Leitstelle enden beide `down -v` (twox-137, twox-137-web) mit Exit 0; „2x“ und „twox-leit“ unberührt (nachgetragen von der Leitstelle).
+- Hinweise der Leitstelle aus der Prüfung (für 138): Die Gesamtzeitgrenze des lokalen Browsertests (600 s) ist kleiner als vier Antworten an der Zeitgrenze des Servers (720 s) – reicht bei normalen Antwortzeiten (≈ 5 s), bei Zeitüberschreitung im Abnahmelauf erst hier ansehen. Befund Fokus nach Mausklick auf „Fragen“ (Knopf mit `disabled` während des Stroms) als Kandidat für die Nacharbeit vor der Abnahme in STATUS.
 - **Zweig und Arbeitsverzeichnis:** `worktree-agent-a28999db5c1ff0d8d` in `.claude/worktrees/agent-a28999db5c1ff0d8d`, Basis `9809570`. Nicht gepusht.
 - **Abweichungen und Befunde:**
   - Zeilennummern im Auftrag waren verschoben (ARCHITECTURE: Konfiguration Z. 620, „What CI runs“ Z. 649, „does not run“ Z. 660, Layout Z. 109; README: der Satz aus Z. 469 steht jetzt im Abschnitt „What the CI does not run“). Zusätzlich im README die Zeile „Expected output … the local part of the M2 acceptance test is skipped“ um M3 ergänzt, damit sie stimmt.
