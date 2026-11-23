@@ -326,11 +326,14 @@ def test_sections_without_an_embedding_of_the_current_model_are_not_merged(
 def test_keyword_hit_without_embedding_is_not_merged(
     device: Device, fake_embedder: FakeEmbedder
 ) -> None:
+    # An exact hit: since E-70 a keyword hit without a distance is a source only then.
     (german,) = add_sections(make_document(device, "Handbuch"), "Achse wöchentlich fetten.")
-    (english,) = add_sections(make_document(device, "Manual"), "Change the lubricant weekly.")
+    (english,) = add_sections(
+        make_document(device, "Manual"), "The gateway has the address 192.168.40.17."
+    )
     embed(german, at_angle(10, axis=1))
 
-    selection = select_context(QUESTION)
+    selection = select_context("Which gateway uses 192.168.40.17?")
 
     assert set(section_ids(selection)) == {german.pk, english.pk}
 
@@ -512,6 +515,155 @@ def test_keyword_hits_without_distance_do_not_lift_the_threshold(
     assert selection.below_threshold is True
     assert selection.sources == []
     assert selection.hit_count == 2
+
+
+# --- Relevance filter after the threshold (E-70) -----------------------------------
+
+#: The starting value of TWOX_ANSWER_MAX_DISTANCE (E-70).
+STARTING_MAX_DISTANCE = 0.55
+#: An angle whose distance (about 0.66) is beyond the starting threshold.
+FAR_ANGLE = 70
+#: The question of the exact hits below; it shares the address with them.
+EXACT_QUESTION = "Which gateway uses 192.168.40.17?"
+
+
+@pytest.fixture
+def starting_threshold(settings: Settings) -> float:
+    """The relevance threshold at its starting value, whatever the environment sets."""
+    settings.TWOX_ANSWER_MAX_DISTANCE = STARTING_MAX_DISTANCE
+    return STARTING_MAX_DISTANCE
+
+
+def test_far_hit_next_to_a_near_one_is_left_out(
+    version: DocumentVersion, fake_embedder: FakeEmbedder, starting_threshold: float
+) -> None:
+    near, far = add_sections(version, "Grease the axle.", "Check the belt.")
+    embed(near, at_angle(10, axis=1))
+    embed(far, at_angle(FAR_ANGLE, axis=2))
+    assert cosine_distance(10) <= starting_threshold < cosine_distance(FAR_ANGLE)
+
+    selection = select_context(QUESTION)
+
+    assert selection.below_threshold is False
+    assert section_ids(selection) == [near.pk]
+    assert selection.hit_count == 2
+    assert selection.best_distance == pytest.approx(cosine_distance(10))
+
+
+def test_exact_hit_beyond_the_threshold_stays_a_source(
+    version: DocumentVersion, fake_embedder: FakeEmbedder, starting_threshold: float
+) -> None:
+    near, exact, far = add_sections(
+        version, "Grease the axle.", "The gateway has the address 192.168.40.17.", "Belt."
+    )
+    embed(near, at_angle(10, axis=1))
+    embed(exact, at_angle(80, axis=2))
+    embed(far, at_angle(FAR_ANGLE, axis=3))
+
+    selection = select_context(EXACT_QUESTION)
+
+    assert set(section_ids(selection)) == {near.pk, exact.pk}
+    assert selection.hit_count == 3
+    assert_numbered(selection)
+
+
+def test_keyword_hit_without_distance_next_to_a_near_one_is_left_out(
+    version: DocumentVersion, fake_embedder: FakeEmbedder, starting_threshold: float
+) -> None:
+    keyword, near = add_sections(version, "Change the lubricant of the pump.", "Grease the axle.")
+    embed(near, at_angle(10, axis=1))
+
+    selection = select_context(QUESTION)
+
+    assert section_ids(selection) == [near.pk]
+    assert keyword.pk not in section_ids(selection)
+    assert selection.hit_count == 2
+
+
+def test_best_distance_and_hit_count_describe_all_hits(
+    version: DocumentVersion,
+    fake_embedder: FakeEmbedder,
+    monkeypatch: pytest.MonkeyPatch,
+    starting_threshold: float,
+) -> None:
+    exact, far, keyword = add_sections(version, "Exact.", "Far.", "Keyword.")
+    hits = [
+        hit_of(exact, 0.9, kinds=(MatchKind.EXACT, MatchKind.SEMANTIC)),
+        hit_of(far, 0.7),
+        hit_of(keyword, None, kinds=(MatchKind.KEYWORD,)),
+    ]
+    use_backend(monkeypatch, StandInBackend(SearchResult(hits, SemanticState.USED)))
+
+    selection = select_context(QUESTION)
+
+    assert section_ids(selection) == [exact.pk]
+    # The best distance is that of a hit the filter left out.
+    assert selection.best_distance == pytest.approx(0.7)
+    assert selection.hit_count == 3
+
+
+def test_distance_equal_to_the_threshold_stays(
+    version: DocumentVersion,
+    fake_embedder: FakeEmbedder,
+    monkeypatch: pytest.MonkeyPatch,
+    starting_threshold: float,
+) -> None:
+    near, edge, beyond = add_sections(version, "Near.", "Edge.", "Beyond.")
+    hits = [
+        hit_of(near, 0.2),
+        hit_of(edge, starting_threshold),
+        hit_of(beyond, starting_threshold + 1e-9),
+    ]
+    use_backend(monkeypatch, StandInBackend(SearchResult(hits, SemanticState.USED)))
+
+    selection = select_context(QUESTION)
+
+    assert section_ids(selection) == [near.pk, edge.pk]
+    assert selection.hit_count == 3
+
+
+def test_neighbours_of_a_relevant_main_source_stay(
+    version: DocumentVersion, fake_embedder: FakeEmbedder, starting_threshold: float
+) -> None:
+    sections = add_sections(version, *(f"Text number {index}." for index in range(6)))
+    embed(sections[2], at_angle(10, axis=1))
+    # A far hit right after the main source still follows it as a neighbour;
+    # a far hit elsewhere is no main source.
+    embed(sections[3], at_angle(FAR_ANGLE, axis=2))
+    embed(sections[5], at_angle(FAR_ANGLE + 5, axis=3))
+
+    selection = select_context(QUESTION, neighbours=True)
+
+    assert ordinals(selection) == [2, 1, 3]
+    assert selection.hit_count == 3
+    assert_numbered(selection)
+
+
+def test_copies_of_a_near_section_stay_one_source_and_far_copies_leave_together(
+    plant: Plant, fake_embedder: FakeEmbedder, starting_threshold: float
+) -> None:
+    devices = [make_device(plant, f"twin-{index}") for index in range(2)]
+    near_sha256 = sha256_of("near manual at two devices")
+    far_sha256 = sha256_of("far manual at two devices")
+    near_copies = []
+    far_copies = []
+    for device in devices:
+        (near,) = add_sections(make_document(device, sha256=near_sha256), "Grease the axle.")
+        embed(near, at_angle(10, axis=1))
+        near_copies.append(near)
+        (far,) = add_sections(
+            make_document(device, "Other manual", sha256=far_sha256), "Check the belt."
+        )
+        embed(far, at_angle(FAR_ANGLE, axis=2))
+        far_copies.append(far)
+
+    (source,) = select_context(QUESTION).sources
+
+    assert source.section_id in {copy.pk for copy in near_copies}
+    assert device_ids_of(source) == {device.pk for device in devices}
+    assert {location.section_id for location in source.locations} == {
+        copy.pk for copy in near_copies
+    }
 
 
 def test_empty_question_does_not_search(
@@ -723,7 +875,7 @@ def test_answer_settings_have_their_starting_values() -> None:
     result = run_python(DUMP_ANSWER_SETTINGS, {})
 
     assert result.returncode == 0, result.stderr
-    assert result.stdout.split() == ["8", "20000", "False", "0.6", "0.15"]
+    assert result.stdout.split() == ["8", "16000", "False", "0.55", "0.15"]
 
 
 def test_answer_settings_read_the_variables() -> None:
@@ -771,7 +923,7 @@ def test_translation_distance_must_be_below_the_threshold(value: str) -> None:
     assert result.returncode != 0
     assert (
         f"TWOX_ANSWER_TRANSLATION_DISTANCE ({float(value):g}) must be less than "
-        "TWOX_ANSWER_MAX_DISTANCE (0.6)"
+        "TWOX_ANSWER_MAX_DISTANCE (0.55)"
     ) in result.stderr
 
 

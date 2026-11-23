@@ -530,10 +530,10 @@ TWOX_EMBED_TIMEOUT_SECONDS = env_positive_int("TWOX_EMBED_TIMEOUT_SECONDS", 120)
 # The same for embedding a search query (052): short, so a hanging model
 # service holds a search up only briefly before it falls back to keywords.
 TWOX_SEARCH_EMBED_TIMEOUT_SECONDS = env_positive_int("TWOX_SEARCH_EMBED_TIMEOUT_SECONDS", 20)
-# Chat model for answers (M3, twox/answers/chat.py). No default: the model is
-# chosen after the measurement run of work order 128 and loaded with ollama
-# pull; empty means answers are unavailable. Read without env_str, whose
-# fallback would require a value.
+# Chat model for answers (M3, twox/answers/chat.py). No default: recommended is
+# gemma4:31b-it-qat, fallback qwen3.8:27b-q4_K_M (E-70); it is loaded with
+# ollama pull and set in the own .env. Empty means answers are unavailable.
+# Read without env_str, whose fallback would require a value.
 TWOX_CHAT_MODEL = os.environ.get("TWOX_CHAT_MODEL", "").strip()
 # Socket time limit in seconds: the longest wait between two pieces of an
 # answer, the first one included (it may have to wait for the model to load).
@@ -545,21 +545,20 @@ TWOX_CHAT_TEMPERATURE = env_float("TWOX_CHAT_TEMPERATURE", 0.0, minimum=0.0, max
 # leaves the field out (None). Unset or empty means none.
 TWOX_CHAT_REASONING_EFFORT = env_reasoning_effort("TWOX_CHAT_REASONING_EFFORT", "none")
 
-# Context of an answer (M3, twox/answers/context.py). Starting values,
-# calibrated in work order 128.
+# Context of an answer (M3, twox/answers/context.py). Starting values decided
+# in E-70 after the measurement run of work order 128.
 # Most main sources (k); neighbouring sections do not count against it.
 TWOX_ANSWER_MAX_SOURCES = env_positive_int("TWOX_ANSWER_MAX_SOURCES", 8)
-# Characters of all source texts together (8 sections of at most 2,000
-# characters plus room for two neighbours).
-TWOX_ANSWER_CONTEXT_CHARS = env_positive_int("TWOX_ANSWER_CONTEXT_CHARS", 20000)
+# Characters of all source texts together: k sections of at most
+# TWOX_SECTION_MAX_CHARS characters (8 x 2,000).
+TWOX_ANSWER_CONTEXT_CHARS = env_positive_int("TWOX_ANSWER_CONTEXT_CHARS", 16000)
 # Load the sections right before and after each main source as well.
 TWOX_ANSWER_NEIGHBOURS = env_bool("TWOX_ANSWER_NEIGHBOURS", default=False)
 # Relevance threshold, a cosine distance (0 < x <= 2): without a hit at most
-# this far from the question (or an exact hit) the model is not asked. The
-# measurement of 124 shows no gap between expected places (up to 0.549) and
-# the control question (from 0.510); this value only turns away the clearly
-# remote.
-TWOX_ANSWER_MAX_DISTANCE = env_positive_float("TWOX_ANSWER_MAX_DISTANCE", 0.60, maximum=2.0)
+# this far from the question (or an exact hit) the model is not asked. It is
+# also a filter (E-70): only hits at most this far (or exact hits) become
+# sources; hits further away are left out of the context.
+TWOX_ANSWER_MAX_DISTANCE = env_positive_float("TWOX_ANSWER_MAX_DISTANCE", 0.55, maximum=2.0)
 # Largest cosine distance of the stored embeddings of two sections from
 # different documents of the same device that count as the same place in
 # another language (E-61); less than TWOX_ANSWER_MAX_DISTANCE.
