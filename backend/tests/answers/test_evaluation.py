@@ -11,9 +11,11 @@ and pages only.
 """
 
 import io
+import itertools
 import json
 import logging
 from collections.abc import Iterable, Iterator, Sequence
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +40,7 @@ from twox.answers.evaluation import (
     QuestionKind,
     QuestionPlaces,
     QuestionResult,
+    Report,
     Rule,
     RunResult,
     Verdict,
@@ -594,7 +597,12 @@ def test_observe_reads_times_and_closes_the_stream() -> None:
     calls: list[tuple[str, tuple[int, ...], tuple[int, ...]]] = []
 
     def answer(
-        question: str, *, device_ids: Sequence[int] = (), plant_ids: Sequence[int] = ()
+        question: str,
+        *,
+        device_ids: Sequence[int] = (),
+        plant_ids: Sequence[int] = (),
+        seed: int | None = None,
+        on_context: service.ContextObserver | None = None,
     ) -> Iterator[AnswerEvent]:
         calls.append((question, tuple(device_ids), tuple(plant_ids)))
         return stream()
@@ -756,16 +764,40 @@ def test_per_run_strict_needs_every_run() -> None:
 class ScriptedAnswer:
     """Stands in for the answer service: the same events for every question."""
 
-    def __init__(self, events: Sequence[AnswerEvent]) -> None:
+    def __init__(
+        self,
+        events: Sequence[AnswerEvent],
+        contexts: Sequence[tuple[float | None, bool]] = (),
+        *,
+        twice: bool = False,
+    ) -> None:
         self.events = list(events)
+        #: ``(best_distance, below_threshold)`` reported by call number n (the last one
+        #: repeats); nothing is reported without any.
+        self.contexts = list(contexts)
+        #: Report every context twice (the second call with the values turned around).
+        self.twice = twice
         self.asked: list[str] = []
+        self.seeds: list[int | None] = []
 
     def __call__(
-        self, question: str, *, device_ids: Sequence[int] = (), plant_ids: Sequence[int] = ()
+        self,
+        question: str,
+        *,
+        device_ids: Sequence[int] = (),
+        plant_ids: Sequence[int] = (),
+        seed: int | None = None,
+        on_context: service.ContextObserver | None = None,
     ) -> Iterator[AnswerEvent]:
         assert not device_ids
         assert not plant_ids
+        if on_context is not None and self.contexts:
+            distance, below = self.contexts[min(len(self.asked), len(self.contexts) - 1)]
+            on_context(distance, below)
+            if self.twice:
+                on_context(0.9999, not below)
         self.asked.append(question)
+        self.seeds.append(seed)
         return iter(self.events)
 
 
@@ -928,7 +960,7 @@ def test_output_holds_no_question_answer_or_section_text() -> None:
             marked_questions,
             places(),
             runs=2,
-            answer=ScriptedAnswer(events),
+            answer=ScriptedAnswer(events, [(0.25, False)]),
             ingested=all_ingested,
         )
         for events in (marked_events(), [*marked_events()[:2], ErrorEvent(code=ErrorCode.TIMEOUT)])
@@ -1183,6 +1215,7 @@ def test_command_rejects_invalid_files(
         (["--probes", "m9"], "Invalid --probes: there is no probe list"),
         (["--probes", "/nowhere/probes.json"], "Invalid probe list: cannot read"),
         (["--runs", "0"], "Invalid --runs"),
+        (["--seed", "x"], "invalid int value"),
         (["--only", "1,x"], "Invalid --only"),
         (["--only", "12"], "Invalid --only: no test question 12"),
     ],
@@ -1197,3 +1230,228 @@ def test_command_with_the_real_test_questions_and_m3_reads_them(settings: Settin
     text = run_command()
     assert "runs 3; mode majority; control question strict; rule per-question" in text
     assert f"{NOT_MEASURED_NOTE}." in text
+
+
+# --- Seed and distance per run (work order 142) -------------------------------------------
+
+ANSWERED: list[AnswerEvent] = [SourcesEvent(sources=[ref(1)]), done()]
+
+
+def clock() -> Iterator[float]:
+    return itertools.count(0.0, 1.0)
+
+
+def test_observe_passes_the_seed_on_and_keeps_the_context_values() -> None:
+    scripted = ScriptedAnswer(ANSWERED, [(0.25, False)])
+
+    observed = observe(scripted, "Frage?", clock().__next__, seed=7)
+
+    assert scripted.seeds == [7]
+    assert (observed.best_distance, observed.below_threshold) == (0.25, False)
+
+
+def test_observe_without_seed_sends_none() -> None:
+    scripted = ScriptedAnswer(ANSWERED)
+
+    observe(scripted, "Frage?", clock().__next__)
+
+    assert scripted.seeds == [None]
+
+
+def test_observe_keeps_the_first_of_several_context_calls() -> None:
+    scripted = ScriptedAnswer(ANSWERED, [(0.25, False)], twice=True)
+
+    observed = observe(scripted, "Frage?", clock().__next__)
+
+    assert (observed.best_distance, observed.below_threshold) == (0.25, False)
+
+
+def test_observe_without_a_context_call_gives_none() -> None:
+    observed = observe(ScriptedAnswer(ANSWERED), "Frage?", clock().__next__)
+
+    assert (observed.best_distance, observed.below_threshold) == (None, None)
+
+
+def test_run_results_carry_distance_and_gate_for_every_verdict() -> None:
+    answered = judged(1, replace(seen([ref(1)]), best_distance=0.25, below_threshold=False))
+    closed = judged(
+        9,
+        replace(
+            seen([], AnswerStatus.NO_EVIDENCE, (), NO_EVIDENCE_TEXT),
+            best_distance=0.75,
+            below_threshold=True,
+        ),
+    )
+    failed = judged(1, Observed(error=ErrorCode.TIMEOUT, best_distance=0.5, below_threshold=False))
+    no_probe = judged(3, replace(seen([ref(1)]), best_distance=0.125, below_threshold=False))
+    silent = judged(1, seen([ref(1)]))
+
+    assert answered.verdict is Verdict.CORRECT
+    assert (answered.best_distance, answered.below_threshold) == (0.25, False)
+    assert closed.verdict is Verdict.CORRECT
+    assert (closed.best_distance, closed.below_threshold) == (0.75, True)
+    assert failed.verdict is Verdict.ERROR
+    assert (failed.best_distance, failed.below_threshold) == (0.5, False)
+    assert no_probe.verdict is Verdict.NO_PROBE
+    assert (no_probe.best_distance, no_probe.below_threshold) == (0.125, False)
+    assert (silent.best_distance, silent.below_threshold) == (None, None)
+
+
+def test_question_result_spreads_the_distance_and_counts_closed_gates() -> None:
+    runs = [
+        RunResult(run=1, verdict=Verdict.CORRECT, best_distance=0.5, below_threshold=False),
+        RunResult(run=2, verdict=Verdict.WRONG, best_distance=0.25, below_threshold=True),
+        RunResult(run=3, verdict=Verdict.WRONG, best_distance=0.75, below_threshold=True),
+        RunResult(run=4, verdict=Verdict.ERROR),
+    ]
+
+    result = aggregate(FACT, runs)
+
+    assert (result.best_distance.median, result.best_distance.minimum) == (0.5, 0.25)
+    assert result.best_distance.maximum == 0.75
+    assert result.below_threshold_runs == 2
+    empty = aggregate(FACT, [RunResult(run=1, verdict=Verdict.ERROR)])
+    assert empty.best_distance.median is None
+    assert empty.below_threshold_runs == 0
+
+
+@pytest.mark.usefixtures("ai_on")
+def test_evaluate_sends_the_same_seed_with_every_question_and_run() -> None:
+    scripted = ScriptedAnswer(ANSWERED)
+    subset = [questions()[1], questions()[9]]
+
+    report = evaluate(subset, places(), runs=3, answer=scripted, ingested=all_ingested, seed=7)
+    without = ScriptedAnswer(ANSWERED)
+    evaluate(subset, places(), runs=2, answer=without, ingested=all_ingested)
+
+    assert scripted.seeds == [7] * 6
+    assert without.seeds == [None] * 4
+    assert report.seed == 7
+
+
+@pytest.mark.usefixtures("ai_on")
+def test_report_shows_seed_distance_and_gate_in_text_and_json() -> None:
+    scripted = ScriptedAnswer(ANSWERED, [(0.25, False), (0.75, True)])
+    subset = [questions()[1], questions()[9]]
+    report = evaluate(subset, places(), answer=scripted, ingested=all_ingested, seed=7)
+
+    text = format_table(report)
+
+    assert "seed 7;" in text
+    assert "best distance (min-max)" in text
+    assert "0.2500 (0.2500-0.2500)" in text
+    assert "0.7500 (0.7500-0.7500)" in text
+    first_table, run_table = text.split("Runs:")
+    assert "below threshold" in first_table
+    assert "0/1" in first_table
+    assert "1/1" in first_table
+    assert "below threshold" in run_table
+    data = json.loads(format_json(report))
+    assert data["seed"] == 7
+    first, control = data["questions"]
+    assert first["runs"][0]["best_distance"] == 0.25
+    assert first["runs"][0]["below_threshold"] is False
+    assert first["best_distance"] == {"median": 0.25, "minimum": 0.25, "maximum": 0.25}
+    assert first["below_threshold_runs"] == 0
+    assert control["runs"][0]["best_distance"] == 0.75
+    assert control["runs"][0]["below_threshold"] is True
+    assert control["below_threshold_runs"] == 1
+
+
+@pytest.mark.usefixtures("ai_on")
+def test_report_shows_a_dash_without_seed_and_without_values() -> None:
+    report = evaluate(
+        [questions()[1]],
+        places(),
+        answer=ScriptedAnswer(ANSWERED),
+        ingested=all_ingested,
+    )
+
+    text = format_table(report)
+
+    assert "seed -;" in text
+    run_line = next(line for line in text.split("Runs:")[1].splitlines() if "answered" in line)
+    assert "0.2500" not in run_line
+    data = json.loads(format_json(report))
+    assert data["seed"] is None
+    assert data["questions"][0]["runs"][0]["best_distance"] is None
+    assert data["questions"][0]["runs"][0]["below_threshold"] is None
+    assert data["questions"][0]["best_distance"]["median"] is None
+
+
+def test_ai_off_report_names_the_seed(settings: Settings) -> None:
+    settings.TWOX_AI_ENABLED = False
+
+    report = evaluate([], {}, seed=7)
+
+    assert report.seed == 7
+    assert "seed 7;" in format_table(report)
+
+
+@pytest.mark.django_db
+def test_command_passes_the_seed_and_reports_distances_of_the_real_service(
+    small_factory: dict[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    chat = use_chat(monkeypatch, ["Der Greifer G-12 hält höchstens 5 kg [1]."])
+    files = [
+        "--questions",
+        str(small_factory["questions"]),
+        "--probes",
+        str(small_factory["probes"]),
+    ]
+
+    data = json.loads(run_command(*files, "--runs", "2", "--seed", "7", "--json"))
+
+    assert data["seed"] == 7
+    assert chat.calls
+    assert {call.seed for call in chat.calls} == {7}
+    by_id = {item["question_id"]: item for item in data["questions"]}
+    for question in (1, 2):
+        for run in by_id[question]["runs"]:
+            assert isinstance(run["best_distance"], float)
+            assert run["below_threshold"] is False
+    control = by_id[3]
+    assert control["below_threshold_runs"] == 2
+    assert all(run["below_threshold"] is True for run in control["runs"])
+    assert all(isinstance(run["best_distance"], float) for run in control["runs"])
+
+    plain = json.loads(run_command(*files, "--runs", "1", "--json"))
+    assert plain["seed"] is None
+    assert chat.calls[-1].seed is None
+
+
+@pytest.mark.django_db
+def test_command_hands_the_seed_to_evaluate(
+    small_factory: dict[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen_seeds: list[int | None] = []
+
+    def spy(
+        questions: Sequence[Question],
+        places: dict[int, QuestionPlaces],
+        *,
+        runs: int,
+        mode: Mode,
+        control_mode: Mode,
+        rule: Rule,
+        wording: Wording,
+        literal: bool,
+        seed: int | None,
+    ) -> Report:
+        seen_seeds.append(seed)
+        return evaluate(questions, places, runs=runs, answer=ScriptedAnswer(ANSWERED), seed=seed)
+
+    monkeypatch.setattr("twox.answers.management.commands.evaluate_answers.evaluate", spy)
+    files = ["--questions", str(small_factory["questions"])]
+    files += ["--probes", str(small_factory["probes"])]
+
+    run_command(*files, "--seed", "7")
+    run_command(*files)
+
+    assert seen_seeds == [7, None]
+
+
+def test_command_help_names_the_seed(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        call_command("evaluate_answers", "--help")
+    assert "--seed N" in capsys.readouterr().out

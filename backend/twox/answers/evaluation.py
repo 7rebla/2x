@@ -67,6 +67,20 @@ Over several runs (:func:`aggregate`, :func:`summarise`, pure)
     among the asked questions (``--only`` without it) the report says "control
     question not asked" and nothing is passed: an acceptance needs it.
 
+Seed and distance per run (work order 142)
+    ``seed`` (``--seed N``) goes unchanged with every question of every run, so
+    that measurements can be repeated; the report names it in its head. The
+    callback ``on_context`` of :func:`twox.answers.service.answer` (a
+    non-public back channel, not part of the event contract) gives each run
+    ``best_distance`` (the smallest cosine distance of all search hits before
+    the selection, not the distance of a cited source) and ``below_threshold``
+    of exactly the selection that run used. ``None`` means: no selection took
+    place in that run, or the answer function reported nothing (an error
+    before or in the selection, a replacement function that does not call the
+    callback); on several calls the first counts. Per question the report
+    gives median, smallest and largest distance and the number of runs below
+    the threshold. Only the two values are passed on, never the selection.
+
 With the AI features off (E-59) no question is asked and the model service
 is never contacted: the report says "not measured" and gives no x/10.
 
@@ -244,6 +258,10 @@ class Observed:
     first_token_seconds: float | None = None
     #: Seconds until ``done`` or ``error``.
     total_seconds: float = 0.0
+    #: From the context selection of this run (callback ``on_context``); ``None``
+    #: when the selection did not take place or reported nothing.
+    best_distance: float | None = None
+    below_threshold: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -282,6 +300,11 @@ class RunResult:
     removed_sentences: int = 0
     first_token_seconds: float | None = None
     total_seconds: float = 0.0
+    #: Smallest cosine distance of all search hits of this run, before the
+    #: selection (not the distance of a cited source); ``None`` without a value.
+    best_distance: float | None = None
+    #: Whether the selection of this run was below the threshold; ``None`` without a value.
+    below_threshold: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -308,6 +331,10 @@ class QuestionResult:
     evidence_rank_max: int | None = None
     first_token_seconds: Spread = field(default_factory=Spread)
     total_seconds: Spread = field(default_factory=Spread)
+    #: Best distance over the runs (median, smallest, largest).
+    best_distance: Spread = field(default_factory=Spread)
+    #: Number of runs whose selection was below the threshold.
+    below_threshold_runs: int = 0
     #: Manifest ids of expected places whose file is not ingested.
     not_ingested: list[str] = field(default_factory=list)
     #: Filled in by a7 in the report of 128 and 138 (D5); always ``None`` here.
@@ -381,6 +408,8 @@ class Report:
     rule: Rule
     wording: Wording
     literal: bool
+    #: The seed sent with every question; ``None`` sends none.
+    seed: int | None
     required: int
     questions: list[QuestionResult]
     #: ``None`` when nothing was measured.
@@ -640,6 +669,8 @@ def judge_run(
         "sources": len(observed.sources),
         "first_token_seconds": observed.first_token_seconds,
         "total_seconds": observed.total_seconds,
+        "best_distance": observed.best_distance,
+        "below_threshold": observed.below_threshold,
     }
     if not question.is_control and (places is None or not places.expected):
         return RunResult(verdict=Verdict.NO_PROBE, **base)
@@ -751,6 +782,8 @@ def aggregate(
         evidence_rank_max=max(ranks, default=None),
         first_token_seconds=_spread(run.first_token_seconds for run in runs),
         total_seconds=_spread(run.total_seconds for run in runs),
+        best_distance=_spread(run.best_distance for run in runs),
+        below_threshold_runs=sum(run.below_threshold is True for run in runs),
     )
 
 
@@ -823,12 +856,24 @@ class AnswerFunction(Protocol):
     """The signature of :func:`twox.answers.service.answer` that the evaluation uses."""
 
     def __call__(
-        self, question: str, *, device_ids: Sequence[int] = (), plant_ids: Sequence[int] = ()
+        self,
+        question: str,
+        *,
+        device_ids: Sequence[int] = (),
+        plant_ids: Sequence[int] = (),
+        seed: int | None = None,
+        on_context: service.ContextObserver | None = None,
     ) -> Iterator[AnswerEvent]: ...
 
 
-def observe(answer: AnswerFunction, text: str, clock: Callable[[], float]) -> Observed:
+def observe(
+    answer: AnswerFunction, text: str, clock: Callable[[], float], *, seed: int | None = None
+) -> Observed:
     """Ask ``text`` once, without restriction to devices or plants, and read the events.
+
+    ``seed`` goes to ``answer`` unchanged. The callback ``on_context`` keeps
+    the two values of the context selection of this run (the first call
+    counts); without a call both stay ``None``.
 
     The stream is closed as soon as ``done`` or ``error`` has come (or on any
     failure). An exception of ``answer`` itself counts as ``error(internal)``;
@@ -840,8 +885,14 @@ def observe(answer: AnswerFunction, text: str, clock: Callable[[], float]) -> Ob
     done: DoneEvent | None = None
     error: ErrorCode | None = None
     events: Iterator[AnswerEvent] | None = None
+    context: list[tuple[float | None, bool]] = []
+
+    def on_context(best_distance: float | None, below_threshold: bool) -> None:
+        if not context:
+            context.append((best_distance, below_threshold))
+
     try:
-        events = answer(text, device_ids=(), plant_ids=())
+        events = answer(text, device_ids=(), plant_ids=(), seed=seed, on_context=on_context)
         for event in events:
             match event:
                 case SourcesEvent():
@@ -870,6 +921,8 @@ def observe(answer: AnswerFunction, text: str, clock: Callable[[], float]) -> Ob
         error=error,
         first_token_seconds=first_token,
         total_seconds=clock() - started,
+        best_distance=context[0][0] if context else None,
+        below_threshold=context[0][1] if context else None,
     )
 
 
@@ -905,6 +958,7 @@ def evaluate(
     rule: Rule = Rule.PER_QUESTION,
     wording: Wording = Wording.YAML,
     literal: bool = False,
+    seed: int | None = None,
     required: int = REQUIRED_CORRECT,
     ingested: Callable[[Iterable[str]], set[str]] = ingested_checksums,
 ) -> Report:
@@ -916,6 +970,8 @@ def evaluate(
     so that tests need neither a database nor a model. The runs go one after
     the other over all questions (run 1 for every question, then run 2, ...).
     With the AI features off nothing is asked and the report is "not measured".
+    ``seed`` is sent with every question of every run (repeatability between
+    measurements); ``None`` sends none.
     """
     if runs < 1:
         raise ValueError("runs must be at least 1")
@@ -935,6 +991,7 @@ def evaluate(
         "rule": rule,
         "wording": wording,
         "literal": literal,
+        "seed": seed,
         "required": required,
     }
     if not ai_enabled:
@@ -969,7 +1026,7 @@ def evaluate(
     for run in range(1, runs + 1):
         for question, own, text in asked:
             outcome = judge_run(
-                question, own, observe(answer, text, clock), run=run, literal=literal
+                question, own, observe(answer, text, clock, seed=seed), run=run, literal=literal
             )
             collected[question.id].append(outcome)
             logger.info(
@@ -1025,6 +1082,20 @@ def _optional(value: int | None) -> str:
     return "-" if value is None else str(value)
 
 
+def _distance(value: float | None) -> str:
+    return "-" if value is None else f"{value:.4f}"
+
+
+def _distance_text(spread: Spread) -> str:
+    if spread.median is None:
+        return "-"
+    return f"{_distance(spread.median)} ({_distance(spread.minimum)}-{_distance(spread.maximum)})"
+
+
+def _yes_no(value: bool | None) -> str:
+    return "-" if value is None else _yes(value)
+
+
 def _rank_range(result: QuestionResult) -> str:
     low, high = result.evidence_rank_min, result.evidence_rank_max
     if low is None:
@@ -1055,7 +1126,8 @@ def _header_lines(report: Report) -> list[str]:
     return [
         f"Answer evaluation: AI features {ai}; runs {report.runs}; mode {report.mode};"
         f" control question {report.control_mode}; rule {report.rule};"
-        f" wording {report.wording}; key facts {facts}; required {report.required}",
+        f" wording {report.wording}; key facts {facts}; seed {_optional(report.seed)};"
+        f" required {report.required}",
         f"Chat model {report.chat_model or '-'}; embedding model {report.embed_model or '-'};"
         f" prompt version {report.prompt_version}; temperature {report.temperature:g};"
         f" max_tokens {report.max_tokens}; reasoning effort {report.reasoning_effort or '-'}",
@@ -1076,6 +1148,8 @@ def _question_rows(report: Report) -> list[list[str]]:
                 _rank_range(result),
                 _spread_text(result.first_token_seconds),
                 _spread_text(result.total_seconds),
+                _distance_text(result.best_distance),
+                f"{result.below_threshold_runs}/{result.run_count}" if result.run_count else "-",
                 ", ".join(result.not_ingested),
                 result.verdict_a7 or "",
             ]
@@ -1101,6 +1175,8 @@ def _run_rows(report: Report) -> list[list[str]]:
                     _yes(run.evidence_cited),
                     _ms(run.first_token_seconds),
                     _ms(run.total_seconds),
+                    _distance(run.best_distance),
+                    _yes_no(run.below_threshold),
                     ", ".join(run.groups_found) or "-",
                     "; ".join(run.missing_key_facts) or "-",
                     "; ".join(_label(label) for label in run.missing_places) or "-",
@@ -1126,6 +1202,8 @@ def format_table(report: Report) -> str:
             "evidence rank",
             "first token ms (min-max)",
             "total ms (min-max)",
+            "best distance (min-max)",
+            "below threshold",
             "not ingested",
             "verdict a7",
         ],
@@ -1150,6 +1228,8 @@ def format_table(report: Report) -> str:
                     "evidence cited",
                     "first token ms",
                     "total ms",
+                    "best distance",
+                    "below threshold",
                     "groups",
                     "missing key facts",
                     "missing places",
