@@ -246,7 +246,7 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 139 | Startwerte und Relevanzfilter (E-70) | B | 125, 128 | in Arbeit |
 | 140 | Zitatprüfung: Werte aus der Frage und Listenpunkte | B | 123, 128 | in Arbeit |
 | 141 | key_fact_alternatives für die Prüffragen 7 und 10 | C | 127, 128 | in Arbeit |
-| 142 | evaluate_answers: --seed und Abstand je Lauf | B | 127, 128 | in Arbeit |
+| 142 | evaluate_answers: --seed und Abstand je Lauf | B | 127, 128 | erledigt |
 | 143 | Suche: Überschriften stärker gewichten (D12 b) | C | 120, 124, 128 | in Arbeit |
 | 144 | Messlauf 2 nach den Nachbesserungen | C | 139–143 | offen |
 

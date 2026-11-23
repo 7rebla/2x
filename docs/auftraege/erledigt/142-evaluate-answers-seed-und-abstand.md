@@ -1,6 +1,6 @@
 # Auftrag 142 – evaluate_answers: --seed und Abstand je Lauf
 
-Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: B · Status: erledigt
 
 Voraussetzung: 127 (`evaluate_answers`), 126 (Antwortdienst `answer()` mit `seed`), 125 (Kontextauswahl mit `best_distance` und `below_threshold`) und 135 (Prüffragen in der CI mit Aufzeichnungen) sind auf `main`. Folgeauftrag zu Befund B6 aus 128 und zu E-70 („`evaluate_answers --seed`“).
 
