@@ -91,7 +91,7 @@ Nichts davon hält die laufende Arbeit auf.
     - D16 Ein selbst geschriebenes Testdokument mit eingebetteter Anweisung ist für Injection-Tests erlaubt (nicht in der Testumgebung 2x).
     - D17 Assistentenfigur erst nach M3.
     Dringend für den Hauptpfad: D11, D1, D2. Welle 1 (120–123) braucht keine Entscheidung.
-20. **Messlauf 128: Chat-Modell und Weg zu 8/10.** Ergebnis: gemma4:31b-it-qat 4/10, qwen3.8:27b-q4_K_M 2/10; Kontrollfrage bei beiden in allen ungestörten Läufen bestanden; Injection-Probe 10/10 bestanden. Ursachen der Fehlschläge meist nicht das Modell: Suche (Fragen 3, 4, 6, 7 – Belegstelle mit dem Wortlaut der Prüffrage nicht im Kontext), Zitatprüfung (Frage 9: Typbezeichnung aus der Frage im Antwortsatz gilt als unbelegt; Listenpunkte ohne eigene Nummer werden verworfen), wörtliche key_facts (Fragen 7, 10). Empfehlung: (a) Standardmodell gemma4, Rückfall qwen3.8, Reasoning aus, Temperatur 0, Schwelle 0.55 mit Filter auf relevante Treffer, k = 8, 16 000 Zeichen (Entwurf E-Eintrag im Kurzbericht 128); (b) Folgeaufträge vor 137/138: Zitatprüfung (Werte aus der Frage, Listenpunkte), `key_fact_alternatives` für 7 und 10 (Datenänderung, Bestätigung durch a7 nach D5), `evaluate_answers --seed`, dann Suche für 3/4/6/7 nach D12 (Überschriften gewichten, Neueinlesen) – danach Messlauf wiederholen. Die Oberfläche (132–134) läuft unabhängig weiter.
+20. ~~Messlauf 128~~ – entschieden mit E-70 (Empfehlung übernommen). Frühere Beschreibung: **Messlauf 128: Chat-Modell und Weg zu 8/10.** Ergebnis: gemma4:31b-it-qat 4/10, qwen3.8:27b-q4_K_M 2/10; Kontrollfrage bei beiden in allen ungestörten Läufen bestanden; Injection-Probe 10/10 bestanden. Ursachen der Fehlschläge meist nicht das Modell: Suche (Fragen 3, 4, 6, 7 – Belegstelle mit dem Wortlaut der Prüffrage nicht im Kontext), Zitatprüfung (Frage 9: Typbezeichnung aus der Frage im Antwortsatz gilt als unbelegt; Listenpunkte ohne eigene Nummer werden verworfen), wörtliche key_facts (Fragen 7, 10). Empfehlung: (a) Standardmodell gemma4, Rückfall qwen3.8, Reasoning aus, Temperatur 0, Schwelle 0.55 mit Filter auf relevante Treffer, k = 8, 16 000 Zeichen (Entwurf E-Eintrag im Kurzbericht 128); (b) Folgeaufträge vor 137/138: Zitatprüfung (Werte aus der Frage, Listenpunkte), `key_fact_alternatives` für 7 und 10 (Datenänderung, Bestätigung durch a7 nach D5), `evaluate_answers --seed`, dann Suche für 3/4/6/7 nach D12 (Überschriften gewichten, Neueinlesen) – danach Messlauf wiederholen. Die Oberfläche (132–134) läuft unabhängig weiter.
 
 ## Offene Abnahmebedingungen M0
 
@@ -232,7 +232,7 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 125 | Kontextauswahl für Antworten | B | 121, 122, 124 | erledigt |
 | 126 | Antwortdienst und Befehl ask | B | 121, 122, 123, 125 | erledigt |
 | 127 | Messwerkzeug evaluate_answers | B | 120, 126 | erledigt |
-| 128 | Messlauf Chat-Modell | C | 126, 127 | wartet auf a7 |
+| 128 | Messlauf Chat-Modell | C | 126, 127 | erledigt |
 | 129 | Selbsttest und check_llm für Chat | B | 121 | erledigt |
 | 130 | Antwort-API mit SSE und Status | C | 126, 129 | erledigt |
 | 131 | Oberfläche Antwortstrom und Hook | B | 130 | erledigt |

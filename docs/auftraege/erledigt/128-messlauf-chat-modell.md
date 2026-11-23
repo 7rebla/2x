@@ -1,6 +1,6 @@
 # Auftrag 128 – Messlauf Chat-Modell
 
-Meilenstein: M3 · Freigabestufe: C · Status: zur Prüfung (Entscheidung a7 nötig, siehe Kurzbericht)
+Meilenstein: M3 · Freigabestufe: C · Status: erledigt
 
 ## Ziel
 
