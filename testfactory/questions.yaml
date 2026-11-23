@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "manifest": "manifest.yaml",
-  "notes": "Test questions of section 11 of the project brief with the expected answers and their evidence (work orders 111 and 112). JSON notation like the manifest. Expected answers are written in the project's own words; the file holds no quotations from vendor documents, because the fischertechnik material carries no license. Every source names a manifest entry by manifest_id. Locators of PDF files give the page index of the file counted from 1 ('PDF-S.') and the printed page number ('gedr. S.'). Locators of repository files give the path from the repository root and the line of the raw file at the commit pinned in the manifest entry. Default access data that some sources contain are never copied here. The candidates are further possible questions found during the research; they do not count for the acceptance of M3.",
+  "notes": "Test questions of section 11 of the project brief with the expected answers and their evidence (work orders 111 and 112). JSON notation like the manifest. Expected answers are written in the project's own words; the file holds no quotations from vendor documents, because the fischertechnik material carries no license. Every source names a manifest entry by manifest_id. Locators of PDF files give the page index of the file counted from 1 ('PDF-S.') and the printed page number ('gedr. S.'). Locators of repository files give the path from the repository root and the line of the raw file at the commit pinned in the manifest entry. Default access data that some sources contain are never copied here. The candidates are further possible questions found during the research; they do not count for the acceptance of M3. The optional field key_fact_alternatives lists equivalent spellings of a key fact (inflected forms and terms of the other language version); it is confirmed by a7 and can be switched off in the measurement tool with --literal.",
   "questions": [
     {
       "id": 1,
@@ -220,6 +220,11 @@
         "Reset",
         "Docke an DPS"
       ],
+      "key_fact_alternatives": {
+        "Docke an DPS": [
+          "Dock to DPS"
+        ]
+      },
       "sources": [
         {
           "manifest_id": "aps-documentation-de",
@@ -233,7 +238,7 @@
         }
       ],
       "verified_on": "2026-11-21",
-      "notes": "The troubleshooting document (aps-troubleshooting-de, 3 pages) has no entry for a lost track. Its AGV entry (PDF-S. 2) concerns another symptom (AGV docks and then stops) and refers to the wiring of the IR track sensor; its general entry for error messages refers to the reset via the dashboard. Neither is used as evidence here."
+      "notes": "The troubleshooting document (aps-troubleshooting-de, 3 pages) has no entry for a lost track. Its AGV entry (PDF-S. 2) concerns another symptom (AGV docks and then stops) and refers to the wiring of the IR track sensor; its general entry for error messages refers to the reset via the dashboard. Neither is used as evidence here. The key fact alternatives come from work order 141 (D5 (f)): the English term of the button is taken from aps-documentation-en, PDF-S. 22."
     },
     {
       "id": 8,
@@ -312,6 +317,18 @@
         "Schutz-Reset",
         "steigende Flanke"
       ],
+      "key_fact_alternatives": {
+        "Schutz-Reset": [
+          "Schutzstopp-Reset",
+          "Zurücksetzen der Schutzeinrichtung",
+          "Safeguard Reset"
+        ],
+        "steigende Flanke": [
+          "steigenden Flanke",
+          "rising edge",
+          "LOW auf HIGH"
+        ]
+      },
       "sources": [
         {
           "manifest_id": "ur5e-user-manual-de",
@@ -345,7 +362,7 @@
         }
       ],
       "verified_on": "2026-11-21",
-      "notes": "Terminology: the German user manual uses Schutzstopp for the safeguard stop SF2 (English Safeguard Stop, software handbook PDF-S. 46). The English term protective stop means another stop, raised by the robot itself, e.g. on a collision or a limit; it is now called Robot Stop (Roboterstopp; user manual PDF-S. 230, gedr. S. 233; software handbook PDF-S. 227). For that stop the service manual (PDF-S. 118, gedr. S. 112, Kap. 7.6.1) requires checking the cause and a deliberate action by a user before resuming. It is not used as evidence here. The emergency stop section of the user manual (PDF-S. 206, gedr. S. 209) also speaks of a Schutzstopp-Schalter but means the emergency stop button; not used."
+      "notes": "Terminology: the German user manual uses Schutzstopp for the safeguard stop SF2 (English Safeguard Stop, software handbook PDF-S. 46). The English term protective stop means another stop, raised by the robot itself, e.g. on a collision or a limit; it is now called Robot Stop (Roboterstopp; user manual PDF-S. 230, gedr. S. 233; software handbook PDF-S. 227). For that stop the service manual (PDF-S. 118, gedr. S. 112, Kap. 7.6.1) requires checking the cause and a deliberate action by a user before resuming. It is not used as evidence here. The emergency stop section of the user manual (PDF-S. 206, gedr. S. 209) also speaks of a Schutzstopp-Schalter but means the emergency stop button; not used. The key fact alternatives come from work order 141 (D5 (f)): terms of ur5e-user-manual-de, PDF-S. 86 and 252, an inflected form and the English terms of ur5e-software-handbook-en, PDF-S. 46."
     },
     {
       "id": 11,
