@@ -60,9 +60,11 @@ IDENTIFIER = "31990L0270"
 IDENTIFIER_PAGE = 1
 #: An IP address in the Markdown fixture (an example target of a backup).
 IP_ADDRESS = "192.168.1.10"
-#: A question in other words: none of its words stands in the section it means
-#: (the definition of who counts as an expert, section 2 (5) of the PDF fixture).
-QUESTION = "Wer ist sachverständig genug für eine Aufgabe nach dieser Regel?"
+#: A question in other words: it means the definition of who counts as an expert
+#: (section 2 (5) of the PDF fixture), and none of its content words (the words
+#: left after the stop words of ``german`` and ``english``) stands in any section
+#: of the test documents, so the keyword search finds nothing (E-71, work order 145).
+QUESTION = "Wann ist jemand sachverständig genug für so einen Auftrag?"
 QUESTION_TARGET = "Fachkundig ist"
 
 #: Upper bound of worker messages per test; the flow ends far below it.
