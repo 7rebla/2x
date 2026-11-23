@@ -1,6 +1,6 @@
 # Auftrag 141 – key_fact_alternatives für die Prüffragen 7 und 10
 
-Meilenstein: M3 · Freigabestufe: C · Status: wartet auf a7 (Bestätigung der Alternativen)
+Meilenstein: M3 · Freigabestufe: C · Status: erledigt (alle Alternativen von a7 bestätigt am 23.11.2026, Option a)
 
 Voraussetzung: 127 (Messwerkzeug `evaluate_answers`, liest `key_fact_alternatives`) und 128 (Messlauf) sind erledigt und auf `main`. Entscheidungsgrundlage: D5 (f) nach E-69 (`docs/DECISIONS.md:79`) und E-70 (`docs/DECISIONS.md:80`, Folgeauftrag „`key_fact_alternatives` für die Fragen 7 und 10 (Bestätigung durch a7 nach D5)“). Stufe C, weil Daten der Testfabrik geändert werden, die die Abnahme von M3 bestimmen; a7 bestätigt jede Alternative.
 
