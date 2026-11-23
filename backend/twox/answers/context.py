@@ -19,8 +19,12 @@ The steps, in this order:
    ``max_distance`` or when it was found exactly (an identifier such as an IP
    address). Without a relevant hit the selection is empty and
    ``below_threshold`` is true, so the model is not asked. Keyword hits
-   without a distance are not relevant on their own. The threshold is a gate:
-   once it is passed, the hits are taken in the order of the search.
+   without a distance are not relevant on their own. The threshold is also a
+   filter (E-70): once it is passed, only the relevant hits go on, in the
+   order of the search; hits further away and keyword hits without a distance
+   are left out. ``best_distance`` and ``hit_count`` still describe all hits
+   of the search. Neighbours (step 6) follow their main source and are not
+   filtered.
 6. Selection, in the order of the search:
 
    - copies of the same file (same ``sha256``, ``ordinal`` and text, the key
@@ -192,14 +196,15 @@ def select_context(
     hits = result.hits
     distances = [hit.semantic_distance for hit in hits if hit.semantic_distance is not None]
     best_distance = min(distances, default=None)
-    if not any(_is_relevant(hit, threshold) for hit in hits):
+    relevant = [hit for hit in hits if _is_relevant(hit, threshold)]
+    if not relevant:
         return _finish(
             ContextSelection(
                 [], below_threshold=True, best_distance=best_distance, hit_count=len(hits)
             )
         )
 
-    candidates = _merge_copies(_candidates(hits, device_ids=device_ids, plant_ids=plant_ids))
+    candidates = _merge_copies(_candidates(relevant, device_ids=device_ids, plant_ids=plant_ids))
     mains, remaining = _select_mains(candidates, max_sources=k, budget=budget)
     ordered = _with_neighbours(mains, remaining) if with_neighbours else mains
     sources = [_to_source(number, candidate) for number, candidate in enumerate(ordered, 1)]
