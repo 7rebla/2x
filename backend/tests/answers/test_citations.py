@@ -837,6 +837,47 @@ def test_values_from_the_question_that_are_not_freed(
     )
 
 
+@pytest.mark.parametrize(
+    "value",
+    [
+        # Ranges and several units in one token.
+        "100-240VAC",
+        "24-48VDC",
+        "24VDC/AC",
+        "2x10kg",
+        # A number with a unit in another case.
+        "24v",
+        "10KG",
+        "8gb",
+        # A MAC address in dot notation and versions with letters after them.
+        "001a.2b3c.4d5e",
+        "V2.1a",
+        "5.12a",
+    ],
+)
+def test_units_ranges_dotted_macs_and_lettered_versions_are_not_freed(value: str) -> None:
+    verdict = verify(
+        f"Der Greifer trägt 5 kg bei {value} [1].",
+        PAYLOAD_SOURCE,
+        drop_unsupported=True,
+        question=f"Trägt der Greifer 5 kg bei {value}?",
+    )
+    assert verdict.status == "no_evidence"
+    assert reasons(verdict) == [(0, "unsupported_value")]
+    assert verdict.removed_sentences[0].values == (value,)
+
+
+def test_range_from_the_question_next_to_a_freed_designation_stays_unsupported() -> None:
+    verdict = verify(
+        "Der G-12 läuft mit 100-240VAC und trägt 5 kg [1].",
+        PAYLOAD_SOURCE,
+        drop_unsupported=True,
+        question="Läuft der G-12 mit 100-240VAC?",
+    )
+    assert verdict.status == "no_evidence"
+    assert verdict.removed_sentences[0].values == ("100-240VAC",)
+
+
 def test_value_from_the_question_needs_a_source_number() -> None:
     verdict = verify(
         "Der G-12 hat eine Nutzlast von 5 kg.",
@@ -1012,6 +1053,10 @@ LIST_INTRO = "Die Station nutzt diese Ports [1]:\n"
         (lambda n: SHORT_ANSWER, lambda n: "Port" + " " * n + "x"),
         (lambda n: SHORT_ANSWER, lambda n: ("." * n) + "x"),
         (lambda n: SHORT_ANSWER, lambda n: ("G-12-Teil" * n)[:n]),
+        # Long single tokens for the unit, MAC and version exclusions.
+        (lambda n: SHORT_ANSWER, lambda n: ("2x10" * n)[:n] + "a"),
+        (lambda n: SHORT_ANSWER, lambda n: "1" + "a" * n),
+        (lambda n: SHORT_ANSWER, lambda n: "V" + ("1." * n)[:n] + "1a"),
     ],
 )
 def test_lists_and_long_questions_stay_linear(

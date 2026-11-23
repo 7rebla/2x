@@ -113,10 +113,13 @@ Values from the question
     with ``5 kg`` in source 1). A sentence whose only value comes from the
     question is checked as without a question, so a false premise (``Was
     bedeutet Fehler E1234?`` with a source on ``E1235``) does not confirm
-    itself. Numbers with a unit (also written as one token: ``10kg``,
-    ``24VDC``), addresses, ports, versions and numbers without a letter
-    (``1.5``) are never taken from the question: they are what a false
-    premise would get wrong. The sentence still needs a valid source number.
+    itself. Numbers with a unit (also within one token that starts with a
+    digit, in any case: ``10kg``, ``24VDC``, ``100-240VAC``, ``24VDC/AC``,
+    ``2x10kg``, ``24v``, ``8gb``; so ``4G`` is not taken either), addresses
+    (also a MAC address in dot notation, ``001a.2b3c.4d5e``), ports,
+    versions (also with letters after them, ``V2.1a``) and numbers without
+    a letter (``1.5``) are never taken from the question: they are what a
+    false premise would get wrong. The sentence still needs a valid source number.
     Only keys are compared; no expression is built from the question.
 
 Sentence verdict
@@ -291,10 +294,21 @@ _UNIT_ALTERNATION: Final = "|".join(
 _UNIT_VALUE: Final = re.compile(
     r"(?<![\w.,])-?\d{1,9}(?:[.,]\d{1,9})?[ \t-]?(?:" + _UNIT_ALTERNATION + r")(?![\w%°])"
 )
-#: A whole token that is a number with a unit, optionally followed by ``AC`` or
-#: ``DC`` (``24VDC``, ``230VAC``): never a type designation from the question.
-_UNIT_TOKEN: Final = re.compile(
-    r"-?\d{1,9}(?:[.,]\d{1,9})?[ \t-]?(?:" + _UNIT_ALTERNATION + r")(?:[-/]?(?i:ac|dc))?"
+#: A unit right after a digit, in any case, optionally followed by ``AC`` or
+#: ``DC``, and not followed by a letter. A token that starts with a digit and
+#: contains this anywhere (``24VDC``, ``100-240VAC``, ``24VDC/AC``, ``2x10kg``,
+#: ``24v``, ``8gb``) is never a type designation from the question. Built from
+#: constants only; searched in one token at a time.
+_UNIT_IN_TOKEN: Final = re.compile(
+    r"\d[ \t-]?(?:" + _UNIT_ALTERNATION + r")(?:[-/]?(?:ac|dc))?(?![^\W\d_])",
+    re.IGNORECASE,
+)
+#: Values written like a MAC address in dot notation (``001a.2b3c.4d5e``) or a
+#: version with a letter after it (``V2.1a``, ``5.12a``, ``V18b``): never a
+#: type designation from the question.
+_NOT_DESIGNATION: Final = re.compile(
+    r"[0-9a-f]{4}\.[0-9a-f]{4}\.[0-9a-f]{4}|v?\d++(?:\.\d++)++[a-z]{0,3}|v\d++[a-z]{0,3}",
+    re.IGNORECASE,
 )
 _PORT_WORD: Final = re.compile(
     # "Port 502", "Ports 502", "Port: 502", "Port-Nr. 502", "Portnummer 502".
@@ -661,15 +675,17 @@ def _check_values(sentence: str) -> list[_Value]:
 def _is_designation(value: str) -> bool:
     """Whether the generic identifier ``value`` is a type designation or code.
 
-    It needs a letter and a digit and must not be a number with a unit
-    written as one token (``10kg``, ``24VDC``). Plain numbers with a full
-    stop (``1.5``) have no letter and are no designation.
+    It needs a letter and a digit. Not a designation: a token that starts
+    with a digit and contains a number with a unit, in any case
+    (``10kg``, ``24VDC``, ``100-240VAC``, ``2x10kg``, ``24v``), a MAC address
+    in dot notation and a version with letters after it (``V2.1a``). Plain
+    numbers with a full stop (``1.5``) have no letter and are no designation.
     """
-    return (
-        any(char.isalpha() for char in value)
-        and any(char.isdigit() for char in value)
-        and _UNIT_TOKEN.fullmatch(value) is None
-    )
+    if not (any(char.isalpha() for char in value) and any(char.isdigit() for char in value)):
+        return False
+    if value.lstrip("+-")[:1].isdigit() and _UNIT_IN_TOKEN.search(value) is not None:
+        return False
+    return _NOT_DESIGNATION.fullmatch(value) is None
 
 
 def _is_word_part(part: str) -> bool:
