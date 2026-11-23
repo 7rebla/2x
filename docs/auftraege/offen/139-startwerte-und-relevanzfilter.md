@@ -1,6 +1,6 @@
 # Auftrag 139 – Startwerte und Relevanzfilter der Auskunft
 
-Meilenstein: M3 · Freigabestufe: B · Status: offen
+Meilenstein: M3 · Freigabestufe: B · Status: zur Prüfung
 
 Voraussetzungen: E-70 (`docs/DECISIONS.md:80`) ist entschieden. 125 (Kontextauswahl), 128 (Messlauf) und 135 (Prüffragen in der CI mit Aufzeichnungen) liegen auf `main`.
 
@@ -155,7 +155,93 @@ Heute ist die Schwelle nur ein Tor. Liegt **ein** Treffer unter der Schwelle, ko
 Keine. Die Werte und der Filter sind in E-70 entschieden. Kommt beim Aufnahmelauf mit gemma4 eine Prüfung nicht durch, gilt Umfang 4 (Status „wartet auf a7“, Optionen durch die Leitstelle).
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+### Was wurde gebaut?
+
+- **Relevanzfilter** (`backend/twox/answers/context.py`): Nach geöffneter Sperre geht nur noch die Liste `relevant = [hit for hit in hits if _is_relevant(hit, threshold)]` an `_candidates(...)`. `_select_mains`, Nachbarn, `_merge_copies` und die Abfrage `limit=min(MAX_LIMIT, 2 * k)` sind unverändert. `best_distance` und `hit_count` werden weiter aus allen Treffern gebildet. Ohne relevanten Treffer bleibt `below_threshold` wahr, und das Modell wird nicht gefragt. Docstring Schritt 5 ist umgeschrieben. Es gibt keinen Schalter.
+- **Startwerte nach E-70** in `settings.py` und `.env.example`: `TWOX_ANSWER_MAX_DISTANCE` 0.55 und `TWOX_ANSWER_CONTEXT_CHARS` 16000. Die übrigen Werte sind unverändert. Die Kommentare nennen E-70 und den Filter; der Kommentar zum Chat-Modell nennt gemma4 und den Rückfall qwen3.8. `TWOX_CHAT_MODEL=` bleibt leer. `deploy/compose/compose.yaml` ist unberührt; dort gibt es keine Werte zu ändern (nur `${VAR:-}`).
+- **Neuaufnahme** `backend/tests/answers/recorded/ci_questions.json`:
+  - Modell `gemma4:31b-it-qat`, Digest `e0812a55773bfeac846b2d605b4d93638b8dfa7119d9587f3d91475afc78185e`. Vorher über `/api/tags` geprüft; er stimmt mit `docs/DECISIONS.md:227` überein.
+  - `prompt_version` `64267b8d166e`, unverändert gegenüber `main`.
+  - Aufgenommen am 23.11.2026, 16:14:53–16:15:44 UTC, Dauer 51 s; alle Prüfungen bestanden (17 passed, 5 skipped).
+  - `/api/ps` war vorher leer, es gab also keine Überschneidung mit anderen Aufträgen.
+  - `ci-fact-1`, `ci-fact-2` und `ci-injection` haben jetzt je 1 Quelle statt 3. Bei `ci-control` (THRESHOLD_OFF) bleibt die Zahl der Quellen gleich.
+  - Durchsicht: Die Datei enthält nur kurze Modellausgabe, keine Links, keine Personennamen und keine Pfade.
+- **Doku:**
+  - `README.md`: Abschnitt „Chat model for answers“ (Empfehlung gemma4 mit Rückfall, `ollama pull gemma4:31b-it-qat`, `OLLAMA_CONTEXT_LENGTH` 16384) und die Zeile zur Neuaufnahme.
+  - `docs/ARCHITECTURE.md`: nur der Teilsatz zur Schwelle in der Zeile `answers` und die Tabellenzeilen `TWOX_CHAT_MODEL`, `TWOX_ANSWER_CONTEXT_CHARS` und `TWOX_ANSWER_MAX_DISTANCE`.
+  - `backend/tests/answers/recorded/README.md`: das Beispiel nennt jetzt gemma4.
+
+### Wie wurde getestet? (Akzeptanzkriterien)
+
+0. `docker version` 29.9.3 und `docker compose version` v5.7.0 enden mit Exit-Code 0.
+1. Alle Jobs der CI sind lokal über `docker compose` mit `.env` aus `.env.example` grün (eigener API-Port 18139):
+   - `backend`: ruff check, ruff format, mypy, `pytest` (3427 passed), `pytest -m worker` (6 passed), Katalog unverändert, Migrationen, Lizenzen, Schema unverändert.
+   - `web`: npm ci, Lint, Typprüfung, Build, Lizenzen und API-Client unverändert sind grün. Die Tests (1132) sind erst im zweiten Lauf grün: Im ersten Lauf liefen gleichzeitig `pytest` und andere Aufträge, und 5 Tests scheiterten an Zeitüberschreitungen (jeweils der erste Test einer Datei). `web/` ist nicht berührt.
+   - `testfactory`: alle Schritte grün.
+   - `e2e`: 88 passed, 1 skipped (der lokale Teil von M2); `answer-page.spec.ts` ist grün. Ein erster Lauf hatte 2 Fehler bei „search without hits“. Ursache waren meine eigenen Prüfabschnitte aus Kriterium 11 in derselben Datenbank. Nach `down -v` und einem Lauf auf leerer Datenbank war alles grün.
+2. `pytest tests/answers/test_ci_questions.py` ist mit `TWOX_LLM_BASE_URL=http://127.0.0.1:9/v1` (Modelldienst nicht erreichbar) grün, 22 passed. Ollama am Host habe ich nicht gestoppt, weil parallele Aufträge es nutzen.
+3. Abgedeckt durch `test_far_hit_next_to_a_near_one_is_left_out`, `test_best_distance_and_hit_count_describe_all_hits`, `test_exact_hit_beyond_the_threshold_stays_a_source` und `test_keyword_hit_without_distance_next_to_a_near_one_is_left_out`. Die Schwelle steht dabei per Fixture auf dem Startwert 0.55; dass dies der Standardwert ist, prüft `test_answer_settings_have_their_starting_values`.
+4. Die neuen Tests (sieben, Abschnitt „Relevance filter after the threshold (E-70)“) sind grün. Bestehende Tests: Nur die beiden Startwert-Tests haben neue Erwartungen. Zusätzlich hat `test_keyword_hit_without_embedding_is_not_merged` einen neuen Aufbau: Ein Stichworttreffer ohne Abstand fällt jetzt aus dem Kontext. Der Abschnitt ohne Einbettung ist darum ein exakter Treffer (IP-Adresse), und die Frage nennt die Adresse. Die Zusicherung ist unverändert (`{german, english}`). Die übrigen Tests liegen alle unter 0,55 (Winkel ≤ 60°) oder prüfen die Absage; sie brauchten keine Anpassung. `test_ask.py`, `test_api.py` und `test_ci_questions.py` sind unverändert und grün. `test_service.py` und `test_evaluation.py` brauchten nichts.
+5. `django.setup()` ohne `TWOX_ANSWER_*`/`TWOX_CHAT_*` ergibt: `0.55 16000 8 0.0 1024 none ''`.
+6. Erfüllt: siehe Diff von `.env.example` und `settings.py`; `compose.yaml` ist unverändert.
+7. Erfüllt: siehe oben.
+8. Erfüllt: nur die genannten Stellen. Die Tabellenzeile `TWOX_ANSWER_MAX_SOURCES` (`ARCHITECTURE.md:599`, „calibrated in work order 128“) habe ich nicht angefasst, weil sie nicht zum Auftrag gehört.
+9. Erfüllt: Keine Abhängigkeitsdatei ist geändert.
+10. `test_logs_hold_neither_question_nor_text_nor_headings` ist grün.
+11. Das Snippet ist im eigenen Projekt `twox-139` gelaufen. Die Datenbasis waren 6 selbst geschriebene Abschnitte, mit bge-m3 eingebettet. Ergebnisse:
+    - Frage A (nah): `hit_count=6`, `best_distance=0.1903`, 3 Quellen (0.1903 / 0.3595 / 0.4136), 3 Treffer jenseits der Schwelle, `violations=0`.
+    - Frage B (mit IP): 2 Quellen (exakt 0.0959; 0.5298), 4 Treffer jenseits der Schwelle, `violations=0`.
+    - Frage C (fremd): `best_distance=0.6626`, `below_threshold=True`, 0 Quellen.
+
+**Prüfanleitung für den Filter** (Frage nur als Umgebungsvariable, Ausgabe nur Zahlen und Kennungen):
+
+```sh
+cat > /tmp/check_filter.py <<'EOF'
+import os
+from django.conf import settings
+from twox.answers.context import select_context
+from twox.search.interface import MAX_LIMIT, MatchKind, SearchRequest, get_search_backend
+
+q = os.environ["TWOX_CHECK_QUESTION"]
+t = settings.TWOX_ANSWER_MAX_DISTANCE
+k = settings.TWOX_ANSWER_MAX_SOURCES
+sel = select_context(q, neighbours=False)
+res = get_search_backend().search(
+    SearchRequest(query=q, limit=min(MAX_LIMIT, 2 * k), include_text=True)
+)
+hits = {loc.section_id: h for h in res.hits for loc in h.locations}
+hits.update({h.section_id: h for h in res.hits})
+print(f"threshold={t} k={k} best_distance={sel.best_distance} hit_count={sel.hit_count} "
+      f"below_threshold={sel.below_threshold} search_hits={len(res.hits)}")
+bad = 0
+for s in sel.sources:
+    ids = [s.section_id] + [loc.section_id for loc in s.locations]
+    h = next((hits[i] for i in ids if i in hits), None)
+    d = None if h is None else h.semantic_distance
+    ex = h is not None and MatchKind.EXACT in h.match_kinds
+    ok = ex or (d is not None and d <= t)
+    bad += not ok
+    print(f"source={s.n} section_id={s.section_id} "
+          f"distance={'none' if d is None else f'{d:.4f}'} "
+          f"exact={'yes' if ex else 'no'} ok={'yes' if ok else 'NO'}")
+far = [h for h in res.hits if not (MatchKind.EXACT in h.match_kinds
+       or (h.semantic_distance is not None and h.semantic_distance <= t))]
+print(f"hits_beyond_threshold={len(far)} sources={len(sel.sources)} violations={bad}")
+EOF
+TWOX_CHECK_QUESTION='<question>' docker compose run --rm -e TWOX_CHECK_QUESTION backend-dev \
+  python manage.py shell -c "$(cat /tmp/check_filter.py)"
+```
+
+Erwartet: `violations=0`. Mit Nachbarn ist das Snippet nicht gedacht; es ruft `select_context` ohne Nachbarn auf, wie vorgegeben.
+
+### Zweig und Arbeitsverzeichnis
+
+Zweig `worktree-agent-a91e35b8d18c79683`, Arbeitsverzeichnis `.claude/worktrees/agent-a91e35b8d18c79683`. Vier Commits plus der Commit mit diesem Bericht. Kein Push.
+
+### Abweichungen
+
+- Keine inhaltlichen Abweichungen.
+- `test_keyword_hit_without_embedding_is_not_merged` hat einen neuen Aufbau (siehe Kriterium 4). Die Zusicherung ist unverändert.
+- Kriterium 2: Die Prüfung lief mit einer nicht erreichbaren Modelladresse statt mit gestopptem Ollama, weil parallele Aufträge Ollama nutzen.
+- Hinweis für die Leitstelle: Nach 140 (falls Prompt oder Zitatprüfung die Aufzeichnung berühren) und nach 143 (Suche) ist eine weitere Neuaufnahme nötig, wie im Auftrag beschrieben.
