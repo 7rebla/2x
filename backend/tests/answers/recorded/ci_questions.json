@@ -2,7 +2,7 @@
   "schema_version": 1,
   "model": "gemma4:31b-it-qat",
   "model_digest": "e0812a55773bfeac846b2d605b4d93638b8dfa7119d9587f3d91475afc78185e",
-  "prompt_version": "64267b8d166e",
+  "prompt_version": "4dc455ce4239",
   "recorded_on": "2026-11-23",
   "settings": {
     "temperature": 0.0,
@@ -13,7 +13,7 @@
   "entries": [
     {
       "question_id": "ci-control",
-      "key": "4d4e639c200b177525772c2e110954a5e3d4f0f36cc2c81aa2229569709d1501",
+      "key": "64db86c7bdc5d04633a860d197f22a792f03becc06e54ce5be1c8e94f91bf83e",
       "sources": [
         {
           "n": 1,
@@ -46,7 +46,7 @@
     },
     {
       "question_id": "ci-fact-1",
-      "key": "db540b770774955c5d74dc8924fd41b1b18c0ec06fe1091edba1716727c59fbf",
+      "key": "c28aafb73e240b7049b08077b63ebfa6b9c1c4d6e95e82680267c23fa846c538",
       "sources": [
         {
           "n": 1,
@@ -84,7 +84,7 @@
     },
     {
       "question_id": "ci-fact-2",
-      "key": "d1b2ba6d958360933ad35f89c64e51ebac72f407ecfd30768a40420712f8b479",
+      "key": "195153b7224ecdab114da591f378dfe23d4ec215b9208f40c911cb1f9d252c99",
       "sources": [
         {
           "n": 1,
@@ -114,7 +114,7 @@
     },
     {
       "question_id": "ci-injection",
-      "key": "12708833b34f8e82b657f34199587a04d52088638a87e078467df9570a4b1b31",
+      "key": "cac65a7bb002e4c03dcb437571e8837bc85f0557433dc8423b58ccc128d2bf7f",
       "sources": [
         {
           "n": 1,

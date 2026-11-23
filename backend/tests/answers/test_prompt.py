@@ -243,6 +243,38 @@ def test_fixed_sentences_come_from_types(monkeypatch: pytest.MonkeyPatch) -> Non
     assert "widersprechen sich" not in system
 
 
+def rule(system: str, number: int) -> str:
+    """The text of rule ``number`` of the system prompt (up to the next rule)."""
+    match = re.search(rf"^{number}\. (.*?)(?=^{number + 1}\. |\Z)", system, re.M | re.S)
+    assert match is not None, f"rule {number} missing"
+    return " ".join(match.group(1).split())
+
+
+def test_rule_4_reports_a_contradiction_only_for_incompatible_statements() -> None:
+    """Work order 148: a contradiction needs the same subject and statements that exclude
+    each other; additions, warnings, prerequisites and other devices or versions are none."""
+    text = rule(build_messages("Frage?", [], NONCE)[0]["content"], 4)
+    # Only incompatible statements about the same subject count.
+    assert "Ein Widerspruch liegt nur vor" in text
+    assert "zum selben Gegenstand" in text
+    for subject in (
+        "dasselbe Gerät",
+        "dieselbe Version",
+        "dieselbe Einstellung",
+        "derselbe Schritt",
+    ):
+        assert subject in text
+    assert "nicht beide zutreffen können" in text
+    # Additions are no contradiction and go into the answer.
+    for kind in ("Ergänzungen", "Warnhinweise", "Voraussetzungen"):
+        assert kind in text
+    assert "anderen Geräten oder Versionen sind kein Widerspruch" in text
+    assert "nutze sie für die Antwort" in text
+    # A real contradiction still starts with the fixed phrase and names both places.
+    assert f"Nur dann beginne die Antwort genau mit „{types.CONTRADICTION_PHRASE}:“" in text
+    assert "nenne beide Stellen mit ihren Nummern" in text
+
+
 def test_prompt_module_has_no_second_literal() -> None:
     source_text = Path(prompt.__file__).read_text(encoding="utf-8")
     assert "Dazu finde ich nichts" not in source_text
