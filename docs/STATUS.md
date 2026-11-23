@@ -243,12 +243,16 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 136 | Beleg für Prüffrage 8 | C | 120 | erledigt |
 | 137 | Abnahmetests M3 und Browserfluss | B | 127, 130, 133, 134 | offen (nach 144) |
 | 138 | Abnahmelauf M3 | C | 128, 135, 136, 137 | offen (nach 144) |
-| 139 | Startwerte und Relevanzfilter (E-70) | B | 125, 128 | in Arbeit |
-| 140 | Zitatprüfung: Werte aus der Frage und Listenpunkte | B | 123, 128 | in Arbeit |
-| 141 | key_fact_alternatives für die Prüffragen 7 und 10 | C | 127, 128 | in Arbeit |
+| 139 | Startwerte und Relevanzfilter (E-70) | B | 125, 128 | erledigt |
+| 140 | Zitatprüfung: Werte aus der Frage und Listenpunkte | B | 123, 128 | erledigt |
+| 141 | key_fact_alternatives für die Prüffragen 7 und 10 | C | 127, 128 | wartet auf a7 (Bestätigung der Schreibweisen) |
 | 142 | evaluate_answers: --seed und Abstand je Lauf | B | 127, 128 | erledigt |
-| 143 | Suche: Überschriften stärker gewichten (D12 b) | C | 120, 124, 128 | in Arbeit |
+| 143 | Suche: Überschriften stärker gewichten (D12 b) | C | 120, 124, 128 | wartet auf a7 (9 rote Tests: CI-Aufzeichnungen, `test_m2.py:373`) |
 | 144 | Messlauf 2 nach den Nachbesserungen | C | 139–143 | offen |
+
+- 139: Hinweis aus der Prüfung – rein numerische Kennungen (Artikel-, Register-, Fehlernummern nur aus Ziffern) sind keine EXACT-Treffer und fallen nach geöffneter Sperre aus dem Kontext, wenn ihr Abstand über 0,55 liegt. Entspricht E-70; in 144 beobachten, bei Bedarf a7 als Option vorlegen.
+- 140: Nach der Prüfung nachgebessert (Wertebereiche, Einheiten in anderer Schreibweise, Punkt-MAC und Versionen mit Buchstaben werden nie aus der Frage übernommen).
+- 143: Prüfung ohne Befund am Code. Option (a) umgesetzt (weiche Stichwortsuche auch auf der Suchseite), Antwort von a7 zu Frage 1 steht noch aus. Kein Neuaufbau des Stichwortindex nötig (nur Abfragezeit).
 
 - 136: Zwei Markdown-Dateien zur Bohrstation in 2x eingelesen (D2; Kennwort-Prüfung vorher und nachher 0). Prüffrage 8: Rang 9 (kombiniert). Schönheitsfehler: Der Titel von Dokument 158 hat beim Upload unter Windows ein Ersatzzeichen statt „ü“ bekommen; Umbenennen gibt es noch nicht – bei Gelegenheit in der Admin-Oberfläche berichtigen.
 - 120 (Messung in 2x): Fragen 3 und 4 in keiner Trefferliste; mit Frage 8 sind derzeit höchstens 8 Fragen belegbar. Nach D12 zuerst mehr Kontext (125), dann neu messen.
