@@ -252,7 +252,7 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 
 - 139: Hinweis aus der Prüfung – rein numerische Kennungen (Artikel-, Register-, Fehlernummern nur aus Ziffern) sind keine EXACT-Treffer und fallen nach geöffneter Sperre aus dem Kontext, wenn ihr Abstand über 0,55 liegt. Entspricht E-70; in 144 beobachten, bei Bedarf a7 als Option vorlegen.
 - 140: Nach der Prüfung nachgebessert (Wertebereiche, Einheiten in anderer Schreibweise, Punkt-MAC und Versionen mit Buchstaben werden nie aus der Frage übernommen).
-- 143: Prüfung ohne Befund am Code. Option (a) umgesetzt (weiche Stichwortsuche auch auf der Suchseite), Antwort von a7 zu Frage 1 steht noch aus. Kein Neuaufbau des Stichwortindex nötig (nur Abfragezeit).
+- 143: Prüfung ohne Befund am Code. Option (a) umgesetzt (weiche Stichwortsuche auch auf der Suchseite), Antwort von a7 zu Frage 1 steht noch aus. Kein Neuaufbau des Stichwortindex nötig (nur Abfragezeit). `pytest -m worker` von der Leitstelle nachgeholt: 6 bestanden.
 
 - 136: Zwei Markdown-Dateien zur Bohrstation in 2x eingelesen (D2; Kennwort-Prüfung vorher und nachher 0). Prüffrage 8: Rang 9 (kombiniert). Schönheitsfehler: Der Titel von Dokument 158 hat beim Upload unter Windows ein Ersatzzeichen statt „ü“ bekommen; Umbenennen gibt es noch nicht – bei Gelegenheit in der Admin-Oberfläche berichtigen.
 - 120 (Messung in 2x): Fragen 3 und 4 in keiner Trefferliste; mit Frage 8 sind derzeit höchstens 8 Fragen belegbar. Nach D12 zuerst mehr Kontext (125), dann neu messen.
