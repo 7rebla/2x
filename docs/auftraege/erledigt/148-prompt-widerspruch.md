@@ -1,6 +1,6 @@
 # Auftrag 148 – Prompt: Widerspruch nur bei unvereinbaren Angaben
 
-Meilenstein: M3 · Freigabestufe: B (Richtung entschieden in E-74) · Status: fertig, zur Prüfung
+Meilenstein: M3 · Freigabestufe: B (Richtung entschieden in E-74) · Status: erledigt
 
 ## Ziel
 
