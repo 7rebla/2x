@@ -1,6 +1,6 @@
 # Auftrag 145 – Tests nach der weichen Stichwortsuche nachziehen
 
-Meilenstein: M3 · Freigabestufe: B (Inhalt entschieden in E-71) · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: B (Inhalt entschieden in E-71) · Status: erledigt
 
 ## Ziel
 
