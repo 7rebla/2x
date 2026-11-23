@@ -1,6 +1,6 @@
 # Auftrag 143 – Suche: Überschriften stärker gewichten und Fragen weicher suchen (D12 b)
 
-Meilenstein: M3 · Freigabestufe: C · Status: offen
+Meilenstein: M3 · Freigabestufe: C · Status: wartet auf a7 (Tests außerhalb von `backend/tests/search/` rot, siehe Kurzbericht und Frage 2)
 
 Stufe C nach E-70 und D12: Die Stichwortsuche ändert ihr Verhalten für alle Aufrufer (Suchseite und Auskunft), und falls der Ausdruck des Stichwortindex (`Section.search_vector`) geändert wird, ändert sich das Datenmodell der Suche (Migration). Zusammenführen und Neuaufbau des Stichwortindex in der Testumgebung „2x“ erst nach Freigabe durch a7; die Leitstelle führt Migration und Messung dort aus.
 
@@ -128,9 +128,109 @@ Alle Texte selbst geschrieben, Embedder nur als Attrappe (`backend/tests/search/
    - (c) Weiche Anfrage nur für die Auskunft über ein neues Feld in `SearchRequest`; ändert die Schnittstelle und berührt `backend/twox/answers/` (Konflikt mit 139).
    - Empfehlung: (a). (b) hilft bei Fragen, bei denen die UND-Anfrage einen einzigen schwachen Treffer findet, nicht; (c) widerspricht der Trennung der parallelen Aufträge.
    - Bis zur Antwort von a7 setzt der Auftragsbearbeiter die Empfehlung (a) um; entscheidet a7 anders, folgt Nacharbeit.
+   - **Umgesetzt: (a)** (Auftragsbearbeiter, 23.11.2026).
+
+2. **Rote Tests außerhalb von `backend/tests/search/`** (vom Auftragsbearbeiter ergänzt). Nach Regel 4 nicht angepasst und nicht neu aufgenommen:
+   - `tests/answers/test_ci_questions.py` (7 Tests: `test_fact_question[ai-on-ci-fact-1]`, `[ai-on-ci-fact-2]`, `test_evaluate_with_the_small_question_set`, `test_control_question_without_threshold_plays_the_refusal`, `test_cancelling_closes_the_stream_of_the_replay`, `test_no_log_line_holds_a_question_an_answer_or_a_section_text`, `test_recording_file`): `RecordingMissingError: no recording for this prompt (prompt_version=64267b8d166e, model=qwen3.8:27b-q4_K_M, question=ci-fact-1)` (bzw. `ci-fact-2`). Erwartet: Die CI-Fragen sind Fragen in Satzform, die Stichwortliste enthält jetzt Teiltreffer, Quellen und Reihenfolge im Kontext ändern sich, damit der Schlüssel der Aufzeichnung.
+   - `tests/acceptance/test_m2.py::test_search_answers_a_question_in_other_words_by_meaning[ai-off]`: `assert {'semantic': ... 'hits': [...]} == {'semantic': 'disabled', 'hits': []}`; `[ai-on]`: `assert ['keyword', 'semantic'] == ['semantic']`. Der Test setzt voraus, dass die Frage „Wer ist sachverständig genug für eine Aufgabe nach dieser Regel?“ per Stichwort nichts findet („none of the words matches“, `test_m2.py:373`); mit der weichen Anfrage trifft jetzt ein Inhaltswort der Frage. Hängt nachweislich an der UND-Semantik, liegt aber außerhalb meines Bereichs.
+   - Optionen: (a) Folgeauftrag nach dem Zusammenführen: CI-Antworten neu aufnehmen (`record_answers`) und in `test_m2.py` die Erwartung anpassen (KI aus: Stichworttreffer erlaubt, Belegstelle nicht verlangt; KI an: erster Treffer bleibt die Belegstelle, Art `keyword`+`semantic` zulassen) bzw. eine Frage ohne gemeinsames Inhaltswort wählen. (b) 143 verwerfen bzw. auf Option (b) aus Frage 1 (nur Rückfall) umbauen. **Empfehlung: (a)**; die Leitstelle hatte die Neuaufnahme für `test_ci_questions.py` bereits vorgesehen, `test_m2.py` kommt dazu.
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+
+**Status: wartet auf a7** (Frage 2: 9 Tests außerhalb von `backend/tests/search/` rot, wie im Auftrag vorhergesehen). Läufe am 23.11.2026 im Container, Compose-Projekt `twox-143`, `TWOX_API_PORT=18143`. Umgesetzt: (a) weiche Anfrage für Fragen + (b1) Gewichte nur im Ranking. Kein (b2), keine Migration, keine neue Abhängigkeit. „2x“ und „twox-leit“ nicht angefasst.
+
+### 1. Analyse am Code (Stand `main` vor 143)
+
+**Warum ganze Fragen keine Stichworttreffer liefern – bestätigt.**
+- `_parse_queries` (`backend/twox/search/postgres.py:334-345`) parst die ganze Anfrage je Konfiguration mit `websearch_to_tsquery`. Diese Funktion verbindet alle Wörter außerhalb von `or` mit `&`. `_Queries.combined` (`postgres.py:190-193`) verbindet nur die drei Konfigurationen mit `|`; die Bedingung ist `s.search_vector @@ %(tsquery)s::tsquery` (`postgres.py:359`). In einer Konfiguration muss also jedes Wort stehen.
+- SQL-Beleg mit Prüffrage 3 (Wortlaut aus `testfactory/questions.yaml`, eigener Text des Projekts) – `SELECT websearch_to_tsquery(c, '<Frage>')::text`:
+  - `simple`: `'über' & 'welches' & 'protokoll' & 'tauschen' & 'die' & 'txt-controller' <-> 'txt' <-> 'controller' & 'daten' & 'mit' & 'der' & 'zentralsteuerung' & 'aus'` – auch die Stoppwörter „über“, „welches“, „die“, „mit“, „der“, „aus“ müssen im Abschnitt stehen.
+  - `german`: `'protokoll' & 'tausch' & 'txt-controll' <-> 'txt' <-> 'controll' & 'dat' & 'zentralsteuer'` – Stoppwörter fallen weg, aber alle fünf Inhaltswörter (eins als Phrase) sind Pflicht.
+  - `english`: wie `simple`, nur gestemmt (`'welch'`, `'protokol'` …); deutsche Stoppwörter bleiben Pflicht.
+  - Selbst geschriebener Abschnitt, Überschrift „Kommunikation > Protokolle“, Text „Die Steuerungen senden ihre Daten per MQTT an den Broker.“ (`search_vector` wie in `models.py` gebaut): `@@` alte Anfrage = **false** in allen drei Konfigurationen, obwohl „Protokolle“ in der Überschrift und „Daten“ im Text stehen. Mit der neuen Anfrage: `matching` = **true**, `every` = false, `ts_rank` mit Fragegewichten 0,064.
+- **Überschriften sind heute schon Gewicht A – bestätigt.** `search_vector` ist eine gespeicherte generierte Spalte (`backend/twox/ingest/models.py:282-287`) aus `search_vector_expression` (`models.py:222-238`): `setweight(..., 'A')` für `heading_text`, `'B'` für `text`, je Konfiguration. `heading_text` ist der Pfad mit „ > “ (`models.py:48`, `join_headings` `models.py:241-243`, gesetzt in `save()` `models.py:350`, in `section_rows` `models.py:405`); GIN-Index `models.py:329`. Gerankt wurde mit `ts_rank(s.search_vector, tsquery, 32)` (`postgres.py:495-499`, `RANK_NORMALIZATION` `postgres.py:146`), also D 0,1 · C 0,2 · B 0,4 · A 1,0. Test `test_keyword_search.py:281` belegt Überschrift vor Text.
+- **Folgerung:** Gewicht A hilft nicht, solange die UND-Bedingung bei Fragen nichts durchlässt. Die Änderung setzt an der Anfrage an; die stärkere Gewichtung (b1) wirkt erst danach, innerhalb der Teiltreffer.
+
+### Was wurde gebaut?
+
+`backend/twox/search/postgres.py`:
+- `is_question(query)`: dieselbe Regel wie E-61, `len(other_words(query)) > EXACT_FIRST_MAX_OTHER_WORDS`. Für alle anderen Anfragen bleibt der Code-Pfad unverändert (`_parse_queries`, gleiches SQL – per Test mit SHA-256 des SQL vor 143 belegt).
+- `query_units(query)`: Wörter und Phrasen der Anfrage wie eingegeben; Phrasen (`"…"`, auch offen am Ende) bleiben eine Einheit; Ausschlüsse (`-wort`, `-"zwei wörter"`) und Teile ohne Buchstabe/Ziffer fallen weg.
+- `_parse_question`: **eine** Abfrage statt zwei – die ganze Anfrage je Konfiguration (wie bisher, für die Ausschlüsse) und zusätzlich jede Einheit einzeln je Konfiguration (`ARRAY(SELECT websearch_to_tsquery('<config>', u.unit) FROM unnest(%(units)s::text[]) WITH ORDINALITY …)`). Benannte Parameter, Konfigurationsnamen nur über `_configs()`.
+- `_build_question` → `_Question` mit drei `_Queries`:
+  - **Stoppwörter:** Eine Einheit, die `german` oder `english` leer parst, fällt in allen drei Konfigurationen weg (auch in `simple`). Kennungen (`find_identifiers`) bleiben immer. Eine Einheit mit Negation (`!`) ist nie ein positives Wort.
+  - `matching` (wer trifft): ODER über die Inhaltswörter **ohne** Kennungen; nur wenn die Frage außer Kennungen kein Inhaltswort hat („Was ist E1234?“), die Kennungen. Begründung siehe Abweichung 1.
+  - `every` (wer zuerst kommt): UND über alle Inhaltswörter und Kennungen.
+  - `ranking`: ODER über alle Inhaltswörter und Kennungen, für `ts_rank` und Hervorhebungen.
+- `_search_sql(..., question=…)`: Bei einer Frage `keyword_match` = `matching` (mit der Nachprüfung über die Naht wie bisher, `_keyword_condition`), zusätzliche Spalte `keyword_every` (Parameter mit Präfix `every_`), Stichwortrang `DENSE_RANK() OVER (… ORDER BY c.keyword_every DESC, c.rank DESC)`, `rank` = `ts_rank('{0.1, 0.2, 0.2, 1.0}'::float4[], s.search_vector, %(rank_tsquery)s, 32)`. Ohne Frage entsteht byte-gleich das bisherige SQL. Ausschlüsse kommen weiter aus der ganzen Anfrage (`queries.exclusions()`), Vektorsuche, `exact_hits_first` und Fusion unverändert.
+- (b1) `QUESTION_RANK_WEIGHTS = (0.1, 0.2, 0.2, 1.0)` neben `RANK_NORMALIZATION`, nur für Fragen (andere Anfragen behalten die Standardgewichte, damit ihr SQL gleich bleibt). Wirkung (SQL-Messung mit selbst geschriebenen Texten): Ein Fragewort in der Überschrift gegen drei Fragewörter im Text – Standardgewichte 0,120 gegen 0,141 (Text vorn), Fragegewichte 0,120 gegen 0,076 (Überschrift vorn). Test `test_heading_word_outranks_more_words_in_the_text`.
+- Hervorhebungen nutzen bei Fragen `ranking`, also keine Stoppwörter.
+- Modul-Docstring (Abschnitt „keyword“ und „Score“), Docstrings der neuen Funktionen und von `_search_sql`.
+- `docs/ARCHITECTURE.md`: nur Punkt „Keyword“ im Abschnitt Search und ein Satz unter „Ranking“ (Grenzen).
+
+**Grenzfall Stoppwörter (geprüft mit `websearch_to_tsquery` je Konfiguration):** Englische Stoppwörter, die im Deutschen Inhaltswörter sind, fallen weg: „Not“ (Not-Fall; `english` leer, `german` `'not'`), „most“ (Most), „once“, „over“. Deutsche Stoppwörter, die im Englischen Inhaltswörter sind: „man“, „war“, „hat“, „bin“, „die“ (engl. Matrize), „will“. Eine Frage, die nur über ein solches Wort trifft, findet per Stichwort nichts mehr; sie bleibt der Vektorsuche überlassen. Test `test_english_stop_word_that_is_a_german_word_is_left_out` („Was tun bei Not am Schaltschrank?“ findet den Abschnitt mit „Not“ nicht). Bindestrich-Wörter wie „Not-Halt“ bleiben erhalten (`english` liefert `'not-halt' <-> …`). „beim“ ist in PostgreSQL kein deutsches Stoppwort und bleibt ein Wort.
+
+**Punkt 3 entfällt:** Ausdruck von `search_vector` unverändert (kein b2). Die Änderung betrifft nur die Anfrage und das Ranking zur Abfragezeit; `search_vector`, GIN-Index, Einbettungen bleiben, daher kein Neuaufbau, keine Migration, kein Neueinlesen. `makemigrations --check` sauber.
+
+### Wie wurde getestet?
+
+Neu `backend/tests/search/test_question_keywords.py` (21 Testfunktionen, alle Texte selbst geschrieben, Embedder nur `FakeEmbedder`):
+- Regel `is_question`, `query_units`, `_build_question` (Stoppwörter, Negation, Kennung, Frage nur aus Kennung und Stoppwörtern).
+- Teiltreffer: Frage nach Muster Prüffrage 3 findet einen Abschnitt mit nur „Roboter“; Nachweis per SQL, dass die alte UND-Anfrage ihn nicht trifft.
+- Alle Inhaltswörter vor Teiltreffer (auch wenn der Teiltreffer die Wörter in der Überschrift hat); Überschrift vor gleichen Wörtern im Text; Überschriftswort vor drei Textwörtern (b1, gegen Standardgewichte).
+- Stoppwörter allein: kein Treffer, keine Hervorhebung („Der“ wird nicht markiert); Frage nur aus Stoppwörtern findet per Stichwort nichts; Grenzfall „Not“.
+- Ausschluss und ausgeschlossene Phrase in Fragen; Phrase bleibt Phrase; Naht der Konfigurationen in einer Frage.
+- Unverändert: für `192.168.0.100`, `E1234`, `Fehler E1234`, `PLC-01 Adresse`, `Pumpe`, `pump -valve` Treffer und Reihenfolge auf einem festen Korpus **und** SHA-256 des SQL (Parse- und Suchabfrage, Parameter eingesetzt) – beides vorher mit dem Code von `main` aufgezeichnet (Datei vorübergehend getauscht, danach wiederhergestellt).
+- Drei Abfragen auch für eine Frage (`test_question_needs_three_queries`; `test_search_needs_three_queries` mit „chi belt“, jetzt eine Frage, bleibt grün).
+- Fusion von Hand: Belegstelle Vektorrang 3, Stichwortrang 1 über die Überschrift → 1/61 + 1/63 = 0,032266, steigt von Platz 3 auf 1; E-61-Fall: Abschnitt, der nur „XR7“ nennt, bekommt keinen Stichwortrang und überholt die Antwort nicht.
+
+Prüfungen (je im Container, Projekt `twox-143`):
+
+| Prüfung | Ergebnis |
+| --- | --- |
+| `ruff check .` | All checks passed |
+| `ruff format --check .` | 232 files already formatted |
+| `mypy .` | Success: no issues found in 228 source files |
+| `pytest tests/search` | 471 passed |
+| `pytest` (alle) | **9 failed**, 3451 passed, 6 deselected – alle 9 außerhalb von `tests/search`, siehe Frage 2 |
+| `pytest -m worker` | nicht separat gelaufen (keine Worker-Datei berührt; im vollen Lauf deselektiert) |
+| `makemessages -l de` | Exit 0, kein Unterschied |
+| `makemigrations --check --dry-run` | No changes detected |
+| Lizenzprüfung | Exit 0 |
+| `spectacular` | Exit 0, kein Unterschied in `web/openapi` |
+| e2e (`--profile e2e run e2e`, Schritte wie `ci.yml`) | 88 passed, 1 skipped, Exit 0 |
+| Jobs `web`, `testfactory` | nicht gelaufen: keine Datei unter `web/` oder `testfactory/` geändert, Schema unverändert |
+
+Danach `docker compose -p twox-143 --profile dev --profile e2e down -v` Exit 0, kein Container und kein Volume `twox-143*`.
+
+### Akzeptanzkriterien
+
+1. erfüllt (Analyse oben). 2. erfüllt (Tests). 3. erfüllt. 4. erfüllt: Kennungsanfragen und Anfragen mit höchstens einem anderen Wort gleiche Treffer, Reihenfolge und SQL; `test_keyword_search.py` und `test_fusion.py` unverändert grün. 5. erfüllt. 6. ohne (b2), Begründung oben. 7. **nicht erfüllt**: 9 Tests außerhalb von `tests/search` rot (Frage 2), sonst grün. 8. erfüllt. 9. offen, Messung der Leitstelle.
+
+### Messung in „2x“ – für die Leitstelle nach dem Zusammenführen
+
+Keine Migration nötig. Vorher (Code von `main` vor 143) und nachher (nach dem Zusammenführen, `api` neu gebaut oder Einmal-Container `--no-deps`), jeweils Text und `--json`:
+
+```
+docker compose -p 2x --env-file <.env des Projektordners> --profile dev run --rm --no-deps backend-dev python manage.py evaluate_search --probes m2
+docker compose -p 2x --env-file <.env des Projektordners> --profile dev run --rm --no-deps backend-dev python manage.py evaluate_search --probes m2 --json
+docker compose -p 2x --env-file <.env des Projektordners> --profile dev run --rm --no-deps backend-dev python manage.py evaluate_search --probes m3 --cutoffs 5,8,10,12 --distance
+docker compose -p 2x --env-file <.env des Projektordners> --profile dev run --rm --no-deps backend-dev python manage.py evaluate_search --probes m3 --cutoffs 5,8,10,12 --distance --json
+```
+
+Darauf achten: Stichwortspalte für Fragen nicht mehr 0; `question-9` Rang 1 (E-61-Risiko, siehe Abweichung 1); `control-11` kleinster Abstand unter den ersten 10 und Rang des ersten Eintrags ohne Abstand. Erwartbar: deutlich mehr Stichworttreffer je Frage; in der Fusion zählt jeder Teiltreffer `1/(60 + Rang)` und kann Abschnitte nur nach Bedeutung überholen.
+
+### Zweig und Arbeitsverzeichnis
+
+- Zweig: `worktree-agent-a478417578a56fa8f`
+- Arbeitsverzeichnis: `.claude/worktrees/agent-a478417578a56fa8f` (relativ zum Projektordner)
+- Nicht gepusht, nichts zusammengeführt.
+
+### Abweichungen
+
+1. **Kennungen machen allein keinen Stichworttreffer einer Frage.** Der Auftrag sagt „Kennungen bleiben immer erhalten“; sie bleiben in der Anfrage (für „alle Wörter zuerst“, Rang, Hervorhebung), aber ein Abschnitt, der nur die Kennung enthält, ist kein Teiltreffer (außer die Frage hat kein anderes Inhaltswort). Grund: Mit reinem ODER bekäme jeder Abschnitt, der das Produkt nennt („UR5e“), einen Stichwortrang und könnte – zusammen mit einem Vektorrang – die Antwort überholen; genau der Fehler aus 060 (Prüffrage 9), den E-61 behoben hat, und `--probes m2` verlangt `question-9` auf Rang 1. Ein Schalter in `_build_question` (`words or identifiers` → `words + identifiers`) stellt reines ODER her, falls a7 das will.
+2. **„Alle Inhaltswörter“ statt „heutiger UND-Treffer“** als erste Gruppe: UND über die Einheiten ohne Stoppwörter (der heutige UND-Treffer verlangt in `simple`/`english` auch deutsche Stoppwörter). Innerhalb jeder Gruppe nach `ts_rank` (ODER-Anfrage, wirkt wie Abdeckung plus Überschriftengewicht); keine eigene Abdeckungsspalte.
+3. **Geänderte bestehende Tests in `tests/search/test_vector_search.py`** (hängen nachweislich an der UND-Semantik): `test_question_naming_a_product_puts_the_best_meaning_first` – die Antwort enthält „Getriebeöls“ und ist jetzt zusätzlich Stichworttreffer (Wert 1/61 + 1/61 statt 1/61, Art `keyword`+`semantic`; Reihenfolge gleich, die XR7-Abschnitte weiter ohne Stichwortrang). `test_vector_list_holds_the_50_nearest_sections` und `test_excluded_sections_do_not_shorten_the_vector_list` – Anfrage „which spare is nearest“ → „which item is nearest“ (sonst wären alle 60 Abschnitte mit „spare“ Stichworttreffer; der Test prüft die Vektorliste). `test_version_rule_works_in_the_vector_list` – der neue, noch nicht eingebettete Abschnitt wird jetzt über „change“ per Stichwort gefunden; die Prüfung, dass die alte Version nicht mehr gesucht wird, bleibt. `test_keyword_search.py` und `test_fusion.py` unverändert.
+4. **Suchseite:** Mehrwortanfragen ohne Kennung (z. B. „safety valve“) gelten jetzt als Frage und zeigen unter den Treffern mit allen Wörtern auch Teiltreffer (Option a aus Frage 1). Die e2e-Tests bleiben grün.
+5. `pytest -m worker` nicht einzeln gelaufen; keine Datei mit Worker-Bezug geändert.
+6. Die ignorierte `.env` des Arbeitsverzeichnisses wurde aus `.env.example` neu geschrieben (`TWOX_API_PORT=18143`); lokal bleiben Images `twox-143-*`.
