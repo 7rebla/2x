@@ -1,6 +1,6 @@
 # Auftrag 143 – Suche: Überschriften stärker gewichten und Fragen weicher suchen (D12 b)
 
-Meilenstein: M3 · Freigabestufe: C · Status: wartet auf a7 (Tests außerhalb von `backend/tests/search/` rot, siehe Kurzbericht und Frage 2)
+Meilenstein: M3 · Freigabestufe: C · Status: erledigt (freigegeben durch a7, E-71; rote Tests in 145)
 
 Stufe C nach E-70 und D12: Die Stichwortsuche ändert ihr Verhalten für alle Aufrufer (Suchseite und Auskunft), und falls der Ausdruck des Stichwortindex (`Section.search_vector`) geändert wird, ändert sich das Datenmodell der Suche (Migration). Zusammenführen und Neuaufbau des Stichwortindex in der Testumgebung „2x“ erst nach Freigabe durch a7; die Leitstelle führt Migration und Messung dort aus.
 

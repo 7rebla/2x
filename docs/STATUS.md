@@ -247,12 +247,13 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 140 | Zitatprüfung: Werte aus der Frage und Listenpunkte | B | 123, 128 | erledigt |
 | 141 | key_fact_alternatives für die Prüffragen 7 und 10 | C | 127, 128 | wartet auf a7 (Bestätigung der Schreibweisen) |
 | 142 | evaluate_answers: --seed und Abstand je Lauf | B | 127, 128 | erledigt |
-| 143 | Suche: Überschriften stärker gewichten (D12 b) | C | 120, 124, 128 | wartet auf a7 (9 rote Tests: CI-Aufzeichnungen, `test_m2.py:373`) |
-| 144 | Messlauf 2 nach den Nachbesserungen | C | 139–143 | offen |
+| 143 | Suche: Überschriften stärker gewichten (D12 b) | C | 120, 124, 128 | erledigt (E-71) |
+| 144 | Messlauf 2 nach den Nachbesserungen | C | 139–143, 145 | offen |
+| 145 | Tests nach der weichen Stichwortsuche nachziehen | B | 143 | in Arbeit |
 
 - 139: Hinweis aus der Prüfung – rein numerische Kennungen (Artikel-, Register-, Fehlernummern nur aus Ziffern) sind keine EXACT-Treffer und fallen nach geöffneter Sperre aus dem Kontext, wenn ihr Abstand über 0,55 liegt. Entspricht E-70; in 144 beobachten, bei Bedarf a7 als Option vorlegen.
 - 140: Nach der Prüfung nachgebessert (Wertebereiche, Einheiten in anderer Schreibweise, Punkt-MAC und Versionen mit Buchstaben werden nie aus der Frage übernommen).
-- 143: Prüfung ohne Befund am Code. Option (a) umgesetzt (weiche Stichwortsuche auch auf der Suchseite), Antwort von a7 zu Frage 1 steht noch aus. Kein Neuaufbau des Stichwortindex nötig (nur Abfragezeit). `pytest -m worker` von der Leitstelle nachgeholt: 6 bestanden.
+- 143: Prüfung ohne Befund am Code. Option (a) umgesetzt (weiche Stichwortsuche auch auf der Suchseite), von a7 bestätigt (E-71). Auf `main` bis 145 neun Tests rot – `main` wird erst nach 145 gepusht. Messung in 2x vor 143: M3-Proben keyword R@8 0,000, combined R@8 0,615 / R@10 0,692; M2-Proben combined R@5 0,571 / R@10 0,857. Kein Neuaufbau des Stichwortindex nötig (nur Abfragezeit). `pytest -m worker` von der Leitstelle nachgeholt: 6 bestanden.
 
 - 136: Zwei Markdown-Dateien zur Bohrstation in 2x eingelesen (D2; Kennwort-Prüfung vorher und nachher 0). Prüffrage 8: Rang 9 (kombiniert). Schönheitsfehler: Der Titel von Dokument 158 hat beim Upload unter Windows ein Ersatzzeichen statt „ü“ bekommen; Umbenennen gibt es noch nicht – bei Gelegenheit in der Admin-Oberfläche berichtigen.
 - 120 (Messung in 2x): Fragen 3 und 4 in keiner Trefferliste; mit Frage 8 sind derzeit höchstens 8 Fragen belegbar. Nach D12 zuerst mehr Kontext (125), dann neu messen.
