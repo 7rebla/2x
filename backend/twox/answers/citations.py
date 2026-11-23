@@ -28,6 +28,15 @@ Sentences
     ends at that full stop and the numbers still belong to it. Sentences
     with neither letters nor digits besides source numbers are skipped.
 
+    A list block is a run of list lines (indented, nested items included);
+    empty lines between them do not end it, a line with other content does.
+    Its introduction sentence is the last sentence of the last line with
+    content before the block that is not a list line, if that sentence ends
+    with ``:``; source numbers may stand before or after the colon
+    (``Die Station nutzt diese Ports [1]:`` and ``... Ports: [1]``). A list
+    at the start of the answer, or after a line that does not end with
+    ``:``, has no introduction sentence.
+
 Source numbers
     ``[n]``, ``[n, m]``, ``[n; m]`` and ``[n][m]`` with a positive integer
     ``n`` of at most six digits. Other forms (``[1-3]``, ``[Quelle 2]``,
@@ -92,6 +101,27 @@ Normalisation
     number with a unit followed by ``AC`` or ``DC`` (``24 V`` in ``24VDC``).
     Each source text is normalised once per call.
 
+Values from the question
+    With ``question`` the check values of the question are determined once
+    per call, by the same rules as for a sentence. Only type designations
+    and other identifiers of letters and digits (``G-12``, ``S7 1500``,
+    ``UR5e``, also ``E1234``, ``PLC-01``, ``IP67``) can be taken from it: a
+    value of the sentence that is such a designation, with the key of one in
+    the question, is not missing, but only if the sentence carries at least
+    one further check value that is not such a designation and is found in
+    one of its valid sources (``Der G-12 hat eine Nutzlast von 5 kg [1].``
+    with ``5 kg`` in source 1). A sentence whose only value comes from the
+    question is checked as without a question, so a false premise (``Was
+    bedeutet Fehler E1234?`` with a source on ``E1235``) does not confirm
+    itself. Numbers with a unit (also within one token that starts with a
+    digit, in any case: ``10kg``, ``24VDC``, ``100-240VAC``, ``24VDC/AC``,
+    ``2x10kg``, ``24v``, ``8gb``; so ``4G`` is not taken either), addresses
+    (also a MAC address in dot notation, ``001a.2b3c.4d5e``), ports,
+    versions (also with letters after them, ``V2.1a``) and numbers without
+    a letter (``1.5``) are never taken from the question: they are what a
+    false premise would get wrong. The sentence still needs a valid source number.
+    Only keys are compared; no expression is built from the question.
+
 Sentence verdict
     A sentence is ``unknown_citation`` if it carries source numbers but no
     valid one, ``no_citation`` if it carries none, ``unsupported_value`` if a
@@ -105,6 +135,15 @@ Sentence verdict
     the unsupported ones. The refusal sentence never needs a number; a
     sentence that consists only of :data:`CONTRADICTION_PHRASE` needs none
     either. Both are neither supported nor listed.
+
+    A sentence in a list block without source numbers of its own inherits
+    the valid numbers of the introduction sentence, if that sentence carries
+    a valid number and is supported; its values are checked against those
+    sources, and the inherited numbers count for ``cited`` like its own.
+    Otherwise it stays ``no_citation``: a dropped introduction sentence
+    passes nothing on. A list item with numbers of its own is checked
+    against those only; with invalid numbers only it is
+    ``unknown_citation``.
 
 Cleaned text
     With ``drop_unsupported=True`` unsupported sentences are removed from
@@ -139,7 +178,14 @@ Limits
     * units outside :data:`UNITS`, and the relation between a value and what
       it describes (a correct ``24 V`` in the wrong context passes);
     * different spellings of one address (``fe80::1`` and ``fe80:0::1``);
-    * which source states a value when several are cited: one is enough.
+    * which source states a value when several are cited: one is enough;
+    * a type designation from the question counts unchecked if the sentence
+      carries a further supported value; whether the source is about that
+      device is not checked. This holds for error codes and identifiers
+      too: ``E1234 tritt ab 80 °C auf [1]`` passes if the source names
+      ``80 °C`` only for ``E1235``;
+    * a list item is only as well supported as the sources of its
+      introduction sentence.
 """
 
 import re
@@ -241,13 +287,28 @@ _NEXT_CHAR: Final = re.compile(r"[ \t]*(\S)")
 _DECIMAL_COMMA: Final = re.compile(r"(?<=\d),(?=\d)")
 _NOT_ALNUM: Final = re.compile(r"[\W_]+")
 
+_UNIT_ALTERNATION: Final = "|".join(
+    re.escape(unit)
+    for unit in sorted({unicodedata.normalize("NFKC", u) for u in UNITS}, key=len, reverse=True)
+)
 _UNIT_VALUE: Final = re.compile(
-    r"(?<![\w.,])-?\d{1,9}(?:[.,]\d{1,9})?[ \t-]?(?:"
-    + "|".join(
-        re.escape(unit)
-        for unit in sorted({unicodedata.normalize("NFKC", u) for u in UNITS}, key=len, reverse=True)
-    )
-    + r")(?![\w%°])"
+    r"(?<![\w.,])-?\d{1,9}(?:[.,]\d{1,9})?[ \t-]?(?:" + _UNIT_ALTERNATION + r")(?![\w%°])"
+)
+#: A unit right after a digit, in any case, optionally followed by ``AC`` or
+#: ``DC``, and not followed by a letter. A token that starts with a digit and
+#: contains this anywhere (``24VDC``, ``100-240VAC``, ``24VDC/AC``, ``2x10kg``,
+#: ``24v``, ``8gb``) is never a type designation from the question. Built from
+#: constants only; searched in one token at a time.
+_UNIT_IN_TOKEN: Final = re.compile(
+    r"\d[ \t-]?(?:" + _UNIT_ALTERNATION + r")(?:[-/]?(?:ac|dc))?(?![^\W\d_])",
+    re.IGNORECASE,
+)
+#: Values written like a MAC address in dot notation (``001a.2b3c.4d5e``) or a
+#: version with a letter after it (``V2.1a``, ``5.12a``, ``V18b``): never a
+#: type designation from the question.
+_NOT_DESIGNATION: Final = re.compile(
+    r"[0-9a-f]{4}\.[0-9a-f]{4}\.[0-9a-f]{4}|v?\d++(?:\.\d++)++[a-z]{0,3}|v\d++[a-z]{0,3}",
+    re.IGNORECASE,
 )
 _PORT_WORD: Final = re.compile(
     # "Port 502", "Ports 502", "Port: 502", "Port-Nr. 502", "Portnummer 502".
@@ -305,17 +366,24 @@ class _Sentence:
     start: int
     end: int
     bare: str  # letters and digits of the normalised sentence without source numbers
+    in_list: bool = False  # the sentence stands in a line with a list marker
 
 
 @dataclass(frozen=True, slots=True)
 class _Value:
-    """A check value: as written, and its normalised key."""
+    """A check value: as written, and its normalised key.
+
+    ``designation`` marks a type designation or other identifier of letters
+    and digits (``G-12``, ``S7 1500``, ``E1234``); only such a value may be
+    taken from the question (see the module docstring).
+    """
 
     display: str
     key: str
     colon_joins: bool = False
     version: bool = False
     unit: bool = False
+    designation: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -458,10 +526,42 @@ def _split_sentences(lines: list[str]) -> list[_Sentence]:
                     and _ends_with_ordinal(line, punctuation)
                 ):
                     continue
-            _add_sentence(sentences, number, line, segment_start, match.end())
+            _add_sentence(sentences, number, line, segment_start, match.end(), marker is not None)
             segment_start = match.end()
-        _add_sentence(sentences, number, line, segment_start, len(line))
+        _add_sentence(sentences, number, line, segment_start, len(line), marker is not None)
     return sentences
+
+
+def _list_intros(lines: list[str], sentences: list[_Sentence]) -> list[int | None]:
+    """For each sentence in a list block, the index of its introduction sentence.
+
+    One pass over the lines. The candidate is the last sentence of the last
+    line with content that is not a list line, if that sentence ends with
+    ``:`` (source numbers before or after it allowed). Empty lines keep the
+    candidate; a list line takes it; any other line with content replaces it.
+    Whether the candidate carries a valid number and is supported is decided
+    by :func:`verify`.
+    """
+    intros: list[int | None] = [None] * len(sentences)
+    candidate: int | None = None
+    index = 0
+    for number, line in enumerate(lines):
+        first = index
+        while index < len(sentences) and sentences[index].line == number:
+            index += 1
+        if not line.strip():
+            continue
+        if _LIST_MARKER.match(line):
+            for position in range(first, index):
+                intros[position] = candidate
+            continue
+        candidate = None
+        if index > first:
+            last = sentences[index - 1]
+            text = line[last.start : last.end]
+            if (_CITATION.sub(" ", text) if "[" in text else text).rstrip().endswith(":"):
+                candidate = index - 1
+    return intros
 
 
 def _ends_with_ordinal(line: str, end: int) -> bool:
@@ -473,7 +573,12 @@ def _ends_with_ordinal(line: str, end: int) -> bool:
 
 
 def _add_sentence(
-    sentences: list[_Sentence], line_number: int, line: str, start: int, end: int
+    sentences: list[_Sentence],
+    line_number: int,
+    line: str,
+    start: int,
+    end: int,
+    in_list: bool = False,
 ) -> None:
     """Append the span ``line[start:end]`` without outer white space, unless it is empty."""
     while start < end and line[start].isspace():
@@ -483,7 +588,9 @@ def _add_sentence(
     text = line[start:end]
     bare = _bare(_CITATION.sub(" ", text) if "[" in text else text)
     if bare:
-        sentences.append(_Sentence(line=line_number, start=start, end=end, bare=bare))
+        sentences.append(
+            _Sentence(line=line_number, start=start, end=end, bare=bare, in_list=in_list)
+        )
 
 
 def _extract_citations(sentence: str) -> list[int]:
@@ -558,11 +665,27 @@ def _check_values(sentence: str) -> list[_Value]:
         else:
             digits = ""
         if digits.isdigit():
-            add(f"{value} {digits}")
+            add(f"{value} {digits}", designation=_is_designation(value))
             skip_next = True
             continue
-        add(value)
+        add(value, designation=_is_designation(value))
     return list(found.values())
+
+
+def _is_designation(value: str) -> bool:
+    """Whether the generic identifier ``value`` is a type designation or code.
+
+    It needs a letter and a digit. Not a designation: a token that starts
+    with a digit and contains a number with a unit, in any case
+    (``10kg``, ``24VDC``, ``100-240VAC``, ``2x10kg``, ``24v``), a MAC address
+    in dot notation and a version with letters after it (``V2.1a``). Plain
+    numbers with a full stop (``1.5``) have no letter and are no designation.
+    """
+    if not (any(char.isalpha() for char in value) and any(char.isdigit() for char in value)):
+        return False
+    if value.lstrip("+-")[:1].isdigit() and _UNIT_IN_TOKEN.search(value) is not None:
+        return False
+    return _NOT_DESIGNATION.fullmatch(value) is None
 
 
 def _is_word_part(part: str) -> bool:
@@ -663,16 +786,49 @@ def _contradiction_pattern() -> re.Pattern[str]:
     return re.compile(r"[\W_]*" + r"\s+".join(map(re.escape, words)) + r"(?!\s*[^\W\d_])")
 
 
+def _missing_values(
+    values: list[_Value],
+    valid: list[int],
+    compact: Mapping[int, _Compact],
+    from_question: frozenset[str],
+) -> tuple[str, ...]:
+    """The values of a sentence found in none of its ``valid`` sources, as written.
+
+    A type designation whose key is in ``from_question`` is not missing, but
+    only if the sentence carries a further value that is not such a
+    designation and is found in a valid source; otherwise it is missing like
+    any other value. Only keys are compared.
+    """
+    checked = [
+        (value, value.designation and value.key in from_question, _found(value, valid, compact))
+        for value in values
+    ]
+    anchored = any(found for _, from_q, found in checked if not from_q)
+    return tuple(
+        value.display for value, from_q, found in checked if not found and not (from_q and anchored)
+    )
+
+
+def _found(value: _Value, valid: list[int], compact: Mapping[int, _Compact]) -> bool:
+    return any(_occurs(value, compact[n]) for n in valid)
+
+
 def verify(
     answer_text: str,
     sources: Mapping[int, str],
     *,
     drop_unsupported: bool,
+    question: str | None = None,
 ) -> Verdict:
     """Check every sentence of ``answer_text`` against the numbered ``sources``.
 
     ``sources`` maps the source number ``n`` to the section text the model was
-    shown. The rules are described in the module docstring.
+    shown. ``question`` is the question the answer replies to: a type
+    designation from it that a sentence repeats need not be in the cited
+    source, if the sentence carries a further check value that is (see
+    "Values from the question" in the module docstring). Without a question
+    (``None`` or empty) nothing is taken from it. The rules are described in
+    the module docstring.
     """
     refusal = _bare(NO_EVIDENCE_TEXT)
     contradiction = _bare(CONTRADICTION_PHRASE)
@@ -682,13 +838,21 @@ def verify(
             status="no_evidence", cited=(), removed_sentences=(), cleaned_text=NO_EVIDENCE_TEXT
         )
 
+    # Determined once per call, with the same rules as for answer sentences.
+    from_question = (
+        frozenset(value.key for value in _check_values(question) if value.designation)
+        if question
+        else frozenset()
+    )
     lines = answer_text.split("\n")
     sentences = _split_sentences(lines)
+    intros = _list_intros(lines, sentences)
     compact: dict[int, _Compact] = {}
     issues: list[SentenceIssue] = []
     dropped: set[int] = set()
     replaced: dict[int, str] = {}
     cited: set[int] = set()
+    supported_numbers: dict[int, list[int]] = {}
     supported = 0
 
     for index, span in enumerate(sentences):
@@ -698,7 +862,12 @@ def verify(
             continue
         valid = sorted({n for n in numbers if n in sources})
         invalid = tuple(sorted({n for n in numbers if n not in sources}))
-        if not numbers or not valid:
+        intro = intros[index]
+        if not numbers and span.in_list and intro is not None:
+            # A list item without its own number inherits the valid numbers of
+            # a supported introduction sentence (empty if it was dropped).
+            valid = supported_numbers.get(intro, [])
+        if not valid:
             reason: IssueReason = "no_citation" if not numbers else "unknown_citation"
             issues.append(
                 SentenceIssue(
@@ -710,11 +879,8 @@ def verify(
         for n in valid:
             if n not in compact:
                 compact[n] = _compact(sources[n])
-        missing = tuple(
-            value.display
-            for value in _check_values(_CITATION.sub(" ", text))
-            if not any(_occurs(value, compact[n]) for n in valid)
-        )
+        values = _check_values(_CITATION.sub(" ", text))
+        missing = _missing_values(values, valid, compact, from_question)
         if missing:
             issues.append(
                 SentenceIssue(
@@ -728,6 +894,7 @@ def verify(
             dropped.add(index)
             continue
         supported += 1
+        supported_numbers[index] = valid
         cited.update(valid)
         if invalid:
             issues.append(

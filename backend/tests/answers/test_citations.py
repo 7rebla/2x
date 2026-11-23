@@ -721,3 +721,349 @@ def test_space_runs_in_checked_sentences_stay_linear(
     large = _best_time(build(20000), SPACE_SOURCES)
     assert large < 1.0
     assert large / max(small, 0.001) < 8
+
+
+# 13. Values from the question (140, E-70)
+
+
+PAYLOAD_SOURCE: dict[int, str] = {1: "Die Nutzlast beträgt 5 kg."}
+PAYLOAD_QUESTION = "Welche Nutzlast hat der Greifer G-12?"
+
+
+@pytest.mark.parametrize(
+    ("question", "answer"),
+    [
+        (PAYLOAD_QUESTION, "Der G-12 hat eine Nutzlast von 5 kg [1]."),
+        # A designation joined with its digits, in question and answer.
+        ("Welche Nutzlast hat die S7 1500?", "Die S7 1500 trägt 5 kg [1]."),
+        ("Welche Nutzlast hat die S7-1500?", "Die S7 1500 trägt 5 kg [1]."),
+        # A word part appended to the designation in the answer.
+        (PAYLOAD_QUESTION, "Der G-12-Greifer hat eine Nutzlast von 5 kg [1]."),
+        (PAYLOAD_QUESTION, "Der **G-12** hat eine Nutzlast von 5 kg [1]."),
+    ],
+)
+def test_designation_from_the_question_is_supported_next_to_a_supported_value(
+    question: str, answer: str
+) -> None:
+    verdict = verify(answer, PAYLOAD_SOURCE, drop_unsupported=True, question=question)
+    assert verdict.status == "answered"
+    assert verdict.cited == (1,)
+    assert verdict.removed_sentences == ()
+    assert verdict.cleaned_text == answer
+
+
+@pytest.mark.parametrize("question", [None, ""])
+def test_without_a_question_the_designation_stays_unsupported(question: str | None) -> None:
+    verdict = verify(
+        "Der G-12 hat eine Nutzlast von 5 kg [1].",
+        PAYLOAD_SOURCE,
+        drop_unsupported=True,
+        question=question,
+    )
+    assert verdict.status == "no_evidence"
+    assert verdict.removed_sentences == (
+        SentenceIssue(
+            index=0, reason="unsupported_value", values=("G-12",), invalid_numbers=(), kept=False
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    ("question", "answer", "values"),
+    [
+        # A false premise with a number and unit confirms nothing.
+        ("Ist die Nutzlast 10 kg?", "Die Nutzlast ist 10 kg [1].", ("10 kg",)),
+        ("Ist die Nutzlast 10kg?", "Die Nutzlast ist 10kg [1].", ("10kg",)),
+        # The further supported value (5 kg) does not free these kinds either.
+        (
+            "Wiegt der Greifer 5 kg bei 24VDC?",
+            "Der Greifer wiegt 5 kg bei 24VDC [1].",
+            ("24VDC",),
+        ),
+        (
+            "Wiegt der Greifer 5 kg bei 230VAC?",
+            "Der Greifer wiegt 5 kg bei 230VAC [1].",
+            ("230VAC",),
+        ),
+        (
+            "Hat der Greifer mit 5 kg die Adresse 10.0.0.9?",
+            "Der Greifer wiegt 5 kg und hat die Adresse 10.0.0.9 [1].",
+            ("10.0.0.9",),
+        ),
+        (
+            "Hat der Greifer mit 5 kg die MAC 00:11:22:33:44:55?",
+            "Der Greifer wiegt 5 kg und hat die MAC 00:11:22:33:44:55 [1].",
+            ("00:11:22:33:44:55",),
+        ),
+        (
+            "Antwortet der Greifer mit 5 kg auf Port 502?",
+            "Der Greifer wiegt 5 kg und antwortet auf Port 502 [1].",
+            ("502",),
+        ),
+        (
+            "Wiegt der Greifer mit Firmware 5.12 noch 5 kg?",
+            "Der Greifer wiegt 5 kg mit Firmware 5.12 [1].",
+            ("5.12",),
+        ),
+        (
+            "Wiegt der Greifer mit Firmware 5.12 noch 5 kg?",
+            "Der Greifer wiegt 5 kg ab 5.12 [1].",
+            ("5.12",),
+        ),
+        ("Wiegt der Greifer ab V18 noch 5 kg?", "Der Greifer wiegt 5 kg ab V18 [1].", ("18",)),
+        ("Gilt der Faktor 1.5 bei 5 kg?", "Der Greifer wiegt 5 kg bei Faktor 1.5 [1].", ("1.5",)),
+        # A designation only in the question does not free another one.
+        (PAYLOAD_QUESTION, "Der G-14 hat eine Nutzlast von 5 kg [1].", ("G-14",)),
+        # The designation from the question is the only value of the sentence.
+        (PAYLOAD_QUESTION, "Der G-12 ist ein Greifer [1].", ("G-12",)),
+        # A false premise with an error code: the source is about E1235.
+        ("Was bedeutet Fehler E1234?", "E1234 bedeutet Übertemperatur [1].", ("E1234",)),
+        # A second designation from the question is no further supported value.
+        ("Passt der G-12 zur S7-1200?", "Der G-12 passt zur S7-1200 [1].", ("G-12",)),
+    ],
+)
+def test_values_from_the_question_that_are_not_freed(
+    question: str, answer: str, values: tuple[str, ...]
+) -> None:
+    sources = {
+        1: "Fehler E1235 bedeutet Übertemperatur. Die Nutzlast beträgt 5 kg. Passt zur S7-1200."
+    }
+    verdict = verify(answer, sources, drop_unsupported=True, question=question)
+    assert verdict.status == "no_evidence"
+    assert verdict.removed_sentences == (
+        SentenceIssue(
+            index=0, reason="unsupported_value", values=values, invalid_numbers=(), kept=False
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        # Ranges and several units in one token.
+        "100-240VAC",
+        "24-48VDC",
+        "24VDC/AC",
+        "2x10kg",
+        # A number with a unit in another case.
+        "24v",
+        "10KG",
+        "8gb",
+        # A MAC address in dot notation and versions with letters after them.
+        "001a.2b3c.4d5e",
+        "V2.1a",
+        "5.12a",
+    ],
+)
+def test_units_ranges_dotted_macs_and_lettered_versions_are_not_freed(value: str) -> None:
+    verdict = verify(
+        f"Der Greifer trägt 5 kg bei {value} [1].",
+        PAYLOAD_SOURCE,
+        drop_unsupported=True,
+        question=f"Trägt der Greifer 5 kg bei {value}?",
+    )
+    assert verdict.status == "no_evidence"
+    assert reasons(verdict) == [(0, "unsupported_value")]
+    assert verdict.removed_sentences[0].values == (value,)
+
+
+def test_range_from_the_question_next_to_a_freed_designation_stays_unsupported() -> None:
+    verdict = verify(
+        "Der G-12 läuft mit 100-240VAC und trägt 5 kg [1].",
+        PAYLOAD_SOURCE,
+        drop_unsupported=True,
+        question="Läuft der G-12 mit 100-240VAC?",
+    )
+    assert verdict.status == "no_evidence"
+    assert verdict.removed_sentences[0].values == ("100-240VAC",)
+
+
+def test_value_from_the_question_needs_a_source_number() -> None:
+    verdict = verify(
+        "Der G-12 hat eine Nutzlast von 5 kg.",
+        PAYLOAD_SOURCE,
+        drop_unsupported=True,
+        question=PAYLOAD_QUESTION,
+    )
+    assert verdict.status == "no_evidence"
+    assert reasons(verdict) == [(0, "no_citation")]
+
+
+def test_value_from_the_question_frees_nothing_in_other_sentences() -> None:
+    answer = "Der G-12 hat eine Nutzlast von 5 kg [1]. Der G-12 ist ein Greifer [1]."
+    verdict = verify(answer, PAYLOAD_SOURCE, drop_unsupported=True, question=PAYLOAD_QUESTION)
+    assert verdict.status == "answered"
+    assert verdict.cleaned_text == "Der G-12 hat eine Nutzlast von 5 kg [1]."
+    assert [(i.index, i.reason, i.values) for i in verdict.removed_sentences] == [
+        (1, "unsupported_value", ("G-12",))
+    ]
+
+
+def test_regex_characters_in_the_question_are_plain_text() -> None:
+    verdict = verify(
+        "Der G-12 hat eine Nutzlast von 5 kg [1].",
+        PAYLOAD_SOURCE,
+        drop_unsupported=True,
+        question="Welche Nutzlast hat (G-12|.*)[1]+?",
+    )
+    assert verdict.status == "no_evidence"
+
+
+# 14. List items inherit the numbers of their introduction sentence (140, E-70)
+
+
+PORT_SOURCES: dict[int, str] = {
+    1: "Die Station nutzt Port 502 und Port 1883.",
+    2: "Der Greifer wiegt 5 kg.",
+}
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "Die Station nutzt diese Ports [1]:\n- Port 502\n- Port 1883",
+        "Die Station nutzt diese Ports: [1]\n- Port 502\n- Port 1883",
+        "Die Station nutzt diese Ports [1]:\n1. Port 502\n2. Port 1883",
+        "Die Station nutzt diese Ports [1]:\n1) Port 502\n2) Port 1883",
+        "Die Station nutzt diese Ports [1]:\n* Port 502\n\n* Port 1883",
+        "Die Station nutzt diese Ports [1]:\n- Port 502\n  - Port 1883",
+        "Vorweg ein Satz [2]. Die Station nutzt diese Ports [1]:\n- Port 502\n- Port 1883",
+    ],
+)
+def test_list_items_inherit_the_numbers_of_the_introduction(answer: str) -> None:
+    verdict = verify(answer, PORT_SOURCES, drop_unsupported=True)
+    assert verdict.status == "answered"
+    assert verdict.removed_sentences == ()
+    assert verdict.cleaned_text == answer
+    assert 1 in verdict.cited
+
+
+def test_list_item_with_a_value_outside_the_inherited_source_is_dropped() -> None:
+    answer = "Die Station nutzt diese Ports [1]:\n- Port 502\n- Port 503\n- Port 1883"
+    verdict = verify(answer, PORT_SOURCES, drop_unsupported=True)
+    assert verdict.status == "answered"
+    assert verdict.cited == (1,)
+    assert verdict.removed_sentences == (
+        SentenceIssue(
+            index=2, reason="unsupported_value", values=("503",), invalid_numbers=(), kept=False
+        ),
+    )
+    assert verdict.cleaned_text == "Die Station nutzt diese Ports [1]:\n- Port 502\n- Port 1883"
+
+
+@pytest.mark.parametrize(
+    ("answer", "expected"),
+    [
+        # The introduction does not end with a colon.
+        (
+            "Die Station nutzt diese Ports [1].\n- Port 502\n- Port 1883",
+            [(1, "no_citation"), (2, "no_citation")],
+        ),
+        ("Die Station nutzt diese Ports [1]: siehe unten\n- Port 502", [(1, "no_citation")]),
+        # A colon, but no number or only an invalid one.
+        (
+            "Die Station nutzt diese Ports:\n- Port 502\n- Port 1883",
+            [(0, "no_citation"), (1, "no_citation"), (2, "no_citation")],
+        ),
+        (
+            "Die Station nutzt diese Ports [9]:\n- Port 502\n- Port 1883",
+            [(0, "unknown_citation"), (1, "no_citation"), (2, "no_citation")],
+        ),
+        # A dropped introduction passes nothing on.
+        (
+            "Die Station nutzt bei 24 V diese Ports [1]:\n- Port 502\n- Port 1883",
+            [(0, "unsupported_value"), (1, "no_citation"), (2, "no_citation")],
+        ),
+        # A line with other content between introduction and list.
+        (
+            "Die Station nutzt diese Ports [1]:\nSie stehen hier.\n- Port 502",
+            [(1, "no_citation"), (2, "no_citation")],
+        ),
+        # A list without an introduction.
+        ("- Port 502\n- Port 1883", [(0, "no_citation"), (1, "no_citation")]),
+        # A list item does not introduce a nested list.
+        ("- Die Station nutzt diese Ports [1]:\n  - Port 502", [(1, "no_citation")]),
+        # Own numbers that are all invalid stay unknown_citation.
+        (
+            "Die Station nutzt diese Ports [1]:\n- Port 502 [9]\n- Port 1883",
+            [(1, "unknown_citation")],
+        ),
+    ],
+)
+def test_list_items_without_a_valid_introduction_inherit_nothing(
+    answer: str, expected: list[tuple[int, str]]
+) -> None:
+    verdict = verify(answer, PORT_SOURCES, drop_unsupported=True)
+    assert reasons(verdict) == expected
+
+
+def test_list_item_with_its_own_number_is_checked_against_it_only() -> None:
+    answer = "Die Station nutzt diese Ports [1]:\n- Port 502 [2]\n- Port 1883"
+    verdict = verify(answer, PORT_SOURCES, drop_unsupported=True)
+    assert verdict.status == "answered"
+    assert verdict.cited == (1,)
+    assert verdict.removed_sentences == (
+        SentenceIssue(
+            index=1, reason="unsupported_value", values=("502",), invalid_numbers=(), kept=False
+        ),
+    )
+    assert verdict.cleaned_text == "Die Station nutzt diese Ports [1]:\n- Port 1883"
+
+
+def test_inherited_numbers_count_for_the_contradiction_rule() -> None:
+    answer = f"{CONTRADICTION_PHRASE} [1][5]:\n- Blatt A nennt 24 V\n- Blatt B nennt 48 V"
+    verdict = verify(answer, SOURCES, drop_unsupported=True)
+    assert verdict.status == "contradiction"
+    assert verdict.cited == (1, 5)
+    assert verdict.removed_sentences == ()
+
+
+def test_sentences_in_list_lines_are_marked() -> None:
+    lines = ["Einleitung [1]:", "- Punkt eins. Punkt zwei", "  1) Unterpunkt", "Schluss."]
+    assert [s.in_list for s in _split_sentences(lines)] == [False, True, True, True, False]
+
+
+# 15. Run time of the new rules (140)
+
+
+def _best_time_with_question(
+    answer: str, sources: dict[int, str], question: str, runs: int = 3
+) -> float:
+    best = float("inf")
+    for _ in range(runs):
+        start = time.perf_counter()
+        verify(answer, sources, drop_unsupported=True, question=question)
+        best = min(best, time.perf_counter() - start)
+    return best
+
+
+SHORT_ANSWER = "Der G-12 hat eine Nutzlast von 5 kg [1]."
+LIST_INTRO = "Die Station nutzt diese Ports [1]:\n"
+
+
+@pytest.mark.parametrize(
+    ("answer", "question"),
+    [
+        # A long list under one introduction (20 000 characters of answer).
+        (lambda n: LIST_INTRO + ("- Port 502\n" * n)[:n], lambda n: ""),
+        (lambda n: LIST_INTRO + ("- G-12\n\n" * n)[:n], lambda n: "Welche Ports hat der G-12?"),
+        # A long question (20 000 characters).
+        (lambda n: SHORT_ANSWER, lambda n: ("Greifer G-12 " * n)[:n]),
+        (lambda n: SHORT_ANSWER, lambda n: ("S7 1 " * n)[:n]),
+        (lambda n: SHORT_ANSWER, lambda n: "Port" + " " * n + "x"),
+        (lambda n: SHORT_ANSWER, lambda n: ("." * n) + "x"),
+        (lambda n: SHORT_ANSWER, lambda n: ("G-12-Teil" * n)[:n]),
+        # Long single tokens for the unit, MAC and version exclusions.
+        (lambda n: SHORT_ANSWER, lambda n: ("2x10" * n)[:n] + "a"),
+        (lambda n: SHORT_ANSWER, lambda n: "1" + "a" * n),
+        (lambda n: SHORT_ANSWER, lambda n: "V" + ("1." * n)[:n] + "1a"),
+    ],
+)
+def test_lists_and_long_questions_stay_linear(
+    answer: Callable[[int], str], question: Callable[[int], str]
+) -> None:
+    sources = {1: "Die Station nutzt Port 502. Die Nutzlast beträgt 5 kg. " * 40}
+    small = _best_time_with_question(answer(5000), sources, question(5000))
+    large = _best_time_with_question(answer(20000), sources, question(20000))
+    assert large < 1.0
+    assert large / max(small, 0.001) < 8
