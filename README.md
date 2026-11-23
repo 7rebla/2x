@@ -188,19 +188,19 @@ Measured (057): about 1.25 s per 100 sections with `bge-m3` once the model is lo
 
 #### Chat model for answers
 
-Answers (milestone M3) need a second, local model that generates text. Which one becomes the default is decided after the measurement run (work order 128); until then `TWOX_CHAT_MODEL` stays empty, answers are unavailable and `manage.py` commands show the warning `twox.answers.W001`.
+Answers (milestone M3) need a second, local model that generates text. Recommended is `gemma4:31b-it-qat`, with `qwen3.8:27b-q4_K_M` as the fallback (E-70, after the measurement run of work order 128); use these tags, never `:latest` or a tag without quantisation. `.env.example` leaves `TWOX_CHAT_MODEL` empty on purpose: until it is set in your own `.env`, answers are unavailable and `manage.py` commands show the warning `twox.answers.W001`.
 
-1. Load the chosen chat model on the host:
+1. Load the chat model on the host, for example:
 
    ```sh
-   ollama pull <chat model>
+   ollama pull gemma4:31b-it-qat
    ```
 
 2. Set `TWOX_CHAT_MODEL=<chat model>` in `.env` (the name exactly as `ollama list` shows it) and recreate `api` and `worker` with `docker compose up -d --wait`. Cloud models (`…:cloud`, `…-cloud`) are refused, and so is a model without the capability `completion`, for example an embedding model.
 
-3. Settings of Ollama on the host (environment variables of the Ollama service, not of the containers; concrete values are set after the model decision):
+3. Settings of Ollama on the host (environment variables of the Ollama service, not of the containers):
 
-   - `OLLAMA_CONTEXT_LENGTH`: the context window in tokens. Ollama silently cuts a longer prompt to it, and the OpenAI-compatible interface `/v1` that 2x uses cannot set it per request. It has to hold the question, the retrieved sections and the answer. A larger window needs more memory (RAM or VRAM).
+   - `OLLAMA_CONTEXT_LENGTH`: the context window in tokens; `16384` for the starting values of the answers (E-70). Ollama silently cuts a longer prompt to it, and the OpenAI-compatible interface `/v1` that 2x uses cannot set it per request. It has to hold the question, the retrieved sections and the answer. A larger window needs more memory (RAM or VRAM).
    - `OLLAMA_NUM_PARALLEL`: how many requests one loaded model answers at the same time. Each parallel slot needs its own share of the context memory.
    - `OLLAMA_KEEP_ALIVE`: how long a model stays loaded after the last request. Short saves memory, but the next answer first has to load the model again (several seconds for a large model). The embedding model and the chat model are loaded side by side, so the host needs memory for both.
 
@@ -444,7 +444,7 @@ docker compose run --rm backend-dev sh scripts/check-licenses.sh
 - `pytest -m worker` runs only those; they need the `valkey` and `worker` services running.
 - No test reaches Docling or Ollama: the tests use stand-ins (`backend/tests/ingest/fake_docling.py`, `fake_converter.py`, `backend/tests/answers/fake_ollama.py`, `backend/tests/search/fake_embedder.py`) and set `TWOX_AI_ENABLED` themselves; every AI-dependent part is tested with the AI features off and on (E-59). `backend/tests/acceptance/test_m2.py` runs the whole path from upload to search through the real tasks against the Docling stand-in.
 - `sh scripts/check-licenses.sh` is the licence check of the Python packages; it fails on every licence that is not allowed in `backend/scripts/license-rules.txt`.
-- `pytest` also runs the CI questions (`backend/tests/answers/test_ci_questions.py`): the whole answer chain against recorded model answers, without a model and without network. After a change of the prompt, the context selection or the fixtures it fails with `re-record: manage.py record_answers`. Recording again is only local and needs the chat model on the host: `docker compose run --rm -e TWOX_CHAT_MODEL=qwen3.8:27b-q4_K_M backend-dev python manage.py record_answers` (details: `backend/tests/answers/recorded/README.md`).
+- `pytest` also runs the CI questions (`backend/tests/answers/test_ci_questions.py`): the whole answer chain against recorded model answers, without a model and without network. After a change of the prompt, the context selection or the fixtures it fails with `re-record: manage.py record_answers`. Recording again is only local and needs the chat model on the host: `docker compose run --rm -e TWOX_CHAT_MODEL=gemma4:31b-it-qat backend-dev python manage.py record_answers` (details: `backend/tests/answers/recorded/README.md`).
 
 Translation catalogue up to date (regenerates `backend/locale/de/LC_MESSAGES/django.po` from the texts marked with `gettext` or `gettext_lazy`; any difference apart from the creation date means the catalogue is out of date):
 
