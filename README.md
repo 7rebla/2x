@@ -235,7 +235,7 @@ At least one selection is needed; several are combined:
 
 Only documents are taken, never configurations. A version with an active job that is not stuck is left alone. The output counts versions, created jobs, skipped formats, missing content, running and stuck jobs and ends with `Dry run: nothing was changed. Add --commit to start the jobs.` or `Saved.`
 
-`embed_sections` computes the embeddings again, for example after the embedding model has changed or after the model service was down (the sections themselves stay). `--missing` (the default) takes the versions with sections without an embedding of `TWOX_EMBED_MODEL`, `--all` every version with sections, whose embeddings are cleared first:
+`embed_sections` computes the embeddings again, for example after the embedding model has changed or after the model service was down (the sections themselves stay). Besides the embedding of each section it writes the embeddings of its pieces of at most `TWOX_PIECE_MAX_CHARS` characters, which the search by meaning uses. `--missing` (the default) takes the versions with sections without an embedding or without pieces of `TWOX_EMBED_MODEL`, `--all` every version with sections, whose embeddings and pieces are cleared first:
 
 ```sh
 docker compose exec api python manage.py embed_sections --user admin
@@ -243,6 +243,15 @@ docker compose exec api python manage.py embed_sections --all --user admin --com
 ```
 
 Without the AI features it prints `DISABLED: …` and creates nothing. After a change of `TWOX_EMBED_MODEL` the search by meaning finds only sections embedded with the new model, so run `embed_sections --all --user admin --commit` (or `--missing`, which takes every section of another model).
+
+After the update that brings the pieces (migration `ingest.0004`), existing sections have no pieces yet and are found by keyword only. Embed them once with `--missing`; the embeddings of the sections stay, and only sections longer than a piece ask the model:
+
+```sh
+docker compose exec api python manage.py embed_sections --user admin
+docker compose exec api python manage.py embed_sections --user admin --commit
+```
+
+The worker works the jobs off; when the dry run (the first line) reports `versions: 0 jobs to create, 0 skipped`, every section has its pieces (a version whose job is still running counts as skipped).
 
 ### Search
 
@@ -351,6 +360,7 @@ All variables and their defaults are listed in [docs/ARCHITECTURE.md](docs/ARCHI
 | `TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS` | Deadline of a job whose Docling task never starts, from the start of the job (86,400 s = 24 hours, at least `TWOX_INGEST_TIMEOUT_SECONDS`); long, so that a large batch waiting in Docling's queue is not cut off. |
 | `TWOX_DOCLING_MEM_LIMIT` | Memory limit of the `docling` service (`8g`, compose `mem_limit` and `memswap_limit` with the same value: the limit includes swap). Above it Docker stops and restarts Docling; the job retries and fails with `docling_unavailable` ("converter unavailable") if the document needs more every time. |
 | `TWOX_SECTION_MAX_CHARS` | Largest section in characters (2,000). |
+| `TWOX_PIECE_MAX_CHARS` | Largest piece of a section with its own embedding (1,000); the search by meaning measures a section by its nearest piece. After a change run `embed_sections --all --user admin --commit`. |
 | `TWOX_EMBED_TASK_MAX_SECONDS` | One embedding task works at most this long, then continues in a new task (240 s). |
 
 The ingestion values are checked against each other at start (`check_ingest_timing` in `backend/twox/config/settings.py`); a value that does not fit stops `api`, `worker` and every `manage.py` command with a message that names it. An embedding length that does not match the database column stops them as well with the AI features on (system check `twox.ingest.E001`) and is only a warning with them off (`twox.ingest.W001`).
