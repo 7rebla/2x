@@ -1,6 +1,6 @@
 # Auftrag 152 – Diagnose: Warum antwortet das Modell bei den Prüffragen 4, 6 und 10 trotz Beleg im Kontext falsch?
 
-Meilenstein: M3 · Freigabestufe: B (Analyse ohne Codeänderung; Vorbereitung der Entscheidung zu Messlauf 151) · Status: offen
+Meilenstein: M3 · Freigabestufe: B (Analyse ohne Codeänderung; Vorbereitung der Entscheidung zu Messlauf 151) · Status: erledigt (Diagnose; Entscheidung durch a7, STATUS Punkt 25)
 
 ## Ziel
 
