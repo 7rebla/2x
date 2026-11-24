@@ -275,6 +275,25 @@ def test_rule_4_reports_a_contradiction_only_for_incompatible_statements() -> No
     assert "nenne beide Stellen mit ihren Nummern" in text
 
 
+def test_rule_4_counts_different_type_designations_for_one_component_as_contradiction() -> None:
+    """Work order 155 (diagnosis 152, variant C2): different types named for the same
+    component contradict each other, even in one document; the sharpening of work order 148
+    stays."""
+    text = rule(build_messages("Frage?", [], NONCE)[0]["content"], 4)
+    assert "Nennen zwei Abschnitte für dasselbe Bauteil verschiedene Typen" in text
+    assert "ist das ein Widerspruch" in text
+    assert "auch wenn beide aus demselben Dokument stammen" in text
+    # The addition comes after the sharpening of work order 148, which stays as it was.
+    assert text.index("anderen Geräten oder Versionen sind kein Widerspruch") < text.index(
+        "dasselbe Bauteil"
+    )
+    assert f"genau mit „{types.CONTRADICTION_PHRASE}:“" in text
+    # The addition stays inside rule 4; rule 3 (refusal) is unchanged (the snapshot covers all).
+    assert rule(build_messages("Frage?", [], NONCE)[0]["content"], 3).startswith(
+        "Steht die Antwort nicht in den Abschnitten"
+    )
+
+
 def test_prompt_module_has_no_second_literal() -> None:
     source_text = Path(prompt.__file__).read_text(encoding="utf-8")
     assert "Dazu finde ich nichts" not in source_text
