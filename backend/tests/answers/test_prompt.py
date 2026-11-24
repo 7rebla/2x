@@ -276,12 +276,11 @@ def test_rule_4_reports_a_contradiction_only_for_incompatible_statements() -> No
 
 
 def test_rule_4_counts_different_type_designations_for_one_component_as_contradiction() -> None:
-    """Work order 155 (diagnosis 152, variant C2): different type or order designations for
-    the same component of the same device contradict each other, even in one document; the
-    sharpening of work order 148 stays."""
+    """Work order 155 (diagnosis 152, variant C2): different types named for the same
+    component contradict each other, even in one document; the sharpening of work order 148
+    stays."""
     text = rule(build_messages("Frage?", [], NONCE)[0]["content"], 4)
-    assert "für dasselbe Bauteil desselben Geräts" in text
-    assert "verschiedene Typ- oder Bestellangaben" in text
+    assert "Nennen zwei Abschnitte für dasselbe Bauteil verschiedene Typen" in text
     assert "ist das ein Widerspruch" in text
     assert "auch wenn beide aus demselben Dokument stammen" in text
     # The addition comes after the sharpening of work order 148, which stays as it was.
