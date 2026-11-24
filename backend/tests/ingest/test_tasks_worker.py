@@ -29,6 +29,7 @@ from tests.ingest.fake_converter import (
     make_embed_job,
     make_job,
     make_version,
+    texts_to_embed,
 )
 from twox.answers.embeddings import EmbeddingUnavailableError
 from twox.config import celery_app
@@ -210,8 +211,12 @@ def test_tasks_run_a_job_through_the_step_embed_when_ai_is_on(
     job.refresh_from_db()
     assert (job.status, job.step, job.error_code) == (IngestStatus.DONE, "embed", "")
     sections = Section.objects.filter(document_version=version)
-    assert sections.count() == job.section_count == len(embedder.texts) > 0
+    assert sections.count() == job.section_count
+    assert job.section_count
+    # 150: one text per section and one per piece of a long section.
+    assert len(embedder.texts) == texts_to_embed(version)
     assert set(sections.values_list("embedding_model", flat=True)) == {FAKE_MODEL}
+    assert not sections.exclude(pieces__embedding_model=FAKE_MODEL).exists()
     assert len(scheduled.embeds) == 1
 
 

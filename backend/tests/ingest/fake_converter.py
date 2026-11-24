@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import BinaryIO
 
 import pytest
+from django.conf import settings as django_settings
 from pytest_django.fixtures import Settings
 
 from tests.files.helpers import make_device
@@ -36,6 +37,7 @@ from twox.ingest.models import (
     Section,
     section_rows,
 )
+from twox.ingest.pieces import split_pieces
 from twox.ingest.sections import SectionDraft
 
 #: Stand-in bytes of BetrSichV.pdf; Docling never sees them, the fake answers.
@@ -236,6 +238,19 @@ class FakeEmbedder:
 
     def embed_query(self, text: str) -> list[float]:
         raise UnexpectedServiceCallError("the ingest flow embeds section texts only")
+
+
+def texts_to_embed(version: DocumentVersion) -> int:
+    """How many texts the embed step sends for the sections of ``version`` without embeddings.
+
+    One per section, plus one per piece of a section longer than
+    ``TWOX_PIECE_MAX_CHARS`` (150); a section of one piece gives it its own vector.
+    """
+    count = 0
+    for text in Section.objects.filter(document_version=version).values_list("text", flat=True):
+        spans = split_pieces(text, django_settings.TWOX_PIECE_MAX_CHARS)
+        count += 1 + (len(spans) if len(spans) > 1 else 0)
+    return count
 
 
 def install_embedder(
