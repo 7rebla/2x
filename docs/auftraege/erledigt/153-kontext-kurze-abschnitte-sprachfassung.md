@@ -1,6 +1,6 @@
 # Auftrag 153 – Kontextauswahl: kurze Abschnitte und inhaltsreichere Sprachfassung
 
-Meilenstein: M3 · Freigabestufe: C (freigegeben mit E-76, Teil A) · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: C (freigegeben mit E-76, Teil A) · Status: erledigt
 
 ## Ziel
 

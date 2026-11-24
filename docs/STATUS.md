@@ -262,7 +262,7 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 150 | Teilstücke mit eigenen Vektoren (E-75) | C | 149 | erledigt (2x migriert und neu eingebettet: 6 815 Teilstücke, 0 ohne Vektor) |
 | 151 | Messlauf 3 nach 148, 149, 150 | C | 148–150 | erledigt (6/10, Kontrollfrage stabil) |
 | 152 | Diagnose: Modellantworten für die Prüffragen 4, 6, 10 | B | 151 | erledigt |
-| 153 | Kontextauswahl: kurze Abschnitte, inhaltsreichere Sprachfassung (E-76 A) | C | 152 | in Arbeit |
+| 153 | Kontextauswahl: kurze Abschnitte, inhaltsreichere Sprachfassung (E-76 A) | C | 152 | erledigt (Frage 4 `probe` gelöst; 4 `yaml` und 10: Belege auf Rang 21–29 der Suche, außerhalb von 2k = 16) |
 | 154 | Werte wie „1512SP“ hinter einem Wort erkennen (E-76 B) | B | 152 | erledigt |
 | 155 | Prompt: verschiedene Typangaben sind ein Widerspruch (E-76 C) | B | 154 | in Arbeit |
 

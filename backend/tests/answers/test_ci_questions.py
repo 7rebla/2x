@@ -138,6 +138,7 @@ ANSWER_SETTINGS = {
     "TWOX_ANSWER_MAX_DISTANCE": 0.6,
     "TWOX_ANSWER_TRANSLATION_DISTANCE": 0.15,
     "TWOX_SECTION_MAX_CHARS": 2000,
+    "TWOX_ANSWER_MIN_SOURCE_CHARS": 200,
 }
 #: The largest cosine distance: with it every section passes the threshold.
 THRESHOLD_OFF = 2.0
