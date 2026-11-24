@@ -6,9 +6,12 @@ the ``n``-th embedded text gets :func:`~tests.ingest.fake_converter.vector_for`
 keeps the texts short.
 """
 
+import threading
+import time
 from collections.abc import Callable, Sequence
 
 import pytest
+from django.db import connection, transaction
 from pytest_django.fixtures import Settings
 
 from tests.ingest.fake_converter import (
@@ -403,3 +406,85 @@ def test_pieces_go_with_their_sections(settings: Settings, monkeypatch: pytest.M
     Section.objects.filter(document_version=version).only("pk").delete()
 
     assert SectionPiece.objects.count() == 0
+
+
+# --- Two tasks for the same job (review of 150) -----------------------------------------
+
+
+def piece_rows(section: Section) -> list[tuple[int, int, int, str]]:
+    return list(
+        SectionPiece.objects.filter(section=section)
+        .order_by("ordinal")
+        .values_list("ordinal", "char_start", "char_end", "embedding_model")
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_second_writer_of_the_same_section_waits_and_leaves_one_valid_set(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A redelivered message may run embed while another task still writes the
+    # pieces of the same section. The second writer must neither fail on the
+    # unique (section, ordinal) nor leave a mixed set.
+    install_embedder(monkeypatch, settings)
+    version = make_version()
+    (long,) = add_texts(version, LONG)
+    job = embed_job(version)
+    outcome: list[StepResult | BaseException] = []
+
+    def second_task() -> None:
+        try:
+            outcome.append(pipeline.embed(job.pk))
+        except BaseException as error:  # pragma: no cover - reported below
+            outcome.append(error)
+        finally:
+            connection.close()
+
+    worker = threading.Thread(target=second_task)
+    with transaction.atomic():
+        # The first task: holds the row lock while it writes its pieces.
+        Section.objects.select_for_update().get(pk=long.pk)
+        worker.start()
+        time.sleep(1.0)
+        assert worker.is_alive(), "the second task did not wait for the lock"
+        for ordinal, (start, end) in enumerate([(0, 19), (20, 38), (39, 53)]):
+            SectionPiece.objects.create(
+                section=long,
+                ordinal=ordinal,
+                char_start=start,
+                char_end=end,
+                embedding=vector_for(900 + ordinal),
+                embedding_model=FAKE_MODEL,
+            )
+    worker.join(timeout=30)
+
+    assert not worker.is_alive()
+    assert outcome == [StepResult(Outcome.DONE)]
+    assert piece_rows(long) == [
+        (0, 0, 19, FAKE_MODEL),
+        (1, 20, 38, FAKE_MODEL),
+        (2, 39, 53, FAKE_MODEL),
+    ]
+    assert [text for text, _, _ in pieces_of(long)] == LONG_PIECES
+
+
+def test_copying_skips_sections_that_already_have_pieces(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    install_embedder(monkeypatch, settings)
+    first = make_version(device="dps-plc")
+    add_texts(first, LONG)
+    run(embed_job(first))
+    second = make_version(device="hbw-plc", filename="copy.pdf")
+    (copy,) = add_texts(second, LONG)
+    SectionPiece.objects.create(
+        section=copy,
+        ordinal=0,
+        char_start=0,
+        char_end=len(LONG),
+        embedding=vector_for(77),
+        embedding_model=FAKE_MODEL,
+    )
+
+    assert pipeline._copy_pieces(second, FAKE_MODEL) == 0
+    assert piece_rows(copy) == [(0, 0, len(LONG), FAKE_MODEL)]

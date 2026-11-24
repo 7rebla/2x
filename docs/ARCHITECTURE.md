@@ -189,6 +189,7 @@ erDiagram
   DocumentVersion ||--o{ IngestJob : "ingested by"
   DocumentVersion ||--o{ Section : "has"
   IngestJob ||--o{ Section : "built"
+  Section ||--o{ SectionPiece : "split into"
   IngestJob |o--o{ IngestJob : "reused_from"
   User }o--o{ Group : "role manage or read"
   User |o--o{ Document : "created_by"
@@ -256,6 +257,13 @@ erDiagram
     vector embedding "1024 values, nullable"
     string embedding_model
   }
+  SectionPiece {
+    int ordinal "unique per section"
+    int char_start
+    int char_end "text is section.text[char_start:char_end]"
+    vector embedding "1024 values"
+    string embedding_model
+  }
 ```
 
 - **Structure** (decision E-41, `twox/assets/models.py`): `Site` and `Area` have a name, `Plant` and `Device` a key and a name. A key consists of lower-case letters, digits and `-` (at most 64 characters, checked by `full_clean()`), and is unique among all plants or among all devices. The device fields are the columns of `testfactory/layout/devices.csv` one to one as free text; only `ip_address` is checked (IPv4 or IPv6, empty is `NULL`), and `device_class` is one of seven values (E-53). All four have `created_at` and `updated_at`.
@@ -266,7 +274,7 @@ erDiagram
 - **Section pieces** (`SectionPiece`, table `ingest_sectionpiece`, work order 150, E-75): parts of a section of at most `TWOX_PIECE_MAX_CHARS` (1,000) characters with an embedding of their own; the vector search measures a section by its nearest piece. The section stays the hit, the source and the unit of citation. A piece holds `section` (deleted with it), `ordinal`, `char_start` and `char_end` (code points in `Section.text`; the text is cut from the section, never stored twice), `embedding` (1024 values, never empty) and `embedding_model` (never empty). Pieces exist only with an embedding: the embed step writes all pieces of a section at once. Migration `ingest.0004` creates the empty table; sections are not touched.
 - **Indexes on sections:** GIN on `search_vector`, GIN with `gin_trgm_ops` on `text` (exact identifiers), HNSW with `vector_cosine_ops` on `embedding`, and the unique B-tree on `(document_version, ordinal)`. On pieces: HNSW with `vector_cosine_ops` on `embedding` and the unique B-tree on `(section, ordinal)`.
 - **Accounts:** `accounts.User` is Django's user; a role is membership in one of the two groups `manage` or `read`, created by a data migration (decision E-40).
-- **Deleting:** every foreign key uses `PROTECT`. An entry that still has children (an area with plants, a device with documents, a version with jobs or sections, a user with uploads or jobs) cannot be deleted. Only a superuser deletes, and only structure entries in the admin.
+- **Deleting:** every foreign key uses `PROTECT`, except `SectionPiece.section` (`CASCADE`, 150): pieces are derived from their section and go with it when the sections of a version are replaced. An entry that still has children (an area with plants, a device with documents, a version with jobs or sections, a user with uploads or jobs) cannot be deleted. Only a superuser deletes, and only structure entries in the admin.
 - **Change log:** the table `auditlog_logentry` of django-auditlog (see [Change log](#change-log)). Ingest jobs and sections are not logged (E-55): they are machine data, and a job records who started it and when.
 - **Sessions** are stored in the database (`django_session`); allauth adds its tables for email addresses, which stay unused.
 

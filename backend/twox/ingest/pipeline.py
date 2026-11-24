@@ -1070,6 +1070,16 @@ def _embed_batch(
             )
         ]
     with transaction.atomic():
+        # Two tasks may embed the same job at once (a redelivered or repeated
+        # message). The row locks, taken in the order of the IDs, make the
+        # second one wait and then replace the pieces of the first as a whole,
+        # instead of failing on the unique (section, ordinal).
+        list(
+            Section.objects.select_for_update()
+            .filter(pk__in=[item.section.pk for item in work])
+            .order_by("pk")
+            .values_list("pk", flat=True)
+        )
         if sections:
             Section.objects.bulk_update(sections, ["embedding", "embedding_model"])
         SectionPiece.objects.filter(section__in=[item.section for item in work]).delete()
@@ -1132,7 +1142,12 @@ CROSS JOIN LATERAL (
 JOIN ingest_sectionpiece piece ON piece.section_id = donor.id
 WHERE target.document_version_id = %(version_id)s
     AND NOT EXISTS (SELECT 1 FROM ingest_sectionpiece p WHERE p.section_id = target.id)
+ON CONFLICT (section_id, ordinal) DO NOTHING
 RETURNING section_id
+"""
+#: Locks the sections of a version in the order of their IDs, as the batches do.
+_LOCK_SECTIONS_SQL: Final = """
+SELECT id FROM ingest_section WHERE document_version_id = %(version_id)s ORDER BY id FOR UPDATE
 """
 
 
@@ -1144,10 +1159,17 @@ def _copy_pieces(version: DocumentVersion, model: str) -> int:
     headings and text whose pieces are all of ``model``. Returns the number
     of sections. Pieces made with another ``TWOX_PIECE_MAX_CHARS`` are taken
     over as they are; ``embed_sections --all`` makes all pieces new.
+
+    A second task for the same job waits for the row locks of the first, then
+    sees its pieces and copies nothing; ``ON CONFLICT`` is the last guard
+    against a duplicate ``(section, ordinal)``.
     """
-    with connection.cursor() as cursor:
-        cursor.execute(
-            _COPY_PIECES_SQL,
-            {"sha256": version.sha256, "version_id": version.pk, "model": model},
-        )
+    params: dict[str, str | int] = {
+        "sha256": version.sha256,
+        "version_id": version.pk,
+        "model": model,
+    }
+    with transaction.atomic(), connection.cursor() as cursor:
+        cursor.execute(_LOCK_SECTIONS_SQL, params)
+        cursor.execute(_COPY_PIECES_SQL, params)
         return len({row[0] for row in cursor.fetchall()})

@@ -1,7 +1,6 @@
 """Splitting a section into pieces for the vector search (work order 150, E-75)."""
 
 import pytest
-from django.conf import settings
 
 from twox.ingest.pieces import DEFAULT_PIECE_MAX_CHARS, Span, split_pieces
 
@@ -25,9 +24,8 @@ def assert_well_formed(text: str, spans: list[Span], max_chars: int) -> None:
 
 
 def test_default_size_is_the_measured_one() -> None:
-    # Diagnosis 147, variant V4a; .env.example and the settings use the same.
+    # Diagnosis 147, variant V4a. The setting itself may differ in a local .env.
     assert DEFAULT_PIECE_MAX_CHARS == 1000
-    assert settings.TWOX_PIECE_MAX_CHARS == DEFAULT_PIECE_MAX_CHARS
 
 
 @pytest.mark.parametrize("text", ["", "x", "Short section.", "a" * 10, "  padded  "])

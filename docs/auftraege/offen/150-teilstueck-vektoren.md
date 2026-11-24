@@ -233,3 +233,26 @@ docker compose -p 2x exec api python manage.py embed_sections --user <Konto mit 
   - Ein dritter Lauf derselben Verzeichnisse mit `-o faulthandler_timeout=90` lief ohne Hänger durch. Der volle Lauf mit `-v` in CI-Reihenfolge lief ebenfalls durch (3592 bestanden).
   - Der Test ließ sich deshalb nicht benennen. Ein Zusammenhang mit 150 ist nicht erkennbar; betroffen waren Läufe mit `tests/answers`.
 - **Reihenfolgeabhängiger Test (bestehend):** Ruft man `tests/search` vor `tests/answers` auf, scheitert `tests/answers/test_api.py::test_no_database_connection_stays_open_after_the_stream` mit `Group.DoesNotExist`. Ursache ist ein Test mit `transaction=True` in `test_vector_search.py`, der die Gruppen leert. Die CI-Reihenfolge ist nicht betroffen; nicht Teil dieses Auftrags.
+
+### Nacharbeit nach der Prüfung der Leitstelle
+
+1. **`TWOX_PIECE_MAX_CHARS` in Compose:** Die Zeile `TWOX_PIECE_MAX_CHARS: ${TWOX_PIECE_MAX_CHARS:-}` steht jetzt neben `TWOX_SECTION_MAX_CHARS` in `deploy/compose/compose.yaml` (`x-backend-environment`); nur diese Zeile wurde geändert. `test_default_size_is_the_measured_one` prüft nur noch `DEFAULT_PIECE_MAX_CHARS == 1000`, damit ein abweichender `.env`-Wert ihn nicht rot macht.
+2. **`docs/ARCHITECTURE.md`:**
+   - „Deleting“ nennt `SectionPiece.section` als Ausnahme (`CASCADE`).
+   - Im erDiagram stehen jetzt `SectionPiece` mit seinen Feldern und die Beziehung `Section ||--o{ SectionPiece`.
+3. **Zwei gleichzeitige embed-Aufgaben:**
+   - `_embed_batch` sperrt die Abschnitte des Bündels mit `select_for_update()` (in der Reihenfolge der IDs), bevor es Teilstücke löscht und einfügt. Ein zweiter Schreiber wartet und ersetzt danach den Satz des ersten als Ganzes.
+   - `_copy_pieces` sperrt die Abschnitte der Version ebenso und hat zusätzlich `ON CONFLICT (section_id, ordinal) DO NOTHING`.
+   - Tests in `tests/ingest/test_embed_pieces.py`:
+     - Mit `transaction=True` hält ein erster Schreiber die Zeilensperre und schreibt Teilstücke; ein zweiter `embed` in einem eigenen Thread wartet nachweislich, endet `done` und hinterlässt genau einen gültigen Satz (Ordnungszahlen 0–2, richtige Spannen, aktuelles Modell).
+     - Kopieren überspringt Abschnitte, die schon Teilstücke haben.
+4. **Kontextauswahl:** neue Datei `tests/answers/test_context_pieces.py` (die Leitstelle hat sie angefordert; `tests/answers` lag nicht im ursprünglichen Bereich).
+   - Ein langer Abschnitt mit nahem Teilstück (8°) und fernem Abschnittsvektor (80°) kommt als ganzer Abschnitt mit vollem Text in den Kontext; `best_distance` ist der Abstand des Teilstücks.
+   - Umgekehrt (naher Abschnittsvektor, alle Teilstücke fern) greift die Schwelle: `below_threshold`.
+   - Das Zusammenlegen der Sprachfassungen (E-61) folgt dem Abschnittsvektor: gleiche Abschnittsvektoren werden zusammengelegt, gleiche Teilstücke allein nicht.
+5. **Prüfung:**
+   - ruff, ruff format, mypy: ohne Befund.
+   - `pytest` voll (`-v`): 3599 bestanden, 1 übersprungen.
+   - `pytest -m worker` mit laufendem `worker`: 6 bestanden.
+   - `makemigrations --check`: ohne Änderung; Übersetzungskatalog unverändert.
+   - Compose-Projekt `twox-150` mit `down -v` entfernt.
