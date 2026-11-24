@@ -50,7 +50,19 @@ Nach diesem Auftrag gilt ein Wert, der mit einer Ziffer beginnt und einen Buchst
 Keine (E-76).
 
 ## Kurzbericht (füllt der Auftragsbearbeiter aus)
-- Was wurde gebaut?
-- Wie wurde getestet?
-- Zweig und Arbeitsverzeichnis
-- Abweichungen
+- **Was wurde gebaut?** In `citations.py` gibt es die neue Hilfsfunktion `_letter_may_precede`. `_bounded` lässt einen Buchstaben direkt vor einer Fundstelle jetzt zu, wenn alle diese Bedingungen gelten: Der Schlüssel des Werts beginnt mit einer Ziffer, besteht nur aus Buchstaben und Ziffern und ist nach `_is_designation` eine Typbezeichnung. Damit fallen Zahlen mit Einheit wie „24VDC“, „5kg“ oder „2x10kg“ heraus. Der Wert ist außerdem weder Einheit noch Version noch IPv6-/MAC-Adresse. Eine Ziffer, ein `_`, ein verbindender `.` oder ein Minuszeichen direkt davor bleiben verboten. Die Regeln für das Ende der Fundstelle sind unverändert. Modul-Docstring (Abschnitt „Normalisation“, Grenzen) und Docstring von `value_occurs` sind nachgezogen.
+  - Beispiel Bewertung: `value_occurs("1512SP", "Die CPU1512SP hat …")` ergibt jetzt True. `missing_key_facts` meldet das key_fact „1512SP“ für „… eine CPU1512SP [1].“ nicht mehr als fehlend, für „CPU1512SP0“ weiterhin.
+  - Beispiel Zitatprüfung: `verify("Die Steuerung 1512SP wird mit 24 V versorgt [1].", {1: "Die Steuerung CPU1512SP hat eine Versorgung von 24 V DC."})` ergibt `answered` ohne entfernten Satz. Vorher wurde der Satz als `unsupported_value` entfernt.
+- **Wie wurde getestet?** In `test_citations.py` gibt es neue Tests. Ein parametrisierter Test prüft jeden Fall mit `value_occurs` und mit `verify`:
+  - Positivfälle: Groß- und Kleinschreibung, „1512-SP“ und „1512SP-1 PN“, geschütztes Bindestrich-Zeichen.
+  - Negativfälle: Ziffer davor, „SPX“ oder „SP0“ danach, `_`, `.` und Minuszeichen davor, „5 kg“ in „25 kg“ und „X5kg“, „24 V“ in „DC24V“, „V18“ in „V180“ und „XV18“, Port 502 in 5020.
+
+  Dazu kommen ein Satztest für `verify` und ein Test, dass `value_occurs` die Regel nicht auf „1500“, „24V“, „24VDC“, „2x10kg“, „V18“, „V2.1a“, IPv4 und Port anwendet. In `test_evaluation.py` stehen vier neue Fälle in `test_key_facts_are_whole_values` und ein neuer Test `test_key_fact_of_a_designation_right_after_a_word_is_found`. Den CI-Ablauf nach `ci.yml` habe ich lokal nachgestellt, Compose-Projekt `twox-154`:
+  - Backend: ruff, Formatprüfung, mypy, `pytest` (3630 bestanden, 1 übersprungen), `pytest -m worker` mit laufendem worker (6 bestanden). Übersetzungskatalog, Migrationen, Lizenzen und OpenAPI-Schema ohne Änderung.
+  - Web: Lint, Typprüfung, 1132 Tests, Build, Lizenzen, API-Client ohne Änderung.
+  - testfactory: alle Schritte grün.
+  - e2e: 102 bestanden, 2 übersprungen.
+
+  Die CI-Aufzeichnungen (`test_ci_questions`) blieben grün. Eine Neuaufnahme war nicht nötig.
+- **Zweig und Arbeitsverzeichnis:** Zweig `worktree-agent-a38449252bf12742b`, Arbeitsverzeichnis `.claude/worktrees/agent-a38449252bf12742b`.
+- **Abweichungen:** keine. Hinweis: Wenn die Antwort „CPU1512SP-1PN“ ohne Leerzeichen vor „PN“ enthält, prüft `verify` weiterhin den Wert „1512SP-1“. Dieser Wert gilt in „…-1PN“ als verlängert. Das war schon vor diesem Auftrag so und gehört nicht zum Umfang. `value_occurs("1512SP-1 PN", "CPU1512SP-1PN")` findet den Wert.
