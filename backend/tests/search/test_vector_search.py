@@ -50,6 +50,7 @@ from twox.search.interface import MAX_LIMIT, MatchKind, SearchRequest, SemanticS
 from twox.search.postgres import (
     HNSW_EF_SEARCH,
     HNSW_ITERATIVE_SCAN,
+    PIECE_CANDIDATES,
     VECTOR_CANDIDATES,
     _Queries,
     _scope_params,
@@ -679,6 +680,7 @@ def test_vector_ranks_are_sorted_again_after_the_index() -> None:
         "embedding": vector_literal(unit(0)),
         "model": FAKE_MODEL,
         "vector_limit": VECTOR_CANDIDATES,
+        "piece_limit": PIECE_CANDIDATES,
     }
     sql = vector_sql(filter_devices=False, filter_plants=False)
     with connection.cursor() as cursor:

@@ -16,6 +16,12 @@ The search vector is a generated column, so PostgreSQL keeps it in step with
 heading and text on every write, ``QuerySet.update()`` included. The
 embedding is optional: without AI features (E-59) every section stays without
 one, and the keyword search works on the search vector alone.
+
+A :class:`SectionPiece` is a part of a section of at most
+``TWOX_PIECE_MAX_CHARS`` characters with an embedding of its own (work order
+150, E-75); the vector search measures a section by its nearest piece. The
+embedding of the section itself is still written: the context selection
+compares sections in two languages with it (E-61).
 """
 
 from collections.abc import Iterable, Sequence
@@ -356,6 +362,72 @@ class Section(models.Model):
             using=using,
             update_fields=update_fields,
         )
+
+    def piece_text(self, piece: SectionPiece) -> str:
+        """The text of ``piece`` of this section: cut from :attr:`text`, never stored twice."""
+        return self.text[piece.char_start : piece.char_end]
+
+
+class SectionPiece(models.Model):
+    """A piece of a section with its own embedding (work order 150, E-75).
+
+    The vector search measures a section by the smallest distance of its
+    pieces: a long section whose answer stands in one paragraph is no longer
+    watered down by the rest of its text. The section stays the source, the
+    context and the unit of citation; a piece is only an entry of the vector
+    index. Its text is not stored: it is ``section.text[char_start:char_end]``
+    (:meth:`Section.piece_text`), split by
+    :func:`twox.ingest.pieces.split_pieces`. Pieces exist only with an
+    embedding: the embed step writes all pieces of a section at once, with
+    the model that made them, and deleting a section deletes its pieces.
+    """
+
+    # The unique constraint on (section, ordinal) serves as its index.
+    section = models.ForeignKey(
+        Section,
+        # Django emulates the cascade (Section uses Python-level variants);
+        # delete sections with .only("pk") so they are not loaded whole.
+        on_delete=models.CASCADE,
+        related_name="pieces",
+        verbose_name=_("section"),
+        db_index=False,
+    )
+    ordinal = models.PositiveIntegerField(_("ordinal"))
+    # Character positions in Section.text: the piece is text[char_start:char_end].
+    # Pieces are not shown anywhere (no admin, no API), so these names and
+    # the one of the model are not translated.
+    char_start = models.PositiveIntegerField()
+    char_end = models.PositiveIntegerField()
+    embedding = VectorField(
+        _("embedding"),
+        dimensions=EMBEDDING_DIMENSIONS,
+        validators=[validate_embedding_dimensions],
+    )
+    embedding_model = models.CharField(_("embedding model"), max_length=EMBEDDING_MODEL_MAX_LENGTH)
+
+    class Meta:
+        ordering = ("section_id", "ordinal")
+        constraints = (
+            models.UniqueConstraint(
+                fields=["section", "ordinal"], name="ingest_sectionpiece_section_ordinal_unique"
+            ),
+            models.CheckConstraint(
+                condition=Q(char_end__gte=F("char_start")), name="ingest_sectionpiece_span_valid"
+            ),
+            models.CheckConstraint(
+                condition=~Q(embedding_model=""), name="ingest_sectionpiece_has_model"
+            ),
+        )
+        indexes = (
+            HnswIndex(
+                fields=["embedding"],
+                opclasses=["vector_cosine_ops"],
+                name="ingest_sectionpiece_hnsw",
+            ),
+        )
+
+    def __str__(self) -> str:
+        return f"{self.section_id} piece {self.ordinal}"
 
 
 class SectionDraftLike(Protocol):

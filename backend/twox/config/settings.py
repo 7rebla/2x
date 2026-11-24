@@ -619,6 +619,10 @@ TWOX_DOCLING_QUEUE_TIMEOUT_SECONDS = env_positive_int(
 )
 # Largest section in characters (twox/ingest/sections.py).
 TWOX_SECTION_MAX_CHARS = env_positive_int("TWOX_SECTION_MAX_CHARS", 2000)
+# Largest piece of a section with its own embedding for the vector search
+# (twox/ingest/pieces.py, work order 150, E-75); a change takes effect with
+# embed_sections --all.
+TWOX_PIECE_MAX_CHARS = env_positive_int("TWOX_PIECE_MAX_CHARS", 1000)
 # One embedding task embeds for at most this long, then schedules itself
 # again for the rest; below the soft time limit of a task.
 TWOX_EMBED_TASK_MAX_SECONDS = env_positive_int("TWOX_EMBED_TASK_MAX_SECONDS", 240)

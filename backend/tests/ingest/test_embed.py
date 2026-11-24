@@ -28,6 +28,7 @@ from tests.ingest.fake_converter import (
     make_job,
     make_version,
     run_job,
+    texts_to_embed,
     vector_for,
 )
 from twox.answers.embeddings import (
@@ -39,7 +40,15 @@ from twox.answers.embeddings import (
 )
 from twox.files.models import DocumentVersion
 from twox.ingest import checks, pipeline, tasks
-from twox.ingest.models import EMBEDDING_DIMENSIONS, IngestJob, IngestStatus, IngestStep, Section
+from twox.ingest.models import (
+    EMBEDDING_DIMENSIONS,
+    IngestJob,
+    IngestStatus,
+    IngestStep,
+    Section,
+    SectionPiece,
+)
+from twox.ingest.pieces import split_pieces
 from twox.ingest.pipeline import Outcome, StepResult
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("isolated_services")]
@@ -147,9 +156,18 @@ def test_ingest_flow_continues_with_embed_and_ends_done(
 
     assert final == StepResult(Outcome.DONE)
     assert (job.status, job.step) == (IngestStatus.DONE, IngestStep.EMBED)
-    count = Section.objects.filter(document_version=version).count()
-    assert job.section_count == count == len(embedder.texts) > 0
+    sections = list(Section.objects.filter(document_version=version))
+    assert job.section_count == len(sections) > 0
+    # 150: one text per section, plus one per piece of a section longer than
+    # a piece (a section of one piece gives it its own vector).
+    pieces = [split_pieces(section.text, settings.TWOX_PIECE_MAX_CHARS) for section in sections]
+    long_pieces = sum(len(spans) for spans in pieces if len(spans) > 1)
+    assert long_pieces > 0
+    assert len(embedder.texts) == len(sections) + long_pieces
     assert set(Section.objects.values_list("embedding_model", flat=True)) == {FAKE_MODEL}
+    assert SectionPiece.objects.filter(section__document_version=version).count() == sum(
+        len(spans) for spans in pieces
+    )
 
 
 def test_version_without_sections_is_done_without_asking_the_model(
@@ -658,7 +676,9 @@ def test_lost_embed_message_is_recovered_by_a_poll_task(
 
     job.refresh_from_db()
     assert job.status == IngestStatus.DONE
-    assert len(embedder.texts) == job.section_count
+    # 150: the pieces of the long sections as well.
+    assert job.section_count is not None
+    assert len(embedder.texts) == texts_to_embed(job.document_version) > job.section_count
 
 
 def test_a_second_message_for_a_done_job_changes_nothing(

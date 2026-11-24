@@ -14,7 +14,8 @@ from pytest_django.fixtures import Settings
 
 from twox.answers import embeddings
 from twox.answers.embeddings import EmbeddingError
-from twox.ingest.models import EMBEDDING_DIMENSIONS, Section
+from twox.ingest.models import EMBEDDING_DIMENSIONS, Section, SectionPiece
+from twox.ingest.pieces import DEFAULT_PIECE_MAX_CHARS, Span, split_pieces
 
 #: Model name the stand-in reports; sections embedded "with the current model" carry it.
 FAKE_MODEL = "fake-embed"
@@ -91,5 +92,33 @@ def install(
 
 
 def embed(section: Section, vector: Sequence[float], model: str = FAKE_MODEL) -> None:
-    """Store ``vector`` as the embedding of ``section``, as 048 would."""
+    """Store ``vector`` as the embedding of ``section`` and of its pieces, as 048 and 150 would.
+
+    The pieces are those of :func:`~twox.ingest.pieces.split_pieces` with the
+    default size; every piece gets ``vector`` as well, so the section is as
+    near as before. :func:`embed_pieces` gives pieces vectors of their own.
+    """
     Section.objects.filter(pk=section.pk).update(embedding=list(vector), embedding_model=model)
+    text = Section.objects.values_list("text", flat=True).get(pk=section.pk)
+    spans = split_pieces(text, DEFAULT_PIECE_MAX_CHARS)
+    embed_pieces(section, [(span, vector) for span in spans], model)
+
+
+def embed_pieces(
+    section: Section,
+    pieces: Sequence[tuple[Span, Sequence[float]]],
+    model: str = FAKE_MODEL,
+) -> list[SectionPiece]:
+    """Replace the pieces of ``section`` by ``pieces``: positions and vector of each."""
+    SectionPiece.objects.filter(section=section).delete()
+    return SectionPiece.objects.bulk_create(
+        SectionPiece(
+            section_id=section.pk,
+            ordinal=ordinal,
+            char_start=start,
+            char_end=end,
+            embedding=list(vector),
+            embedding_model=model,
+        )
+        for ordinal, ((start, end), vector) in enumerate(pieces)
+    )

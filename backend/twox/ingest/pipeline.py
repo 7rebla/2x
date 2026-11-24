@@ -34,12 +34,16 @@ of the job (work order 065).
 :func:`embed` (task ``twox.ingest.embed``, work order 048)
     Only with the AI features on (E-59). Computes the embeddings of the
     sections through the embedding interface of work order 044 and stores
-    them with the model name. Sections whose version has the same content
-    (SHA-256) as another version with an embedding of the current model for
-    the same ordinal, heading and text get that embedding copied, without
-    asking the model. The rest is embedded batch by batch, and every batch is
-    written at once, so an error later on keeps what is done. A task embeds
-    for a limited time and then continues in a new task.
+    them with the model name, and the embeddings of their pieces of at most
+    ``TWOX_PIECE_MAX_CHARS`` characters (:class:`~twox.ingest.models.SectionPiece`,
+    work order 150), which the vector search uses. A section that is a
+    single piece gives its piece its own vector. Sections whose version has
+    the same content (SHA-256) as another version with an embedding (and
+    pieces) of the current model for the same ordinal, heading and text get
+    them copied, without asking the model. The rest is embedded batch by
+    batch, and every batch is written at once, so an error later on keeps
+    what is done. A task embeds for a limited time and then continues in a
+    new task.
 
 Both entry points are idempotent: a job that is not in the expected state is
 left alone, and the last step locks the job row, so a duplicate or
@@ -71,7 +75,7 @@ from typing import IO, Any, BinaryIO, Final, cast
 
 from celery.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import Exists, F, OuterRef, Q, Subquery
 from django.utils import timezone
 
@@ -107,8 +111,10 @@ from twox.ingest.models import (
     IngestStatus,
     IngestStep,
     Section,
+    SectionPiece,
     section_rows,
 )
+from twox.ingest.pieces import Span, split_pieces
 from twox.ingest.sections import UnsupportedDocumentError, build_sections
 
 logger = logging.getLogger(__name__)
@@ -719,8 +725,10 @@ def _finish(job: IngestJob, storage: BlobStorage) -> StepResult:
         if locked is None:
             return StepResult(Outcome.IGNORED)
         rows = section_rows(drafts, locked.document_version, locked)
-        # The old sections stay searchable until this moment.
-        Section.objects.filter(document_version_id=locked.document_version_id).delete()
+        # The old sections stay searchable until this moment. Their pieces go
+        # with them (CASCADE); only("pk") keeps Django from loading every
+        # text and vector to find them.
+        Section.objects.filter(document_version_id=locked.document_version_id).only("pk").delete()
         Section.objects.bulk_create(rows, batch_size=SECTION_BATCH_SIZE)
         now = timezone.now()
         fields: dict[str, Any] = {
@@ -750,7 +758,7 @@ def _finish(job: IngestJob, storage: BlobStorage) -> StepResult:
 
 
 def embedding_text(heading_text: str, text: str) -> str:
-    """The text that is embedded for a section: its headings, an empty line, its text."""
+    """The text that is embedded: the headings, an empty line, the text of a section or piece."""
     if not heading_text:
         return text
     return f"{heading_text}{EMBEDDING_TEXT_SEPARATOR}{text}"
@@ -771,8 +779,20 @@ def should_pause(elapsed_seconds: float) -> bool:
 
 
 def needs_embedding(model: str) -> Q:
-    """Sections without an embedding of ``model``."""
-    return Q(embedding__isnull=True) | ~Q(embedding_model=model)
+    """Sections without an embedding of ``model`` or without pieces of ``model`` (150).
+
+    The embed step writes all pieces of a section at once, so a section with
+    one piece of ``model`` has all of them; a piece of another model means
+    the pieces are from before a change of the model.
+    """
+    current = SectionPiece.objects.filter(section=OuterRef("pk"), embedding_model=model)
+    stale = SectionPiece.objects.filter(section=OuterRef("pk")).exclude(embedding_model=model)
+    return (
+        Q(embedding__isnull=True)
+        | ~Q(embedding_model=model)
+        | ~Q(Exists(current))
+        | Q(Exists(stale))
+    )
 
 
 def embed(
@@ -902,13 +922,23 @@ def _embed(job: IngestJob, embedder: Embedder | None, elapsed: Callable[[], floa
         )
     model = client.model_name
     version = job.document_version
+    # Pieces of another model are from before a change of the model.
+    SectionPiece.objects.filter(section__document_version_id=version.pk).exclude(
+        embedding_model=model
+    ).delete()
     copied = _copy_embeddings(version, model)
-    if copied:
+    copied_pieces = _copy_pieces(version, model)
+    if copied or copied_pieces:
         logger.info(
-            "ingest: job %s, %s embeddings taken over from the same content", job.pk, copied
+            "ingest: job %s, %s embeddings and the pieces of %s sections taken over from the"
+            " same content",
+            job.pk,
+            copied,
+            copied_pieces,
         )
 
     batch_size: int = settings.TWOX_EMBED_BATCH_SIZE
+    max_chars: int = settings.TWOX_PIECE_MAX_CHARS
     pending = Section.objects.filter(document_version_id=version.pk).filter(needs_embedding(model))
     last_ordinal = -1
     batches = 0
@@ -916,7 +946,9 @@ def _embed(job: IngestJob, embedder: Embedder | None, elapsed: Callable[[], floa
         rows = list(
             pending.filter(ordinal__gt=last_ordinal)
             .order_by("ordinal")
-            .only("pk", "ordinal", "heading_text", "text")[:batch_size]
+            .only("pk", "ordinal", "heading_text", "text", "embedding", "embedding_model")[
+                :batch_size
+            ]
         )
         if not rows:
             break
@@ -924,30 +956,134 @@ def _embed(job: IngestJob, embedder: Embedder | None, elapsed: Callable[[], floa
         if batches and should_pause(elapsed()):
             logger.info("ingest: job %s, embedding continues in a new task", job.pk)
             return StepResult(Outcome.EMBEDDING, embed_after=0)
-        _embed_batch(client, rows, model, column)
+        work = _batch_work([_SectionWork.of(row, model, max_chars) for row in rows], batch_size)
+        _embed_batch(client, work, model, column, batch_size)
         batches += 1
-        last_ordinal = rows[-1].ordinal
+        last_ordinal = work[-1].section.ordinal
         # Also shows progress in updated_at; stops if the job ended meanwhile.
         if not _update(job):
             return StepResult(Outcome.IGNORED)
     return _end_embedding(job)
 
 
-def _embed_batch(client: Embedder, rows: Sequence[Section], model: str, column: int) -> None:
-    """Embed one batch and write it at once (no change log entries, E-55)."""
-    vectors = client.embed_documents([embedding_text(row.heading_text, row.text) for row in rows])
-    if len(vectors) != len(rows):
-        raise EmbeddingUnavailableError(
-            f"unexpected answer: expected {len(rows)} vector(s), got {len(vectors)}"
-        )
-    for row, vector in zip(rows, vectors, strict=True):
-        if len(vector) != column:
-            raise EmbeddingDimensionError(
-                f"model {model!r} returned {len(vector)} values, the embedding column has {column}"
+@dataclass(frozen=True, slots=True)
+class _SectionWork:
+    """What the embed step computes and writes for one section (150).
+
+    The embedding of the section itself (still read by the context selection,
+    E-61) and one per piece. A section that is one piece, its whole text,
+    has the same embedded text as the section: its piece takes the vector of
+    the section, so short sections cost no extra request.
+    """
+
+    section: Section
+    spans: list[Span]
+    #: Whether the embedding of the section itself must be computed.
+    embed_section: bool
+
+    @classmethod
+    def of(cls, section: Section, model: str, max_chars: int) -> _SectionWork:
+        current = section.embedding is not None and section.embedding_model == model
+        return cls(section, split_pieces(section.text, max_chars), embed_section=not current)
+
+    @property
+    def piece_is_section(self) -> bool:
+        """Whether the only piece is the whole text (the vector of the section serves)."""
+        return self.spans == [(0, len(self.section.text))]
+
+    def texts(self) -> list[str]:
+        """The texts to embed, in order: the section (if needed), then the pieces."""
+        heading = self.section.heading_text
+        texts = [embedding_text(heading, self.section.text)] if self.embed_section else []
+        if not self.piece_is_section:
+            texts += [embedding_text(heading, self.section.text[a:b]) for a, b in self.spans]
+        return texts
+
+
+def _batch_work(work: Sequence[_SectionWork], batch_size: int) -> list[_SectionWork]:
+    """The leading sections of ``work`` whose texts fit into one request of ``batch_size``.
+
+    At least the first section; one whose texts alone exceed ``batch_size``
+    goes out in several requests (:func:`_embed_batch`).
+    """
+    chosen: list[_SectionWork] = []
+    count = 0
+    for item in work:
+        size = len(item.texts())
+        if chosen and count + size > batch_size:
+            break
+        chosen.append(item)
+        count += size
+    return chosen
+
+
+def _embed_batch(
+    client: Embedder, work: Sequence[_SectionWork], model: str, column: int, batch_size: int
+) -> None:
+    """Embed one batch and write it at once (no change log entries, E-55).
+
+    The texts go out in requests of at most ``batch_size``; nothing is
+    written before every vector of the batch is there. Each section then gets
+    its embedding (if it needed one) and all its pieces in one transaction.
+    """
+    texts = [text for item in work for text in item.texts()]
+    vectors: list[list[float]] = []
+    for first in range(0, len(texts), batch_size):
+        chunk = texts[first : first + batch_size]
+        answer = client.embed_documents(chunk)
+        if len(answer) != len(chunk):
+            raise EmbeddingUnavailableError(
+                f"unexpected answer: expected {len(chunk)} vector(s), got {len(answer)}"
             )
-        row.embedding = list(vector)
-        row.embedding_model = model
-    Section.objects.bulk_update(rows, ["embedding", "embedding_model"])
+        for vector in answer:
+            if len(vector) != column:
+                raise EmbeddingDimensionError(
+                    f"model {model!r} returned {len(vector)} values,"
+                    f" the embedding column has {column}"
+                )
+            vectors.append(list(vector))
+    queue = iter(vectors)
+    sections: list[Section] = []
+    pieces: list[SectionPiece] = []
+    for item in work:
+        section = item.section
+        if item.embed_section:
+            section.embedding = next(queue)
+            section.embedding_model = model
+            sections.append(section)
+        if item.piece_is_section:
+            assert section.embedding is not None
+            piece_vectors = [[float(value) for value in section.embedding]]
+        else:
+            piece_vectors = [next(queue) for _ in item.spans]
+        pieces += [
+            SectionPiece(
+                section=section,
+                ordinal=ordinal,
+                char_start=start,
+                char_end=end,
+                embedding=vector,
+                embedding_model=model,
+            )
+            for ordinal, ((start, end), vector) in enumerate(
+                zip(item.spans, piece_vectors, strict=True)
+            )
+        ]
+    with transaction.atomic():
+        # Two tasks may embed the same job at once (a redelivered or repeated
+        # message). The row locks, taken in the order of the IDs, make the
+        # second one wait and then replace the pieces of the first as a whole,
+        # instead of failing on the unique (section, ordinal).
+        list(
+            Section.objects.select_for_update()
+            .filter(pk__in=[item.section.pk for item in work])
+            .order_by("pk")
+            .values_list("pk", flat=True)
+        )
+        if sections:
+            Section.objects.bulk_update(sections, ["embedding", "embedding_model"])
+        SectionPiece.objects.filter(section__in=[item.section for item in work]).delete()
+        SectionPiece.objects.bulk_create(pieces, batch_size=SECTION_BATCH_SIZE)
 
 
 def _copy_embeddings(version: DocumentVersion, model: str) -> int:
@@ -974,3 +1110,66 @@ def _copy_embeddings(version: DocumentVersion, model: str) -> int:
             embedding_model=model,
         )
     )
+
+
+#: Copies the pieces of a section with the same content (:func:`_copy_pieces`).
+_COPY_PIECES_SQL: Final = """
+INSERT INTO ingest_sectionpiece
+    (section_id, ordinal, char_start, char_end, embedding, embedding_model)
+SELECT target.id, piece.ordinal, piece.char_start, piece.char_end, piece.embedding,
+    piece.embedding_model
+FROM ingest_section target
+CROSS JOIN LATERAL (
+    SELECT donor.id
+    FROM ingest_section donor
+    JOIN files_documentversion donor_version ON donor_version.id = donor.document_version_id
+    WHERE donor_version.sha256 = %(sha256)s
+        AND donor.document_version_id <> %(version_id)s
+        AND donor.ordinal = target.ordinal
+        AND donor.heading_text = target.heading_text
+        AND donor.text = target.text
+        AND EXISTS (
+            SELECT 1 FROM ingest_sectionpiece p
+            WHERE p.section_id = donor.id AND p.embedding_model = %(model)s
+        )
+        AND NOT EXISTS (
+            SELECT 1 FROM ingest_sectionpiece p
+            WHERE p.section_id = donor.id AND p.embedding_model <> %(model)s
+        )
+    ORDER BY donor.id
+    LIMIT 1
+) AS donor
+JOIN ingest_sectionpiece piece ON piece.section_id = donor.id
+WHERE target.document_version_id = %(version_id)s
+    AND NOT EXISTS (SELECT 1 FROM ingest_sectionpiece p WHERE p.section_id = target.id)
+ON CONFLICT (section_id, ordinal) DO NOTHING
+RETURNING section_id
+"""
+#: Locks the sections of a version in the order of their IDs, as the batches do.
+_LOCK_SECTIONS_SQL: Final = """
+SELECT id FROM ingest_section WHERE document_version_id = %(version_id)s ORDER BY id FOR UPDATE
+"""
+
+
+def _copy_pieces(version: DocumentVersion, model: str) -> int:
+    """Copy the pieces of ``model`` from other versions with the same content (150).
+
+    Like :func:`_copy_embeddings`: a section without pieces takes over the
+    pieces of a section of another version with the same SHA-256, ordinal,
+    headings and text whose pieces are all of ``model``. Returns the number
+    of sections. Pieces made with another ``TWOX_PIECE_MAX_CHARS`` are taken
+    over as they are; ``embed_sections --all`` makes all pieces new.
+
+    A second task for the same job waits for the row locks of the first, then
+    sees its pieces and copies nothing; ``ON CONFLICT`` is the last guard
+    against a duplicate ``(section, ordinal)``.
+    """
+    params: dict[str, str | int] = {
+        "sha256": version.sha256,
+        "version_id": version.pk,
+        "model": model,
+    }
+    with transaction.atomic(), connection.cursor() as cursor:
+        cursor.execute(_LOCK_SECTIONS_SQL, params)
+        cursor.execute(_COPY_PIECES_SQL, params)
+        return len({row[0] for row in cursor.fetchall()})

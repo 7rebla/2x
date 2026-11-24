@@ -5,9 +5,14 @@ Usage::
     python manage.py embed_sections --user <name> [--missing | --all] [--commit]
 
 ``--missing`` (the default) takes every document version with sections that
-have no embedding or one of another model than ``TWOX_EMBED_MODEL``. ``--all``
-takes every version with sections; their embeddings are cleared first, so
-that all of them are computed again. ``--user`` names the account recorded as
+have no embedding or one of another model than ``TWOX_EMBED_MODEL``, or no
+pieces of that model (work order 150). After the migration of 150 that is
+every version; its sections keep their embeddings, and only the pieces of
+sections longer than ``TWOX_PIECE_MAX_CHARS`` ask the model (a section of one
+piece gives it its own vector). ``--all`` takes every version with sections;
+their embeddings and pieces are cleared first, so that all of them are
+computed again (also after a change of ``TWOX_PIECE_MAX_CHARS``). ``--user``
+names the account recorded as
 ``requested_by`` of the new jobs; it must be active and have the role
 ``manage``.
 
@@ -46,6 +51,7 @@ from twox.ingest.models import (
     IngestStatus,
     IngestStep,
     Section,
+    SectionPiece,
 )
 from twox.ingest.pipeline import needs_embedding, partial_detail
 from twox.ingest.services import SEND_RETRY_POLICY
@@ -147,7 +153,10 @@ class Command(BaseCommand):
         which.add_argument(
             "--missing",
             action="store_true",
-            help="Versions with sections without an embedding of TWOX_EMBED_MODEL (default).",
+            help=(
+                "Versions with sections without an embedding or without pieces of"
+                " TWOX_EMBED_MODEL (default)."
+            ),
         )
         which.add_argument(
             "--all",
@@ -199,7 +208,11 @@ class Command(BaseCommand):
                 counts.versions_skipped += 1
                 counts.sections_skipped += total
 
-        mode = "all sections" if everything else f"sections without an embedding of {model!r}"
+        mode = (
+            "all sections"
+            if everything
+            else f"sections without an embedding or without pieces of {model!r}"
+        )
         self.stdout.write(f"selection: {mode}")
         verb = "created" if commit else "to create"
         self.stdout.write(
@@ -229,8 +242,8 @@ class Command(BaseCommand):
     ) -> set[int]:
         """Create the jobs in one transaction and send embed after its commit.
 
-        With ``--all`` the embeddings of every version that gets a job are
-        cleared in the same transaction, before any message is sent. Otherwise
+        With ``--all`` the embeddings and pieces of every version that gets a
+        job are cleared in the same transaction, before any message is sent. Otherwise
         the first job could take over the old vectors of a version with the
         same content that is not cleared yet (see ``_copy_embeddings`` in the
         pipeline), and nothing would be computed again. Returns the IDs of the
@@ -263,6 +276,7 @@ class Command(BaseCommand):
                 Section.objects.filter(document_version_id__in=created).update(
                     embedding=None, embedding_model=""
                 )
+                SectionPiece.objects.filter(section__document_version_id__in=created).delete()
             transaction.on_commit(lambda: unsent.extend(send_all(job_ids)))
         return created
 

@@ -28,12 +28,20 @@ from tests.ingest.fake_converter import (
     make_version,
     vector_for,
 )
+from tests.search.fake_embedder import embed
 from twox.accounts.models import User
 from twox.answers.embeddings import EmbeddingUnavailableError
 from twox.files.models import DocumentVersion
 from twox.files.storage import key_for_sha256
 from twox.ingest import pipeline, tasks
-from twox.ingest.models import IngestErrorCode, IngestJob, IngestStatus, IngestStep, Section
+from twox.ingest.models import (
+    IngestErrorCode,
+    IngestJob,
+    IngestStatus,
+    IngestStep,
+    Section,
+    SectionPiece,
+)
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("isolated_services")]
 
@@ -86,9 +94,9 @@ def run(*args: str) -> str:
 
 
 def embed_all(version: DocumentVersion, model: str = FAKE_MODEL) -> None:
-    Section.objects.filter(document_version=version).update(
-        embedding=vector_for(0), embedding_model=model
-    )
+    """Embed every section of ``version`` with its pieces (150), as the embed step does."""
+    for section in Section.objects.filter(document_version=version):
+        embed(section, vector_for(0), model)
 
 
 @pytest.fixture
@@ -104,9 +112,7 @@ def versions() -> dict[str, DocumentVersion]:
         add_sections(version, 3)
     embed_all(made["complete"])
     embed_all(made["old_model"], "old-model")
-    Section.objects.filter(document_version=made["partly"], ordinal=0).update(
-        embedding=vector_for(0), embedding_model=FAKE_MODEL
-    )
+    embed(Section.objects.get(document_version=made["partly"], ordinal=0), vector_for(0))
     return made
 
 
@@ -196,6 +202,48 @@ def test_all_takes_every_version_and_clears_its_embeddings(
     assert "sections: 12 to embed, 0 skipped" in output
     assert len(embed_jobs()) == len(sent) == 4
     assert not Section.objects.filter(embedding__isnull=False).exists()
+    # 150: the pieces are made again as well (also after a change of the piece size).
+    assert not SectionPiece.objects.exists()
+
+
+@pytest.mark.usefixtures("ai_on")
+def test_missing_takes_sections_embedded_before_pieces_existed(
+    manager: User,
+    sent: SentEmbeds,
+    settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+    django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
+) -> None:
+    # After the migration of 150 every section has its embedding but no
+    # pieces: --missing (the default) takes every version, and the jobs ask
+    # the model only for the pieces of sections longer than a piece.
+    settings.TWOX_PIECE_MAX_CHARS = 6
+    versions = [make_version(f"before 150, {n}".encode(), device=f"dev-{n}") for n in range(2)]
+    for version in versions:
+        add_sections(version, 2)
+        Section.objects.filter(document_version=version).update(
+            embedding=vector_for(500), embedding_model=FAKE_MODEL
+        )
+    # One long section: "Long text 1" gives three pieces of at most 6 characters.
+    Section.objects.filter(document_version=versions[1], ordinal=1).update(text="Long text 1")
+
+    with django_capture_on_commit_callbacks(execute=True):
+        output = run("--user", manager.username, "--commit")
+    assert "versions: 2 jobs created, 0 skipped" in output
+    assert "sections: 4 to embed, 0 skipped" in output
+
+    embedder = install_embedder(monkeypatch, settings)
+    for job_id in sent:
+        assert pipeline.embed(job_id).outcome == pipeline.Outcome.DONE
+
+    assert embedder.texts == [
+        "Chapter > Part 1\n\nLong",
+        "Chapter > Part 1\n\ntext 1",
+    ]
+    # The embeddings of the sections stay; every section has its pieces.
+    assert not Section.objects.exclude(embedding=vector_for(500)).exists()
+    assert SectionPiece.objects.count() == 5
+    assert "versions: 0 jobs to create" in run("--user", manager.username)
 
 
 @pytest.mark.usefixtures("ai_on")
