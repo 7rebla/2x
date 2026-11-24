@@ -1,6 +1,6 @@
 # Auftrag 150 – Teilstücke mit eigenen Vektoren
 
-Meilenstein: M3 · Freigabestufe: C (freigegeben mit E-75) · Status: bearbeitet, Prüfung durch die Leitstelle
+Meilenstein: M3 · Freigabestufe: C (freigegeben mit E-75) · Status: erledigt
 
 Voraussetzung: 149 (Vektorliste zählt Inhalte statt Zeilen) liegt auf `main`.
 

@@ -258,7 +258,7 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 147 | Diagnose: Vektorsuche für die Prüffragen 3, 4, 6, 7 | B | 144 | erledigt |
 | 148 | Prompt: Widerspruch nur bei unvereinbaren Angaben | B | 144 | erledigt |
 | 149 | Vektorliste: 50 Inhalte statt 50 Zeilen (Fehler aus 147) | B | 147 | erledigt (2x: R@8 kombiniert 8/13 → 9/13, keine Probe schlechter; Mittel 52 → 109 ms) |
-| 150 | Teilstücke mit eigenen Vektoren (E-75) | C | 149 | in Arbeit |
+| 150 | Teilstücke mit eigenen Vektoren (E-75) | C | 149 | erledigt (Neueinbettung in 2x durch die Leitstelle) |
 
 - 139: Hinweis aus der Prüfung – rein numerische Kennungen (Artikel-, Register-, Fehlernummern nur aus Ziffern) sind keine EXACT-Treffer und fallen nach geöffneter Sperre aus dem Kontext, wenn ihr Abstand über 0,55 liegt. Entspricht E-70; in 144 beobachten, bei Bedarf a7 als Option vorlegen.
 - 140: Nach der Prüfung nachgebessert (Wertebereiche, Einheiten in anderer Schreibweise, Punkt-MAC und Versionen mit Buchstaben werden nie aus der Frage übernommen).
