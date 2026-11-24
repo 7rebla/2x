@@ -1075,6 +1075,7 @@ def run_command(*args: str, stdin: io.StringIO | None = None) -> str:
     return out.getvalue()
 
 
+@pytest.mark.usefixtures("every_text_a_source")  # short texts, work order 153
 @pytest.mark.django_db
 def test_command_measures_over_the_real_answer_service(
     small_factory: dict[str, Path], monkeypatch: pytest.MonkeyPatch

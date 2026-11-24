@@ -22,7 +22,11 @@ from twox.answers.context import select_context
 from twox.assets.models import Device
 from twox.ingest.models import Section
 
-pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("no_real_model_service")]
+pytestmark = [
+    pytest.mark.django_db,
+    # Short texts on purpose (work order 153).
+    pytest.mark.usefixtures("no_real_model_service", "every_text_a_source"),
+]
 
 #: A question that shares no word with the sections below.
 QUESTION = "How do I change the lubricant?"

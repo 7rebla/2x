@@ -764,6 +764,7 @@ def factory(fake_embedder: FakeEmbedder) -> Factory:
     return Factory(device_a=device_a.pk, device_b=device_b.pk)
 
 
+@pytest.mark.usefixtures("every_text_a_source")  # short texts, work order 153
 @pytest.mark.django_db
 def test_end_to_end_over_the_real_context_selection(factory: Factory) -> None:
     chat = FakeChatModel(["Der Greifer G-12 ", "hält höchstens 5 kg [1]."])
@@ -788,6 +789,7 @@ def test_end_to_end_over_the_real_context_selection(factory: Factory) -> None:
     assert not {"INSERT", "UPDATE", "DELETE"} & set(statements)
 
 
+@pytest.mark.usefixtures("every_text_a_source")  # short texts, work order 153
 @pytest.mark.django_db
 def test_end_to_end_device_scope(factory: Factory) -> None:
     chat = FakeChatModel(["Laut Nachtrag hält der Greifer G-12 höchstens 7 kg [1]."])

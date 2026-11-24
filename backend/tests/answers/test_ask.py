@@ -22,6 +22,9 @@ from twox.answers.chat import ChatRejectedError, FakeChatModel
 from twox.answers.management.commands.ask import DISABLED_LINE
 from twox.answers.types import NO_EVIDENCE_TEXT, DoneEvent, SourcesEvent, from_json
 
+# The sections of these tests are a few words long (work order 153).
+pytestmark = pytest.mark.usefixtures("every_text_a_source")
+
 QUESTION = "Wie viel hält der Greifer?"
 TEXT_A = "Der Greifer G-12 hält höchstens 5 kg."
 TEXT_B = "Der Greifer G-14 hält höchstens 8 kg."

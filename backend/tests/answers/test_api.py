@@ -916,6 +916,7 @@ def wait_for_sessions(expected: int) -> int:
     return count
 
 
+@pytest.mark.usefixtures("every_text_a_source")  # short texts, work order 153
 @pytest.mark.django_db(transaction=True)
 def test_no_database_connection_stays_open_after_the_stream(
     fake_embedder: FakeEmbedder, monkeypatch: pytest.MonkeyPatch, settings: Settings

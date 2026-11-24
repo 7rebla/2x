@@ -49,10 +49,18 @@ from twox.search.interface import (
     SemanticState,
 )
 
-pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("no_real_model_service")]
+# Most texts here are a few words: every_text_a_source; the rule for short
+# sections has its own tests below, which set the limit themselves.
+pytestmark = [
+    pytest.mark.django_db,
+    pytest.mark.usefixtures("no_real_model_service", "every_text_a_source"),
+]
 
 #: A question that shares no word with any section text below.
 QUESTION = "How do I change the lubricant?"
+
+#: The starting value of TWOX_ANSWER_MIN_SOURCE_CHARS (work order 153).
+STARTING_MIN_SOURCE_CHARS = 200
 
 
 @pytest.fixture
@@ -276,7 +284,7 @@ def test_same_checksum_and_ordinal_with_another_text_stay_two_sources(
 def test_same_place_in_another_document_of_the_device_appears_once(
     device: Device, fake_embedder: FakeEmbedder
 ) -> None:
-    (german,) = add_sections(make_document(device, "Handbuch"), "Achse wöchentlich fetten.")
+    (german,) = add_sections(make_document(device, "Handbuch"), "Achse fetten.")
     (english,) = add_sections(make_document(device, "Manual"), "Grease the axle weekly.")
     (other,) = add_sections(make_document(device, "Manual 2"), "Check the belt tension.")
     embed(german, at_angle(12, axis=1))
@@ -285,8 +293,120 @@ def test_same_place_in_another_document_of_the_device_appears_once(
 
     selection = select_context(QUESTION)
 
-    # The better placed edition stays, the other one is left out.
+    # The better placed edition stays, the later and shorter one is left out.
     assert section_ids(selection) == [english.pk, other.pk]
+
+
+@dataclass(frozen=True)
+class Editions:
+    """Two language editions of one place at one device and a hit of another device."""
+
+    english: Section
+    other: Section
+    german: Section
+
+
+def two_editions(plant: Plant, english_text: str, german_text: str) -> Editions:
+    """English first, then the other device, then German, in the order of the search."""
+    device = make_device(plant, "editions")
+    (english,) = add_sections(make_document(device, "Manual"), english_text)
+    (other,) = add_sections(make_document(make_device(plant, "other")), text_of(30, "o"))
+    (german,) = add_sections(make_document(device, "Handbuch"), german_text)
+    embed(english, at_angle(10, axis=1))
+    embed(other, at_angle(12, axis=2))
+    # 4 degrees from the English edition: a distance of about 0.002.
+    embed(german, at_angle(14, axis=1))
+    return Editions(english, other, german)
+
+
+def test_later_edition_with_more_text_takes_the_place_of_the_earlier(
+    plant: Plant, fake_embedder: FakeEmbedder
+) -> None:
+    editions = two_editions(plant, text_of(30, "e"), text_of(60, "g"))
+
+    selection = select_context(QUESTION)
+
+    assert section_ids(selection) == [editions.german.pk, editions.other.pk]
+    assert_numbered(selection)
+    assert [location.document_id for location in selection.sources[0].locations] == [
+        editions.german.document_version.document_id
+    ]
+
+
+def test_later_edition_with_less_or_equal_text_stays_out(
+    plant: Plant, fake_embedder: FakeEmbedder
+) -> None:
+    shorter = two_editions(plant, text_of(60, "e"), text_of(30, "g"))
+    assert section_ids(select_context(QUESTION)) == [shorter.english.pk, shorter.other.pk]
+
+
+def test_later_edition_of_equal_length_stays_out(plant: Plant, fake_embedder: FakeEmbedder) -> None:
+    equal = two_editions(plant, text_of(40, "e"), text_of(40, "g"))
+    assert section_ids(select_context(QUESTION)) == [equal.english.pk, equal.other.pk]
+
+
+def test_longer_edition_replaces_also_when_all_sources_are_taken(
+    plant: Plant, fake_embedder: FakeEmbedder
+) -> None:
+    editions = two_editions(plant, text_of(30, "e"), text_of(60, "g"))
+
+    selection = select_context(QUESTION, max_sources=2)
+
+    assert section_ids(selection) == [editions.german.pk, editions.other.pk]
+
+
+def test_longer_edition_replaces_only_when_it_fits_into_the_budget(
+    plant: Plant, fake_embedder: FakeEmbedder
+) -> None:
+    editions = two_editions(plant, text_of(30, "e"), text_of(60, "g"))
+
+    # 80 - 30 - 30 leaves 20; with the English text freed 50, less than 60.
+    tight = select_context(QUESTION, context_chars=80)
+    # 90 - 30 - 30 leaves 30; with the English text freed exactly 60.
+    enough = select_context(QUESTION, context_chars=90)
+
+    assert section_ids(tight) == [editions.english.pk, editions.other.pk]
+    assert section_ids(enough) == [editions.german.pk, editions.other.pk]
+    assert sum(len(source.text) for source in enough.sources) == 90
+    assert_numbered(enough)
+
+
+def test_longer_edition_of_two_sources_takes_the_first_place_and_the_second_leaves(
+    device: Device, fake_embedder: FakeEmbedder
+) -> None:
+    # Two sections of one English document are no editions of each other.
+    first, second = add_sections(make_document(device, "Manual"), "Grease it.", "Grease them.")
+    (other,) = add_sections(make_document(device, "Manual 2"), "Check the belt tension.")
+    (german,) = add_sections(make_document(device, "Handbuch"), text_of(40, "g"))
+    embed(first, at_angle(10, axis=1))
+    embed(second, at_angle(11, axis=1))
+    embed(other, at_angle(50, axis=2))
+    embed(german, at_angle(12, axis=1))
+
+    selection = select_context(QUESTION)
+
+    assert section_ids(selection) == [german.pk, other.pk]
+    assert_numbered(selection)
+
+
+def test_copies_stay_one_source_next_to_a_shorter_edition(
+    plant: Plant, fake_embedder: FakeEmbedder
+) -> None:
+    devices = [make_device(plant, f"copy-{index}") for index in range(2)]
+    sha256 = sha256_of("English manual at two devices")
+    copies = []
+    for device in devices:
+        (copy,) = add_sections(make_document(device, "Manual", sha256=sha256), text_of(60, "e"))
+        embed(copy, at_angle(10, axis=1))
+        copies.append(copy)
+    (german,) = add_sections(make_document(devices[0], "Handbuch"), text_of(30, "g"))
+    embed(german, at_angle(12, axis=1))
+
+    (source,) = select_context(QUESTION).sources
+
+    assert source.section_id in {copy.pk for copy in copies}
+    assert device_ids_of(source) == {device.pk for device in devices}
+    assert {location.section_id for location in source.locations} == {c.pk for c in copies}
 
 
 def test_similar_sections_of_one_document_both_stay(
@@ -350,6 +470,177 @@ def test_translation_distance_decides(
     assert len(select_context(QUESTION).sources) == 2
     settings.TWOX_ANSWER_TRANSLATION_DISTANCE = 0.04
     assert len(select_context(QUESTION).sources) == 1
+
+
+# --- Short sections (work order 153) ---------------------------------------------
+
+
+@pytest.fixture
+def starting_min_chars(settings: Settings) -> int:
+    """The limit for short sections at its starting value."""
+    settings.TWOX_ANSWER_MIN_SOURCE_CHARS = STARTING_MIN_SOURCE_CHARS
+    return STARTING_MIN_SOURCE_CHARS
+
+
+def test_section_below_the_limit_is_no_source_and_one_at_it_is(
+    version: DocumentVersion, fake_embedder: FakeEmbedder, starting_min_chars: int
+) -> None:
+    below, at_limit, above = add_sections(
+        version,
+        text_of(starting_min_chars - 1, "a"),
+        text_of(starting_min_chars, "b"),
+        text_of(starting_min_chars + 1, "c"),
+    )
+    embed(below, at_angle(10, axis=1))
+    embed(at_limit, at_angle(12, axis=2))
+    embed(above, at_angle(14, axis=3))
+
+    selection = select_context(QUESTION)
+
+    assert section_ids(selection) == [at_limit.pk, above.pk]
+    assert selection.below_threshold is False
+    assert selection.best_distance == pytest.approx(cosine_distance(10))
+    assert selection.hit_count == 3
+    assert_numbered(selection)
+
+
+def test_white_space_around_the_text_does_not_count(
+    version: DocumentVersion, fake_embedder: FakeEmbedder, starting_min_chars: int
+) -> None:
+    padded, full = add_sections(
+        version, " \n" * 100 + text_of(starting_min_chars - 1) + "\n", text_of(starting_min_chars)
+    )
+    embed(padded, at_angle(10, axis=1))
+    embed(full, at_angle(12, axis=2))
+
+    assert section_ids(select_context(QUESTION)) == [full.pk]
+
+
+def test_limit_can_be_given_and_one_takes_every_section(
+    version: DocumentVersion, fake_embedder: FakeEmbedder, starting_min_chars: int
+) -> None:
+    heading, body = add_sections(version, "Care", text_of(80, "b"))
+    embed(heading, at_angle(10, axis=1))
+    embed(body, at_angle(12, axis=2))
+
+    assert section_ids(select_context(QUESTION)) == []
+    assert section_ids(select_context(QUESTION, min_source_chars=50)) == [body.pk]
+    assert section_ids(select_context(QUESTION, min_source_chars=1)) == [heading.pk, body.pk]
+
+
+def test_short_exact_hit_stays_a_source(
+    version: DocumentVersion, fake_embedder: FakeEmbedder, starting_min_chars: int
+) -> None:
+    exact, short, long = add_sections(
+        version, "Gateway 192.168.40.17.", "Gateway.", text_of(starting_min_chars, "l")
+    )
+    embed(exact, at_angle(20, axis=1))
+    embed(short, at_angle(10, axis=2))
+    embed(long, at_angle(14, axis=3))
+
+    selection = select_context(EXACT_QUESTION)
+
+    assert set(section_ids(selection)) == {exact.pk, long.pk}
+    assert short.pk not in section_ids(selection)
+    assert_numbered(selection)
+
+
+def test_short_copy_found_exactly_at_one_device_stays_with_all_locations(
+    plant: Plant, fake_embedder: FakeEmbedder, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    devices = [make_device(plant, f"short-{index}") for index in range(2)]
+    sha256 = sha256_of("a short file at two devices")
+    copies = [
+        add_sections(make_document(device, sha256=sha256), "Gateway 192.168.40.17.")[0]
+        for device in devices
+    ]
+    hits = [
+        hit_of(copies[0], 0.2),
+        hit_of(copies[1], 0.3, kinds=(MatchKind.EXACT, MatchKind.SEMANTIC)),
+    ]
+    use_backend(monkeypatch, StandInBackend(SearchResult(hits, SemanticState.USED)))
+
+    (source,) = select_context(QUESTION, min_source_chars=STARTING_MIN_SOURCE_CHARS).sources
+
+    assert source.section_id == copies[0].pk
+    assert device_ids_of(source) == {device.pk for device in devices}
+
+
+def test_short_sections_do_not_take_a_place_among_the_main_sources(
+    version: DocumentVersion, fake_embedder: FakeEmbedder, starting_min_chars: int
+) -> None:
+    sections = add_sections(
+        version,
+        "Care",
+        text_of(starting_min_chars, "a"),
+        "Figure 3",
+        text_of(starting_min_chars, "b"),
+        text_of(starting_min_chars, "c"),
+    )
+    for index, section in enumerate(sections):
+        embed(section, at_angle(10 + 2 * index, axis=index + 1))
+
+    selection = select_context(QUESTION, max_sources=3, context_chars=10_000)
+
+    assert ordinals(selection) == [1, 3, 4]
+    assert_numbered(selection)
+
+
+def test_only_short_relevant_hits_give_an_empty_selection_above_the_threshold(
+    version: DocumentVersion, fake_embedder: FakeEmbedder, starting_min_chars: int
+) -> None:
+    heading, caption = add_sections(version, "Care", "Figure 3: the axle.")
+    embed(heading, at_angle(10, axis=1))
+    embed(caption, at_angle(12, axis=2))
+
+    selection = select_context(QUESTION)
+
+    assert selection.sources == []
+    assert selection.below_threshold is False
+    assert selection.best_distance == pytest.approx(cosine_distance(10))
+    assert selection.hit_count == 2
+
+
+def test_short_section_still_follows_a_main_source_as_neighbour(
+    version: DocumentVersion, fake_embedder: FakeEmbedder, starting_min_chars: int
+) -> None:
+    heading, body, rest = add_sections(version, "Care", text_of(starting_min_chars), "End.")
+    embed(heading, at_angle(10, axis=1))
+    embed(body, at_angle(12, axis=2))
+
+    selection = select_context(QUESTION, neighbours=True)
+
+    # The heading is no main source of its own, but the neighbours are not filtered.
+    assert ordinals(selection) == [body.ordinal, heading.ordinal, rest.ordinal]
+    assert_numbered(selection)
+
+
+def test_budget_and_numbers_hold_with_short_sections_and_editions(
+    plant: Plant, fake_embedder: FakeEmbedder, starting_min_chars: int
+) -> None:
+    device = make_device(plant, "mixed")
+    english = add_sections(
+        make_document(device, "Manual"),
+        "Care",
+        text_of(starting_min_chars, "e"),
+        text_of(starting_min_chars + 50, "f"),
+    )
+    (german,) = add_sections(make_document(device, "Handbuch"), text_of(starting_min_chars + 100))
+    embed(english[0], at_angle(10, axis=1))
+    embed(english[1], at_angle(12, axis=2))
+    # Far enough from the German section not to count as its edition.
+    embed(english[2], at_angle(40, axis=3))
+    # The German edition of the second English section, and longer.
+    embed(german, at_angle(13, axis=2))
+
+    for budget in (200, 300, 450, 500, 550, 1000):
+        for with_neighbours in (False, True):
+            selection = select_context(QUESTION, context_chars=budget, neighbours=with_neighbours)
+            assert sum(len(source.text) for source in selection.sources) <= budget
+            assert_numbered(selection)
+
+    selection = select_context(QUESTION, context_chars=1000)
+    assert section_ids(selection) == [german.pk, english[2].pk]
 
 
 # --- Character budget ----------------------------------------------------------
@@ -867,6 +1158,7 @@ print(
     settings.TWOX_ANSWER_NEIGHBOURS,
     settings.TWOX_ANSWER_MAX_DISTANCE,
     settings.TWOX_ANSWER_TRANSLATION_DISTANCE,
+    settings.TWOX_ANSWER_MIN_SOURCE_CHARS,
 )
 """
 
@@ -875,7 +1167,7 @@ def test_answer_settings_have_their_starting_values() -> None:
     result = run_python(DUMP_ANSWER_SETTINGS, {})
 
     assert result.returncode == 0, result.stderr
-    assert result.stdout.split() == ["8", "16000", "False", "0.55", "0.15"]
+    assert result.stdout.split() == ["8", "16000", "False", "0.55", "0.15", "200"]
 
 
 def test_answer_settings_read_the_variables() -> None:
@@ -887,11 +1179,12 @@ def test_answer_settings_read_the_variables() -> None:
             "TWOX_ANSWER_NEIGHBOURS": "true",
             "TWOX_ANSWER_MAX_DISTANCE": "2",
             "TWOX_ANSWER_TRANSLATION_DISTANCE": "0.1",
+            "TWOX_ANSWER_MIN_SOURCE_CHARS": "150",
         },
     )
 
     assert result.returncode == 0, result.stderr
-    assert result.stdout.split() == ["5", "12000", "True", "2.0", "0.1"]
+    assert result.stdout.split() == ["5", "12000", "True", "2.0", "0.1", "150"]
 
 
 @pytest.mark.parametrize(
@@ -907,6 +1200,8 @@ def test_answer_settings_read_the_variables() -> None:
         ("TWOX_ANSWER_MAX_DISTANCE", "near", "must be a number greater than 0 and at most 2"),
         ("TWOX_ANSWER_TRANSLATION_DISTANCE", "0", "must be a number greater than 0"),
         ("TWOX_ANSWER_TRANSLATION_DISTANCE", "-1", "must be a number greater than 0"),
+        ("TWOX_ANSWER_MIN_SOURCE_CHARS", "0", "must be a whole number greater than zero"),
+        ("TWOX_ANSWER_MIN_SOURCE_CHARS", "short", "must be a whole number greater than zero"),
     ],
 )
 def test_answer_settings_reject_invalid_values(name: str, value: str, message: str) -> None:
@@ -944,6 +1239,7 @@ def test_answer_check_accepts_values_that_fit() -> None:
         lambda: select_context(QUESTION, context_chars=0),
         lambda: select_context(QUESTION, max_distance=0.0),
         lambda: select_context(QUESTION, max_distance=2.1),
+        lambda: select_context(QUESTION, min_source_chars=0),
     ],
 )
 def test_invalid_arguments_are_refused(

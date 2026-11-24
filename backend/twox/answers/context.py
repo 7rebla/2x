@@ -30,9 +30,19 @@ The steps, in this order:
    - copies of the same file (same ``sha256``, ``ordinal`` and text, the key
      of the search as well) at several devices are one source with the
      locations of all copies;
-   - the same place in another language (E-61) is left out: a hit from
+   - a very short section (fewer than ``TWOX_ANSWER_MIN_SOURCE_CHARS``
+     characters without the white space around it: a heading, a caption,
+     the rest of a page) is no source of its own and is skipped, unless it
+     was found exactly (an identifier such as an IP address); when all
+     relevant hits are that short, the selection is empty (work order 153);
+   - the same place in another language (E-61) appears once: a hit from
      another document of the same device whose stored embedding is at most
-     ``TWOX_ANSWER_TRANSLATION_DISTANCE`` from a source taken before;
+     ``TWOX_ANSWER_TRANSLATION_DISTANCE`` from a source taken before is an
+     edition of that source. The edition with more text stays and takes the
+     place of the earlier one in the order; a shorter or equally long one is
+     left out (work order 153: the editions are often cut differently, and
+     the longer one holds more of the answer). This holds also when
+     ``max_sources`` are already taken;
    - several sections of one document are allowed;
    - texts are never cut (the citation check looks for marks in the whole
      section); a section that does not fit into the rest of the character
@@ -117,6 +127,8 @@ class _Candidate:
     locations: list[HitLocation]
     #: Stored embedding of the current model, otherwise ``None``.
     embedding: list[float] | None
+    #: Found exactly (:attr:`MatchKind.EXACT`); such a hit is never too short.
+    exact: bool = False
     document_ids: set[int] = field(default_factory=set)
     device_ids: set[int] = field(default_factory=set)
 
@@ -158,6 +170,7 @@ def select_context(
     context_chars: int | None = None,
     max_distance: float | None = None,
     neighbours: bool | None = None,
+    min_source_chars: int | None = None,
 ) -> ContextSelection:
     """The numbered sources for ``question`` within the devices and plants given.
 
@@ -172,12 +185,17 @@ def select_context(
     budget = settings.TWOX_ANSWER_CONTEXT_CHARS if context_chars is None else context_chars
     threshold = settings.TWOX_ANSWER_MAX_DISTANCE if max_distance is None else max_distance
     with_neighbours = settings.TWOX_ANSWER_NEIGHBOURS if neighbours is None else neighbours
+    min_chars = (
+        settings.TWOX_ANSWER_MIN_SOURCE_CHARS if min_source_chars is None else min_source_chars
+    )
     if k < 1:
         raise ValueError(f"max_sources must be at least 1, not {k}")
     if budget < 1:
         raise ValueError(f"context_chars must be at least 1, not {budget}")
     if not 0 < threshold <= 2:
         raise ValueError(f"max_distance must be greater than 0 and at most 2, not {threshold}")
+    if min_chars < 1:
+        raise ValueError(f"min_source_chars must be at least 1, not {min_chars}")
 
     if not question.strip():
         return _finish(ContextSelection([], below_threshold=True, best_distance=None, hit_count=0))
@@ -205,7 +223,7 @@ def select_context(
         )
 
     candidates = _merge_copies(_candidates(relevant, device_ids=device_ids, plant_ids=plant_ids))
-    mains, remaining = _select_mains(candidates, max_sources=k, budget=budget)
+    mains, remaining = _select_mains(candidates, max_sources=k, budget=budget, min_chars=min_chars)
     ordered = _with_neighbours(mains, remaining) if with_neighbours else mains
     sources = [_to_source(number, candidate) for number, candidate in enumerate(ordered, 1)]
     return _finish(
@@ -262,6 +280,7 @@ def _candidates(
             text=hit.text,
             locations=[],
             embedding=section.embedding,
+            exact=MatchKind.EXACT in hit.match_kinds,
         )
         candidate.add_locations(locations)
         candidates.append(candidate)
@@ -307,6 +326,7 @@ def _merge_copies(candidates: Sequence[_Candidate]) -> list[_Candidate]:
             merged[content] = candidate
         else:
             first.add_locations(candidate.locations)
+            first.exact = first.exact or candidate.exact
     return list(merged.values())
 
 
@@ -329,22 +349,40 @@ def _cosine_distance(a: Sequence[float], b: Sequence[float]) -> float:
     return 1.0 - math.sumprod(a, b) / norms
 
 
+def _too_short(candidate: _Candidate, min_chars: int) -> bool:
+    """Whether ``candidate`` has too little text to be a source of its own."""
+    return not candidate.exact and len(candidate.text.strip()) < min_chars
+
+
 def _select_mains(
-    candidates: Sequence[_Candidate], *, max_sources: int, budget: int
+    candidates: Sequence[_Candidate], *, max_sources: int, budget: int, min_chars: int
 ) -> tuple[list[_Candidate], int]:
-    """The main sources in the order of the search, and the budget left after them."""
+    """The main sources in the order of the search, and the budget left after them.
+
+    A language edition of a source taken before replaces it in place when it
+    has more text and fits into the budget instead of it; otherwise it is left
+    out. Replacing adds no source, so it is checked also once ``max_sources``
+    are taken.
+    """
     mains: list[_Candidate] = []
-    keys: set[tuple[int, int]] = set()
     remaining = budget
     for candidate in candidates:
-        if len(mains) == max_sources:
-            break
-        if candidate.key in keys or len(candidate.text) > remaining:
+        if any(main.key == candidate.key for main in mains) or _too_short(candidate, min_chars):
             continue
-        if any(_is_translation(candidate, main) for main in mains):
+        editions = [index for index, main in enumerate(mains) if _is_translation(candidate, main)]
+        if editions:
+            replaced = [mains[index] for index in editions]
+            freed = sum(len(main.text) for main in replaced)
+            longer = len(candidate.text) > max(len(main.text) for main in replaced)
+            if longer and len(candidate.text) <= remaining + freed:
+                mains[editions[0]] = candidate
+                for index in reversed(editions[1:]):
+                    del mains[index]
+                remaining += freed - len(candidate.text)
+            continue
+        if len(mains) == max_sources or len(candidate.text) > remaining:
             continue
         mains.append(candidate)
-        keys.add(candidate.key)
         remaining -= len(candidate.text)
     return mains, remaining
 

@@ -565,6 +565,10 @@ TWOX_ANSWER_MAX_DISTANCE = env_positive_float("TWOX_ANSWER_MAX_DISTANCE", 0.55, 
 TWOX_ANSWER_TRANSLATION_DISTANCE = env_positive_float(
     "TWOX_ANSWER_TRANSLATION_DISTANCE", 0.15, maximum=2.0
 )
+# Fewest characters of a section to be a source of its own (work order 153):
+# shorter hits (headings, captions, the rest of a page) are skipped unless
+# they were found exactly. 1 takes every section.
+TWOX_ANSWER_MIN_SOURCE_CHARS = env_positive_int("TWOX_ANSWER_MIN_SOURCE_CHARS", 200)
 # Longest time in seconds for one answer over the API, from the question to
 # the last event (work order 130); beyond it the answer ends with the error
 # code timeout and the connection to the model is closed.
