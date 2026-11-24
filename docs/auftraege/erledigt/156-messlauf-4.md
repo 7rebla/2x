@@ -1,6 +1,6 @@
 # Auftrag 156 – Messlauf 4 nach 153, 154 und 155
 
-Meilenstein: M3 · Freigabestufe: C · Status: zur Prüfung (6/10, Kontrollfrage stabil)
+Meilenstein: M3 · Freigabestufe: C · Status: erledigt (6/10, Kontrollfrage stabil; Entscheidung durch a7, STATUS Punkt 26)
 
 ## Ziel
 
