@@ -365,9 +365,12 @@ def test_search_answers_a_question_in_other_words_by_meaning(
         document_version_id=ingested.pdf["version"]["id"], text__contains=QUESTION_TARGET
     )
     if world.query_embedder is not None:
-        # The stand-in model puts the question next to the section it means.
-        assert target.embedding is not None
-        world.query_embedder.queries[QUESTION] = list(target.embedding)
+        # The stand-in model puts the question next to the section it means:
+        # since 150 next to the piece of the section that holds the words,
+        # because the search compares the question with the pieces.
+        position = target.text.index(QUESTION_TARGET)
+        piece = target.pieces.get(char_start__lte=position, char_end__gt=position)
+        world.query_embedder.queries[QUESTION] = list(piece.embedding)
 
     answer = search(reader, QUESTION)
 

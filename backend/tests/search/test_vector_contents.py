@@ -24,7 +24,7 @@ from tests.search.test_keyword_search import (
 )
 from twox.assets.models import Device, Plant
 from twox.files.models import DocumentVersion
-from twox.ingest.models import Section
+from twox.ingest.models import Section, SectionPiece
 from twox.search import postgres
 from twox.search.interface import MAX_LIMIT, SearchRequest
 from twox.search.postgres import (
@@ -154,6 +154,7 @@ def exact_branch_ran(request: SearchRequest) -> bool | None:
         "embedding": vector_literal(at_angle(0)),
         "model": FAKE_MODEL,
         "vector_limit": postgres.VECTOR_CANDIDATES,
+        "piece_limit": postgres.PIECE_CANDIDATES,
     }
     with transaction.atomic(), connection.cursor() as cursor:
         cursor.execute(
@@ -243,6 +244,7 @@ def test_exact_branch_runs_only_when_needed() -> None:
         "embedding": vector_literal(at_angle(0)),
         "model": FAKE_MODEL,
         "vector_limit": VECTOR_CANDIDATES,
+        "piece_limit": postgres.PIECE_CANDIDATES,
     }
     sql = vector_sql(filter_devices=False, filter_plants=False)
     with connection.cursor() as cursor:
@@ -303,7 +305,10 @@ def test_excluded_contents_take_no_place(devices: list[Device]) -> None:
 def test_copies_of_another_model_or_without_embedding_stay_out(devices: list[Device]) -> None:
     (shared,) = add_shared_manual(devices[:3], ["Belt tension."])
     embed(shared[1], at_angle(0.5), model="other-embed")
+    # Since 150 the vector list reads pieces: without an embedding a section
+    # has no pieces either (the embed step writes both).
     Section.objects.filter(pk=shared[2].pk).update(embedding=None, embedding_model="")
+    SectionPiece.objects.filter(section=shared[2]).delete()
 
     rows = nearest(SearchRequest(query=QUESTION))
 
