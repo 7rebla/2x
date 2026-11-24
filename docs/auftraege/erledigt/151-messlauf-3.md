@@ -1,6 +1,6 @@
 # Auftrag 151 – Messlauf 3 nach 148, 149 und 150
 
-Meilenstein: M3 · Freigabestufe: C · Status: zur Prüfung (Ergebnis 6/10, Kontrollfrage stabil; Entscheidung durch a7)
+Meilenstein: M3 · Freigabestufe: C · Status: erledigt (6/10, Kontrollfrage stabil; Entscheidung durch a7, STATUS Punkt 25)
 
 ## Ziel
 
