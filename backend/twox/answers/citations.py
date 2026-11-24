@@ -99,7 +99,13 @@ Normalisation
     in the original. ``192.168.0.5`` does not match ``192.168.0.50`` and
     ``5 kg`` does not match ``25 kg``. A version may be preceded by ``v``, a
     number with a unit followed by ``AC`` or ``DC`` (``24 V`` in ``24VDC``).
-    Each source text is normalised once per call.
+    A type designation that starts with a digit and contains a letter (its
+    key only letters and digits, no number with a unit) may be preceded by a
+    letter: the change from letter to digit is a boundary, so ``1512SP`` is
+    found in ``CPU1512SP``, but not in ``21512SP``, ``1512SPX`` or
+    ``1512SP0``. Numbers with a unit (``5 kg``, ``24V``), versions
+    (``V18``), addresses, ports and plain numbers (``1500``) keep the rule
+    above. Each source text is normalised once per call.
 
 Values from the question
     With ``question`` the check values of the question are determined once
@@ -439,6 +445,23 @@ def _is_word(char: str) -> bool:
     return char.isalnum() or char == "_"
 
 
+def _letter_may_precede(value: _Value) -> bool:
+    """Whether a letter may stand directly before an occurrence of ``value``.
+
+    Only for a type designation that starts with a digit and contains a
+    letter (``1512SP`` in ``CPU1512SP``): the key consists of letters and
+    digits only, and the value is no number with a unit (``24V``, ``5kg``),
+    version, address or port. A digit before it still lengthens it.
+    """
+    key = value.key
+    return (
+        not (value.unit or value.version or value.colon_joins)
+        and key[:1].isdigit()
+        and key.isalnum()
+        and _is_designation(key)
+    )
+
+
 def _bounded(source: _Compact, start: int, end: int, value: _Value) -> bool:
     """Whether the occurrence ``source.text[start:end]`` is not lengthened."""
     text, gap = source.text, source.gap
@@ -452,7 +475,7 @@ def _bounded(source: _Compact, start: int, end: int, value: _Value) -> bool:
                 value.version
                 and before == "v"
                 and (start == 1 or gap[start - 1] or not _is_word(text[start - 2]))
-            )
+            ) or (before.isalpha() and _letter_may_precede(value))
             if not prefix_ok:
                 return False
         elif before in joiners and start >= 2 and not gap[start - 1] and _is_word(text[start - 2]):
@@ -493,8 +516,11 @@ def value_occurs(value: str, text: str) -> bool:
     Both are normalised with :func:`normalise_value`; the occurrence must not
     be lengthened (same boundary rules as for check values, see the module
     docstring): ``"5 kg"`` occurs in ``"5kg"`` but not in ``"25 kg"`` or
-    ``"12,5 kg"``, ``"V18"`` in ``"V 18"`` but not in ``"V180"``. For the
-    measurement of the answers (127); :func:`verify` does not use it.
+    ``"12,5 kg"``, ``"V18"`` in ``"V 18"`` but not in ``"V180"``. A type
+    designation that starts with a digit and contains a letter may follow a
+    letter directly: ``"1512SP"`` occurs in ``"CPU1512SP"``, not in
+    ``"21512SP"`` or ``"1512SPX"``. For the measurement of the answers (127);
+    :func:`verify` does not call it but compares by the same rules.
     """
     key = normalise_value(value)
     if not key:

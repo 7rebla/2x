@@ -18,6 +18,7 @@ from twox.answers.citations import (
     Verdict,
     _split_sentences,
     normalise_value,
+    value_occurs,
     verify,
 )
 
@@ -313,6 +314,70 @@ def test_values_are_compared_normalised_with_boundaries(
 ) -> None:
     verdict = verify(f"Der Wert ist {value} [1].", {1: source}, drop_unsupported=True)
     assert verdict.status == ("answered" if found else "no_evidence")
+
+
+# A type designation that starts with a digit and contains a letter may follow
+# a letter directly (work order 154). Self-made values, no manual text.
+@pytest.mark.parametrize(
+    ("source", "value", "found"),
+    [
+        ("Steuerung CPU1512SP mit Display", "1512SP", True),
+        ("Steuerung cpu1512sp mit Display", "1512SP", True),
+        ("Steuerung CPU1512SP mit Display", "1512sp", True),
+        ("Steuerung CPU1512SP-1 PN mit Display", "1512SP-1 PN", True),
+        ("Steuerung CPU1512-SP mit Display", "1512SP", True),
+        ("Steuerung CPU1512SP mit Display", "1512-SP", True),
+        (f"Steuerung CPU1512{chr(0x2011)}SP mit Display", "1512SP", True),
+        ("Modul AB4711XY.", "4711XY", True),
+        ("Steuerung 21512SP mit Display", "1512SP", False),
+        ("Steuerung CPU21512SP mit Display", "1512SP", False),
+        ("Steuerung CPU1512SPX mit Display", "1512SP", False),
+        ("Steuerung CPU1512SP0 mit Display", "1512SP", False),
+        ("Steuerung CPU_1512SP mit Display", "1512SP", False),
+        ("Steuerung CPU.1512SP mit Display", "1512SP", False),
+        (f"Steuerung {chr(0x2212)}1512SP mit Display", "1512SP", False),
+        ("Steuerung CPU1512SP mit Display", "1512SP-1 PN", False),
+        # Numbers with a unit, versions, ports and plain numbers keep the rule.
+        ("Last 25 kg", "5 kg", False),
+        ("Last X5 kg", "5 kg", False),
+        ("Last X5kg", "5kg", False),
+        ("Versorgung DC24V", "24 V", False),
+        ("Versorgung DC24VDC", "24 V", False),
+        ("TIA Portal V180", "V18", False),
+        ("TIA Portal XV18", "V18", False),
+        ("Port 5020", "Port 502", False),
+    ],
+)
+def test_designation_starting_with_a_digit_may_follow_a_letter(
+    source: str, value: str, found: bool
+) -> None:
+    # Same rule for the measurement (value_occurs) and the citation check (verify).
+    assert value_occurs(value, source) is found
+    verdict = verify(f"Der Wert ist {value} [1].", {1: source}, drop_unsupported=True)
+    assert verdict.status == ("answered" if found else "no_evidence")
+
+
+def test_sentence_with_a_designation_after_a_word_in_the_source_is_kept() -> None:
+    source = "Die Steuerung CPU1512SP hat eine Versorgung von 24 V DC."
+    answer = "Die Steuerung 1512SP wird mit 24 V versorgt [1]."
+    verdict = verify(answer, {1: source}, drop_unsupported=True)
+    assert verdict.status == "answered"
+    assert verdict.removed_sentences == ()
+    assert verdict.cleaned_text == answer
+
+
+def test_value_occurs_after_a_letter_only_for_designations_with_a_letter() -> None:
+    assert value_occurs("1512SP", "CPU1512SP")
+    assert not value_occurs("1500", "S1500")
+    assert not value_occurs("5 kg", "X5kg")
+    assert not value_occurs("24V", "DC24V")
+    assert not value_occurs("24VDC", "X24VDC")
+    assert not value_occurs("2x10kg", "A2x10kg")
+    assert not value_occurs("V18", "XV18")
+    assert not value_occurs("192.168.0.5", "A192.168.0.5")
+    assert not value_occurs("V2.1a", "AV2.1a")
+    assert not value_occurs("Port 502", "XPort 502")
+    assert value_occurs("1512SP-1 PN", "CPU1512SP-1PN")
 
 
 def test_module_docstring_names_every_unit() -> None:

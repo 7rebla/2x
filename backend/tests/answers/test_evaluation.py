@@ -453,11 +453,22 @@ def fact_question(*key_facts: str) -> Question:
         ("V18", "TIA Portal V 18 [1].", True),
         ("Reset", "Über den Reset-Button [1].", True),
         ("OPC UA", "Der OPC-UA-Server [1].", True),
+        ("1512SP", "Die CPU1512SP hat zwei Schnittstellen [1].", True),
+        ("1512SP", "Die CPU 1512SP hat zwei Schnittstellen [1].", True),
+        ("1512SP", "Die CPU21512SP hat zwei Schnittstellen [1].", False),
+        ("1512SP", "Die CPU1512SPX hat zwei Schnittstellen [1].", False),
     ],
 )
 def test_key_facts_are_whole_values(fact: str, text: str, found: bool) -> None:
     assert value_occurs(fact, text) is found
     assert missing_key_facts(fact_question(fact), text) == ([] if found else [fact])
+
+
+def test_key_fact_of_a_designation_right_after_a_word_is_found() -> None:
+    # Work order 154: a key fact like "1512SP" counts after "CPU" without a space.
+    question = fact_question("1512SP")
+    assert missing_key_facts(question, "Die Steuerung ist eine CPU1512SP [1].") == []
+    assert missing_key_facts(question, "Die Steuerung ist eine CPU1512SP0 [1].") == ["1512SP"]
 
 
 def test_a_lengthened_key_fact_makes_a_fact_question_wrong() -> None:
