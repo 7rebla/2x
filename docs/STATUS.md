@@ -263,8 +263,8 @@ Aufträge 120–138, entworfen und von drei Prüfern gegengelesen. Offene Entsch
 | 151 | Messlauf 3 nach 148, 149, 150 | C | 148–150 | erledigt (6/10, Kontrollfrage stabil) |
 | 152 | Diagnose: Modellantworten für die Prüffragen 4, 6, 10 | B | 151 | erledigt |
 | 153 | Kontextauswahl: kurze Abschnitte, inhaltsreichere Sprachfassung (E-76 A) | C | 152 | in Arbeit |
-| 154 | Werte wie „1512SP“ hinter einem Wort erkennen (E-76 B) | B | 152 | in Arbeit |
-| 155 | Prompt: verschiedene Typangaben sind ein Widerspruch (E-76 C) | B | 154 | offen (nach 154) |
+| 154 | Werte wie „1512SP“ hinter einem Wort erkennen (E-76 B) | B | 152 | erledigt |
+| 155 | Prompt: verschiedene Typangaben sind ein Widerspruch (E-76 C) | B | 154 | in Arbeit |
 
 - 139: Hinweis aus der Prüfung – rein numerische Kennungen (Artikel-, Register-, Fehlernummern nur aus Ziffern) sind keine EXACT-Treffer und fallen nach geöffneter Sperre aus dem Kontext, wenn ihr Abstand über 0,55 liegt. Entspricht E-70; in 144 beobachten, bei Bedarf a7 als Option vorlegen.
 - 140: Nach der Prüfung nachgebessert (Wertebereiche, Einheiten in anderer Schreibweise, Punkt-MAC und Versionen mit Buchstaben werden nie aus der Frage übernommen).

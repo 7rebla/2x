@@ -1,6 +1,6 @@
 # Auftrag 154 – Werte wie „1512SP“ auch direkt hinter einem Wort erkennen
 
-Meilenstein: M3 · Freigabestufe: B (Teil B von E-76) · Status: offen
+Meilenstein: M3 · Freigabestufe: B (Teil B von E-76) · Status: erledigt
 
 ## Ziel
 
