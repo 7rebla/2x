@@ -291,6 +291,8 @@ docker compose exec -T api python manage.py evaluate_search --probes m3 --cutoff
 - `done`: `status` (`answered`, `no_evidence`, `contradiction`), the cited numbers and `final_text`, the checked answer that replaces the pieces. Without a matching section the answer is "Dazu finde ich nichts in den Unterlagen." and the model is not asked;
 - or `error` with a fixed `code` (`model_unavailable`, `timeout` …) and a short `detail`.
 
+Which sections become sources is set by the variables `TWOX_ANSWER_*` in `.env` (list and starting values: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)). `TWOX_ANSWER_MIN_SOURCE_CHARS` (default `200`) keeps very short sections such as a heading or a caption from taking the place of a source, unless they contain the identifier asked for; `1` takes every section. Of the same place in the German and the English edition of a manual only the one with more text is given.
+
 Each account may run one answer at a time (otherwise 409 `answer_in_progress`) and ask `TWOX_ANSWER_RATE` questions (default `10/min`, then 429); an answer ends after `TWOX_ANSWER_TOTAL_TIMEOUT` seconds (default 180) with `timeout`. With the AI features off the endpoint answers 409 `ai_disabled` without searching or contacting anything, without a chat model 503 `chat_not_configured`. `GET /api/v1/answers/status/` tells beforehand: `{"enabled": …, "chat_model_configured": …, "available": …}`.
 
 To try it by hand, sign in first and use the session cookie and the CSRF token of that session (placeholders below):

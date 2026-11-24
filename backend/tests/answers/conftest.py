@@ -25,6 +25,16 @@ def no_real_model_service(settings: Settings) -> Iterator[None]:
 
 
 @pytest.fixture
+def every_text_a_source(settings: Settings) -> None:
+    """Sections of a few words count as sources (``TWOX_ANSWER_MIN_SOURCE_CHARS`` 1).
+
+    For tests whose texts are short on purpose and that test something else
+    than the rule for short sections (work order 153, ``test_context.py``).
+    """
+    settings.TWOX_ANSWER_MIN_SOURCE_CHARS = 1
+
+
+@pytest.fixture
 def fake_embedder(
     no_real_model_service: None, monkeypatch: pytest.MonkeyPatch, settings: Settings
 ) -> FakeEmbedder:
