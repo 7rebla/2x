@@ -1,6 +1,6 @@
 # Auftrag 155 – Prompt: verschiedene Typangaben für dasselbe Bauteil sind ein Widerspruch
 
-Meilenstein: M3 · Freigabestufe: B (Teil C von E-76) · Status: zur Prüfung
+Meilenstein: M3 · Freigabestufe: B (Teil C von E-76) · Status: erledigt
 
 Voraussetzung: 154 (Werte hinter einem Wort) liegt auf `main`.
 
