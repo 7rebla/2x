@@ -1,6 +1,6 @@
 # Auftrag 157 – Diagnose: Suchanfrage durch Umformulierung oder Übersetzung erweitern
 
-Meilenstein: M3 · Freigabestufe: B (Analyse ohne Codeänderung, E-77) · Status: offen
+Meilenstein: M3 · Freigabestufe: B (Analyse ohne Codeänderung, E-77) · Status: erledigt (Diagnose; Entscheidung durch a7, STATUS Punkt 27)
 
 ## Ziel
 
